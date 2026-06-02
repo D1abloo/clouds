@@ -43,9 +43,20 @@ cp .env.example .env
 docker compose -f infra/docker-compose.yml up -d
 npm run prisma:migrate
 npm run prisma:seed
+npm run seed:demo     # dataset completo (cuentas, instancias, métricas, etc.)
 npm run dev:backend   # http://localhost:3000
 npm run dev:frontend  # http://localhost:4200
 ```
+
+## Modo demo
+
+Carga datos de prueba en PostgreSQL sin conectar AWS, GCP, Azure, Jenkins ni SSH reales:
+
+```bash
+npm run seed:demo
+```
+
+Ver credenciales y recursos en [docs/datos-demo.md](docs/datos-demo.md). Activa `DEMO_MODE=true` en `.env` para mocks seguros en adaptadores cloud.
 
 ## Variables de entorno
 
@@ -71,6 +82,7 @@ npm run prisma:studio  # DB explorer
 ./scripts/dev-up.sh    # Docker Compose up
 ./scripts/migrate.sh   # Run migrations
 ./scripts/seed.sh      # Seed roles & admin
+npm run seed:demo      # Base seed + dataset demo completo
 ```
 
 ## Documentación

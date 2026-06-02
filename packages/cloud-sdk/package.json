@@ -8,5 +8,8 @@
     "build": "tsc",
     "lint": "eslint src --ext .ts",
     "test": "jest"
+  },
+  "dependencies": {
+    "@cloudops/shared": "*"
   }
 }

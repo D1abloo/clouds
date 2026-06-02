@@ -72,9 +72,9 @@ export class MainLayoutComponent {
 
   navItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
-    { label: 'AWS Accounts', path: '/aws', icon: 'cloud' },
-    { label: 'GCP Accounts', path: '/gcp', icon: 'cloud_queue' },
-    { label: 'Azure Accounts', path: '/azure', icon: 'cloud_circle' },
+    { label: 'AWS Accounts', path: '/accounts/aws', icon: 'cloud' },
+    { label: 'GCP Accounts', path: '/accounts/gcp', icon: 'cloud_queue' },
+    { label: 'Azure Accounts', path: '/accounts/azure', icon: 'cloud_circle' },
     { label: 'VPS / Bare Metal', path: '/vps', icon: 'dns' },
     { label: 'Instances', path: '/instances', icon: 'memory' },
     { label: 'Terminal', path: '/terminal', icon: 'terminal' },

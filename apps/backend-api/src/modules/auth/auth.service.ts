@@ -71,6 +71,17 @@ export class AuthService {
     return { id: user.id, email: user.email, name: user.name }
   }
 
+  async configureMfa(userId: string, enabled: boolean, secretRef?: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        mfaEnabled: enabled,
+        mfaSecretRef: enabled ? secretRef ?? `vault:mfa/${userId}` : null,
+      },
+      select: { id: true, email: true, mfaEnabled: true },
+    })
+  }
+
   async validateUser(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId, deletedAt: null, isActive: true },

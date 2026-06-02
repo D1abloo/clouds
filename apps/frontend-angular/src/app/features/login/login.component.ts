@@ -64,7 +64,10 @@ export class LoginComponent {
     this.error = ''
     const { email, password } = this.form.getRawValue()
     this.auth.login(email!, password!).subscribe({
-      next: () => { this.loading = false; this.router.navigate(['/dashboard']) },
+      next: () => {
+        this.loading = false
+        void this.router.navigateByUrl('/dashboard', { replaceUrl: true })
+      },
       error: () => { this.loading = false; this.error = 'Invalid credentials' },
     })
   }

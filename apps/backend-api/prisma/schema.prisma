@@ -44,6 +44,8 @@ model User {
   passwordHash String     @map("password_hash")
   name         String?
   isActive     Boolean    @default(true) @map("is_active")
+  mfaEnabled   Boolean    @default(false) @map("mfa_enabled")
+  mfaSecretRef String?    @map("mfa_secret_ref")
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
   deletedAt    DateTime?  @map("deleted_at")

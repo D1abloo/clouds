@@ -14,7 +14,7 @@ export class AuthService {
 
   private readonly userSignal = signal<AuthUser | null>(readStoredUser())
   readonly user = this.userSignal.asReadonly()
-  readonly isAuthenticated = computed(() => !!this.getToken())
+  readonly isAuthenticated = computed(() => !!this.userSignal())
 
   login = (email: string, password: string) => {
     return this.api.post<LoginResponse>('auth/login', { email, password }).pipe(
@@ -37,7 +37,6 @@ export class AuthService {
     localStorage.setItem(USER_KEY, JSON.stringify(res.user))
     this.userSignal.set(res.user)
   }
-
 }
 
 const readStoredUser = (): AuthUser | null => {

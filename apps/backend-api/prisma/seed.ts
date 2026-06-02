@@ -70,6 +70,11 @@ async function main() {
   })
 
   const passwordHash = await bcrypt.hash('Admin123!', 12)
+  const demoPasswordHash = await bcrypt.hash('Demo123!', 12)
+
+  const roleByName = async (name: string) =>
+    prisma.role.findUnique({ where: { name } })
+
   const admin = await prisma.user.upsert({
     where: { email: 'admin@cloudops.local' },
     create: {
@@ -83,6 +88,32 @@ async function main() {
     update: {},
   })
 
+  const DEMO_USERS = [
+    { email: 'cloud.admin@demo.local', name: 'Demo Cloud Admin', role: 'cloud_admin' },
+    { email: 'devops@demo.local', name: 'Demo DevOps', role: 'devops' },
+    { email: 'viewer@demo.local', name: 'Demo Viewer', role: 'viewer' },
+    { email: 'auditor@demo.local', name: 'Demo Auditor', role: 'auditor' },
+    { email: 'billing@demo.local', name: 'Demo Billing', role: 'billing_viewer' },
+    { email: 'jenkins@demo.local', name: 'Demo Jenkins Op', role: 'jenkins_operator' },
+    { email: 'terraform@demo.local', name: 'Demo Terraform Op', role: 'terraform_operator' },
+  ]
+
+  for (const demo of DEMO_USERS) {
+    const role = await roleByName(demo.role)
+    await prisma.user.upsert({
+      where: { email: demo.email },
+      create: {
+        email: demo.email,
+        passwordHash: demoPasswordHash,
+        name: demo.name,
+        userRoles: role
+          ? { create: [{ roleId: role.id, projectId: project.id }] }
+          : undefined,
+      },
+      update: { name: demo.name },
+    })
+  }
+
   await prisma.alertRule.createMany({
     data: [
       { name: 'High CPU', condition: 'cpu_high', severity: AlertSeverity.WARNING },
@@ -93,7 +124,12 @@ async function main() {
     skipDuplicates: true,
   })
 
-  console.log(`Seed complete. Admin: admin@cloudops.local / Admin123!`)
+  console.log('Seed complete.')
+  console.log('Admin: admin@cloudops.local / Admin123!')
+  console.log('Demo users (password Demo123! for all):')
+  for (const demo of DEMO_USERS) {
+    console.log(`  - ${demo.email} (${demo.role})`)
+  }
   console.log(`Project ID: ${project.id}`)
   console.log(`Admin ID: ${admin.id}`)
 }

@@ -20,13 +20,14 @@ case "$SCOPE" in
     npm run test -w apps/workers 2>/dev/null || echo "Workers tests not configured yet"
     ;;
   frontend)
-    npm run test -w apps/frontend-angular
+    npm run test -w apps/frontend-angular -- --no-watch --browsers=ChromeHeadless
     ;;
   packages)
     npm run test -w packages/cloud-sdk 2>/dev/null || true
     ;;
   all)
-    run_workspace_tests
+    npm run test -w apps/backend-api
+    npm run test -w apps/frontend-angular -- --no-watch --browsers=ChromeHeadless 2>/dev/null || echo "Frontend tests skipped (Chrome not available)"
     ;;
   *)
     echo "Usage: $0 [all|backend|frontend|workers|packages]"

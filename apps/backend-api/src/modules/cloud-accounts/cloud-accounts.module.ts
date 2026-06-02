@@ -10,6 +10,6 @@ import { AuditModule } from '../audit/audit.module'
   imports: [AuditModule],
   controllers: [CloudAccountsController],
   providers: [CloudAccountsService, AwsAdapterService, GcpAdapterService, AzureAdapterService],
-  exports: [CloudAccountsService],
+  exports: [CloudAccountsService, AwsAdapterService, GcpAdapterService, AzureAdapterService],
 })
 export class CloudAccountsModule {}

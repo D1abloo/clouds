@@ -55,6 +55,10 @@ Requisitos de esta fase:
 12. Crea archivos base limpios y preparados para continuar.
 
 No expliques demasiado. Crea los archivos directamente.
+
+### Datos demo
+- Crear `docs/datos-demo.md` y `DEMO_MODE=true` en `.env.example`.
+- Documentar usuarios demo planificados en README.
 ```
 
 ---
@@ -119,6 +123,11 @@ Requisitos:
 14. Añadir auditoría base para acciones críticas.
 
 Crea código real y funcional, no pseudocódigo.
+
+### Datos demo
+- Mocks en cada módulo cuando no hay credenciales.
+- `prisma/seed.ts` con roles, permisos y admin demo.
+- Health check sin APIs externas.
 ```
 
 ---
@@ -183,6 +192,10 @@ Crea también comandos npm para:
 - prisma:migrate
 - prisma:studio
 - prisma:seed
+
+### Datos demo
+- Seed: 8 roles, permisos, proyecto `default`, admin + 7 usuarios demo.
+- Passwords: `Admin123!` / `Demo123!`.
 ```
 
 ---
@@ -241,6 +254,10 @@ Cada adaptador debe implementar una interfaz común llamada CloudProviderAdapter
 Si no hay credenciales reales, implementa mocks seguros y deja TODOs claros para SDK oficial.
 
 Crea endpoints REST, DTOs, servicios, tests básicos y documentación Swagger.
+
+### Datos demo
+- Mocks `AwsAdapterService`, `GcpAdapterService`, `AzureAdapterService`.
+- Seed: 3 cuentas cloud + 5 instancias demo.
 ```
 
 ---
@@ -284,6 +301,10 @@ Seguridad:
 - No guardar contraseñas en texto plano.
 - Validar permisos antes de ejecutar comandos.
 - Evitar command injection.
+
+### Datos demo
+- Seed: 2 VPS + 3 `CommandExecution` demo.
+- Mock SSH validate/execute sin servidor real.
 ```
 
 ---
@@ -332,6 +353,10 @@ Frontend:
 - Mostrar pestañas: Resumen, Docker, Kubernetes, Servicios, Puertos, Procesos, Métricas.
 - Mostrar estados con badges.
 - Mostrar actualización en tiempo real.
+
+### Datos demo
+- Seed: 1 DockerHost, 4 containers, 1 K8s cluster, 5 resources.
+- `SystemDiscoveryService` mock.
 ```
 
 ---
@@ -374,6 +399,10 @@ Seguridad:
 - No mostrar tokens.
 - Validar permisos antes de lanzar jobs.
 - Auditar ejecuciones.
+
+### Datos demo
+- Seed: 1 JenkinsServer, 2 jobs, 3 builds.
+- Mock Jenkins list/trigger/logs.
 ```
 
 ---
@@ -439,6 +468,10 @@ El flujo debe ser:
 6. Backend ejecuta terraform apply.
 7. Se sincroniza inventario.
 8. Dashboard se actualiza.
+
+### Datos demo
+- Seed: TerraformWorkspace, 3 runs, logs, 1 InstanceTemplate.
+- Plan output mock en runner.
 ```
 
 ---
@@ -507,6 +540,10 @@ Alertas:
 - Servicio crítico detenido.
 - Build Jenkins fallido.
 - Terraform fallido.
+
+### Datos demo
+- Seed: ~150 MetricSample, 2 Alert activas, 4 Notification.
+- Dashboard con datos reales de PostgreSQL.
 ```
 
 ---
@@ -548,6 +585,10 @@ Crea servicios separados:
 - AwsBillingService.
 - GcpBillingService.
 - AzureBillingService.
+
+### Datos demo
+- Seed: BillingAccount + BillingRecord estimados.
+- Mocks `AwsBillingService`, `GcpBillingService`, `AzureBillingService`.
 ```
 
 ---
@@ -617,6 +658,10 @@ Requisitos UX:
 - Estados loading/error/empty.
 - No mostrar secretos.
 - Usar logos oficiales respetando guías de marca.
+
+### Datos demo
+- Login precargado; redirección automática al dashboard.
+- Tablas con datos seed; empty state con hint `npm run seed:demo`.
 ```
 
 ---
@@ -667,6 +712,10 @@ Acciones críticas:
 - Cambiar credenciales.
 - Ejecutar comandos SSH peligrosos.
 - Lanzar jobs Jenkins críticos.
+
+### Datos demo
+- Usuarios demo por rol para RBAC.
+- Audit logs demo; secretRef `vault:demo/*` únicamente.
 ```
 
 ---
@@ -721,6 +770,10 @@ Crea documentación:
 - docs/despliegue-local.md
 - docs/despliegue-kubernetes.md
 - docs/variables-entorno.md
+
+### Datos demo
+- `scripts/seed-demo.sh` y `docs/datos-demo.md`.
+- Flujo: docker compose → migrate → seed:demo.
 ```
 
 ---
@@ -775,6 +828,10 @@ El README debe incluir:
 - Cómo subir a GitHub.
 
 Prepara el proyecto para que pueda ejecutarse con comandos claros.
+
+### Datos demo
+- README sección "Modo demo".
+- Documentar credenciales y recursos en `docs/datos-demo.md`.
 ```
 
 ---
@@ -819,9 +876,54 @@ Después:
 5. Deja el proyecto listo para subir a GitHub.
 
 No expliques demasiado. Aplica los cambios directamente.
+
+### Datos demo
+- Verificar flujo completo con `npm run seed:demo`.
+- Todos los módulos muestran data sin credenciales reales.
 ```
 
 ---
+
+
+---
+
+## Fase Demo Completa - Dataset integral para pruebas sin servicios reales
+
+```md
+Le adjunto captura como referencia y sube a github
+
+Implementa el dataset demo completo para probar la app sin servicios reales.
+
+Archivos obligatorios:
+- apps/backend-api/prisma/seed-demo.ts
+- scripts/seed-demo.sh
+- docs/datos-demo.md
+
+Comando: npm run seed:demo
+
+Debe crear en PostgreSQL:
+1. Usuarios demo (admin + 7 roles, Demo123!)
+2. Cuentas cloud demo (AWS, GCP, Azure)
+3. Instancias demo (5+)
+4. VPS demo (2)
+5. Docker demo (host + 4 containers)
+6. Kubernetes demo (cluster + resources)
+7. Jenkins demo (server, jobs, builds)
+8. Terraform demo (workspace, runs, logs, template)
+9. Métricas demo (CPU/RAM/disco)
+10. Billing demo (cuentas + registros estimados)
+11. Alertas demo (2 activas)
+12. Notificaciones demo (4 in-app)
+13. Auditoría demo
+14. SSH command executions demo
+
+Requisitos: idempotente, secretRef vault, adaptadores mock.
+
+No expliques demasiado. Crea los archivos directamente.
+```
+
+### Datos demo
+- Esta fase implementa `npm run seed:demo` — ver `docs/datos-demo.md`.
 
 # Orden recomendado
 
@@ -840,6 +942,7 @@ No expliques demasiado. Aplica los cambios directamente.
 13. Fase 13 - Infraestructura.
 14. Fase 14 - Docs, tests y GitHub.
 15. Fase 15 - Revisión final.
+16. Fase Demo Completa - Dataset integral.
 
 ---
 
