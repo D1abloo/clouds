@@ -1,0 +1,29 @@
+# CloudOps Control Center — Background workers
+# Build: docker build -f infra/docker/Dockerfile.workers -t cloudops-workers .
+
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+COPY apps/workers/package.json ./apps/workers/
+COPY packages/shared/package.json ./packages/shared/
+RUN npm ci --workspace=@cloudops/workers --include-workspace-root 2>/dev/null \
+  || npm install --workspace=@cloudops/workers --include-workspace-root
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+COPY apps/workers ./apps/workers
+COPY packages/shared ./packages/shared
+WORKDIR /app/apps/workers
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -g 1001 -S nodejs && adduser -S worker -u 1001 -G nodejs
+COPY --from=builder /app/apps/workers/dist ./dist
+COPY --from=builder /app/apps/workers/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+USER worker
+CMD ["node", "dist/main.js"]

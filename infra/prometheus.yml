@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "cloudops-backend"
+    static_configs:
+      - targets: ["backend-api:3000"]

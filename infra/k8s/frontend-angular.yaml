@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-angular
+  namespace: cloudops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-angular
+  template:
+    metadata:
+      labels:
+        app: frontend-angular
+    spec:
+      containers:
+        - name: frontend-angular
+          image: ghcr.io/your-org/cloudops-frontend:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-angular
+  namespace: cloudops
+spec:
+  selector:
+    app: frontend-angular
+  ports:
+    - port: 80
+      targetPort: 80

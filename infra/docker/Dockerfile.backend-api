@@ -1,0 +1,37 @@
+# CloudOps Control Center — Backend API (NestJS)
+# Build: docker build -f infra/docker/Dockerfile.backend-api -t cloudops-backend .
+
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+COPY apps/backend-api/package.json ./apps/backend-api/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/cloud-sdk/package.json ./packages/cloud-sdk/
+RUN npm ci --workspace=@cloudops/backend-api --include-workspace-root 2>/dev/null \
+  || npm install --workspace=@cloudops/backend-api --include-workspace-root
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+COPY apps/backend-api ./apps/backend-api
+COPY packages/shared ./packages/shared
+COPY packages/cloud-sdk ./packages/cloud-sdk
+WORKDIR /app/apps/backend-api
+RUN npx prisma generate
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001 -G nodejs
+COPY --from=builder /app/apps/backend-api/dist ./dist
+COPY --from=builder /app/apps/backend-api/package.json ./
+COPY --from=builder /app/apps/backend-api/prisma ./prisma
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/backend-api/node_modules/.prisma ./node_modules/.prisma 2>/dev/null || true
+USER nestjs
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/v1/health || exit 1
+CMD ["node", "dist/main.js"]

@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+.angular/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma
+apps/backend-api/prisma/migrations/**/migration_lock.toml
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# Docker
+docker-compose.override.yml
+
+# Secrets
+*.pem
+*.key
+!*.key.example
+secrets/
+
+# Misc
+.angular/
+.cache/
+tmp/
+temp/
+*.pid

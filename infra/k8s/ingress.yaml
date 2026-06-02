@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloudops-ingress
+  namespace: cloudops
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - cloudops.example.com
+        - api.cloudops.example.com
+      secretName: cloudops-tls
+  rules:
+    - host: cloudops.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-angular
+                port:
+                  number: 80
+    - host: api.cloudops.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-api
+                port:
+                  number: 80

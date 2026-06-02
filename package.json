@@ -1,0 +1,28 @@
+{
+  "name": "cloudops-control-center",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CloudOps Control Center - Multi-cloud infrastructure management platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:backend": "npm run start:dev -w apps/backend-api",
+    "dev:frontend": "npm run start -w apps/frontend-angular",
+    "dev:workers": "npm run start:dev -w apps/workers",
+    "prisma:generate": "npm run prisma:generate -w apps/backend-api",
+    "prisma:migrate": "npm run prisma:migrate -w apps/backend-api",
+    "prisma:studio": "npm run prisma:studio -w apps/backend-api",
+    "prisma:seed": "npm run prisma:seed -w apps/backend-api"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "author": "CloudOps Team",
+  "license": "MIT"
+}

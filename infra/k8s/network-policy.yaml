@@ -1,0 +1,79 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: cloudops
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-api-policy
+  namespace: cloudops
+spec:
+  podSelector:
+    matchLabels:
+      app: backend-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend-angular
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - {} # DNS and external cloud APIs — tighten in production
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: workers-policy
+  namespace: cloudops
+spec:
+  podSelector:
+    matchLabels:
+      app: workers
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: backend-api
+      ports:
+        - protocol: TCP
+          port: 3000
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - {}
