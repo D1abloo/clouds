@@ -75,12 +75,11 @@ export class MainLayoutComponent {
 
   navItems: NavItem[] = [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
-    { label: 'AWS Accounts', path: '/accounts/aws', icon: 'cloud' },
-    { label: 'GCP Accounts', path: '/accounts/gcp', icon: 'cloud_queue' },
-    { label: 'Azure Accounts', path: '/accounts/azure', icon: 'cloud_circle' },
+    { label: 'AWS', path: '/accounts/aws', icon: 'cloud' },
+    { label: 'GCP', path: '/accounts/gcp', icon: 'cloud_queue' },
+    { label: 'Azure', path: '/accounts/azure', icon: 'cloud_circle' },
     { label: 'VPS / Bare Metal', path: '/vps', icon: 'dns' },
     { label: 'Instances', path: '/instances', icon: 'memory' },
-    { label: 'Terminal', path: '/terminal', icon: 'terminal' },
     { label: 'Docker', path: '/docker', icon: 'view_in_ar' },
     { label: 'Kubernetes', path: '/kubernetes', icon: 'hub' },
     { label: 'Jenkins', path: '/jenkins', icon: 'build' },

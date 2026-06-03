@@ -2,7 +2,31 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Bugfix loaders infinitos (completado)
+**Fase actual:** Paneles ricos + Demo UI (completado)
+
+---
+
+## Fase 17 — Paneles administrativos completos ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Backend:**
+- Módulo `inventory` — `GET /inventory/dashboard`, `/docker`, `/kubernetes`, `/terraform`, `/jenkins`, `/provider/:provider`
+- Agregados demo desde Prisma (instancias, alertas, audit, billing, Docker, K8s, Jenkins, Terraform)
+
+**Frontend — componentes compartidos:**
+- `page-header`, `mini-chart`, `detail-dialog`
+- `InventoryService`, `DemoActionsService`, `invNum()` util
+
+**Frontend — paneles enriquecidos (tabs, filtros, modales, acciones demo):**
+- Dashboard (gráficos, alertas, actividad, notificaciones, rango temporal)
+- AWS / GCP / Azure (`cloud-provider-hub`)
+- VPS, Instances (grid/list, bulk), Instance detail (9 tabs)
+- Docker, Kubernetes, Jenkins, Terraform, Billing, Alerts, Notifications, Audit, Settings
+
+**Sidebar:** etiquetas AWS/GCP/Azure; Terminal accesible desde VPS e instancias
+
+**Validación:** `npm run build` backend + frontend OK
 
 ---
 

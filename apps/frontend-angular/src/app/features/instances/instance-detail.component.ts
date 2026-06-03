@@ -1,7 +1,6 @@
 import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, RouterLink } from '@angular/router'
-import { MatCardModule } from '@angular/material/card'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { InstancesService } from '../../core/services/instances.service'
@@ -9,7 +8,9 @@ import { Instance } from '../../core/models/api.models'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import { ChartPlaceholderComponent } from '../../shared/components/chart-placeholder/chart-placeholder.component'
+import { MatTabsModule } from '@angular/material/tabs'
+import { MiniChartComponent } from '../../shared/components/mini-chart/mini-chart.component'
+import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { MatDialog } from '@angular/material/dialog'
 import {
@@ -23,13 +24,13 @@ import { createPageLoader } from '../../core/utils/page-load.util'
   standalone: true,
   imports: [
     RouterLink,
-    MatCardModule,
     MatButtonModule,
     MatIconModule,
     LoadingStateComponent,
     ErrorStateComponent,
     StatusBadgeComponent,
-    ChartPlaceholderComponent,
+    MiniChartComponent,
+    MatTabsModule,
   ],
   template: `
     <div class="page-container">
@@ -63,11 +64,10 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           </div>
         </header>
 
-        <div class="detail-grid">
-          <mat-card>
-            <mat-card-header><mat-card-title>Details</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <dl class="detail-list">
+        <mat-tab-group>
+          <mat-tab label="Summary">
+            <div class="tab-panel">
+              <dl class="detail-list wide">
                 <dt>Provider</dt><dd>{{ instance()!.provider }}</dd>
                 <dt>Region</dt><dd>{{ instance()!.region ?? '—' }}</dd>
                 <dt>Type</dt><dd>{{ instance()!.instanceType ?? '—' }}</dd>
@@ -77,10 +77,19 @@ import { createPageLoader } from '../../core/utils/page-load.util'
                 <dt>CPU / RAM / Disk</dt><dd>{{ instance()!.cpuCores ?? '—' }} cores · {{ instance()!.ramGb ?? '—' }} GB · {{ instance()!.diskGb ?? '—' }} GB</dd>
                 <dt>Monthly cost</dt><dd>{{ formatCost(instance()!.monthlyCost) }} (MTD {{ formatCost(instance()!.mtdCost) }})</dd>
               </dl>
-            </mat-card-content>
-          </mat-card>
-          <app-chart-placeholder label="CPU & memory metrics" />
-        </div>
+            </div>
+          </mat-tab>
+          <mat-tab label="Metrics">
+            <div class="tab-panel"><app-mini-chart title="CPU / RAM" kind="line" [data]="metricTrend()" /></div>
+          </mat-tab>
+          <mat-tab label="Docker"><div class="tab-panel"><p>3 containers running (demo)</p><button mat-stroked-button (click)="demoTab('Docker')">Refresh</button></div></mat-tab>
+          <mat-tab label="Kubernetes"><div class="tab-panel"><p>Not enrolled in a cluster (demo)</p></div></mat-tab>
+          <mat-tab label="Services"><div class="tab-panel"><p>sshd, nginx, node-exporter (demo)</p></div></mat-tab>
+          <mat-tab label="Terminal"><div class="tab-panel"><a mat-flat-button color="primary" routerLink="/terminal">Open terminal</a></div></mat-tab>
+          <mat-tab label="Billing"><div class="tab-panel"><p>MTD {{ formatCost(instance()!.mtdCost) }} · Projected {{ formatCost(instance()!.monthlyCost) }}</p></div></mat-tab>
+          <mat-tab label="Alerts"><div class="tab-panel"><p>0 active alerts for this instance</p></div></mat-tab>
+          <mat-tab label="Audit"><div class="tab-panel"><p>Last: instance.sync · terraform.plan (demo)</p><a routerLink="/audit">View audit log</a></div></mat-tab>
+        </mat-tab-group>
       }
     </div>
   `,
@@ -113,20 +122,13 @@ import { createPageLoader } from '../../core/utils/page-load.util'
       vertical-align: middle;
     }
     .health { margin-left: 0.75rem; font-size: 0.85rem; color: var(--app-text-muted); }
-    .detail-grid {
+    .detail-list.wide {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-    .detail-list {
-      display: grid;
-      grid-template-columns: 120px 1fr;
+      grid-template-columns: 140px 1fr;
       gap: 0.5rem 1rem;
+      max-width: 640px;
       dt { color: var(--app-text-muted); font-weight: 500; }
       dd { margin: 0; }
-    }
-    @media (max-width: 768px) {
-      .detail-grid { grid-template-columns: 1fr; }
     }
   `,
 })
@@ -135,6 +137,7 @@ export class InstanceDetailComponent implements OnInit {
   private readonly service = inject(InstancesService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly demoActions = inject(DemoActionsService)
   private readonly destroyRef = inject(DestroyRef)
 
   readonly page = createPageLoader(true)
@@ -193,5 +196,17 @@ export class InstanceDetailComponent implements OnInit {
   formatCost = (value?: number | null): string => {
     if (value === undefined || value === null) return '—'
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+  }
+
+  metricTrend = (): { label: string; value: number }[] => [
+    { label: '1h', value: 35 },
+    { label: '2h', value: 42 },
+    { label: '3h', value: 58 },
+    { label: '4h', value: 51 },
+    { label: '5h', value: 47 },
+  ]
+
+  demoTab = (tab: string): void => {
+    this.demoActions.simulate(`${tab} refresh`, 400).subscribe()
   }
 }

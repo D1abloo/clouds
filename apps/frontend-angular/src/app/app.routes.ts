@@ -27,30 +27,26 @@ export const routes: Routes = [
       {
         path: 'accounts/aws',
         loadComponent: () =>
-          import('./features/cloud-accounts/cloud-accounts-page.component').then(
-            (m) => m.CloudAccountsPageComponent,
+          import('./features/cloud-accounts/cloud-provider-hub.component').then(
+            (m) => m.CloudProviderHubComponent,
           ),
-        data: { provider: 'AWS', title: 'AWS Accounts', breadcrumb: 'AWS Accounts' },
+        data: { provider: 'AWS', title: 'AWS', breadcrumb: 'AWS' },
       },
       {
         path: 'accounts/gcp',
         loadComponent: () =>
-          import('./features/cloud-accounts/cloud-accounts-page.component').then(
-            (m) => m.CloudAccountsPageComponent,
+          import('./features/cloud-accounts/cloud-provider-hub.component').then(
+            (m) => m.CloudProviderHubComponent,
           ),
-        data: { provider: 'GCP', title: 'GCP Accounts', breadcrumb: 'GCP Accounts' },
+        data: { provider: 'GCP', title: 'GCP', breadcrumb: 'GCP' },
       },
       {
         path: 'accounts/azure',
         loadComponent: () =>
-          import('./features/cloud-accounts/cloud-accounts-page.component').then(
-            (m) => m.CloudAccountsPageComponent,
+          import('./features/cloud-accounts/cloud-provider-hub.component').then(
+            (m) => m.CloudProviderHubComponent,
           ),
-        data: {
-          provider: 'AZURE',
-          title: 'Azure Accounts',
-          breadcrumb: 'Azure Accounts',
-        },
+        data: { provider: 'AZURE', title: 'Azure', breadcrumb: 'Azure' },
       },
       {
         path: 'vps',

@@ -1,125 +1,214 @@
-import { Component, inject, signal } from '@angular/core'
-import { finalize } from 'rxjs'
+import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
+import { MatTabsModule } from '@angular/material/tabs'
+import { MatTableModule } from '@angular/material/table'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import { MatTabsModule } from '@angular/material/tabs'
-import { DiscoveryService } from '../../core/services/discovery.service'
-import { ToastService } from '../../core/services/toast.service'
+import { MatMenuModule } from '@angular/material/menu'
+import { MatDialog } from '@angular/material/dialog'
+import { debounceTime, startWith } from 'rxjs'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
-import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
+import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
+import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
+import { InventoryService } from '../../core/services/inventory.service'
+import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { createPageLoader } from '../../core/utils/page-load.util'
+import { invNum } from '../../core/utils/inventory.util'
+
+type PodRow = Record<string, unknown>
 
 @Component({
   selector: 'app-kubernetes-page',
   standalone: true,
   imports: [
     ReactiveFormsModule,
+    PageHeaderComponent,
+    SummaryCardComponent,
+    LoadingStateComponent,
+    EmptyStateComponent,
+    ErrorStateComponent,
+    StatusBadgeComponent,
+    MatTabsModule,
+    MatTableModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatTabsModule,
-    LoadingStateComponent,
-    ErrorStateComponent,
-    EmptyStateComponent,
+    MatMenuModule,
   ],
   template: `
     <div class="page-container">
-      <header class="page-header">
-        <h1>Kubernetes</h1>
-        <p>Cluster and system discovery on remote hosts</p>
-      </header>
+      <app-page-header
+        title="Kubernetes"
+        description="Clusters, pods, deployments and services"
+        [actions]="[
+          { label: 'Scale deployment', icon: 'unfold_more', primary: true },
+          { label: 'Refresh', icon: 'refresh' },
+        ]"
+        (actionClick)="handleHeader($event)"
+      />
 
-      <div class="table-card" style="padding: 1.25rem">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Host reference</mat-label>
-          <input matInput [formControl]="hostRef" />
-        </mat-form-field>
-
-        <div class="actions">
-          <button
-            mat-flat-button
-            color="primary"
-            type="button"
-            [disabled]="loading() || !hostRef.value"
-            (click)="handleK8s()"
-          >
-            Discover Kubernetes
-          </button>
-          <button
-            mat-stroked-button
-            type="button"
-            [disabled]="loading() || !hostRef.value"
-            (click)="handleSystem()"
-          >
-            Discover system info
-          </button>
+      @if (page.loading()) {
+        <app-loading-state />
+      } @else if (page.error()) {
+        <app-error-state [message]="page.error()!" (retry)="load()" />
+      } @else {
+        <div class="summary-grid">
+          <app-summary-card title="Clusters" [value]="n('clusters')" icon="hub" />
+          <app-summary-card title="Namespaces" [value]="n('namespaceCount')" icon="folder" />
+          <app-summary-card title="Pods" [value]="n('podCount')" icon="widgets" />
+          <app-summary-card title="Deployments" [value]="n('deployments')" icon="deployed_code" />
+          <app-summary-card title="Services" [value]="n('services')" icon="lan" />
+          <app-summary-card title="Pods with error" [value]="n('podsWithError')" icon="error" iconColor="warn" />
         </div>
 
-        @if (loading()) {
-          <app-loading-state />
-        } @else if (discoverError()) {
-          <app-error-state [message]="discoverError()!" (retry)="handleRetry()" />
-        } @else if (result()) {
-          <pre class="result mono">{{ result() }}</pre>
-        } @else {
-          <app-empty-state
-            title="No discovery results"
-            description="Enter a host reference (e.g. demo-vps-001) and run discovery."
-          />
-        }
-      </div>
+        <mat-tab-group>
+          <mat-tab label="Pods">
+            <div class="tab-panel">
+              <mat-form-field appearance="outline">
+                <mat-label>Search pods</mat-label>
+                <input matInput [formControl]="searchControl" />
+              </mat-form-field>
+              @if (filteredPods().length === 0) {
+                <app-empty-state title="No pods" description="Run demo seed to populate Kubernetes resources." />
+              } @else {
+                <table mat-table [dataSource]="filteredPods()" class="full-table">
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Name</th>
+                    <td mat-cell *matCellDef="let row">{{ row.name }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="namespace">
+                    <th mat-header-cell *matHeaderCellDef>Namespace</th>
+                    <td mat-cell *matCellDef="let row">{{ row.namespace }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="status">
+                    <th mat-header-cell *matHeaderCellDef>Status</th>
+                    <td mat-cell *matCellDef="let row"><app-status-badge [value]="row.status" /></td>
+                  </ng-container>
+                  <ng-container matColumnDef="node">
+                    <th mat-header-cell *matHeaderCellDef>Node</th>
+                    <td mat-cell *matCellDef="let row">{{ row.node }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="restarts">
+                    <th mat-header-cell *matHeaderCellDef>Restarts</th>
+                    <td mat-cell *matCellDef="let row">{{ row.restarts }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="cpu">
+                    <th mat-header-cell *matHeaderCellDef>CPU</th>
+                    <td mat-cell *matCellDef="let row">{{ row.cpu }}%</td>
+                  </ng-container>
+                  <ng-container matColumnDef="ram">
+                    <th mat-header-cell *matHeaderCellDef>RAM</th>
+                    <td mat-cell *matCellDef="let row">{{ row.ram }}%</td>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let row">
+                      <button mat-icon-button [matMenuTriggerFor]="podMenu" aria-label="Actions"><mat-icon>more_vert</mat-icon></button>
+                      <mat-menu #podMenu="matMenu">
+                        <button mat-menu-item (click)="showLogs(row)">View logs</button>
+                        <button mat-menu-item (click)="showYaml(row)">View YAML</button>
+                        <button mat-menu-item (click)="restartDemo(row)">Restart (demo)</button>
+                      </mat-menu>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="podCols"></tr>
+                  <tr mat-row *matRowDef="let row; columns: podCols"></tr>
+                </table>
+              }
+            </div>
+          </mat-tab>
+          <mat-tab label="Clusters"><div class="tab-panel"><p>{{ n('clusters') }} clusters connected.</p></div></mat-tab>
+          <mat-tab label="Nodes"><div class="tab-panel"><p>demo-node-01, demo-node-02 (Ready)</p></div></mat-tab>
+          <mat-tab label="Namespaces"><div class="tab-panel"><p>default, staging, production, monitoring</p></div></mat-tab>
+          <mat-tab label="Deployments"><div class="tab-panel"><p>{{ n('deployments') }} deployments tracked.</p></div></mat-tab>
+          <mat-tab label="Services"><div class="tab-panel"><p>{{ n('services') }} services exposed.</p></div></mat-tab>
+          <mat-tab label="Events"><div class="tab-panel"><pre class="mono event-log">{{ eventLog() }}</pre></div></mat-tab>
+          <mat-tab label="YAML"><div class="tab-panel"><button mat-stroked-button (click)="showYaml()">View sample deployment YAML</button></div></mat-tab>
+        </mat-tab-group>
+      }
     </div>
   `,
   styles: `
-    .full-width { width: 100%; max-width: 480px; }
-    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 1rem 0; }
-    .result {
-      padding: 1rem;
-      background: var(--app-surface);
-      border-radius: 8px;
-      overflow: auto;
-      max-height: 480px;
-    }
+    .full-table { width: 100%; }
+    .event-log { font-size: 0.75rem; background: var(--app-surface); padding: 1rem; border-radius: 8px; }
   `,
 })
-export class KubernetesPageComponent {
-  private readonly discovery = inject(DiscoveryService)
-  private readonly toast = inject(ToastService)
+export class KubernetesPageComponent implements OnInit {
+  private readonly inventory = inject(InventoryService)
+  private readonly demoActions = inject(DemoActionsService)
+  private readonly dialog = inject(MatDialog)
 
-  readonly hostRef = new FormControl('', { nonNullable: true })
-  readonly loading = signal(false)
-  readonly discoverError = signal<string | null>(null)
-  readonly result = signal<string | null>(null)
-  private lastMode: 'k8s' | 'system' = 'k8s'
+  readonly page = createPageLoader(true)
+  readonly data = signal<Record<string, unknown> | null>(null)
+  readonly searchControl = new FormControl('', { nonNullable: true })
+  readonly podCols = ['name', 'namespace', 'status', 'node', 'restarts', 'cpu', 'ram', 'actions']
 
-  handleK8s = (): void => this.runDiscovery('k8s')
-  handleSystem = (): void => this.runDiscovery('system')
-  handleRetry = (): void => this.runDiscovery(this.lastMode)
+  private readonly searchTerm = toSignal(
+    this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')),
+    { initialValue: '' },
+  )
 
-  private runDiscovery = (mode: 'k8s' | 'system'): void => {
-    const ref = this.hostRef.value.trim()
-    if (!ref) return
-    this.lastMode = mode
-    this.loading.set(true)
-    this.discoverError.set(null)
-    this.result.set(null)
-    const obs =
-      mode === 'k8s'
-        ? this.discovery.discoverKubernetes(ref)
-        : this.discovery.discoverSystem(ref)
-    obs.pipe(finalize(() => this.loading.set(false))).subscribe({
-      next: (data) => {
-        this.result.set(JSON.stringify(data, null, 2))
-        this.toast.success('Discovery completed')
-      },
-      error: () => {
-        this.discoverError.set('Discovery failed. Use a valid VPS id (e.g. demo-vps-001).')
-        this.toast.error('Discovery failed')
+  pods = computed(() => (this.data()?.['podItems'] as PodRow[]) ?? [])
+
+  filteredPods = computed(() => {
+    const term = (this.searchTerm() ?? '').toLowerCase()
+    return this.pods().filter((p) => !term || String(p['name']).toLowerCase().includes(term))
+  })
+
+  ngOnInit = (): void => this.load()
+
+  n = (key: string): number => invNum(this.data(), key)
+
+  load = (): void => {
+    this.page.run(this.inventory.kubernetes(), {
+      onSuccess: (d) => this.data.set(d),
+      errorMessage: 'Failed to load Kubernetes inventory',
+    })
+  }
+
+  handleHeader = (label: string): void => {
+    if (label === 'Scale deployment') {
+      this.demoActions.simulate('Scale deployment api-demo to 3 replicas', 900).subscribe()
+      return
+    }
+    this.load()
+  }
+
+  showLogs = (row: PodRow): void => {
+    this.dialog.open(DetailDialogComponent, {
+      width: '560px',
+      data: {
+        title: `Pod logs — ${row['name']}`,
+        rows: [{ label: 'Namespace', value: String(row['namespace']) }],
+        extra: `[INFO] Container started\n[INFO] Listening on :8080\n[WARN] High memory usage 78%`,
       },
     })
   }
+
+  showYaml = (row?: PodRow): void => {
+    const name = row ? String(row['name']) : 'api-demo'
+    this.dialog.open(DetailDialogComponent, {
+      width: '560px',
+      data: {
+        title: `YAML — ${name}`,
+        rows: [],
+        extra: `apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: ${name}\nspec:\n  replicas: 2\n  selector:\n    matchLabels:\n      app: ${name}`,
+      },
+    })
+  }
+
+  restartDemo = (row: PodRow): void => {
+    this.demoActions.simulate(`Restart pod ${row['name']}`, 700).subscribe(() => this.load())
+  }
+
+  eventLog = (): string =>
+    `Normal  Scheduled  pod/api-demo-xxx  Successfully assigned demo-node-01\nWarning BackOff   pod/worker-yyy  Back-off restarting failed container`
 }

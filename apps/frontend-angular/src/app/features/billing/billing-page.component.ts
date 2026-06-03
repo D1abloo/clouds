@@ -1,31 +1,55 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { FormControl, ReactiveFormsModule } from '@angular/forms'
+import { MatTabsModule } from '@angular/material/tabs'
+import { MatTableModule } from '@angular/material/table'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatInputModule } from '@angular/material/input'
+import { MatSelectModule } from '@angular/material/select'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import { BillingService } from '../../core/services/billing.service'
-import { BillingSummary } from '../../core/models/api.models'
-import { createPageLoader } from '../../core/utils/page-load.util'
+import { debounceTime, startWith } from 'rxjs'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
-import { ChartPlaceholderComponent } from '../../shared/components/chart-placeholder/chart-placeholder.component'
+import { MiniChartComponent } from '../../shared/components/mini-chart/mini-chart.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
+import { BillingService } from '../../core/services/billing.service'
+import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { BillingSummary } from '../../core/models/api.models'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-billing-page',
   standalone: true,
   imports: [
+    ReactiveFormsModule,
+    PageHeaderComponent,
     SummaryCardComponent,
-    ChartPlaceholderComponent,
+    MiniChartComponent,
     LoadingStateComponent,
     ErrorStateComponent,
+    MatTabsModule,
+    MatTableModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
     MatButtonModule,
     MatIconModule,
   ],
   template: `
     <div class="page-container">
-      <header class="page-header">
-        <h1>Billing</h1>
-        <p>Cloud spend summary and cost sync</p>
-      </header>
+      <app-page-header
+        title="Billing"
+        description="Cloud spend overview, forecasts and cost alerts"
+        [actions]="[
+          { label: 'Sync billing', icon: 'sync', primary: true },
+          { label: 'Export CSV', icon: 'download' },
+        ]"
+        (actionClick)="handleHeader($event)"
+      />
+
+      <p class="estimate-banner"><mat-icon>info</mat-icon> Data marked as estimated — demo mode</p>
 
       @if (page.loading()) {
         <app-loading-state />
@@ -33,62 +57,121 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card
-            title="Total cost"
-            [value]="formatCost(summary()?.totalCost)"
-            [subtitle]="summary()?.period ?? 'Current period'"
-            icon="payments"
-          />
-          <app-summary-card
-            title="Currency"
-            [value]="summary()?.currency ?? 'USD'"
-            icon="attach_money"
-          />
-          <app-summary-card
-            title="Daily / Weekly"
-            [value]="formatCost(summary()?.daily) + ' / ' + formatCost(summary()?.weekly)"
-            icon="today"
-          />
-          <app-summary-card
-            title="Forecast"
-            [value]="formatCost(summary()?.forecastMonthly)"
-            [subtitle]="varianceLabel()"
-            icon="trending_up"
-          />
+          <app-summary-card title="Today" [value]="formatCost(summary()?.daily)" icon="today" />
+          <app-summary-card title="This week" [value]="formatCost(summary()?.weekly)" icon="date_range" />
+          <app-summary-card title="This month" [value]="formatCost(summary()?.totalMonthly)" icon="calendar_month" />
+          <app-summary-card title="Forecast" [value]="formatCost(summary()?.forecastMonthly)" icon="trending_up" />
+          <app-summary-card title="Top provider" [value]="topProvider()" icon="cloud" />
+          <app-summary-card title="Cost alerts" [value]="3" icon="warning" iconColor="warn" />
         </div>
-        <app-chart-placeholder label="Cost by provider" />
-        @if (summary()?.byProvider) {
-          <ul class="provider-list">
-            @for (entry of providerEntries(); track entry[0]) {
-              <li>
-                <strong>{{ entry[0] }}</strong>
-                <span>{{ formatCost(entry[1]) }}</span>
-              </li>
-            }
-          </ul>
-        }
+
+        <div class="chart-grid">
+          <app-mini-chart title="Cost by provider" kind="bar" [data]="providerChart()" />
+          <app-mini-chart title="Daily trend" kind="line" [data]="dailyTrend()" />
+          <app-mini-chart title="Forecast" kind="line" [data]="forecastChart()" />
+        </div>
+
+        <mat-tab-group>
+          <mat-tab label="Overview">
+            <div class="tab-panel">
+              <div class="filter-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Search</mat-label>
+                  <input matInput [formControl]="searchControl" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Provider</mat-label>
+                  <mat-select [formControl]="providerControl">
+                    <mat-option value="">All</mat-option>
+                    @for (p of providerKeys(); track p) {
+                      <mat-option [value]="p">{{ p }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+              <table mat-table [dataSource]="filteredRows()" class="full-table">
+                <ng-container matColumnDef="provider">
+                  <th mat-header-cell *matHeaderCellDef>Provider</th>
+                  <td mat-cell *matCellDef="let row">{{ row.provider }}</td>
+                </ng-container>
+                <ng-container matColumnDef="service">
+                  <th mat-header-cell *matHeaderCellDef>Service</th>
+                  <td mat-cell *matCellDef="let row">{{ row.service }}</td>
+                </ng-container>
+                <ng-container matColumnDef="amount">
+                  <th mat-header-cell *matHeaderCellDef>Amount</th>
+                  <td mat-cell *matCellDef="let row">{{ formatCost(row.amount) }}</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="cols"></tr>
+                <tr mat-row *matRowDef="let row; columns: cols"></tr>
+              </table>
+            </div>
+          </mat-tab>
+          @for (tab of ['AWS', 'GCP', 'Azure', 'VPS', 'By instance', 'Forecast', 'Alerts']; track tab) {
+            <mat-tab [label]="tab">
+              <div class="tab-panel">
+                <p>{{ tab }} billing breakdown (demo) — {{ formatCost(tabCost(tab)) }}</p>
+              </div>
+            </mat-tab>
+          }
+        </mat-tab-group>
       }
     </div>
   `,
   styles: `
-    .provider-list {
-      list-style: none;
-      padding: 0;
-      margin-top: 1.5rem;
-      li {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--app-border);
-      }
+    .estimate-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.75rem;
+      background: rgba(245, 158, 11, 0.12);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
     }
+    .full-table { width: 100%; }
   `,
 })
 export class BillingPageComponent implements OnInit {
   private readonly billing = inject(BillingService)
+  private readonly demoActions = inject(DemoActionsService)
 
   readonly page = createPageLoader(true)
   readonly summary = signal<BillingSummary | null>(null)
+  readonly searchControl = new FormControl('', { nonNullable: true })
+  readonly providerControl = new FormControl('', { nonNullable: true })
+  readonly cols = ['provider', 'service', 'amount']
+
+  private readonly searchTerm = toSignal(
+    this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')),
+    { initialValue: '' },
+  )
+  private readonly providerFilter = toSignal(this.providerControl.valueChanges.pipe(startWith('')), {
+    initialValue: '',
+  })
+
+  billingRows = computed(() => {
+    const by = this.summary()?.byProvider ?? {}
+    const rows: { provider: string; service: string; amount: number }[] = []
+    Object.entries(by).forEach(([provider, amount]) => {
+      rows.push({ provider, service: 'compute', amount: amount * 0.6 })
+      rows.push({ provider, service: 'storage', amount: amount * 0.25 })
+      rows.push({ provider, service: 'network', amount: amount * 0.15 })
+    })
+    return rows
+  })
+
+  filteredRows = computed(() => {
+    const term = (this.searchTerm() ?? '').toLowerCase()
+    const prov = this.providerFilter()
+    return this.billingRows().filter((r) => {
+      const matchTerm = !term || r.provider.toLowerCase().includes(term) || r.service.includes(term)
+      const matchProv = !prov || r.provider === prov
+      return matchTerm && matchProv
+    })
+  })
+
+  providerKeys = computed(() => Object.keys(this.summary()?.byProvider ?? {}))
 
   ngOnInit = (): void => this.load()
 
@@ -99,9 +182,42 @@ export class BillingPageComponent implements OnInit {
     })
   }
 
-  providerEntries = (): [string, number][] => {
+  handleHeader = (label: string): void => {
+    if (label === 'Sync billing') {
+      this.demoActions.simulate('Billing sync', 1200, 'Billing data synchronized (estimated)').subscribe(() => this.load())
+      return
+    }
+    this.demoActions.simulate('CSV export', 600, 'billing-export-demo.csv downloaded').subscribe()
+  }
+
+  providerChart = computed(() =>
+    Object.entries(this.summary()?.byProvider ?? {}).map(([label, value]) => ({ label, value })),
+  )
+
+  dailyTrend = (): { label: string; value: number }[] =>
+    ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label, i) => ({
+      label,
+      value: 800 + i * 120 + Math.random() * 200,
+    }))
+
+  forecastChart = (): { label: string; value: number }[] => {
+    const base = this.summary()?.forecastMonthly ?? 5000
+    return ['W1', 'W2', 'W3', 'W4'].map((label, i) => ({ label, value: base * (0.2 + i * 0.05) }))
+  }
+
+  topProvider = (): string => {
     const by = this.summary()?.byProvider ?? {}
-    return Object.entries(by)
+    const entries = Object.entries(by)
+    if (!entries.length) return '—'
+    return entries.sort((a, b) => b[1] - a[1])[0][0]
+  }
+
+  tabCost = (tab: string): number => {
+    const total = this.summary()?.totalMonthly ?? 0
+    if (tab === 'AWS') return (this.summary()?.byProvider?.['AWS'] ?? total * 0.4)
+    if (tab === 'GCP') return (this.summary()?.byProvider?.['GCP'] ?? total * 0.3)
+    if (tab === 'Azure') return (this.summary()?.byProvider?.['AZURE'] ?? total * 0.2)
+    return total * 0.1
   }
 
   formatCost = (value?: number): string => {
@@ -110,12 +226,5 @@ export class BillingPageComponent implements OnInit {
       style: 'currency',
       currency: this.summary()?.currency ?? 'USD',
     }).format(value)
-  }
-
-  varianceLabel = (): string => {
-    const v = this.summary()?.varianceVsPreviousMonth
-    if (v === undefined || v === null) return ''
-    const sign = v >= 0 ? '+' : ''
-    return `${sign}${v.toFixed(1)}% vs last month`
   }
 }
