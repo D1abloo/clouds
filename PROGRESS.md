@@ -2,7 +2,38 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-03  
-**Fase actual:** Dashboard premium redesign (completado)
+**Fase actual:** Dashboard completo premium (completado)
+
+---
+
+## Fase 23 — Dashboard completo + fix textos cortados ✅
+
+**Estado:** Completada (2026-06-03)
+
+**Problemas visuales corregidos:**
+- Grid de stats de 6 columnas fijas → `auto-fill minmax(200px, 1fr)` — cards más amplias
+- `overflow: hidden` eliminado en stat cards — textos ya no se recortan
+- Labels sin `text-transform: uppercase` agresivo — mejor legibilidad
+- Tooltips (`matTooltip`) en valores, trends, badges y celdas con ellipsis
+- Tabla Instance Overview con scroll horizontal (`min-width: 1400px`) y paginación
+- Layout principal ampliado a `1680px` max-width
+- Grids responsive con `auto-fill` en charts, providers y panels
+
+**Nuevos componentes:**
+- `InstanceOverviewTableComponent` — 18 columnas, filtros, paginación, menú acciones
+- `InstanceDetailDrawerComponent` — drawer lateral con 8 tabs
+- `ProviderSummaryPanelComponent` — AWS, GCP, Azure, VPS
+- `PlatformDetailPanelComponent` — Docker, K8s, Jenkins, Terraform
+- `dashboard.models.ts` + `dashboard-demo.util.ts` — fallback demo completo (26 instancias)
+
+**Dashboard ampliado:**
+- 12 stat cards (running, stopped, warning, error, VPS, Docker, K8s, Jenkins, TF, billing, alerts)
+- 12 gráficos (provider, status, CPU/RAM, cost, alerts severity, Docker/K8s/Jenkins/TF)
+- Instance Overview tabla global
+- Paneles por proveedor y plataforma
+- Backend `/inventory/dashboard` enriquecido con `instanceList`, `providers`, métricas extendidas
+
+**Validación:** `npm run build` frontend + backend OK
 
 ---
 

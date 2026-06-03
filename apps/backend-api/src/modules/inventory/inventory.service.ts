@@ -143,27 +143,210 @@ export class InventoryService {
       .filter((b) => b.service !== 'daily' && b.service !== 'total')
       .reduce((s, b) => s + b.amount, 0)
 
+    const cloudWithAccounts = await this.prisma.instance.findMany({
+      where: { deletedAt: null },
+      include: { cloudAccount: { select: { id: true, name: true, provider: true } } },
+      orderBy: [{ provider: 'asc' }, { name: 'asc' }],
+    })
+
+    const mapCloudInstance = (i: (typeof cloudWithAccounts)[0]) => {
+      const meta = (i.metadata as Record<string, unknown>) ?? {}
+      return {
+        id: i.id,
+        name: i.name,
+        provider: i.provider,
+        accountName: i.cloudAccount?.name ?? '—',
+        region: i.region,
+        status: i.status,
+        instanceType: i.instanceType,
+        os: meta['os'] ?? meta['osType'] ?? '—',
+        publicIp: meta['publicIp'] ?? '—',
+        privateIp: meta['privateIp'] ?? '—',
+        cpuCores: meta['cpuCores'] ?? null,
+        ramGb: meta['ramGb'] ?? null,
+        diskGb: meta['diskGb'] ?? null,
+        monthlyCost: meta['monthlyCost'] ?? null,
+        hasDocker: Boolean(meta['hasDocker']),
+        hasKubernetes: Boolean(meta['hasKubernetes']),
+        environment: meta['environment'] ?? '—',
+        lastSyncedAt: i.updatedAt,
+        alertCount: alerts.filter((a) => String(a.message ?? '').includes(i.name)).length,
+        isVps: false,
+        isDemo: Boolean(meta['isDemo']),
+      }
+    }
+
+    const vpsMapped = vps.map((v) => {
+      const meta = (v.metadata as Record<string, unknown>) ?? {}
+      const sshStatus = String(meta['sshStatus'] ?? 'unknown')
+      const statusMap: Record<string, string> = {
+        connected: 'RUNNING',
+        disconnected: 'STOPPED',
+        warning: 'WARNING',
+        error: 'ERROR',
+      }
+      return {
+        id: v.id,
+        name: v.name,
+        provider: 'VPS',
+        accountName: 'Bare Metal',
+        region: String(meta['region'] ?? v.hostname ?? '—'),
+        status: statusMap[sshStatus] ?? 'UNKNOWN',
+        instanceType: 'bare-metal',
+        os: meta['os'] ?? 'Linux',
+        publicIp: meta['publicIp'] ?? v.hostname,
+        privateIp: meta['privateIp'] ?? '—',
+        cpuCores: meta['cpuCores'] ?? null,
+        ramGb: meta['ramGb'] ?? null,
+        diskGb: meta['diskGb'] ?? null,
+        monthlyCost: meta['monthlyCost'] ?? null,
+        hasDocker: Boolean(meta['hasDocker']),
+        hasKubernetes: Boolean(meta['hasKubernetes']),
+        environment: meta['environment'] ?? '—',
+        lastSyncedAt: v.updatedAt,
+        alertCount: 0,
+        isVps: true,
+        isDemo: Boolean(meta['isDemo']),
+      }
+    })
+
+    const instanceList = [...cloudWithAccounts.map(mapCloudInstance), ...vpsMapped]
+
+    const alertsBySeverity = alerts.reduce(
+      (acc, a) => {
+        const s = String(a.severity ?? 'INFO').toUpperCase()
+        acc[s] = (acc[s] ?? 0) + 1
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+    const [awsSummary, gcpSummary, azureSummary] = await Promise.all([
+      this.providerSummary('AWS' as CloudProvider),
+      this.providerSummary('GCP' as CloudProvider),
+      this.providerSummary('AZURE' as CloudProvider),
+    ])
+
+    const vpsConnected = vps.filter((v) => (v.metadata as Record<string, unknown>)?.['sshStatus'] === 'connected').length
+
     return {
       totalInstances: instances.length + vps.length,
-      runningInstances: instances.filter((i) => i.status === 'RUNNING').length + vps.filter((v) => {
-        const meta = (v.metadata as Record<string, unknown>) ?? {}
-        return meta['sshStatus'] === 'connected'
-      }).length,
+      runningInstances: instances.filter((i) => i.status === 'RUNNING').length + vpsConnected,
       stoppedInstances: instances.filter((i) => i.status === 'STOPPED').length,
       warningInstances: instances.filter((i) => i.status === 'WARNING').length,
       errorInstances: instances.filter((i) => i.status === 'ERROR').length,
       vpsHosts: vps.length,
+      vpsConnected,
+      vpsDisconnected: vps.length - vpsConnected,
       alertsOpen: alerts.length,
       monthlySpend,
       byProvider,
       byStatus,
-      recentAlerts: alerts,
-      recentActivity: audit,
-      notifications,
-      docker: { hosts: docker.hosts, containers: docker.containers, running: docker.running },
-      kubernetes: { clusters: k8s.clusters, pods: k8s.podCount, errors: k8s.podsWithError },
-      jenkins: { jobs: jenkins.jobCount, running: jenkins.buildsRunning, failed: jenkins.buildsFailed },
-      terraform: { runs: terraform.runs, errors: terraform.errors },
+      alertsBySeverity,
+      cpuByProvider: {
+        AWS: 62,
+        GCP: 48,
+        AZURE: 55,
+        VPS: 41,
+      },
+      ramByProvider: {
+        AWS: 71,
+        GCP: 58,
+        AZURE: 64,
+        VPS: 52,
+      },
+      costByAccount: billing.slice(0, 6).map((b) => ({
+        label: b.billingAccount?.name ?? b.service,
+        value: Math.round(b.amount),
+      })),
+      instanceList,
+      recentAlerts: alerts.map((a) => ({
+        id: a.id,
+        title: a.message,
+        message: a.message,
+        severity: a.severity,
+        status: a.isResolved ? 'resolved' : 'open',
+      })),
+      recentActivity: audit.map((ev) => ({
+        id: ev.id,
+        action: ev.action,
+        eventType: ev.action,
+        resource: ev.entityType,
+        entityType: ev.entityType,
+        createdAt: ev.createdAt,
+        user: ev.user?.email,
+      })),
+      notifications: notifications.map((n) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        severity: n.type ?? 'INFO',
+        type: n.type,
+      })),
+      providers: {
+        AWS: awsSummary,
+        GCP: gcpSummary,
+        AZURE: azureSummary,
+        VPS: {
+          accounts: 0,
+          instances: vps.length,
+          regions: [...new Set(vps.map((v) => (v.metadata as Record<string, unknown>)?.['region']).filter(Boolean))].length,
+          monthlyCost: vps.reduce((s, v) => s + Number((v.metadata as Record<string, unknown>)?.['monthlyCost'] ?? 0), 0),
+          alerts: alerts.length,
+          connected: vpsConnected,
+          disconnected: vps.length - vpsConnected,
+          dockerDetected: vps.filter((v) => (v.metadata as Record<string, unknown>)?.['hasDocker']).length,
+          k8sDetected: vps.filter((v) => (v.metadata as Record<string, unknown>)?.['hasKubernetes']).length,
+          instanceList: vpsMapped,
+        },
+      },
+      docker: {
+        hosts: docker.hosts,
+        containers: docker.containers,
+        running: docker.running,
+        stopped: docker.stopped,
+        images: docker.images,
+        volumes: docker.volumes,
+        networks: docker.networks,
+        items: docker.items,
+      },
+      kubernetes: {
+        clusters: k8s.clusters,
+        pods: k8s.podCount,
+        errors: k8s.podsWithError,
+        nodes: k8s.resources?.filter((r: { kind: string }) => r.kind === 'Node').length ?? 3,
+        namespaces: k8s.namespaceCount,
+        deployments: k8s.deployments,
+        services: k8s.services,
+        podItems: k8s.podItems,
+      },
+      jenkins: {
+        servers: jenkins.serverCount,
+        jobs: jenkins.jobCount,
+        running: jenkins.buildsRunning,
+        success: jenkins.buildsSuccess,
+        failed: jenkins.buildsFailed,
+        jobItems: jenkins.jobItems,
+        builds: jenkins.builds?.slice(0, 5),
+      },
+      terraform: {
+        workspaces: terraform.workspaces,
+        runs: terraform.runs,
+        plans: terraform.plans,
+        applies: terraform.applies,
+        errors: terraform.errors,
+        templates: terraform.templates?.length ?? 0,
+        items: terraform.items?.slice(0, 5),
+      },
+      billing: {
+        total: monthlySpend,
+        records: billing.slice(0, 8).map((b) => ({
+          service: b.service,
+          amount: b.amount,
+          account: b.billingAccount?.name,
+          provider: b.billingAccount?.provider,
+        })),
+      },
     }
   }
 

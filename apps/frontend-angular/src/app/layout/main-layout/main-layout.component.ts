@@ -45,7 +45,7 @@ import { RealtimeService } from '../../core/services/realtime.service'
     .layout-content {
       flex: 1;
       padding: 1.25rem 1.5rem 2rem;
-      max-width: 1480px;
+      max-width: min(100%, 1680px);
       width: 100%;
       margin: 0 auto;
     }

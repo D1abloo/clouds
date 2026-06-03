@@ -1,9 +1,11 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable, catchError, of } from 'rxjs'
+import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { CloudProvider } from '../models/api.models'
 import { DockerService } from './docker.service'
 import { KubernetesService } from './kubernetes.service'
+import { buildDemoDashboard } from '../../features/dashboard/utils/dashboard-demo.util'
+import { DashboardData } from '../../features/dashboard/dashboard.models'
 
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
@@ -11,10 +13,13 @@ export class InventoryService {
   private readonly dockerApi = inject(DockerService)
   private readonly kubernetesApi = inject(KubernetesService)
 
-  dashboard = (): Observable<Record<string, unknown>> =>
+  dashboard = (): Observable<DashboardData> =>
     this.api
-      .get<Record<string, unknown>>('inventory/dashboard')
-      .pipe(catchError((): Observable<Record<string, unknown>> => of(this.fallbackDashboard())))
+      .get<DashboardData>('inventory/dashboard')
+      .pipe(
+        map((data) => this.mergeDashboard(data)),
+        catchError((): Observable<DashboardData> => of(buildDemoDashboard())),
+      )
 
   docker = (): Observable<Record<string, unknown>> =>
     this.dockerApi.pageData().pipe(
@@ -41,15 +46,9 @@ export class InventoryService {
       .get<Record<string, unknown>>(`inventory/provider/${p}`)
       .pipe(catchError((): Observable<Record<string, unknown>> => of({ accounts: 0, instanceList: [] })))
 
-  private fallbackDashboard = (): Record<string, unknown> => ({
-    totalInstances: 0,
-    runningInstances: 0,
-    monthlySpend: 0,
-    alertsOpen: 0,
-    byProvider: {},
-    byStatus: {},
-    recentAlerts: [],
-    recentActivity: [],
-    notifications: [],
-  })
+  private mergeDashboard = (data: DashboardData): DashboardData => {
+    const demo = buildDemoDashboard()
+    if ((data.instanceList?.length ?? 0) > 0) return data
+    return { ...demo, ...data, instanceList: demo.instanceList }
+  }
 }
