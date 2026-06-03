@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core'
+import { finalize } from 'rxjs'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
@@ -8,6 +9,8 @@ import { MatTabsModule } from '@angular/material/tabs'
 import { DiscoveryService } from '../../core/services/discovery.service'
 import { ToastService } from '../../core/services/toast.service'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 
 @Component({
   selector: 'app-kubernetes-page',
@@ -20,6 +23,8 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
     MatIconModule,
     MatTabsModule,
     LoadingStateComponent,
+    ErrorStateComponent,
+    EmptyStateComponent,
   ],
   template: `
     <div class="page-container">
@@ -56,8 +61,15 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
 
         @if (loading()) {
           <app-loading-state />
+        } @else if (discoverError()) {
+          <app-error-state [message]="discoverError()!" (retry)="handleRetry()" />
         } @else if (result()) {
           <pre class="result mono">{{ result() }}</pre>
+        } @else {
+          <app-empty-state
+            title="No discovery results"
+            description="Enter a host reference (e.g. demo-vps-001) and run discovery."
+          />
         }
       </div>
     </div>
@@ -80,29 +92,33 @@ export class KubernetesPageComponent {
 
   readonly hostRef = new FormControl('', { nonNullable: true })
   readonly loading = signal(false)
+  readonly discoverError = signal<string | null>(null)
   readonly result = signal<string | null>(null)
+  private lastMode: 'k8s' | 'system' = 'k8s'
 
   handleK8s = (): void => this.runDiscovery('k8s')
   handleSystem = (): void => this.runDiscovery('system')
+  handleRetry = (): void => this.runDiscovery(this.lastMode)
 
   private runDiscovery = (mode: 'k8s' | 'system'): void => {
     const ref = this.hostRef.value.trim()
     if (!ref) return
+    this.lastMode = mode
     this.loading.set(true)
+    this.discoverError.set(null)
     this.result.set(null)
     const obs =
       mode === 'k8s'
         ? this.discovery.discoverKubernetes(ref)
         : this.discovery.discoverSystem(ref)
-    obs.subscribe({
+    obs.pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (data) => {
         this.result.set(JSON.stringify(data, null, 2))
-        this.loading.set(false)
         this.toast.success('Discovery completed')
       },
       error: () => {
+        this.discoverError.set('Discovery failed. Use a valid VPS id (e.g. demo-vps-001).')
         this.toast.error('Discovery failed')
-        this.loading.set(false)
       },
     })
   }

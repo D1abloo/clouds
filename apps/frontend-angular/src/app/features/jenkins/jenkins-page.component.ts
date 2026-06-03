@@ -14,6 +14,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { ToastService } from '../../core/services/toast.service'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-jenkins-page',
@@ -45,10 +46,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
           </mat-form-field>
         </div>
 
-        @if (loading()) {
+        @if (page.loading()) {
           <app-loading-state />
-        } @else if (error()) {
-          <app-error-state [message]="error()!" (retry)="load()" />
+        } @else if (page.error()) {
+          <app-error-state [message]="page.error()!" (retry)="load()" />
         } @else if (filtered().length === 0) {
           <app-empty-state
             title="No Jenkins servers"
@@ -105,8 +106,7 @@ export class JenkinsPageComponent implements OnInit {
     { initialValue: '' },
   )
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly servers = signal<JenkinsServer[]>([])
   readonly cols = ['name', 'url', 'status', 'actions']
 
@@ -123,16 +123,9 @@ export class JenkinsPageComponent implements OnInit {
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.service.listServers().subscribe({
-      next: (data) => {
-        this.servers.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load Jenkins servers')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.listServers(), {
+      onSuccess: (data) => this.servers.set(data),
+      errorMessage: 'Failed to load Jenkins servers',
     })
   }
 

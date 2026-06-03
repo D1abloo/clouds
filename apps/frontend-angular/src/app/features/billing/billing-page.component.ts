@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { BillingService } from '../../core/services/billing.service'
 import { BillingSummary } from '../../core/models/api.models'
+import { createPageLoader } from '../../core/utils/page-load.util'
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { ChartPlaceholderComponent } from '../../shared/components/chart-placeholder/chart-placeholder.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
@@ -26,10 +27,10 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
         <p>Cloud spend summary and cost sync</p>
       </header>
 
-      @if (loading()) {
+      @if (page.loading()) {
         <app-loading-state />
-      } @else if (error()) {
-        <app-error-state [message]="error()!" (retry)="load()" />
+      } @else if (page.error()) {
+        <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
           <app-summary-card
@@ -75,23 +76,15 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 export class BillingPageComponent implements OnInit {
   private readonly billing = inject(BillingService)
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly summary = signal<BillingSummary | null>(null)
 
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.billing.summary().subscribe({
-      next: (data) => {
-        this.summary.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load billing summary')
-        this.loading.set(false)
-      },
+    this.page.run(this.billing.summary(), {
+      onSuccess: (data) => this.summary.set(data),
+      errorMessage: 'Failed to load billing summary',
     })
   }
 

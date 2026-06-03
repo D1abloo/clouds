@@ -2,7 +2,7 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Fase Demo Completa completada
+**Fase actual:** Bugfix loaders infinitos (completado)
 
 ---
 
@@ -214,6 +214,27 @@ Plan maestro: `prompts_cursor_por_fases.md`
 5. Re-ejecución tests (8/8 pass)
 
 **Flujo mental verificado:** login → cuentas cloud → instancias → VPS → SSH → discovery → Jenkins → Terraform → métricas → billing → alertas
+
+---
+
+## Bugfix — Loaders infinitos en Angular ✅
+
+**Estado:** Completado
+
+**Causas corregidas:**
+- Audit API devolvía `{ data: [] }` y el frontend trataba el objeto como array → error en `computed` / UI bloqueada
+- Billing, alerts y notifications con campos distintos al contrato del frontend
+- Rutas AWS/GCP/Azure e instance detail no recargaban al cambiar parámetros (`route.data` / `paramMap`)
+- HTTP sin timeout ni `finalize` → loading podía quedar activo tras error o navegación rápida
+- Discovery Docker/K8s apuntaba a URLs incorrectas
+
+**Cambios:**
+- `createPageLoader()` con `finalize` en todas las pantallas de datos
+- `unwrapList()` y mapeos en servicios (audit, billing, alerts, notifications, dashboard)
+- Timeout 20s en `ApiClientService`
+- Suscripción a `route.data` / `paramMap` en cloud accounts, instance detail, terminal
+- Estados vacío y error con reintentar en Docker, K8s y Terminal
+- Backend metrics: campos `cloudAccounts`, `vpsHosts`, `monthlySpend` alineados con dashboard
 
 ---
 

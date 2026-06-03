@@ -1,14 +1,17 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable } from 'rxjs'
+import { Observable, map } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { CloudAccount, CloudProvider } from '../models/api.models'
+import { unwrapList } from '../utils/api-response.util'
 
 @Injectable({ providedIn: 'root' })
 export class CloudAccountsService {
   private readonly api = inject(ApiClientService)
 
   list = (projectId?: string): Observable<CloudAccount[]> =>
-    this.api.get<CloudAccount[]>('cloud-accounts', { projectId })
+    this.api
+      .get<unknown>('cloud-accounts', { projectId })
+      .pipe(map((res) => unwrapList<CloudAccount>(res)))
 
   listByProvider = (
     provider: CloudProvider,

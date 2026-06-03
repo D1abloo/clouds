@@ -15,6 +15,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-instances-list',
@@ -57,10 +58,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
           </mat-form-field>
         </div>
 
-        @if (loading()) {
+        @if (page.loading()) {
           <app-loading-state />
-        } @else if (error()) {
-          <app-error-state [message]="error()!" (retry)="load()" />
+        } @else if (page.error()) {
+          <app-error-state [message]="page.error()!" (retry)="load()" />
         } @else if (filtered().length === 0) {
           <app-empty-state
             title="No instances found"
@@ -119,8 +120,7 @@ export class InstancesListComponent implements OnInit {
     { initialValue: '' },
   )
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly instances = signal<Instance[]>([])
   readonly cols = ['name', 'provider', 'region', 'status', 'type']
 
@@ -140,37 +140,9 @@ export class InstancesListComponent implements OnInit {
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.error.set(null)
-    this.service.list().subscribe({
-      next: (data) => {
-        const list = Array.isArray(data) ? data : this.flattenGrouped(data)
-        this.instances.set(list)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load instances')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.list(), {
+      onSuccess: (data) => this.instances.set(data),
+      errorMessage: 'Failed to load instances',
     })
-  }
-
-  private flattenGrouped = (data: Record<string, unknown>): Instance[] => {
-    const result: Instance[] = []
-    const walk = (node: unknown): void => {
-      if (Array.isArray(node)) {
-        node.forEach((item) => {
-          if (item && typeof item === 'object' && 'id' in item) {
-            result.push(item as Instance)
-          } else {
-            walk(item)
-          }
-        })
-      } else if (node && typeof node === 'object') {
-        Object.values(node).forEach(walk)
-      }
-    }
-    walk(data)
-    return result
   }
 }

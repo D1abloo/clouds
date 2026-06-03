@@ -7,11 +7,11 @@ export class DiscoveryService {
   private readonly api = inject(ApiClientService)
 
   discoverDocker = (hostRef: string): Observable<unknown> =>
-    this.api.post(`docker-discovery/${hostRef}`)
+    this.api.post(`discovery/docker/${hostRef}`)
 
   discoverKubernetes = (hostRef: string): Observable<unknown> =>
-    this.api.post(`kubernetes-discovery/kubernetes/${hostRef}`)
+    this.api.post(`discovery/kubernetes/${hostRef}`)
 
   discoverSystem = (hostRef: string): Observable<unknown> =>
-    this.api.post(`kubernetes-discovery/system/${hostRef}`)
+    this.api.post(`discovery/system/${hostRef}`)
 }

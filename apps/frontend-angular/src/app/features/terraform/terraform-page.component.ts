@@ -9,6 +9,7 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { ToastService } from '../../core/services/toast.service'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-terraform-page',
@@ -31,10 +32,10 @@ import { ToastService } from '../../core/services/toast.service'
 
       <mat-tab-group>
         <mat-tab label="Templates">
-          @if (loading()) {
+          @if (page.loading()) {
             <app-loading-state />
-          } @else if (error()) {
-            <app-error-state [message]="error()!" (retry)="load()" />
+          } @else if (page.error()) {
+            <app-error-state [message]="page.error()!" (retry)="load()" />
           } @else if (templates().length === 0) {
             <app-empty-state
               title="No templates"
@@ -76,24 +77,16 @@ export class TerraformPageComponent implements OnInit {
   private readonly service = inject(TerraformService)
   private readonly toast = inject(ToastService)
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly templates = signal<TerraformTemplate[]>([])
   readonly cols = ['name', 'provider']
 
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.service.listTemplates().subscribe({
-      next: (data) => {
-        this.templates.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load Terraform templates')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.listTemplates(), {
+      onSuccess: (data) => this.templates.set(data),
+      errorMessage: 'Failed to load Terraform templates',
     })
   }
 }

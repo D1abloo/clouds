@@ -26,11 +26,13 @@ export class MetricsService {
   }
 
   async getDashboardStats() {
-    const [instances, vps, alerts, samples] = await Promise.all([
+    const [instances, vps, alerts, samples, cloudAccounts, billingAgg] = await Promise.all([
       this.prisma.instance.groupBy({ by: ['status'], _count: true, where: { deletedAt: null } }),
       this.prisma.vpsServer.count({ where: { deletedAt: null, isActive: true } }),
       this.prisma.alert.count({ where: { isResolved: false } }),
       this.prisma.metricSample.findMany({ orderBy: { recordedAt: 'desc' }, take: 50 }),
+      this.prisma.cloudAccount.count({ where: { deletedAt: null } }),
+      this.prisma.billingRecord.aggregate({ _sum: { amount: true } }),
     ])
 
     const running = instances.find((i) => i.status === 'RUNNING')?._count ?? 0
@@ -41,13 +43,18 @@ export class MetricsService {
     const ramSamples = samples.filter((s) => s.metricType === 'ram')
     const avgCpu = cpuSamples.length ? cpuSamples.reduce((s, x) => s + x.value, 0) / cpuSamples.length : 0
     const avgRam = ramSamples.length ? ramSamples.reduce((s, x) => s + x.value, 0) / ramSamples.length : 0
+    const monthlySpend = billingAgg._sum.amount ?? 0
 
     return {
       totalInstances: total,
       runningInstances: running,
       stoppedInstances: stopped,
+      cloudAccounts,
+      vpsHosts: vps,
       activeVps: vps,
+      alertsOpen: alerts,
       activeAlerts: alerts,
+      monthlySpend,
       avgCpu,
       avgRam,
       dockerHosts: await this.prisma.dockerHost.count(),

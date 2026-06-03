@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, RouterLink } from '@angular/router'
 import { MatCardModule } from '@angular/material/card'
 import { MatButtonModule } from '@angular/material/button'
@@ -15,6 +16,7 @@ import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../shared/components/confirm-dialog/confirm-dialog.component'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-instance-detail',
@@ -31,10 +33,10 @@ import {
   ],
   template: `
     <div class="page-container">
-      @if (loading()) {
+      @if (page.loading()) {
         <app-loading-state />
-      } @else if (error()) {
-        <app-error-state [message]="error()!" (retry)="load()" />
+      } @else if (page.error()) {
+        <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else if (instance()) {
         <header class="page-header detail-header">
           <div>
@@ -116,34 +118,29 @@ export class InstanceDetailComponent implements OnInit {
   private readonly service = inject(InstancesService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly destroyRef = inject(DestroyRef)
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly instance = signal<Instance | null>(null)
 
   private instanceId = ''
 
   ngOnInit = (): void => {
-    this.instanceId = this.route.snapshot.paramMap.get('id') ?? ''
-    this.load()
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.instanceId = params.get('id') ?? ''
+      this.load()
+    })
   }
 
   load = (): void => {
     if (!this.instanceId) {
-      this.error.set('Invalid instance ID')
-      this.loading.set(false)
+      this.page.error.set('Invalid instance ID')
+      this.page.loading.set(false)
       return
     }
-    this.loading.set(true)
-    this.service.getOne(this.instanceId).subscribe({
-      next: (data) => {
-        this.instance.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Instance not found')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.getOne(this.instanceId), {
+      onSuccess: (data) => this.instance.set(data),
+      errorMessage: 'Instance not found',
     })
   }
 

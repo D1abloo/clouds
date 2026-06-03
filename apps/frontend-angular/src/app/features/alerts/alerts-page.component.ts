@@ -15,6 +15,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { ToastService } from '../../core/services/toast.service'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-alerts-page',
@@ -47,10 +48,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
           </mat-form-field>
         </div>
 
-        @if (loading()) {
+        @if (page.loading()) {
           <app-loading-state />
-        } @else if (error()) {
-          <app-error-state [message]="error()!" (retry)="load()" />
+        } @else if (page.error()) {
+          <app-error-state [message]="page.error()!" (retry)="load()" />
         } @else if (filtered().length === 0) {
           <app-empty-state
             icon="check_circle"
@@ -111,8 +112,7 @@ export class AlertsPageComponent implements OnInit {
     { initialValue: '' },
   )
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly alerts = signal<AlertItem[]>([])
   readonly cols = ['title', 'severity', 'status', 'createdAt', 'actions']
 
@@ -121,7 +121,7 @@ export class AlertsPageComponent implements OnInit {
     return this.alerts().filter(
       (a) =>
         !term ||
-        a.title.toLowerCase().includes(term) ||
+        (a.title ?? '').toLowerCase().includes(term) ||
         a.severity.toLowerCase().includes(term),
     )
   })
@@ -129,16 +129,9 @@ export class AlertsPageComponent implements OnInit {
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.service.list().subscribe({
-      next: (data) => {
-        this.alerts.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load alerts')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.list(), {
+      onSuccess: (data) => this.alerts.set(data),
+      errorMessage: 'Failed to load alerts',
     })
   }
 

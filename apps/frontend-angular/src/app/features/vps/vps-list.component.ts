@@ -15,6 +15,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { ToastService } from '../../core/services/toast.service'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-vps-list',
@@ -47,10 +48,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
           </mat-form-field>
         </div>
 
-        @if (loading()) {
+        @if (page.loading()) {
           <app-loading-state />
-        } @else if (error()) {
-          <app-error-state [message]="error()!" (retry)="load()" />
+        } @else if (page.error()) {
+          <app-error-state [message]="page.error()!" (retry)="load()" />
         } @else if (filtered().length === 0) {
           <app-empty-state
             title="No VPS hosts"
@@ -114,8 +115,7 @@ export class VpsListComponent implements OnInit {
     { initialValue: '' },
   )
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly hosts = signal<VpsHost[]>([])
   readonly cols = ['name', 'host', 'port', 'status', 'actions']
 
@@ -132,16 +132,9 @@ export class VpsListComponent implements OnInit {
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.service.list().subscribe({
-      next: (data) => {
-        this.hosts.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load VPS hosts')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.list(), {
+      onSuccess: (data) => this.hosts.set(data),
+      errorMessage: 'Failed to load VPS hosts',
     })
   }
 

@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
+import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute } from '@angular/router'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatSelectModule } from '@angular/material/select'
@@ -8,6 +9,9 @@ import { TerminalPlaceholderComponent } from '../../shared/components/terminal-p
 import { VpsService } from '../../core/services/vps.service'
 import { VpsHost } from '../../core/models/api.models'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
+import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-terminal-page',
@@ -19,6 +23,8 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
     MatButtonModule,
     TerminalPlaceholderComponent,
     LoadingStateComponent,
+    ErrorStateComponent,
+    EmptyStateComponent,
   ],
   template: `
     <div class="page-container">
@@ -27,8 +33,15 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
         <p>Secure shell sessions to VPS hosts</p>
       </header>
 
-      @if (loading()) {
+      @if (page.loading()) {
         <app-loading-state message="Loading hosts..." />
+      } @else if (page.error()) {
+        <app-error-state [message]="page.error()!" (retry)="loadHosts()" />
+      } @else if (hosts().length === 0) {
+        <app-empty-state
+          title="No VPS hosts"
+          description="Add a VPS host or run npm run seed:demo to load demo data."
+        />
       } @else {
         <div class="terminal-controls">
           <mat-form-field appearance="outline">
@@ -61,21 +74,25 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
 export class TerminalPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly vps = inject(VpsService)
+  private readonly destroyRef = inject(DestroyRef)
 
   readonly hostControl = new FormControl('', { nonNullable: true })
-  readonly loading = signal(true)
+  readonly page = createPageLoader(true)
   readonly hosts = signal<VpsHost[]>([])
 
   ngOnInit = (): void => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadHosts())
+  }
+
+  loadHosts = (): void => {
     const routeId = this.route.snapshot.paramMap.get('vpsId')
-    this.vps.list().subscribe({
-      next: (data) => {
+    this.page.run(this.vps.list(), {
+      onSuccess: (data) => {
         this.hosts.set(data)
         const initial = routeId ?? data[0]?.id ?? ''
         this.hostControl.setValue(initial)
-        this.loading.set(false)
       },
-      error: () => this.loading.set(false),
+      errorMessage: 'Failed to load VPS hosts for terminal',
     })
   }
 

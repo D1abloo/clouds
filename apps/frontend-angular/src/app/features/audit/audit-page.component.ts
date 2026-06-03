@@ -11,6 +11,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-audit-page',
@@ -40,10 +41,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
           </mat-form-field>
         </div>
 
-        @if (loading()) {
+        @if (page.loading()) {
           <app-loading-state />
-        } @else if (error()) {
-          <app-error-state [message]="error()!" (retry)="load()" />
+        } @else if (page.error()) {
+          <app-error-state [message]="page.error()!" (retry)="load()" />
         } @else if (filtered().length === 0) {
           <app-empty-state title="No audit entries" />
         } @else {
@@ -87,8 +88,7 @@ export class AuditPageComponent implements OnInit {
     { initialValue: '' },
   )
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly logs = signal<AuditLog[]>([])
   readonly cols = ['action', 'resource', 'ipAddress', 'createdAt']
 
@@ -105,16 +105,9 @@ export class AuditPageComponent implements OnInit {
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.service.list().subscribe({
-      next: (data) => {
-        this.logs.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load audit log')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.list(), {
+      onSuccess: (data) => this.logs.set(data),
+      errorMessage: 'Failed to load audit log',
     })
   }
 }

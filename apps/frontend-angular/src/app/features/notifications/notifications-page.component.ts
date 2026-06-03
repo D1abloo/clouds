@@ -9,6 +9,7 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { ToastService } from '../../core/services/toast.service'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-notifications-page',
@@ -29,10 +30,10 @@ import { ToastService } from '../../core/services/toast.service'
         <p>System and operational notifications</p>
       </header>
 
-      @if (loading()) {
+      @if (page.loading()) {
         <app-loading-state />
-      } @else if (error()) {
-        <app-error-state [message]="error()!" (retry)="load()" />
+      } @else if (page.error()) {
+        <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else if (items().length === 0) {
         <app-empty-state
           icon="notifications_none"
@@ -80,23 +81,15 @@ export class NotificationsPageComponent implements OnInit {
   private readonly service = inject(NotificationsService)
   private readonly toast = inject(ToastService)
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly items = signal<NotificationItem[]>([])
 
   ngOnInit = (): void => this.load()
 
   load = (): void => {
-    this.loading.set(true)
-    this.service.list().subscribe({
-      next: (data) => {
-        this.items.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load notifications')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.list(), {
+      onSuccess: (data) => this.items.set(data),
+      errorMessage: 'Failed to load notifications',
     })
   }
 

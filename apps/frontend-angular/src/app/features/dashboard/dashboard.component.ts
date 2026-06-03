@@ -8,6 +8,7 @@ import { LoadingStateComponent } from '../../shared/components/loading-state/loa
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { DashboardService } from '../../core/services/dashboard.service'
 import { DashboardStats } from '../../core/models/api.models'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-dashboard',
@@ -28,10 +29,10 @@ import { DashboardStats } from '../../core/models/api.models'
         <p>Overview of your cloud infrastructure and operations</p>
       </header>
 
-      @if (loading()) {
+      @if (page.loading()) {
         <app-loading-state message="Loading dashboard metrics..." />
-      } @else if (error()) {
-        <app-error-state [message]="error()!" (retry)="loadData()" />
+      } @else if (page.error()) {
+        <app-error-state [message]="page.error()!" (retry)="loadData()" />
       } @else {
         <div class="summary-grid">
           <app-summary-card
@@ -99,24 +100,15 @@ import { DashboardStats } from '../../core/models/api.models'
 export class DashboardComponent implements OnInit {
   private readonly dashboard = inject(DashboardService)
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly stats = signal<DashboardStats | null>(null)
 
   ngOnInit = (): void => this.loadData()
 
   loadData = (): void => {
-    this.loading.set(true)
-    this.error.set(null)
-    this.dashboard.getStats().subscribe({
-      next: (data) => {
-        this.stats.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Could not reach the metrics API at /api/v1/metrics/dashboard')
-        this.loading.set(false)
-      },
+    this.page.run(this.dashboard.getStats(), {
+      onSuccess: (data) => this.stats.set(data),
+      errorMessage: 'Could not reach the metrics API at /api/v1/metrics/dashboard',
     })
   }
 

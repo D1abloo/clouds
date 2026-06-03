@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute } from '@angular/router'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatTableModule } from '@angular/material/table'
@@ -21,6 +22,7 @@ import {
 } from '../../shared/components/confirm-dialog/confirm-dialog.component'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { createPageLoader } from '../../core/utils/page-load.util'
 
 @Component({
   selector: 'app-cloud-accounts-page',
@@ -59,10 +61,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
           </button>
         </div>
 
-        @if (loading()) {
+        @if (page.loading()) {
           <app-loading-state />
-        } @else if (error()) {
-          <app-error-state [message]="error()!" (retry)="loadAccounts()" />
+        } @else if (page.error()) {
+          <app-error-state [message]="page.error()!" (retry)="loadAccounts()" />
         } @else if (filteredAccounts().length === 0) {
           <app-empty-state
             icon="cloud_off"
@@ -130,6 +132,7 @@ import { toSignal } from '@angular/core/rxjs-interop'
 export class CloudAccountsPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly service = inject(CloudAccountsService)
+  private readonly destroyRef = inject(DestroyRef)
 
   provider: CloudProvider = 'AWS'
   title = 'Cloud Accounts'
@@ -142,8 +145,7 @@ export class CloudAccountsPageComponent implements OnInit {
     { initialValue: '' },
   )
 
-  readonly loading = signal(true)
-  readonly error = signal<string | null>(null)
+  readonly page = createPageLoader(true)
   readonly accounts = signal<CloudAccount[]>([])
   readonly displayedColumns = ['name', 'accountId', 'provider', 'status', 'actions']
 
@@ -163,23 +165,17 @@ export class CloudAccountsPageComponent implements OnInit {
   })
 
   ngOnInit = (): void => {
-    this.provider = this.route.snapshot.data['provider'] as CloudProvider
-    this.title = this.route.snapshot.data['title'] as string
-    this.loadAccounts()
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
+      this.provider = data['provider'] as CloudProvider
+      this.title = data['title'] as string
+      this.loadAccounts()
+    })
   }
 
   loadAccounts = (): void => {
-    this.loading.set(true)
-    this.error.set(null)
-    this.service.list().subscribe({
-      next: (data) => {
-        this.accounts.set(data)
-        this.loading.set(false)
-      },
-      error: () => {
-        this.error.set('Failed to load cloud accounts from the API')
-        this.loading.set(false)
-      },
+    this.page.run(this.service.list(), {
+      onSuccess: (data) => this.accounts.set(data),
+      errorMessage: 'Failed to load cloud accounts from the API',
     })
   }
 

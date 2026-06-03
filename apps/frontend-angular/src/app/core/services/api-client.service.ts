@@ -1,7 +1,9 @@
 import { Injectable, inject } from '@angular/core'
 import { HttpClient, HttpParams } from '@angular/common/http'
-import { Observable } from 'rxjs'
+import { Observable, timeout } from 'rxjs'
 import { environment } from '../../../environments/environment'
+
+const REQUEST_TIMEOUT_MS = 20_000
 
 @Injectable({ providedIn: 'root' })
 export class ApiClientService {
@@ -9,25 +11,35 @@ export class ApiClientService {
   private readonly baseUrl = environment.apiUrl
 
   get<T>(path: string, params?: Record<string, string | undefined>): Observable<T> {
-    return this.http.get<T>(`${this.baseUrl}/${path}`, {
-      params: this.buildParams(params),
-    })
+    return this.http
+      .get<T>(`${this.baseUrl}/${path}`, {
+        params: this.buildParams(params),
+      })
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
   }
 
   post<T>(path: string, body?: unknown): Observable<T> {
-    return this.http.post<T>(`${this.baseUrl}/${path}`, body ?? {})
+    return this.http
+      .post<T>(`${this.baseUrl}/${path}`, body ?? {})
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
   }
 
   put<T>(path: string, body?: unknown): Observable<T> {
-    return this.http.put<T>(`${this.baseUrl}/${path}`, body ?? {})
+    return this.http
+      .put<T>(`${this.baseUrl}/${path}`, body ?? {})
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
   }
 
   patch<T>(path: string, body?: unknown): Observable<T> {
-    return this.http.patch<T>(`${this.baseUrl}/${path}`, body ?? {})
+    return this.http
+      .patch<T>(`${this.baseUrl}/${path}`, body ?? {})
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
   }
 
   delete<T>(path: string): Observable<T> {
-    return this.http.delete<T>(`${this.baseUrl}/${path}`)
+    return this.http
+      .delete<T>(`${this.baseUrl}/${path}`)
+      .pipe(timeout(REQUEST_TIMEOUT_MS))
   }
 
   private buildParams(

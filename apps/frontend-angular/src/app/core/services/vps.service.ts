@@ -1,13 +1,15 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable } from 'rxjs'
+import { Observable, map } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { VpsHost } from '../models/api.models'
+import { unwrapList } from '../utils/api-response.util'
 
 @Injectable({ providedIn: 'root' })
 export class VpsService {
   private readonly api = inject(ApiClientService)
 
-  list = (): Observable<VpsHost[]> => this.api.get<VpsHost[]>('vps')
+  list = (): Observable<VpsHost[]> =>
+    this.api.get<unknown>('vps').pipe(map((res) => unwrapList<VpsHost>(res)))
 
   getOne = (id: string): Observable<VpsHost> =>
     this.api.get<VpsHost>(`vps/${id}`)
