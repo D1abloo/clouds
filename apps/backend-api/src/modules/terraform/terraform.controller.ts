@@ -3,12 +3,35 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { CloudProvider } from '@prisma/client'
 import { TerraformService } from './terraform.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
+import {
+  LaunchInstanceTerraformApplyDto,
+  LaunchInstanceTerraformEstimateDto,
+  LaunchInstanceTerraformPlanDto,
+} from './dto/launch-instance-terraform.dto'
 
 @ApiTags('Terraform')
 @ApiBearerAuth()
 @Controller('terraform')
 export class TerraformController {
   constructor(private service: TerraformService) {}
+
+  @Post('launch-instance/estimate')
+  @ApiOperation({ summary: 'Estimate cost for Terraform instance launch' })
+  launchEstimate(@Body() dto: LaunchInstanceTerraformEstimateDto) {
+    return this.service.estimateLaunchInstance(dto)
+  }
+
+  @Post('launch-instance/plan')
+  @ApiOperation({ summary: 'Generate Terraform plan for instance launch' })
+  launchPlan(@Body() dto: LaunchInstanceTerraformPlanDto, @CurrentUser() user: JwtPayload) {
+    return this.service.planLaunchInstance(dto, user.sub)
+  }
+
+  @Post('launch-instance/apply')
+  @ApiOperation({ summary: 'Apply Terraform plan for instance launch' })
+  launchApply(@Body() dto: LaunchInstanceTerraformApplyDto, @CurrentUser() user: JwtPayload) {
+    return this.service.applyLaunchInstance(dto.runId, user.sub, dto.confirmed)
+  }
 
   @Post('runs')
   @ApiOperation({ summary: 'Create Terraform run from instance form' })

@@ -58,11 +58,16 @@ export class CloudAccountsService {
   securityGroups = (id: string, region?: string): Observable<unknown[]> =>
     this.api.get(`cloud-accounts/${id}/security-groups`, { region })
 
-  images = (id: string, region: string): Observable<unknown[]> =>
-    this.api.get(`cloud-accounts/${id}/images`, { region })
+  images = (id: string, region?: string): Observable<unknown[]> =>
+    this.api.get(`cloud-accounts/${id}/images`, region ? { region } : undefined)
 
-  instanceTypes = (id: string, region: string): Observable<unknown[]> =>
-    this.api.get(`cloud-accounts/${id}/instance-types`, { region })
+  instanceTypes = (id: string, region?: string): Observable<unknown[]> =>
+    this.api.get(`cloud-accounts/${id}/instance-types`, region ? { region } : undefined)
+
+  listInstances = (id: string, region?: string): Observable<unknown[]> =>
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/instances`, region ? { region } : undefined)
+      .pipe(map((res) => unwrapList(res)))
 
   launch = (id: string, body: LaunchInstancePayload): Observable<unknown> =>
     this.api.post(`cloud-accounts/${id}/instances`, body)

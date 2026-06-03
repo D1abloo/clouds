@@ -82,8 +82,22 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           <mat-tab label="Metrics">
             <div class="tab-panel"><app-mini-chart title="CPU / RAM" kind="line" [data]="metricTrend()" /></div>
           </mat-tab>
-          <mat-tab label="Docker"><div class="tab-panel"><p>3 containers running (demo)</p><button mat-stroked-button (click)="demoTab('Docker')">Refresh</button></div></mat-tab>
-          <mat-tab label="Kubernetes"><div class="tab-panel"><p>Not enrolled in a cluster (demo)</p></div></mat-tab>
+          <mat-tab label="Docker">
+            <div class="tab-panel">
+              <p>{{ discoverySummary()['docker'] ?? 'Run discovery to scan containers on this host.' }}</p>
+              <button mat-stroked-button type="button" [disabled]="discovering()" (click)="handleDiscover('docker')">
+                @if (discovering()) { Discovering… } @else { Discover Docker }
+              </button>
+            </div>
+          </mat-tab>
+          <mat-tab label="Kubernetes">
+            <div class="tab-panel">
+              <p>{{ discoverySummary()['kubernetes'] ?? 'Run discovery to detect Kubernetes workloads.' }}</p>
+              <button mat-stroked-button type="button" [disabled]="discovering()" (click)="handleDiscover('kubernetes')">
+                Discover Kubernetes
+              </button>
+            </div>
+          </mat-tab>
           <mat-tab label="Services"><div class="tab-panel"><p>sshd, nginx, node-exporter (demo)</p></div></mat-tab>
           <mat-tab label="Terminal"><div class="tab-panel"><a mat-flat-button color="primary" routerLink="/terminal">Open terminal</a></div></mat-tab>
           <mat-tab label="Billing"><div class="tab-panel"><p>MTD {{ formatCost(instance()!.mtdCost) }} · Projected {{ formatCost(instance()!.monthlyCost) }}</p></div></mat-tab>
@@ -142,6 +156,8 @@ export class InstanceDetailComponent implements OnInit {
 
   readonly page = createPageLoader(true)
   readonly instance = signal<Instance | null>(null)
+  readonly discovering = signal(false)
+  readonly discoverySummary = signal<Record<string, string>>({})
 
   private instanceId = ''
 
@@ -205,6 +221,34 @@ export class InstanceDetailComponent implements OnInit {
     { label: '4h', value: 51 },
     { label: '5h', value: 47 },
   ]
+
+  handleDiscover = (_target: 'docker' | 'kubernetes'): void => {
+    if (!this.instanceId) return
+    this.discovering.set(true)
+    this.service.discover(this.instanceId).subscribe({
+      next: (res) => {
+        this.discovering.set(false)
+        const summary: Record<string, string> = {}
+        const discoveries = res.discoveries ?? {}
+        if (discoveries['docker']) {
+          const d = discoveries['docker'] as Record<string, unknown>
+          const containers = Array.isArray(d['containers']) ? d['containers'].length : 0
+          summary['docker'] = `${containers} containers on ${res.hostRef}`
+        }
+        if (discoveries['kubernetes']) {
+          const k = discoveries['kubernetes'] as Record<string, unknown>
+          summary['kubernetes'] = `${k['pods'] ?? k['resourceCount'] ?? '—'} resources discovered`
+        }
+        this.discoverySummary.set(summary)
+        this.toast.success('Discovery completed')
+      },
+      error: () => {
+        this.discovering.set(false)
+        this.demoActions.simulate('Instance discovery', 800).subscribe()
+        this.toast.error('Discovery failed')
+      },
+    })
+  }
 
   demoTab = (tab: string): void => {
     this.demoActions.simulate(`${tab} refresh`, 400).subscribe()

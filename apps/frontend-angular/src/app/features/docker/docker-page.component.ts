@@ -17,7 +17,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
-import { InventoryService } from '../../core/services/inventory.service'
+import { DockerService } from '../../core/services/docker.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { DiscoveryService } from '../../core/services/discovery.service'
 import { RealtimeService } from '../../core/services/realtime.service'
@@ -132,10 +132,10 @@ type ContainerRow = Record<string, unknown>
               }
             </div>
           </mat-tab>
-          <mat-tab label="Hosts"><div class="tab-panel"><p>{{ n('hosts') }} Docker hosts registered (demo).</p></div></mat-tab>
-          <mat-tab label="Images"><div class="tab-panel"><p>{{ n('images') }} unique images across hosts.</p></div></mat-tab>
-          <mat-tab label="Networks"><div class="tab-panel"><p>{{ n('networks') }} bridge/overlay networks.</p></div></mat-tab>
-          <mat-tab label="Volumes"><div class="tab-panel"><p>{{ n('volumes') }} persistent volumes.</p></div></mat-tab>
+          <mat-tab label="Hosts"><div class="tab-panel"><p>{{ hostRows().length || n('hosts') }} Docker hosts registered.</p></div></mat-tab>
+          <mat-tab label="Images"><div class="tab-panel"><p>{{ imageRows().length || n('images') }} unique images across hosts.</p></div></mat-tab>
+          <mat-tab label="Networks"><div class="tab-panel"><p>{{ networkRows().length || n('networks') }} bridge/overlay networks.</p></div></mat-tab>
+          <mat-tab label="Volumes"><div class="tab-panel"><p>{{ volumeRows().length || n('volumes') }} persistent volumes.</p></div></mat-tab>
           <mat-tab label="Logs"><div class="tab-panel"><pre class="log-preview mono">{{ logPreview() }}</pre></div></mat-tab>
         </mat-tab-group>
       }
@@ -154,7 +154,7 @@ type ContainerRow = Record<string, unknown>
   `,
 })
 export class DockerPageComponent implements OnInit {
-  private readonly inventory = inject(InventoryService)
+  private readonly docker = inject(DockerService)
   private readonly discovery = inject(DiscoveryService)
   private readonly realtime = inject(RealtimeService)
   private readonly demoActions = inject(DemoActionsService)
@@ -172,6 +172,10 @@ export class DockerPageComponent implements OnInit {
   )
 
   items = computed(() => (this.data()?.['items'] as ContainerRow[]) ?? [])
+  hostRows = computed(() => (this.data()?.['hostRows'] as Record<string, unknown>[]) ?? [])
+  imageRows = computed(() => (this.data()?.['imageRows'] as Record<string, unknown>[]) ?? [])
+  networkRows = computed(() => (this.data()?.['networkRows'] as Record<string, unknown>[]) ?? [])
+  volumeRows = computed(() => (this.data()?.['volumeRows'] as Record<string, unknown>[]) ?? [])
 
   filtered = computed(() => {
     const term = (this.searchTerm() ?? '').toLowerCase()
@@ -187,9 +191,9 @@ export class DockerPageComponent implements OnInit {
   n = (key: string): number => invNum(this.data(), key)
 
   load = (): void => {
-    this.page.run(this.inventory.docker(), {
+    this.page.run(this.docker.pageData(), {
       onSuccess: (d) => this.data.set(d),
-      errorMessage: 'Failed to load Docker inventory',
+      errorMessage: 'Failed to load Docker data',
     })
   }
 

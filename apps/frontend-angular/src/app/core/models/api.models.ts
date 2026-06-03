@@ -132,6 +132,7 @@ export interface TerraformTemplate {
   id: string
   name: string
   provider: CloudProvider
+  config?: Record<string, unknown>
 }
 
 export interface PaginatedMeta {

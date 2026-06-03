@@ -33,6 +33,13 @@ export class InstancesService {
 
   restart = (id: string): Observable<unknown> =>
     this.api.post(`instances/${id}/restart`)
+
+  discover = (id: string): Observable<{
+    instanceId: string
+    hostRef: string
+    discoveries: Record<string, unknown>
+    discoveredAt: string
+  }> => this.api.post(`instances/${id}/discover`)
 }
 
 const flattenGroupedInstances = (data: unknown): Instance[] => {

@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
-import { CloudProvider } from '@prisma/client'
+import { CloudProvider, InstanceStatus } from '@prisma/client'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { CloudAdapterRegistry } from '../cloud-accounts/cloud-adapter.registry'
-import { InstanceStatus } from '@prisma/client'
+import { DockerDiscoveryService } from '../docker-discovery/docker-discovery.service'
+import { KubernetesDiscoveryService } from '../kubernetes-discovery/kubernetes-discovery.service'
 
 @Injectable()
 export class InstancesService {
@@ -11,6 +12,8 @@ export class InstancesService {
     private prisma: PrismaService,
     private audit: AuditService,
     private cloudRegistry: CloudAdapterRegistry,
+    private dockerDiscovery: DockerDiscoveryService,
+    private k8sDiscovery: KubernetesDiscoveryService,
   ) {}
 
   async findAll(filters?: {
@@ -146,6 +149,41 @@ export class InstancesService {
 
   async restart(id: string, userId?: string) {
     return this.runAction(id, 'restart', userId)
+  }
+
+  async discover(id: string, userId?: string) {
+    const instance = await this.findOne(id)
+    const meta = (instance as { metadata?: Record<string, unknown> }).metadata ?? {}
+    const hostRef = String(
+      meta['publicIp'] ?? meta['hostname'] ?? (instance as { name?: string }).name ?? id,
+    ).replace(/^https?:\/\//, '')
+
+    const discoveries: Record<string, unknown> = {}
+
+    if (meta['hasDocker'] || (instance as { isVps?: boolean }).isVps) {
+      discoveries['docker'] = await this.dockerDiscovery.discover(hostRef)
+    }
+    if (meta['hasKubernetes']) {
+      discoveries['kubernetes'] = await this.k8sDiscovery.discover(hostRef)
+    }
+    if (Object.keys(discoveries).length === 0) {
+      discoveries['docker'] = await this.dockerDiscovery.discover(hostRef)
+    }
+
+    await this.audit.create({
+      userId,
+      action: 'instance.discover',
+      resource: 'instance',
+      resourceId: id,
+      metadata: { hostRef, targets: Object.keys(discoveries) },
+    })
+
+    return {
+      instanceId: id,
+      hostRef,
+      discoveries,
+      discoveredAt: new Date().toISOString(),
+    }
   }
 
   private async runAction(id: string, action: 'start' | 'stop' | 'restart', userId?: string) {

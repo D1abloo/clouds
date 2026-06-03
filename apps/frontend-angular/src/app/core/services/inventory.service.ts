@@ -2,10 +2,14 @@ import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { CloudProvider } from '../models/api.models'
+import { DockerService } from './docker.service'
+import { KubernetesService } from './kubernetes.service'
 
 @Injectable({ providedIn: 'root' })
 export class InventoryService {
   private readonly api = inject(ApiClientService)
+  private readonly dockerApi = inject(DockerService)
+  private readonly kubernetesApi = inject(KubernetesService)
 
   dashboard = (): Observable<Record<string, unknown>> =>
     this.api
@@ -13,14 +17,14 @@ export class InventoryService {
       .pipe(catchError((): Observable<Record<string, unknown>> => of(this.fallbackDashboard())))
 
   docker = (): Observable<Record<string, unknown>> =>
-    this.api
-      .get<Record<string, unknown>>('inventory/docker')
-      .pipe(catchError((): Observable<Record<string, unknown>> => of({ hosts: 0, containers: 0, items: [] })))
+    this.dockerApi.pageData().pipe(
+      catchError((): Observable<Record<string, unknown>> => of({ hosts: 0, containers: 0, items: [] })),
+    )
 
   kubernetes = (): Observable<Record<string, unknown>> =>
-    this.api
-      .get<Record<string, unknown>>('inventory/kubernetes')
-      .pipe(catchError((): Observable<Record<string, unknown>> => of({ clusters: 0, podItems: [] })))
+    this.kubernetesApi.pageData().pipe(
+      catchError((): Observable<Record<string, unknown>> => of({ clusters: 0, podItems: [] })),
+    )
 
   terraform = (): Observable<Record<string, unknown>> =>
     this.api

@@ -123,11 +123,15 @@ export class CloudAccountsService {
   }
 
   async listImages(id: string, region: string) {
-    return this.registry.listImages(id, region)
+    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
+    const resolved = region || account?.defaultRegion || 'us-east-1'
+    return this.registry.listImages(id, resolved)
   }
 
   async listInstanceTypes(id: string, region: string) {
-    return this.registry.listInstanceTypes(id, region)
+    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
+    const resolved = region || account?.defaultRegion || 'us-east-1'
+    return this.registry.listInstanceTypes(id, resolved)
   }
 
   async syncInventory(id: string, userId?: string) {
@@ -136,6 +140,22 @@ export class CloudAccountsService {
 
   async launchInstance(id: string, dto: LaunchInstanceDto, userId?: string) {
     return this.sync.launchInstance(id, dto, userId)
+  }
+
+  async listAccountInstances(accountId: string, region?: string) {
+    const account = await this.prisma.cloudAccount.findFirst({
+      where: { id: accountId, deletedAt: null },
+    })
+    if (!account) throw new NotFoundException('Cloud account not found')
+
+    return this.prisma.instance.findMany({
+      where: {
+        cloudAccountId: accountId,
+        deletedAt: null,
+        ...(region ? { region } : {}),
+      },
+      orderBy: [{ region: 'asc' }, { name: 'asc' }],
+    })
   }
 
   private sanitizeAccount(account: Record<string, unknown>) {

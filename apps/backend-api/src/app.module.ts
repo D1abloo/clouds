@@ -27,6 +27,8 @@ import { RealtimeModule } from './modules/realtime/realtime.module'
 import { HealthModule } from './modules/health/health.module'
 import { DemoModule } from './modules/demo/demo.module'
 import { InventoryModule } from './modules/inventory/inventory.module'
+import { DockerModule } from './modules/docker/docker.module'
+import { KubernetesApiModule } from './modules/kubernetes/kubernetes.module'
 
 @Module({
   imports: [
@@ -55,6 +57,8 @@ import { InventoryModule } from './modules/inventory/inventory.module'
     HealthModule,
     DemoModule,
     InventoryModule,
+    DockerModule,
+    KubernetesApiModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

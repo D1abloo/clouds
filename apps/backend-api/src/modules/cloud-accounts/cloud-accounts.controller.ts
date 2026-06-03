@@ -38,6 +38,12 @@ export class CloudAccountsController {
     return this.service.findAll(projectId, provider)
   }
 
+  @Post('sync-all')
+  @ApiOperation({ summary: 'Sync all active cloud accounts' })
+  syncAll() {
+    return this.instanceSync.syncAllActive()
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get cloud account detail' })
   findOne(@Param('id') id: string) {
@@ -50,29 +56,40 @@ export class CloudAccountsController {
     return this.service.validateConnection(id, user.sub)
   }
 
+  @Get(':id/instances')
+  @ApiOperation({ summary: 'List instances for cloud account' })
+  listInstances(@Param('id') id: string, @Query('region') region?: string) {
+    return this.service.listAccountInstances(id, region)
+  }
+
   @Get(':id/regions')
+  @ApiOperation({ summary: 'List regions for cloud account' })
   listRegions(@Param('id') id: string) {
     return this.service.listRegions(id)
   }
 
   @Get(':id/networks')
+  @ApiOperation({ summary: 'List VPCs/subnets for cloud account' })
   listNetworks(@Param('id') id: string, @Query('region') region?: string) {
     return this.service.listNetworks(id, region)
   }
 
   @Get(':id/security-groups')
+  @ApiOperation({ summary: 'List security groups / firewalls / NSGs' })
   listSecurityGroups(@Param('id') id: string, @Query('region') region?: string) {
     return this.service.listSecurityGroups(id, region)
   }
 
   @Get(':id/images')
-  listImages(@Param('id') id: string, @Query('region') region: string) {
-    return this.service.listImages(id, region)
+  @ApiOperation({ summary: 'List machine images / AMIs' })
+  listImages(@Param('id') id: string, @Query('region') region?: string) {
+    return this.service.listImages(id, region ?? '')
   }
 
   @Get(':id/instance-types')
-  listInstanceTypes(@Param('id') id: string, @Query('region') region: string) {
-    return this.service.listInstanceTypes(id, region)
+  @ApiOperation({ summary: 'List instance types / sizes' })
+  listInstanceTypes(@Param('id') id: string, @Query('region') region?: string) {
+    return this.service.listInstanceTypes(id, region ?? '')
   }
 
   @Post(':id/sync')
@@ -96,11 +113,5 @@ export class CloudAccountsController {
   async syncBilling(@Param('id') id: string) {
     const provider = await this.service.getProvider(id)
     return this.billingSync.syncForAccount(provider, id)
-  }
-
-  @Post('sync-all')
-  @ApiOperation({ summary: 'Sync all active cloud accounts' })
-  syncAll() {
-    return this.instanceSync.syncAllActive()
   }
 }

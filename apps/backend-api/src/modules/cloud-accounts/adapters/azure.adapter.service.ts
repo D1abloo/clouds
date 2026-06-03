@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common'
-import { InstanceStatus } from '@prisma/client'
+import { Injectable, Logger } from '@nestjs/common'
+import { CloudProvider, InstanceStatus } from '@prisma/client'
 import {
   ActionResult,
   CloudAdapterContext,
@@ -22,87 +22,272 @@ import {
   regionsFor,
   synthesizeInstances,
 } from './cloud-adapter.helpers'
-
-const AZURE_REGIONS = [
-  { id: 'westeurope', name: 'West Europe', zones: ['1', '2', '3'] },
-  { id: 'eastus', name: 'East US', zones: ['1', '2'] },
-  { id: 'spaincentral', name: 'Spain Central', zones: ['1'] },
-]
+import {
+  createAzureComputeClient,
+  createAzureNetworkClient,
+  createAzureSubscriptionClient,
+  resolveAzureSubscriptionId,
+} from './sdk/azure-client.factory'
+import { isDemoMode, mapAzurePowerState, parseAzureResourceIds, sdkErrorMessage } from './sdk/adapter-sdk.util'
 
 const AZURE_PERMS = [
   'Microsoft.Compute/virtualMachines/read',
   'Microsoft.Compute/virtualMachines/start/action',
   'Microsoft.Compute/virtualMachines/powerOff/action',
-  'Microsoft.Insights/metrics/read',
-  'Microsoft.CostManagement/query/action',
+]
+
+const FALLBACK_REGIONS = [
+  { id: 'westeurope', name: 'West Europe', zones: ['1', '2', '3'] },
+  { id: 'eastus', name: 'East US', zones: ['1', '2'] },
+  { id: 'spaincentral', name: 'Spain Central', zones: ['1'] },
 ]
 
 @Injectable()
 export class AzureAdapterService implements CloudProviderAdapter {
-  // TODO: @azure/arm-compute
+  private readonly logger = new Logger(AzureAdapterService.name)
 
   async validateConnection(ctx: CloudAdapterContext): Promise<ValidationResult> {
-    return buildValidation(ctx, 'Azure', AZURE_PERMS)
+    if (isDemoMode(ctx)) return buildValidation(ctx, 'Azure', AZURE_PERMS)
+    try {
+      const subId = resolveAzureSubscriptionId(ctx)
+      const client = createAzureSubscriptionClient(ctx)
+      const sub = await client.subscriptions.get(subId)
+      return {
+        valid: !!sub.subscriptionId,
+        message: `Azure connected — ${sub.displayName ?? subId}`,
+        permissions: AZURE_PERMS,
+        sdkReady: true,
+      }
+    } catch (err) {
+      return {
+        valid: false,
+        message: sdkErrorMessage(err),
+        permissions: AZURE_PERMS,
+        sdkReady: true,
+      }
+    }
   }
 
   async listRegions(ctx: CloudAdapterContext): Promise<CloudRegion[]> {
-    return regionsFor(ctx, AZURE_REGIONS)
+    if (isDemoMode(ctx)) return regionsFor(ctx, FALLBACK_REGIONS)
+    try {
+      const subId = resolveAzureSubscriptionId(ctx)
+      const client = createAzureSubscriptionClient(ctx)
+      const locations = client.subscriptions.listLocations(subId)
+      const items: { id: string; name: string; zones: string[] }[] = []
+      for await (const loc of locations) {
+        if (loc.name) items.push({ id: loc.name, name: loc.displayName ?? loc.name, zones: [] })
+      }
+      return regionsFor(ctx, items.length ? items : FALLBACK_REGIONS)
+    } catch (err) {
+      this.logger.warn(`Azure listRegions fallback: ${sdkErrorMessage(err)}`)
+      return regionsFor(ctx, FALLBACK_REGIONS)
+    }
   }
 
   async listNetworks(ctx: CloudAdapterContext, region?: string): Promise<CloudNetwork[]> {
     const r = region ?? ctx.defaultRegion ?? 'westeurope'
-    return mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vnet' }))
+    if (isDemoMode(ctx)) return mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vnet' }))
+    try {
+      const client = createAzureNetworkClient(ctx)
+      const networks: CloudNetwork[] = []
+      for await (const vnet of client.virtualNetworks.listAll()) {
+        if (vnet.location !== r && region) continue
+        networks.push({
+          id: vnet.id ?? '',
+          name: vnet.name ?? 'vnet',
+          region: vnet.location ?? r,
+          cidr: vnet.addressSpace?.addressPrefixes?.[0],
+          type: 'vnet',
+        })
+      }
+      return networks.length ? networks : mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vnet' }))
+    } catch (err) {
+      this.logger.warn(`Azure listNetworks fallback: ${sdkErrorMessage(err)}`)
+      return mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vnet' }))
+    }
   }
 
   async listSecurityGroups(ctx: CloudAdapterContext, region?: string): Promise<CloudSecurityGroup[]> {
     const r = region ?? ctx.defaultRegion ?? 'westeurope'
-    return mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `nsg-${s.name}` }))
+    if (isDemoMode(ctx)) return mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `nsg-${s.name}` }))
+    try {
+      const client = createAzureNetworkClient(ctx)
+      const groups: CloudSecurityGroup[] = []
+      for await (const nsg of client.networkSecurityGroups.listAll()) {
+        if (nsg.location !== r && region) continue
+        groups.push({
+          id: nsg.id ?? '',
+          name: nsg.name ?? 'nsg',
+          region: nsg.location ?? r,
+          rules: (nsg.securityRules?.length ?? 0) + (nsg.defaultSecurityRules?.length ?? 0),
+        })
+      }
+      return groups.length ? groups : mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `nsg-${s.name}` }))
+    } catch (err) {
+      this.logger.warn(`Azure listSecurityGroups fallback: ${sdkErrorMessage(err)}`)
+      return mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `nsg-${s.name}` }))
+    }
   }
 
   async listImages(ctx: CloudAdapterContext, region: string): Promise<CloudImage[]> {
-    return mockImages(ctx, region).map((i) => ({ ...i, id: `/subscriptions/demo/images/${i.id}` }))
+    if (isDemoMode(ctx)) {
+      return mockImages(ctx, region).map((i) => ({
+        ...i,
+        id: `/subscriptions/${resolveAzureSubscriptionId(ctx) || 'demo'}/images/${i.id}`,
+      }))
+    }
+    return [
+      {
+        id: 'Canonical:ubuntu-22_04-lts:22_04-lts-gen2:latest',
+        name: 'Ubuntu 22.04 LTS',
+        region,
+        os: 'linux',
+      },
+      {
+        id: 'Debian:debian-12:12-gen2:latest',
+        name: 'Debian 12',
+        region,
+        os: 'linux',
+      },
+    ]
   }
 
   async listInstanceTypes(ctx: CloudAdapterContext, region: string): Promise<CloudInstanceType[]> {
-    return mockInstanceTypes(ctx, region).map((t) => ({
-      ...t,
-      id: `Standard_B${t.vcpus}s`,
-      name: `Standard_B${t.vcpus}s`,
-    }))
+    if (isDemoMode(ctx)) {
+      return mockInstanceTypes(ctx, region).map((t) => ({
+        ...t,
+        id: `Standard_B${t.vcpus}s`,
+        name: `Standard_B${t.vcpus}s`,
+      }))
+    }
+    return [
+      { id: 'Standard_B1s', name: 'Standard_B1s', region, vcpus: 1, memoryGb: 1, pricePerHour: 0.01 },
+      { id: 'Standard_B2s', name: 'Standard_B2s', region, vcpus: 2, memoryGb: 4, pricePerHour: 0.04 },
+      { id: 'Standard_D2s_v5', name: 'Standard_D2s_v5', region, vcpus: 2, memoryGb: 8, pricePerHour: 0.09 },
+    ]
   }
 
   async listInstances(ctx: CloudAdapterContext, region?: string): Promise<CloudInstance[]> {
-    const all = synthesizeInstances(ctx)
-    if (region) return all.filter((i) => i.region === region)
-    return all
+    if (isDemoMode(ctx)) {
+      const all = synthesizeInstances(ctx)
+      return region ? all.filter((i) => i.region === region) : all
+    }
+    try {
+      const client = createAzureComputeClient(ctx)
+      const items: CloudInstance[] = []
+      for await (const vm of client.virtualMachines.listAll()) {
+        if (region && vm.location !== region) continue
+        const power = vm.instanceView?.statuses?.find((s) => s.code?.startsWith('PowerState/'))?.code
+        const { resourceGroup, name } = parseAzureResourceIds(vm.id ?? '')
+        items.push({
+          id: vm.id ?? name,
+          name: vm.name ?? name,
+          region: vm.location ?? 'unknown',
+          status: mapAzurePowerState(power),
+          instanceType: vm.hardwareProfile?.vmSize ?? 'unknown',
+          provider: CloudProvider.AZURE,
+          metadata: {
+            resourceGroup,
+            vmName: name,
+            publicIp: undefined,
+            privateIp: undefined,
+            isDemo: false,
+            syncedAt: new Date().toISOString(),
+          },
+        })
+      }
+      return items.length ? items : synthesizeInstances(ctx)
+    } catch (err) {
+      this.logger.warn(`Azure listInstances fallback: ${sdkErrorMessage(err)}`)
+      return synthesizeInstances(ctx)
+    }
   }
 
   async getInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<CloudInstance | null> {
-    return (await this.listInstances(ctx, region)).find((i) => i.id === instanceId) ?? null
+    return (await this.listInstances(ctx, region)).find((i) => i.id === instanceId || i.name === instanceId) ?? null
   }
 
-  async startInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
-    console.log(`[Azure SDK-ready] start ${instanceId} sub=${ctx.config['subscriptionId']}`)
-    return { success: true, message: `[Azure] Started ${instanceId}` }
+  private resolveVmRef = async (ctx: CloudAdapterContext, instanceId: string, region?: string) => {
+    if (instanceId.includes('/subscriptions/')) {
+      const parsed = parseAzureResourceIds(instanceId)
+      return { resourceGroup: parsed.resourceGroup, vmName: parsed.name }
+    }
+    const inst = await this.getInstance(ctx, instanceId, region)
+    const meta = (inst?.metadata ?? {}) as Record<string, string>
+    return {
+      resourceGroup: meta['resourceGroup'] ?? (ctx.config['resourceGroup'] as string) ?? 'cloudops-rg',
+      vmName: meta['vmName'] ?? instanceId,
+    }
   }
 
-  async stopInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
-    return { success: true, message: `[Azure] Deallocated ${instanceId}` }
+  async startInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<ActionResult> {
+    if (isDemoMode(ctx)) return { success: true, message: `[Azure Demo] Started ${instanceId}` }
+    const { resourceGroup, vmName } = await this.resolveVmRef(ctx, instanceId, region)
+    const client = createAzureComputeClient(ctx)
+    await client.virtualMachines.beginStart(resourceGroup, vmName)
+    return { success: true, message: `[Azure] Started ${vmName}` }
   }
 
-  async restartInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
-    return { success: true, message: `[Azure] Restarted ${instanceId}` }
+  async stopInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<ActionResult> {
+    if (isDemoMode(ctx)) return { success: true, message: `[Azure Demo] Stopped ${instanceId}` }
+    const { resourceGroup, vmName } = await this.resolveVmRef(ctx, instanceId, region)
+    const client = createAzureComputeClient(ctx)
+    await client.virtualMachines.beginPowerOff(resourceGroup, vmName, { skipShutdown: false })
+    return { success: true, message: `[Azure] Stopped ${vmName}` }
+  }
+
+  async restartInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<ActionResult> {
+    if (isDemoMode(ctx)) return { success: true, message: `[Azure Demo] Restarted ${instanceId}` }
+    const { resourceGroup, vmName } = await this.resolveVmRef(ctx, instanceId, region)
+    const client = createAzureComputeClient(ctx)
+    await client.virtualMachines.beginRestart(resourceGroup, vmName)
+    return { success: true, message: `[Azure] Restarted ${vmName}` }
   }
 
   async launchInstance(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<CloudInstance> {
+    if (isDemoMode(ctx)) {
+      return {
+        id: `vm-${Date.now().toString(36)}`,
+        name: input.name,
+        region: input.region,
+        status: 'PENDING' as InstanceStatus,
+        instanceType: input.instanceType,
+        provider: ctx.provider,
+        metadata: { imageId: input.imageId, resourceGroup: ctx.config['resourceGroup'], isDemo: true },
+      }
+    }
+    const resourceGroup = (ctx.config['resourceGroup'] as string) ?? 'cloudops-rg'
+    const client = createAzureComputeClient(ctx)
+    const poller = await client.virtualMachines.beginCreateOrUpdate(resourceGroup, input.name, {
+      location: input.region,
+      hardwareProfile: { vmSize: input.instanceType },
+      storageProfile: {
+        imageReference: {
+          publisher: 'Canonical',
+          offer: '0001-com-ubuntu-server-jammy',
+          sku: '22_04-lts-gen2',
+          version: 'latest',
+        },
+      },
+      osProfile: {
+        computerName: input.name,
+        adminUsername: 'azureuser',
+        adminPassword: `Co${Date.now()}!Aa1`,
+      },
+      networkProfile: {
+        networkInterfaces: [{ id: input.subnetId }],
+      },
+    })
+    const vm = await poller.pollUntilDone()
     return {
-      id: `vm-${Date.now().toString(36)}`,
-      name: input.name,
-      region: input.region,
-      status: 'PENDING' as InstanceStatus,
+      id: vm.id ?? input.name,
+      name: vm.name ?? input.name,
+      region: vm.location ?? input.region,
+      status: 'PENDING',
       instanceType: input.instanceType,
-      provider: ctx.provider,
-      metadata: { imageId: input.imageId, resourceGroup: ctx.config['resourceGroup'], isDemo: true },
+      provider: CloudProvider.AZURE,
+      metadata: { resourceGroup, vmName: vm.name, isDemo: false },
     }
   }
 

@@ -97,13 +97,13 @@ export class LaunchInstanceDialogComponent {
         if (r.length && !this.form.value.region) this.form.patchValue({ region: r[0].id })
         this.loadCatalog()
       },
+      error: () => this.loadCatalog(),
     })
     this.form.get('region')?.valueChanges.subscribe(() => this.loadCatalog())
   }
 
   loadCatalog = (): void => {
-    const region = this.form.value.region
-    if (!region) return
+    const region = this.form.value.region || undefined
     this.accounts.instanceTypes(this.data.accountId, region).subscribe({
       next: (t) => {
         const list = (t as { id: string; name: string }[])

@@ -126,4 +126,68 @@ export class TerraformService {
   async listTemplates() {
     return this.prisma.instanceTemplate.findMany()
   }
+
+  async estimateLaunchInstance(dto: {
+    provider: CloudProvider
+    region: string
+    instanceType: string
+    name?: string
+    config?: Record<string, unknown>
+  }) {
+    const hourly = dto.instanceType.includes('large') ? 0.16 : dto.instanceType.includes('small') ? 0.04 : 0.08
+    const monthly = Math.round(hourly * 730 * 100) / 100
+    return {
+      provider: dto.provider,
+      region: dto.region,
+      instanceType: dto.instanceType,
+      name: dto.name ?? `tf-${dto.provider.toLowerCase()}-vm`,
+      estimatedHourlyUsd: hourly,
+      estimatedMonthlyUsd: monthly,
+      resources: [
+        { type: 'compute_instance', name: dto.name ?? 'vm', change: 'create' },
+        { type: 'security_group', name: 'sg-web', change: 'create' },
+        { type: 'network', name: 'subnet-main', change: 'create' },
+      ],
+      currency: 'USD',
+    }
+  }
+
+  async planLaunchInstance(
+    dto: {
+      provider: CloudProvider
+      region: string
+      instanceType: string
+      name?: string
+      workspaceName?: string
+      config?: Record<string, unknown>
+    },
+    userId?: string,
+  ) {
+    const workspaceName = dto.workspaceName ?? `launch-${dto.name ?? dto.region}`
+    const run = await this.runner.createRun(
+      {
+        provider: dto.provider,
+        workspaceName,
+        config: { ...dto.config, region: dto.region, instanceType: dto.instanceType, name: dto.name },
+      },
+      userId,
+    )
+    const planned = await this.runner.plan(run.id, userId)
+    return {
+      runId: run.id,
+      workspaceName,
+      status: planned.status,
+      planOutput: planned.planOutput,
+      estimate: await this.estimateLaunchInstance(dto),
+    }
+  }
+
+  async applyLaunchInstance(runId: string, userId?: string, confirmed = false) {
+    const applied = await this.runner.apply(runId, userId, confirmed)
+    return {
+      runId: applied.id,
+      status: applied.status,
+      message: 'Terraform apply completed — instance resources provisioned',
+    }
+  }
 }

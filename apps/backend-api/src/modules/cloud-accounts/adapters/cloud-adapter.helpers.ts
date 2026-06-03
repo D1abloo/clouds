@@ -34,7 +34,7 @@ export const buildValidation = (
       ? `${providerLabel} connection validated (demo/SDK-ready)`
       : 'Missing credentials — configure auth in account form',
     permissions: requiredPerms,
-    sdkReady: false,
+    sdkReady: ctx.credentials['demoMode'] !== 'true',
   }
 }
 

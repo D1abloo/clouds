@@ -2,7 +2,43 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-03  
-**Fase actual:** Cloud accounts + sync + realtime (completado)
+**Fase actual:** Terraform UI premium + endpoints REST (completado)
+
+---
+
+## Fase 20 — Terraform UI premium + wizard multi-cloud ✅
+
+**Estado:** Completada (2026-06-03)
+
+**Frontend — Terraform:**
+- Wizard `LaunchInstanceModalComponent` (5 pasos): proveedor → cuenta/ubicación → instancia → opciones AWS/GCP/Azure → estimación/plan/apply
+- Campos dinámicos por cloud (VPC, SG, AMI, zones, resource groups, labels, etc.) conectados a `CloudAccountsService`
+- Flujo Terraform: estimate → plan → review → apply (sin apply sin plan previo)
+- Componentes: `CostEstimateCard`, `TerraformPlanViewer`, `TerraformLogsViewer`, `ProviderSpecificOptions`, `CloudAccountSelector`, `RegionSelector`, `InstanceTemplateSelector`, `RunDetailDrawer`
+- Pantalla Terraform rediseñada: header enriquecido, cards elevadas, tabs con iconos, tabla premium, drawer de detalle de run, filtros/búsqueda
+- Estilos globales: sombras suaves, sin bordes duros, animaciones `fadeIn`/`slideIn`, variables `--app-shadow-*`, `--app-radius-*`
+- Componentes compartidos mejorados: `SummaryCard`, `StatusBadge`, `LoadingState`, `EmptyState`, `RealtimeStatusBadge`
+
+**Backend (sesión previa):**
+- Endpoints REST: `/docker/*`, `/kubernetes/*`, `POST /instances/:id/discover`, `POST /terraform/launch-instance/*`, `GET /cloud-accounts/:id/instances`
+- Servicios Angular alineados: `DockerService`, `KubernetesService`, endpoints terraform/cloud/instances
+
+**Validación:** `npm run build` backend + frontend OK
+
+---
+
+## Fase 19 — SDK oficiales AWS + GCP + Azure ✅
+
+**Estado:** Completada (2026-06-03)
+
+**Paquetes:** `@aws-sdk/client-ec2`, `@aws-sdk/client-sts`, `@google-cloud/compute`, `@azure/arm-compute`, `@azure/arm-network`, `@azure/arm-subscriptions`, `@azure/identity`
+
+**Comportamiento:**
+- Modo **Demo** (`credentialType: demo`) → datos sintéticos (sin llamadas cloud)
+- Credenciales reales → SDK (list/sync/start/stop/launch) con fallback a demo si falla la API
+- AWS: Access Key, AssumeRole (STS), regiones/instances EC2 reales
+- GCP: Service Account JSON, `aggregatedListAsync`, start/stop/insert
+- Azure: Client Secret o Managed Identity, VMs, VNets, NSG
 
 ---
 

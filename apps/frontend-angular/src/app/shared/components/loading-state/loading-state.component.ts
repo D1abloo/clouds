@@ -6,8 +6,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
   standalone: true,
   imports: [MatProgressSpinnerModule],
   template: `
-    <div class="state-container" role="status" [attr.aria-label]="message">
-      <mat-spinner diameter="40" />
+    <div class="state-container animate-fade-in" role="status" [attr.aria-label]="message">
+      <div class="spinner-wrap">
+        <mat-spinner diameter="44" />
+      </div>
       <p>{{ message }}</p>
     </div>
   `,
@@ -18,9 +20,16 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
       align-items: center;
       justify-content: center;
       gap: 1rem;
-      padding: 3rem 1rem;
+      padding: 3.5rem 1rem;
       color: var(--app-text-muted);
     }
+    .spinner-wrap {
+      padding: 1rem;
+      border-radius: 50%;
+      background: var(--app-elevated);
+      box-shadow: var(--app-shadow-sm);
+    }
+    p { margin: 0; font-size: 0.9rem; }
   `,
 })
 export class LoadingStateComponent {

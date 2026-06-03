@@ -17,7 +17,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
-import { InventoryService } from '../../core/services/inventory.service'
+import { KubernetesService } from '../../core/services/kubernetes.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { DiscoveryService } from '../../core/services/discovery.service'
 import { RealtimeService } from '../../core/services/realtime.service'
@@ -128,11 +128,11 @@ type PodRow = Record<string, unknown>
               }
             </div>
           </mat-tab>
-          <mat-tab label="Clusters"><div class="tab-panel"><p>{{ n('clusters') }} clusters connected.</p></div></mat-tab>
-          <mat-tab label="Nodes"><div class="tab-panel"><p>demo-node-01, demo-node-02 (Ready)</p></div></mat-tab>
-          <mat-tab label="Namespaces"><div class="tab-panel"><p>default, staging, production, monitoring</p></div></mat-tab>
-          <mat-tab label="Deployments"><div class="tab-panel"><p>{{ n('deployments') }} deployments tracked.</p></div></mat-tab>
-          <mat-tab label="Services"><div class="tab-panel"><p>{{ n('services') }} services exposed.</p></div></mat-tab>
+          <mat-tab label="Clusters"><div class="tab-panel"><p>{{ clusterRows().length || n('clusters') }} clusters connected.</p></div></mat-tab>
+          <mat-tab label="Nodes"><div class="tab-panel"><p>{{ nodeSummary() }}</p></div></mat-tab>
+          <mat-tab label="Namespaces"><div class="tab-panel"><p>{{ namespaceSummary() }}</p></div></mat-tab>
+          <mat-tab label="Deployments"><div class="tab-panel"><p>{{ deploymentRows().length || n('deployments') }} deployments tracked.</p></div></mat-tab>
+          <mat-tab label="Services"><div class="tab-panel"><p>{{ serviceRows().length || n('services') }} services exposed.</p></div></mat-tab>
           <mat-tab label="Events"><div class="tab-panel"><pre class="mono event-log">{{ eventLog() }}</pre></div></mat-tab>
           <mat-tab label="YAML"><div class="tab-panel"><button mat-stroked-button (click)="showYaml()">View sample deployment YAML</button></div></mat-tab>
         </mat-tab-group>
@@ -145,7 +145,7 @@ type PodRow = Record<string, unknown>
   `,
 })
 export class KubernetesPageComponent implements OnInit {
-  private readonly inventory = inject(InventoryService)
+  private readonly kubernetes = inject(KubernetesService)
   private readonly discovery = inject(DiscoveryService)
   private readonly realtime = inject(RealtimeService)
   private readonly demoActions = inject(DemoActionsService)
@@ -163,6 +163,12 @@ export class KubernetesPageComponent implements OnInit {
   )
 
   pods = computed(() => (this.data()?.['podItems'] as PodRow[]) ?? [])
+  clusterRows = computed(() => (this.data()?.['clusterRows'] as Record<string, unknown>[]) ?? [])
+  nodeRows = computed(() => (this.data()?.['nodeRows'] as Record<string, unknown>[]) ?? [])
+  namespaceRows = computed(() => (this.data()?.['namespaceRows'] as Record<string, unknown>[]) ?? [])
+  deploymentRows = computed(() => (this.data()?.['deploymentRows'] as Record<string, unknown>[]) ?? [])
+  serviceRows = computed(() => (this.data()?.['serviceRows'] as Record<string, unknown>[]) ?? [])
+  eventRows = computed(() => (this.data()?.['eventRows'] as Record<string, unknown>[]) ?? [])
 
   filteredPods = computed(() => {
     const term = (this.searchTerm() ?? '').toLowerCase()
@@ -178,9 +184,9 @@ export class KubernetesPageComponent implements OnInit {
   n = (key: string): number => invNum(this.data(), key)
 
   load = (): void => {
-    this.page.run(this.inventory.kubernetes(), {
+    this.page.run(this.kubernetes.pageData(), {
       onSuccess: (d) => this.data.set(d),
-      errorMessage: 'Failed to load Kubernetes inventory',
+      errorMessage: 'Failed to load Kubernetes data',
     })
   }
 
@@ -227,6 +233,25 @@ export class KubernetesPageComponent implements OnInit {
     this.demoActions.simulate(`Restart pod ${row['name']}`, 700).subscribe(() => this.load())
   }
 
-  eventLog = (): string =>
-    `Normal  Scheduled  pod/api-demo-xxx  Successfully assigned demo-node-01\nWarning BackOff   pod/worker-yyy  Back-off restarting failed container`
+  eventLog = (): string => {
+    const rows = this.eventRows()
+    if (rows.length === 0) {
+      return `Normal  Scheduled  pod/api-demo-xxx  Successfully assigned demo-node-01\nWarning BackOff   pod/worker-yyy  Back-off restarting failed container`
+    }
+    return rows
+      .map((e) => `${e['type'] ?? 'Event'}  ${e['reason'] ?? ''}  ${e['object'] ?? ''}  ${e['message'] ?? ''}`)
+      .join('\n')
+  }
+
+  nodeSummary = (): string => {
+    const rows = this.nodeRows()
+    if (rows.length === 0) return 'demo-node-01, demo-node-02 (Ready)'
+    return rows.map((n) => `${n['name']} (${n['status'] ?? 'Ready'})`).join(', ')
+  }
+
+  namespaceSummary = (): string => {
+    const rows = this.namespaceRows()
+    if (rows.length === 0) return 'default, staging, production, monitoring'
+    return rows.map((n) => String(n['name'])).join(', ')
+  }
 }

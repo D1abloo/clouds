@@ -7,17 +7,14 @@ import { MatButtonModule } from '@angular/material/button'
   standalone: true,
   imports: [MatIconModule, MatButtonModule],
   template: `
-    <div class="state-container" role="status">
-      <mat-icon class="state-icon">{{ icon }}</mat-icon>
+    <div class="state-container animate-fade-in" role="status">
+      <div class="state-icon-wrap">
+        <mat-icon class="state-icon">{{ icon }}</mat-icon>
+      </div>
       <h3>{{ title }}</h3>
       <p>{{ description }}</p>
       @if (actionLabel) {
-        <button
-          mat-flat-button
-          color="primary"
-          type="button"
-          (click)="actionClick.emit()"
-        >
+        <button mat-flat-button color="primary" type="button" (click)="actionClick.emit()">
           {{ actionLabel }}
         </button>
       }
@@ -29,24 +26,37 @@ import { MatButtonModule } from '@angular/material/button'
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: 3rem 1rem;
+      padding: 3.5rem 1.5rem;
       color: var(--app-text-muted);
     }
+    .state-icon-wrap {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--app-elevated);
+      box-shadow: var(--app-shadow-sm);
+      margin-bottom: 0.75rem;
+    }
     .state-icon {
-      font-size: 3rem;
-      width: 3rem;
-      height: 3rem;
-      margin-bottom: 0.5rem;
-      opacity: 0.6;
+      font-size: 2.25rem;
+      width: 2.25rem;
+      height: 2.25rem;
+      opacity: 0.55;
     }
     h3 {
       margin: 0 0 0.5rem;
       color: inherit;
       font-weight: 600;
+      font-size: 1.05rem;
     }
     p {
-      margin: 0 0 1rem;
-      max-width: 360px;
+      margin: 0 0 1.25rem;
+      max-width: 400px;
+      line-height: 1.5;
+      font-size: 0.9rem;
     }
   `,
 })
