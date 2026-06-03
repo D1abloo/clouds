@@ -11,13 +11,20 @@ import { DemoService } from '../../../core/services/demo.service'
   template: `
     @if (demo.demoMode()) {
       <div class="demo-banner animate-fade-in" role="status" aria-label="Demo mode active">
-        <div class="demo-banner__left">
+        <div class="demo-banner__content">
           <div class="demo-banner__icon"><mat-icon>science</mat-icon></div>
-          <div>
-            <strong>Demo Mode</strong>
-            <span>No real cloud resources — simulated data only</span>
+          <div class="demo-banner__text">
+            <div class="demo-banner__title-row">
+              <strong>Demo Mode</strong>
+              <span class="demo-banner__pill">Simulated data</span>
+            </div>
+            <p>No real cloud resources connected — all metrics and actions are safe to explore</p>
             @if (demo.status(); as s) {
-              <small>{{ s.instances }} instances · {{ s.vps }} VPS · {{ s.alerts }} alerts</small>
+              <div class="demo-banner__stats">
+                <span><strong>{{ s.instances }}</strong> instances</span>
+                <span><strong>{{ s.vps }}</strong> VPS</span>
+                <span><strong>{{ s.alerts }}</strong> alerts</span>
+              </div>
             }
           </div>
         </div>
@@ -25,8 +32,14 @@ import { DemoService } from '../../../core/services/demo.service'
           @if (demo.loading()) {
             <mat-spinner diameter="22" />
           } @else {
-            <button mat-stroked-button type="button" (click)="demo.loadDemo()">Load demo data</button>
-            <button mat-stroked-button type="button" (click)="demo.resetDemo()">Reset demo</button>
+            <button mat-flat-button color="primary" type="button" (click)="demo.loadDemo()">
+              <mat-icon>cloud_download</mat-icon>
+              Load demo data
+            </button>
+            <button mat-stroked-button type="button" (click)="demo.resetDemo()">
+              <mat-icon>restart_alt</mat-icon>
+              Reset demo
+            </button>
           }
         </div>
       </div>
@@ -38,27 +51,77 @@ import { DemoService } from '../../../core/services/demo.service'
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.65rem 1rem;
-      margin-bottom: 1.25rem;
-      border-radius: var(--app-radius-md);
-      background: linear-gradient(135deg, color-mix(in srgb, #3b82f6 10%, var(--app-card)), color-mix(in srgb, #10b981 8%, var(--app-card)));
-      box-shadow: var(--app-shadow-xs);
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.35rem;
+      border-radius: var(--app-radius-lg);
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, #3b82f6 8%, var(--app-card)),
+        color-mix(in srgb, #10b981 6%, var(--app-card))
+      );
+      box-shadow: var(--app-shadow-sm);
     }
-    .demo-banner__left {
+    .demo-banner__content {
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      align-items: flex-start;
+      gap: 0.9rem;
+      flex: 1;
+      min-width: min(100%, 280px);
     }
     .demo-banner__icon {
-      width: 36px; height: 36px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      background: color-mix(in srgb, #3b82f6 15%, transparent);
-      mat-icon { color: #3b82f6; font-size: 1.25rem; }
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: color-mix(in srgb, #3b82f6 14%, transparent);
+      box-shadow: 0 4px 12px color-mix(in srgb, #3b82f6 18%, transparent);
+      mat-icon { color: #3b82f6; font-size: 1.3rem; width: 1.3rem; height: 1.3rem; }
     }
-    strong { display: block; font-size: 0.88rem; }
-    span, small { display: block; color: var(--app-text-muted); font-size: 0.76rem; }
-    .demo-banner__actions { display: flex; gap: 0.5rem; align-items: center; }
+    .demo-banner__title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      strong { font-size: 0.95rem; font-weight: 700; }
+    }
+    .demo-banner__pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, #3b82f6 12%, transparent);
+      color: #3b82f6;
+    }
+    p {
+      margin: 0.3rem 0 0;
+      font-size: 0.82rem;
+      color: var(--app-text-muted);
+      line-height: 1.45;
+      max-width: 520px;
+    }
+    .demo-banner__stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-top: 0.55rem;
+      span {
+        font-size: 0.75rem;
+        color: var(--app-text-muted);
+        strong { color: var(--app-text); font-weight: 700; margin-right: 0.2rem; }
+      }
+    }
+    .demo-banner__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      button { display: inline-flex; align-items: center; gap: 0.35rem; }
+    }
   `,
 })
 export class DemoBannerComponent implements OnInit {

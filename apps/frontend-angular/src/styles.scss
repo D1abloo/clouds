@@ -364,8 +364,21 @@ body.dark-theme {
   min-width: 140px;
 }
 
-@media (max-width: 960px) {
-  .page-container {
-    padding: 1rem;
+.mat-mdc-table {
+  background: transparent !important;
+  .mdc-data-table__row:not(.mdc-data-table__header-row) {
+    border: none;
+  }
+  .mdc-data-table__header-row {
+    border: none;
+  }
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    border-bottom: none !important;
   }
 }
+
+.dashboard-page {
+  animation: fadeIn 0.35s ease;
+}
+

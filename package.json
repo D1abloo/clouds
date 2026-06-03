@@ -12,7 +12,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "dev:backend": "npm run start:dev -w apps/backend-api",
-    "dev:frontend": "npm run start -w apps/frontend-angular",
+    "dev:frontend": "bash scripts/dev-frontend.sh",
     "dev:workers": "npm run start:dev -w apps/workers",
     "prisma:generate": "npm run prisma:generate -w apps/backend-api",
     "prisma:migrate": "npm run prisma:migrate -w apps/backend-api",

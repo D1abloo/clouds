@@ -2,7 +2,36 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-03  
-**Fase actual:** UI/UX global premium (completado)
+**Fase actual:** Dashboard premium redesign (completado)
+
+---
+
+## Fase 22 — Dashboard premium redesign ✅
+
+**Estado:** Completada (2026-06-03)
+
+**Eliminación de bordes visibles:**
+- Cards, paneles, tablas y secciones del Dashboard usan solo `box-shadow`, elevación y fondos (`--app-card`) — sin `border: 1px solid`
+- Tablas Material: override global en `styles.scss` (`border-bottom: none` en filas/celdas)
+- Status cards y table-cards antiguos con borde eliminados del Dashboard
+
+**Nuevos componentes (`features/dashboard/components/`):**
+- `DashboardHeaderComponent` — título, badge Demo/Real, last sync, segmented time range, Refresh + Export
+- `StatCardComponent` — métricas premium con icono, trend, badge, hover y animación escalonada
+- `TimeRangeSelectorComponent` — segmented control 1h / 24h / 7d / 30d
+- `DashboardSectionComponent` — secciones con jerarquía visual
+- `PlatformSummaryCardComponent` — Docker, K8s, Jenkins, Terraform con métricas y link
+- `AlertsTableComponent` — tabla sin bordes, severity pills, hover rows
+- `ActivityTimelineComponent` — timeline con iconos y timestamps
+- `NotificationsPanelComponent` — lista visual con badges de severidad
+
+**Mejoras visuales:**
+- `ChartCardComponent` — contenedor premium, loading shimmer, empty state
+- `MiniChartComponent` — donut con centro total, barras animadas, línea dual CPU/RAM, tooltips hover
+- `DemoBannerComponent` — integración más limpia, stats inline, botones modernos
+- Grid responsive: 6→3→2→1 stats, 2→1 charts, 4→2→1 platform, 3→1 panels
+
+**Validación:** `npm run build` frontend OK
 
 ---
 
