@@ -60,7 +60,11 @@ import { environment } from '../../../environments/environment'
               <mat-card-header><mat-card-title>Demo Mode</mat-card-title></mat-card-header>
               <mat-card-content>
                 <p>Simulated cloud data — no real AWS/GCP/Azure resources.</p>
+                <p><strong>Status:</strong> {{ demo.demoMode() ? 'Activo' : 'Desactivado en servidor' }}</p>
                 <p><strong>User:</strong> {{ demoUserLabel }}</p>
+                @if (!demo.canManageDemo()) {
+                  <p class="hint">Inicia sesión como admin para cargar o resetear datos demo.</p>
+                }
                 @if (demo.status(); as s) {
                   <p class="demo-stats">{{ s.instances }} instances · {{ s.vps }} VPS · {{ s.metrics }} metrics</p>
                 }
@@ -68,8 +72,8 @@ import { environment } from '../../../environments/environment'
                   @if (demo.loading()) {
                     <mat-spinner diameter="24" />
                   } @else {
-                    <button mat-flat-button color="primary" type="button" (click)="demo.loadDemo()">Cargar datos demo</button>
-                    <button mat-stroked-button color="warn" type="button" (click)="demo.resetDemo()">Reset demo</button>
+                    <button mat-flat-button color="primary" type="button" [disabled]="!demo.canManageDemo()" (click)="demo.loadDemo()">Cargar datos demo</button>
+                    <button mat-stroked-button color="warn" type="button" [disabled]="!demo.canManageDemo()" (click)="demo.resetDemo()">Reset demo</button>
                   }
                 </div>
               </mat-card-content>
@@ -105,6 +109,7 @@ import { environment } from '../../../environments/environment'
     .logout-btn { margin-top: 1rem; }
     .demo-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; align-items: center; }
     .demo-stats { font-size: 0.85rem; color: var(--app-text-muted); }
+    .hint { font-size: 0.85rem; color: #b45309; }
     p { margin: 0.5rem 0; }
   `,
 })
@@ -116,7 +121,9 @@ export class SettingsPageComponent implements OnInit {
   readonly apiUrl = environment.apiUrl
   readonly demoUserLabel = 'demo@cloudops.local / Demo1234!'
 
-  ngOnInit = (): void => this.demo.refreshStatus()
+  ngOnInit(): void {
+    this.demo.refreshStatus()
+  }
 
   handleThemeChange = (dark: boolean): void => {
     this.theme.setTheme(dark ? 'dark' : 'light')

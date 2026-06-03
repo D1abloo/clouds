@@ -200,7 +200,9 @@ export class AlertsPageComponent implements OnInit {
     }
   })
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.load()
+  }
 
   load = (): void => {
     this.page.run(this.service.list(), {

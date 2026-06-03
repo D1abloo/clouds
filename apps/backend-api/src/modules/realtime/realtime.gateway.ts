@@ -35,4 +35,16 @@ export class RealtimeGateway {
   emitDashboardUpdate(data: unknown) {
     this.server?.emit('dashboard.updated', data)
   }
+
+  emitInventoryUpdate(accountId: string, data: unknown) {
+    this.server?.emit('inventory.updated', { accountId, ...data as object })
+  }
+
+  emitSyncProgress(accountId: string, data: unknown) {
+    this.server?.emit('sync.progress', { accountId, ...data as object })
+  }
+
+  emitAccountUpdate(accountId: string, data: unknown) {
+    this.server?.emit('account.updated', { accountId, ...data as object })
+  }
 }

@@ -15,6 +15,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { InventoryService } from '../../core/services/inventory.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { RealtimeService } from '../../core/services/realtime.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
 import { finalize } from 'rxjs'
@@ -209,6 +210,7 @@ type DashboardData = Record<string, unknown>
 export class DashboardComponent implements OnInit {
   private readonly inventory = inject(InventoryService)
   private readonly demoActions = inject(DemoActionsService)
+  private readonly realtime = inject(RealtimeService)
 
   readonly page = createPageLoader(true)
   readonly data = signal<DashboardData | null>(null)
@@ -216,7 +218,12 @@ export class DashboardComponent implements OnInit {
   readonly rangeControl = new FormControl('24h', { nonNullable: true })
   readonly alertCols = ['title', 'severity', 'status']
 
-  ngOnInit = (): void => this.loadData()
+  ngOnInit(): void {
+    this.realtime.connect()
+    this.realtime.on('inventory.updated', () => this.loadData())
+    this.realtime.on('dashboard.updated', () => this.loadData())
+    this.loadData()
+  }
 
   n = (key: string): number => invNum(this.data(), key)
 

@@ -11,7 +11,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatMenuModule } from '@angular/material/menu'
 import { MatDialog } from '@angular/material/dialog'
-import { debounceTime, startWith } from 'rxjs'
+import { debounceTime, startWith, forkJoin, map } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
@@ -24,7 +24,10 @@ import { InventoryService } from '../../core/services/inventory.service'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { InstancesService } from '../../core/services/instances.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
+import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.component'
+import { LaunchInstanceDialogComponent } from './launch-instance-dialog.component'
 import { CloudProvider } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
@@ -309,8 +312,10 @@ export class CloudProviderHubComponent implements OnInit {
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly destroyRef = inject(DestroyRef)
+  private readonly realtime = inject(RealtimeService)
 
   readonly page = createPageLoader(true)
+  readonly cloudAccounts = signal<Record<string, unknown>[]>([])
   readonly summary = signal<ProviderData | null>(null)
   readonly tabIndex = signal(0)
   readonly searchControl = new FormControl('', { nonNullable: true })
@@ -331,7 +336,7 @@ export class CloudProviderHubComponent implements OnInit {
 
   readonly headerActions = [
     { label: 'Add account', icon: 'add', primary: true },
-    { label: 'Validate credentials', icon: 'verified' },
+    { label: 'Launch instance', icon: 'rocket_launch' },
     { label: 'Sync inventory', icon: 'sync' },
     { label: 'List regions', icon: 'public' },
   ]
@@ -343,7 +348,11 @@ export class CloudProviderHubComponent implements OnInit {
   private readonly regionFilter = toSignal(this.regionControl.valueChanges.pipe(startWith('')), { initialValue: '' })
   private readonly statusFilter = toSignal(this.statusControl.valueChanges.pipe(startWith('')), { initialValue: '' })
 
-  accounts = computed(() => (this.summary()?.['accountList'] as Record<string, unknown>[]) ?? [])
+  accounts = computed(() => {
+    const api = this.cloudAccounts()
+    if (api.length > 0) return api
+    return (this.summary()?.['accountList'] as Record<string, unknown>[]) ?? []
+  })
   instances = computed(() => (this.summary()?.['instanceList'] as InstanceRow[]) ?? [])
   regions = computed(() => (this.summary()?.['regionList'] as Record<string, unknown>[]) ?? [])
 
@@ -362,7 +371,13 @@ export class CloudProviderHubComponent implements OnInit {
     })
   })
 
-  ngOnInit = (): void => {
+  ngOnInit(): void {
+    this.realtime.connect()
+    this.realtime.on('inventory.updated', () => this.load())
+    this.realtime.on('sync.progress', (p) => {
+      const payload = p as { status?: string; instances?: number }
+      if (payload.status === 'completed') this.toast.success(`Sync done — ${payload.instances ?? 0} instances`)
+    })
     this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
       this.provider = (data['provider'] as CloudProvider) ?? 'AWS'
       this.title = (data['title'] as string) ?? this.provider
@@ -372,34 +387,104 @@ export class CloudProviderHubComponent implements OnInit {
       this.securityTabLabel =
         this.provider === 'GCP' ? 'Firewalls' : this.provider === 'AZURE' ? 'NSG' : 'Security Groups'
       this.load()
+      this.loadAccounts()
+    })
+  }
+
+  loadAccounts = (): void => {
+    this.accountsService.list(undefined, this.provider).subscribe({
+      next: (rows) =>
+        this.cloudAccounts.set(
+          rows.map((a) => ({
+            id: a.id,
+            name: a.name,
+            accountId: a.accountId,
+            status: (a as { syncStatus?: string }).syncStatus ?? 'active',
+            hasCredentials: (a as { hasCredentials?: boolean }).hasCredentials,
+          })),
+        ),
+      error: () => this.cloudAccounts.set([]),
     })
   }
 
   load = (): void => {
-    this.page.run(this.inventory.provider(this.provider), {
-      onSuccess: (d) => this.summary.set(d),
-      errorMessage: `Failed to load ${this.provider} inventory`,
-    })
+    const provider = this.provider
+    this.page.run(
+      forkJoin({
+        summary: this.inventory.provider(provider),
+        instances: this.instancesService.list(
+          provider === 'AWS' || provider === 'GCP' || provider === 'AZURE'
+            ? { provider }
+            : undefined,
+        ),
+      }).pipe(
+        map(({ summary, instances }) => {
+          const list = (summary['instanceList'] as InstanceRow[]) ?? []
+          const cloudOnly = instances.filter((i) => i.provider === provider)
+          return {
+            ...summary,
+            instanceList: list.length > 0 ? list : cloudOnly,
+            instances: list.length > 0 ? summary['instances'] : cloudOnly.length,
+          }
+        }),
+      ),
+      {
+        onSuccess: (d) => this.summary.set(d),
+        errorMessage: `Failed to load ${provider} inventory`,
+      },
+    )
   }
 
   n = (key: string): number => invNum(this.summary(), key)
 
   handleHeaderAction = (label: string): void => {
     if (label === 'Add account') {
-      this.demoActions.simulate(`Add ${this.provider} account`, 700, 'Account form opened (demo)').subscribe()
+      this.dialog
+        .open(CloudAccountFormDialogComponent, { width: '520px', data: { provider: this.provider } })
+        .afterClosed()
+        .subscribe((res) => {
+          if (res?.created) {
+            this.loadAccounts()
+            this.load()
+          }
+        })
       return
     }
-    if (label === 'Validate credentials') {
-      this.demoActions.simulate('Credential validation', 900, 'All credentials valid (demo)').subscribe()
+    if (label === 'Launch instance') {
+      const acc = this.accounts()[0]
+      if (!acc?.['id']) {
+        this.toast.error('Add a cloud account first')
+        return
+      }
+      this.dialog
+        .open(LaunchInstanceDialogComponent, {
+          width: '440px',
+          data: { accountId: String(acc['id']), accountName: String(acc['name']) },
+        })
+        .afterClosed()
+        .subscribe((res) => {
+          if (res?.launched) this.load()
+        })
       return
     }
     if (label === 'Sync inventory') {
-      this.demoActions.simulate('Inventory sync', 1200, 'Inventory synchronized').subscribe(() => this.load())
+      const list = this.accounts()
+      if (list.length === 0) {
+        this.accountsService.syncAll().subscribe({
+          next: (r) => {
+            this.toast.success(`Synced ${r.accounts} accounts`)
+            this.load()
+            this.loadAccounts()
+          },
+          error: () => this.demoActions.simulate('Inventory sync', 1200).subscribe(() => this.load()),
+        })
+        return
+      }
+      list.forEach((a) => this.syncAccount(a))
       return
     }
     if (label === 'List regions') {
       this.tabIndex.set(2)
-      this.demoActions.simulate('List regions', 400).subscribe()
     }
   }
 
@@ -412,9 +497,10 @@ export class CloudProviderHubComponent implements OnInit {
 
   syncAccount = (account: Record<string, unknown>): void => {
     this.accountsService.sync(String(account['id'])).subscribe({
-      next: () => {
-        this.toast.success('Sync started')
+      next: (r) => {
+        this.toast.success(`Synced ${r.instances} instances (${r.regions} regions)`)
         this.load()
+        this.loadAccounts()
       },
       error: () => this.demoActions.simulate('Account sync', 800).subscribe(() => this.load()),
     })

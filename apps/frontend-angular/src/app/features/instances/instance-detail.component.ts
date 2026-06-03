@@ -145,7 +145,7 @@ export class InstanceDetailComponent implements OnInit {
 
   private instanceId = ''
 
-  ngOnInit = (): void => {
+  ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.instanceId = params.get('id') ?? ''
       this.load()

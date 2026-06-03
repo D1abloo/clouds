@@ -1,56 +1,112 @@
 import { Injectable } from '@nestjs/common'
-import { CloudProvider } from '@prisma/client'
-import { BaseCloudAdapter } from './base-cloud.adapter'
-import { CloudInstance, CloudRegion, CredentialValidationResult } from './cloud-provider.adapter'
+import { InstanceStatus } from '@prisma/client'
+import {
+  ActionResult,
+  CloudAdapterContext,
+  CloudImage,
+  CloudInstance,
+  CloudInstanceType,
+  CloudNetwork,
+  CloudProviderAdapter,
+  CloudRegion,
+  CloudSecurityGroup,
+  LaunchInstanceInput,
+  ValidationResult,
+} from './cloud-provider.adapter'
+import {
+  buildValidation,
+  mockImages,
+  mockInstanceTypes,
+  mockNetworks,
+  mockSecurityGroups,
+  regionsFor,
+  synthesizeInstances,
+} from './cloud-adapter.helpers'
+
+const AZURE_REGIONS = [
+  { id: 'westeurope', name: 'West Europe', zones: ['1', '2', '3'] },
+  { id: 'eastus', name: 'East US', zones: ['1', '2'] },
+  { id: 'spaincentral', name: 'Spain Central', zones: ['1'] },
+]
+
+const AZURE_PERMS = [
+  'Microsoft.Compute/virtualMachines/read',
+  'Microsoft.Compute/virtualMachines/start/action',
+  'Microsoft.Compute/virtualMachines/powerOff/action',
+  'Microsoft.Insights/metrics/read',
+  'Microsoft.CostManagement/query/action',
+]
 
 @Injectable()
-export class AzureAdapterService extends BaseCloudAdapter {
-  // TODO: Integrate @azure/arm-compute with Service Principal / Managed Identity / OIDC
+export class AzureAdapterService implements CloudProviderAdapter {
+  // TODO: @azure/arm-compute
 
-  async validateCredentials(): Promise<CredentialValidationResult> {
-    return { valid: true, message: 'Mock Azure credentials validated (integrate Azure SDK)' }
+  async validateConnection(ctx: CloudAdapterContext): Promise<ValidationResult> {
+    return buildValidation(ctx, 'Azure', AZURE_PERMS)
   }
 
-  async listRegions(): Promise<CloudRegion[]> {
-    return [
-      { id: 'eastus', name: 'East US', provider: CloudProvider.AZURE },
-      { id: 'westeurope', name: 'West Europe', provider: CloudProvider.AZURE },
-    ]
+  async listRegions(ctx: CloudAdapterContext): Promise<CloudRegion[]> {
+    return regionsFor(ctx, AZURE_REGIONS)
   }
 
-  async listInstances(region?: string): Promise<CloudInstance[]> {
-    const instances: CloudInstance[] = [
-      {
-        id: 'azure-mock-001',
-        name: 'azure-vm-01',
-        region: 'eastus',
-        status: 'RUNNING' as CloudInstance['status'],
-        instanceType: 'Standard_B2s',
-        provider: CloudProvider.AZURE,
-      },
-    ]
-    if (region) return instances.filter((i) => i.region === region)
-    return instances
+  async listNetworks(ctx: CloudAdapterContext, region?: string): Promise<CloudNetwork[]> {
+    const r = region ?? ctx.defaultRegion ?? 'westeurope'
+    return mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vnet' }))
   }
 
-  async getInstance(instanceId: string): Promise<CloudInstance | null> {
-    const all = await this.listInstances()
-    return all.find((i) => i.id === instanceId) ?? null
+  async listSecurityGroups(ctx: CloudAdapterContext, region?: string): Promise<CloudSecurityGroup[]> {
+    const r = region ?? ctx.defaultRegion ?? 'westeurope'
+    return mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `nsg-${s.name}` }))
   }
 
-  async startInstance(instanceId: string, _region?: string): Promise<void> {
-    console.log(`[Azure Mock] Starting instance ${instanceId}`)
+  async listImages(ctx: CloudAdapterContext, region: string): Promise<CloudImage[]> {
+    return mockImages(ctx, region).map((i) => ({ ...i, id: `/subscriptions/demo/images/${i.id}` }))
   }
 
-  async stopInstance(instanceId: string, _region?: string): Promise<void> {
-    console.log(`[Azure Mock] Stopping instance ${instanceId}`)
+  async listInstanceTypes(ctx: CloudAdapterContext, region: string): Promise<CloudInstanceType[]> {
+    return mockInstanceTypes(ctx, region).map((t) => ({
+      ...t,
+      id: `Standard_B${t.vcpus}s`,
+      name: `Standard_B${t.vcpus}s`,
+    }))
   }
 
-  async restartInstance(instanceId: string, _region?: string): Promise<void> {
-    console.log(`[Azure Mock] Restarting instance ${instanceId}`)
+  async listInstances(ctx: CloudAdapterContext, region?: string): Promise<CloudInstance[]> {
+    const all = synthesizeInstances(ctx)
+    if (region) return all.filter((i) => i.region === region)
+    return all
   }
 
-  async syncInventory(): Promise<CloudInstance[]> {
-    return this.listInstances()
+  async getInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<CloudInstance | null> {
+    return (await this.listInstances(ctx, region)).find((i) => i.id === instanceId) ?? null
+  }
+
+  async startInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
+    console.log(`[Azure SDK-ready] start ${instanceId} sub=${ctx.config['subscriptionId']}`)
+    return { success: true, message: `[Azure] Started ${instanceId}` }
+  }
+
+  async stopInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
+    return { success: true, message: `[Azure] Deallocated ${instanceId}` }
+  }
+
+  async restartInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
+    return { success: true, message: `[Azure] Restarted ${instanceId}` }
+  }
+
+  async launchInstance(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<CloudInstance> {
+    return {
+      id: `vm-${Date.now().toString(36)}`,
+      name: input.name,
+      region: input.region,
+      status: 'PENDING' as InstanceStatus,
+      instanceType: input.instanceType,
+      provider: ctx.provider,
+      metadata: { imageId: input.imageId, resourceGroup: ctx.config['resourceGroup'], isDemo: true },
+    }
+  }
+
+  async syncInventory(ctx: CloudAdapterContext): Promise<CloudInstance[]> {
+    return this.listInstances(ctx)
   }
 }

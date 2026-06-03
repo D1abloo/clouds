@@ -9,7 +9,7 @@ import { DemoService } from '../../../core/services/demo.service'
   standalone: true,
   imports: [MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   template: `
-    @if (demo.demoMode) {
+    @if (demo.demoMode()) {
       <div class="demo-banner" role="status" aria-label="Demo mode active">
         <div class="demo-banner__content">
           <mat-icon>science</mat-icon>
@@ -63,5 +63,7 @@ import { DemoService } from '../../../core/services/demo.service'
 export class DemoBannerComponent implements OnInit {
   readonly demo = inject(DemoService)
 
-  ngOnInit = (): void => this.demo.refreshStatus()
+  ngOnInit(): void {
+    this.demo.refreshStatus()
+  }
 }

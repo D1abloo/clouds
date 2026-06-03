@@ -1,8 +1,31 @@
 # CloudOps Control Center — Progress Tracker
 
 Plan maestro: `prompts_cursor_por_fases.md`  
-Última ejecución: 2026-06-02  
-**Fase actual:** Paneles ricos + Demo UI (completado)
+Última ejecución: 2026-06-03  
+**Fase actual:** Cloud accounts + sync + realtime (completado)
+
+---
+
+## Fase 18 — Gestión cloud completa (cuentas, sync, realtime) ✅
+
+**Estado:** Completada (2026-06-03)
+
+**Backend:**
+- Interfaz `CloudProviderAdapter` ampliada (regiones, redes, SG, imágenes, tipos, launch, sync)
+- `CloudAdapterRegistry`, `CloudSyncService`, `SecretsVaultService` (AES-GCM)
+- Adaptadores AWS/GCP/Azure con contexto por cuenta (demo SDK-ready)
+- `InstanceSyncWorker`, `MetricsSyncWorker`, `BillingSyncWorker`
+- API: `POST cloud-accounts`, `validate`, `sync`, `launch`, `networks`, `security-groups`, `images`, `instance-types`, `sync-all`
+- WebSocket: `inventory.updated`, `sync.progress`, `account.updated`
+- SSE: `GET /realtime/events`
+- Prisma: `defaultRegion`, `config`, `syncStatus`, `lastSyncedAt` en `CloudAccount`
+
+**Frontend:**
+- Formularios por proveedor (`cloud-account-form-dialog`)
+- Lanzamiento de instancias (`launch-instance-dialog`)
+- `RealtimeService` (socket.io)
+- Hub AWS/GCP/Azure conectado a API real + tiempo real
+- Docker/K8s: discovery API + refresh en vivo
 
 ---
 

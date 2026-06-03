@@ -144,8 +144,11 @@ export class InventoryService {
       .reduce((s, b) => s + b.amount, 0)
 
     return {
-      totalInstances: instances.length,
-      runningInstances: instances.filter((i) => i.status === 'RUNNING').length,
+      totalInstances: instances.length + vps.length,
+      runningInstances: instances.filter((i) => i.status === 'RUNNING').length + vps.filter((v) => {
+        const meta = (v.metadata as Record<string, unknown>) ?? {}
+        return meta['sshStatus'] === 'connected'
+      }).length,
       stoppedInstances: instances.filter((i) => i.status === 'STOPPED').length,
       warningInstances: instances.filter((i) => i.status === 'WARNING').length,
       errorInstances: instances.filter((i) => i.status === 'ERROR').length,

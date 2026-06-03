@@ -1,42 +1,61 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
-import { CloudProvider } from '@prisma/client'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { CreateCloudAccountDto } from './dto/create-cloud-account.dto'
-import { AwsAdapterService } from './adapters/aws.adapter.service'
-import { GcpAdapterService } from './adapters/gcp.adapter.service'
-import { AzureAdapterService } from './adapters/azure.adapter.service'
-import { CloudProviderAdapter } from './adapters/cloud-provider.adapter'
+import { LaunchInstanceDto } from './dto/launch-instance.dto'
+import { CloudAdapterRegistry } from './cloud-adapter.registry'
+import { CloudSyncService } from './cloud-sync.service'
+import { SecretsVaultService } from './secrets-vault.service'
 
 @Injectable()
 export class CloudAccountsService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
-    private awsAdapter: AwsAdapterService,
-    private gcpAdapter: GcpAdapterService,
-    private azureAdapter: AzureAdapterService,
+    private registry: CloudAdapterRegistry,
+    private sync: CloudSyncService,
+    private vault: SecretsVaultService,
   ) {}
 
-  private getAdapter(provider: CloudProvider): CloudProviderAdapter {
-    switch (provider) {
-      case CloudProvider.AWS: return this.awsAdapter
-      case CloudProvider.GCP: return this.gcpAdapter
-      case CloudProvider.AZURE: return this.azureAdapter
-      default: throw new BadRequestException('Unsupported provider')
-    }
+  async getDefaultProject() {
+    const project = await this.prisma.project.findFirst({ where: { slug: 'default', deletedAt: null } })
+    if (!project) throw new NotFoundException('Default project not found — run database seed')
+    return { id: project.id, name: project.name, slug: project.slug }
   }
 
   async create(dto: CreateCloudAccountDto, userId?: string) {
+    const creds = dto.credentials ?? {}
+    const secretPayload: Record<string, string> = {
+      credentialType: creds.credentialType ?? 'demo',
+      demoMode: creds.demoMode ?? 'true',
+      roleArn: creds.roleArn ?? '',
+      externalId: creds.externalId ?? '',
+      accessKeyId: creds.accessKeyId ?? '',
+      secretAccessKey: creds.secretAccessKey ?? '',
+      oidcProvider: creds.oidcProvider ?? '',
+      serviceAccountJson: creds.serviceAccountJson ?? '',
+      tenantId: creds.tenantId ?? '',
+      clientId: creds.clientId ?? '',
+      clientSecret: creds.clientSecret ?? '',
+      managedIdentity: creds.managedIdentity ?? '',
+    }
+
     const account = await this.prisma.cloudAccount.create({
       data: {
         projectId: dto.projectId,
         name: dto.name,
         provider: dto.provider,
         accountId: dto.accountId,
-        credentials: dto.credentialType
-          ? { create: [{ credentialType: dto.credentialType, secretRef: dto.secretRef ?? 'vault:pending' }] }
-          : undefined,
+        defaultRegion: dto.defaultRegion,
+        config: (dto.config ?? {}) as object,
+        credentials: {
+          create: [
+            {
+              credentialType: creds.credentialType ?? 'demo',
+              secretRef: this.vault.storeSecrets(secretPayload),
+            },
+          ],
+        },
       },
       include: { credentials: true },
     })
@@ -51,20 +70,36 @@ export class CloudAccountsService {
     return this.sanitizeAccount(account)
   }
 
-  async findAll(projectId?: string) {
+  async findAll(projectId?: string, provider?: string) {
     const accounts = await this.prisma.cloudAccount.findMany({
-      where: { deletedAt: null, ...(projectId ? { projectId } : {}) },
-      include: { credentials: { select: { id: true, credentialType: true, createdAt: true } } },
+      where: {
+        deletedAt: null,
+        ...(projectId ? { projectId } : {}),
+        ...(provider ? { provider: provider as never } : {}),
+      },
+      include: { credentials: { select: { id: true, credentialType: true, createdAt: true } }, regions: true },
+      orderBy: { name: 'asc' },
     })
     return accounts.map((a) => this.sanitizeAccount(a))
   }
 
-  async validateConnection(id: string, userId?: string) {
+  async findOne(id: string) {
+    const account = await this.prisma.cloudAccount.findFirst({
+      where: { id, deletedAt: null },
+      include: { regions: true, credentials: { select: { credentialType: true } } },
+    })
+    if (!account) throw new NotFoundException('Cloud account not found')
+    return this.sanitizeAccount(account as unknown as Record<string, unknown>)
+  }
+
+  async getProvider(id: string) {
     const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
     if (!account) throw new NotFoundException('Cloud account not found')
+    return account.provider
+  }
 
-    const result = await this.getAdapter(account.provider).validateCredentials()
-
+  async validateConnection(id: string, userId?: string) {
+    const result = await this.registry.validateConnection(id)
     await this.audit.create({
       userId,
       action: 'cloud_account.validate',
@@ -72,66 +107,45 @@ export class CloudAccountsService {
       resourceId: id,
       metadata: { valid: result.valid },
     })
-
     return result
   }
 
   async listRegions(id: string) {
-    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
-    if (!account) throw new NotFoundException('Cloud account not found')
-    return this.getAdapter(account.provider).listRegions()
+    return this.registry.listRegions(id)
+  }
+
+  async listNetworks(id: string, region?: string) {
+    return this.registry.listNetworks(id, region)
+  }
+
+  async listSecurityGroups(id: string, region?: string) {
+    return this.registry.listSecurityGroups(id, region)
+  }
+
+  async listImages(id: string, region: string) {
+    return this.registry.listImages(id, region)
+  }
+
+  async listInstanceTypes(id: string, region: string) {
+    return this.registry.listInstanceTypes(id, region)
   }
 
   async syncInventory(id: string, userId?: string) {
-    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
-    if (!account) throw new NotFoundException('Cloud account not found')
-
-    const instances = await this.getAdapter(account.provider).syncInventory()
-
-    for (const inst of instances) {
-      const existing = await this.prisma.instance.findFirst({
-        where: { cloudAccountId: id, externalId: inst.id },
-      })
-
-      if (existing) {
-        await this.prisma.instance.update({
-          where: { id: existing.id },
-          data: {
-            name: inst.name,
-            status: inst.status,
-            instanceType: inst.instanceType,
-            metadata: inst.metadata as object | undefined,
-          },
-        })
-      } else {
-        await this.prisma.instance.create({
-          data: {
-            projectId: account.projectId,
-            cloudAccountId: id,
-            externalId: inst.id,
-            name: inst.name,
-            provider: inst.provider,
-            region: inst.region,
-            instanceType: inst.instanceType,
-            status: inst.status,
-            metadata: inst.metadata as object | undefined,
-          },
-        })
-      }
-    }
-
-    await this.audit.create({
-      userId,
-      action: 'cloud_account.sync',
-      resource: 'cloud_account',
-      resourceId: id,
-      metadata: { count: instances.length },
-    })
-
-    return { synced: instances.length }
+    return this.sync.fullSync(id, userId)
   }
 
-  private sanitizeAccount<T extends { credentials?: unknown[] }>(account: T) {
-    return { ...account, credentials: undefined, hasCredentials: !!(account.credentials?.length) }
+  async launchInstance(id: string, dto: LaunchInstanceDto, userId?: string) {
+    return this.sync.launchInstance(id, dto, userId)
+  }
+
+  private sanitizeAccount(account: Record<string, unknown>) {
+    const creds = account['credentials'] as { credentialType?: string }[] | undefined
+    const { credentials: _c, ...rest } = account
+    return {
+      ...rest,
+      hasCredentials: !!(creds?.length),
+      credentialType: creds?.[0]?.credentialType,
+      status: (account['syncStatus'] as string) ?? 'idle',
+    }
   }
 }

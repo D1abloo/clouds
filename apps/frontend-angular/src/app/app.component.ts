@@ -11,7 +11,7 @@ import { ThemeService } from './core/services/theme.service'
 export class AppComponent implements OnInit {
   private readonly theme = inject(ThemeService)
 
-  ngOnInit = (): void => {
+  ngOnInit(): void {
     this.theme.setTheme(this.theme.mode())
   }
 }

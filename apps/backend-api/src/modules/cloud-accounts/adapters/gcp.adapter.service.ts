@@ -1,56 +1,112 @@
 import { Injectable } from '@nestjs/common'
-import { CloudProvider } from '@prisma/client'
-import { BaseCloudAdapter } from './base-cloud.adapter'
-import { CloudInstance, CloudRegion, CredentialValidationResult } from './cloud-provider.adapter'
+import { InstanceStatus } from '@prisma/client'
+import {
+  ActionResult,
+  CloudAdapterContext,
+  CloudImage,
+  CloudInstance,
+  CloudInstanceType,
+  CloudNetwork,
+  CloudProviderAdapter,
+  CloudRegion,
+  CloudSecurityGroup,
+  LaunchInstanceInput,
+  ValidationResult,
+} from './cloud-provider.adapter'
+import {
+  buildValidation,
+  mockImages,
+  mockInstanceTypes,
+  mockNetworks,
+  mockSecurityGroups,
+  regionsFor,
+  synthesizeInstances,
+} from './cloud-adapter.helpers'
+
+const GCP_REGIONS = [
+  { id: 'us-central1-a', name: 'US Central (Iowa)', zones: ['us-central1-a', 'us-central1-b'] },
+  { id: 'europe-west1-b', name: 'Europe West (Belgium)', zones: ['europe-west1-b', 'europe-west1-c'] },
+]
+
+const GCP_PERMS = [
+  'compute.instances.list',
+  'compute.instances.start',
+  'compute.instances.stop',
+  'monitoring.timeSeries.list',
+  'billing.accounts.get',
+]
 
 @Injectable()
-export class GcpAdapterService extends BaseCloudAdapter {
-  // TODO: Integrate @google-cloud/compute with Service Account / OIDC
+export class GcpAdapterService implements CloudProviderAdapter {
+  // TODO: @google-cloud/compute
 
-  async validateCredentials(): Promise<CredentialValidationResult> {
-    return { valid: true, message: 'Mock GCP credentials validated (integrate Google Cloud SDK)' }
+  async validateConnection(ctx: CloudAdapterContext): Promise<ValidationResult> {
+    return buildValidation(ctx, 'GCP', GCP_PERMS)
   }
 
-  async listRegions(): Promise<CloudRegion[]> {
-    return [
-      { id: 'us-central1', name: 'Iowa', provider: CloudProvider.GCP },
-      { id: 'europe-west1', name: 'Belgium', provider: CloudProvider.GCP },
-    ]
+  async listRegions(ctx: CloudAdapterContext): Promise<CloudRegion[]> {
+    return regionsFor(ctx, GCP_REGIONS)
   }
 
-  async listInstances(region?: string): Promise<CloudInstance[]> {
-    const instances: CloudInstance[] = [
-      {
-        id: 'gcp-mock-001',
-        name: 'gcp-app-01',
-        region: 'us-central1',
-        status: 'RUNNING' as CloudInstance['status'],
-        instanceType: 'e2-medium',
-        provider: CloudProvider.GCP,
-      },
-    ]
-    if (region) return instances.filter((i) => i.region === region)
-    return instances
+  async listNetworks(ctx: CloudAdapterContext, region?: string): Promise<CloudNetwork[]> {
+    const r = region ?? ctx.defaultRegion ?? 'us-central1-a'
+    return mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vpc-network' }))
   }
 
-  async getInstance(instanceId: string): Promise<CloudInstance | null> {
-    const all = await this.listInstances()
-    return all.find((i) => i.id === instanceId) ?? null
+  async listSecurityGroups(ctx: CloudAdapterContext, region?: string): Promise<CloudSecurityGroup[]> {
+    const r = region ?? ctx.defaultRegion ?? 'us-central1-a'
+    return mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `fw-${s.name}` }))
   }
 
-  async startInstance(instanceId: string, _region?: string): Promise<void> {
-    console.log(`[GCP Mock] Starting instance ${instanceId}`)
+  async listImages(ctx: CloudAdapterContext, region: string): Promise<CloudImage[]> {
+    return mockImages(ctx, region).map((i) => ({ ...i, id: `projects/demo/global/images/${i.id}` }))
   }
 
-  async stopInstance(instanceId: string, _region?: string): Promise<void> {
-    console.log(`[GCP Mock] Stopping instance ${instanceId}`)
+  async listInstanceTypes(ctx: CloudAdapterContext, region: string): Promise<CloudInstanceType[]> {
+    return mockInstanceTypes(ctx, region).map((t) => ({
+      ...t,
+      id: `e2-${t.name}`,
+      name: `e2-${t.name}`,
+    }))
   }
 
-  async restartInstance(instanceId: string, _region?: string): Promise<void> {
-    console.log(`[GCP Mock] Restarting instance ${instanceId}`)
+  async listInstances(ctx: CloudAdapterContext, region?: string): Promise<CloudInstance[]> {
+    const all = synthesizeInstances(ctx)
+    if (region) return all.filter((i) => i.region === region)
+    return all
   }
 
-  async syncInventory(): Promise<CloudInstance[]> {
-    return this.listInstances()
+  async getInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<CloudInstance | null> {
+    return (await this.listInstances(ctx, region)).find((i) => i.id === instanceId) ?? null
+  }
+
+  async startInstance(ctx: CloudAdapterContext, instanceId: string, _region?: string): Promise<ActionResult> {
+    console.log(`[GCP SDK-ready] start ${instanceId} project=${ctx.config['projectId']}`)
+    return { success: true, message: `[GCP] Started ${instanceId}` }
+  }
+
+  async stopInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
+    console.log(`[GCP SDK-ready] stop ${instanceId}`)
+    return { success: true, message: `[GCP] Stopped ${instanceId}` }
+  }
+
+  async restartInstance(ctx: CloudAdapterContext, instanceId: string): Promise<ActionResult> {
+    return { success: true, message: `[GCP] Reset ${instanceId}` }
+  }
+
+  async launchInstance(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<CloudInstance> {
+    return {
+      id: `gce-${Date.now().toString(36)}`,
+      name: input.name,
+      region: input.region,
+      status: 'PENDING' as InstanceStatus,
+      instanceType: input.instanceType,
+      provider: ctx.provider,
+      metadata: { imageId: input.imageId, isDemo: true },
+    }
+  }
+
+  async syncInventory(ctx: CloudAdapterContext): Promise<CloudInstance[]> {
+    return this.listInstances(ctx)
   }
 }

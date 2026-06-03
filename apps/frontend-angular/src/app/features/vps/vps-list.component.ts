@@ -206,7 +206,9 @@ export class VpsListComponent implements OnInit {
   withDocker = computed(() => this.hosts().filter((h) => h.docker !== false).length)
   withK8s = computed(() => Math.min(2, this.hosts().length))
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.load()
+  }
 
   load = (): void => {
     this.page.run(this.service.list(), {

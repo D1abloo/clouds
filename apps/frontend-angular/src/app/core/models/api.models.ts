@@ -1,4 +1,4 @@
-export type CloudProvider = 'AWS' | 'GCP' | 'AZURE'
+export type CloudProvider = 'AWS' | 'GCP' | 'AZURE' | 'VPS'
 
 export type ResourceStatus =
   | 'running'
@@ -26,6 +26,11 @@ export interface CloudAccount {
   provider: CloudProvider
   accountId?: string
   projectId?: string
+  defaultRegion?: string
+  hasCredentials?: boolean
+  credentialType?: string
+  syncStatus?: string
+  lastSyncedAt?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -33,7 +38,7 @@ export interface CloudAccount {
 export interface Instance {
   id: string
   name: string
-  provider: CloudProvider
+  provider: CloudProvider | string
   region?: string
   status?: string
   instanceType?: string
@@ -44,6 +49,7 @@ export interface Instance {
   environment?: string
   health?: string
   isDemo?: boolean
+  isVps?: boolean
   cpuCores?: number
   ramGb?: number
   diskGb?: number

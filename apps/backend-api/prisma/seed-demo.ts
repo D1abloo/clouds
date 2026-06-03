@@ -21,7 +21,7 @@ import {
   buildVpsMetadata,
 } from './demo/demo-catalog'
 
-const prisma = new PrismaClient()
+const defaultPrisma = new PrismaClient()
 
 const accountNames: Record<string, string> = {
   [DEMO_ACCOUNTS.aws.id]: DEMO_ACCOUNTS.aws.name,
@@ -29,7 +29,11 @@ const accountNames: Record<string, string> = {
   [DEMO_ACCOUNTS.azure.id]: DEMO_ACCOUNTS.azure.name,
 }
 
-export async function seedDemoData(options: { clearFirst?: boolean } = {}) {
+export async function seedDemoData(
+  options: { clearFirst?: boolean } = {},
+  prismaClient: PrismaClient = defaultPrisma,
+) {
+  const prisma = prismaClient
   if (options.clearFirst) {
     await clearDemoData(prisma)
   }
@@ -479,7 +483,7 @@ export async function seedDemoData(options: { clearFirst?: boolean } = {}) {
 
 async function main() {
   const clearFirst = process.argv.includes('--reset')
-  await seedDemoData({ clearFirst })
+  await seedDemoData({ clearFirst }, defaultPrisma)
 }
 
 if (require.main === module) {
@@ -489,6 +493,6 @@ if (require.main === module) {
       process.exit(1)
     })
     .finally(async () => {
-      await prisma.$disconnect()
+      await defaultPrisma.$disconnect()
     })
 }

@@ -21,6 +21,7 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { InstancesService } from '../../core/services/instances.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { DemoService } from '../../core/services/demo.service'
 import { ToastService } from '../../core/services/toast.service'
 import { Instance } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
@@ -74,6 +75,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
               <mat-option value="AWS">AWS</mat-option>
               <mat-option value="GCP">GCP</mat-option>
               <mat-option value="AZURE">Azure</mat-option>
+              <mat-option value="VPS">VPS</mat-option>
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Region</mat-label>
@@ -94,9 +96,9 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           <mat-form-field appearance="outline"><mat-label>Environment</mat-label>
             <mat-select [formControl]="envControl">
               <mat-option value="">All</mat-option>
-              <mat-option value="production">Production</mat-option>
+              <mat-option value="prod">Production</mat-option>
               <mat-option value="staging">Staging</mat-option>
-              <mat-option value="development">Development</mat-option>
+              <mat-option value="dev">Development</mat-option>
             </mat-select>
           </mat-form-field>
         </div>
@@ -115,8 +117,21 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           <app-loading-state />
         } @else if (page.error()) {
           <app-error-state [message]="page.error()!" (retry)="load()" />
+        } @else if (filtered().length === 0 && instances().length > 0) {
+          <app-empty-state
+            title="No matches"
+            description="Clear filters to see {{ instances().length }} instances."
+          />
         } @else if (filtered().length === 0) {
-          <app-empty-state title="No instances" description="Sync cloud accounts or load demo data." />
+          <app-empty-state
+            title="No instances"
+            description="Load demo data from Settings or the Demo banner (admin login required)."
+          />
+          @if (demo.canManageDemo()) {
+            <button mat-flat-button color="primary" type="button" class="empty-action" (click)="demo.loadDemo()">
+              Cargar datos demo
+            </button>
+          }
         } @else if (viewMode() === 'grid') {
           <div class="instance-grid">
             @for (row of filtered(); track row.id) {
@@ -182,11 +197,13 @@ import { createPageLoader } from '../../core/utils/page-load.util'
       flex-direction: column;
       gap: 0.35rem;
     }
+    .empty-action { margin-top: 0.75rem; }
   `,
 })
 export class InstancesListComponent implements OnInit {
   private readonly service = inject(InstancesService)
   readonly demoActions = inject(DemoActionsService)
+  readonly demo = inject(DemoService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
 
@@ -221,12 +238,14 @@ export class InstancesListComponent implements OnInit {
       const matchProvider = !this.providerFilter() || i.provider === this.providerFilter()
       const matchRegion = !this.regionFilter() || i.region === this.regionFilter()
       const matchStatus = !this.statusFilter() || i.status === this.statusFilter()
-      const matchEnv = !this.envFilter() || (i.environment ?? '').toLowerCase() === this.envFilter()
+      const matchEnv = !this.envFilter() || (i.environment ?? '').toLowerCase() === this.envFilter().toLowerCase()
       return matchTerm && matchProvider && matchRegion && matchStatus && matchEnv
     })
   })
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.load()
+  }
 
   load = (): void => {
     this.page.run(this.service.list(), {

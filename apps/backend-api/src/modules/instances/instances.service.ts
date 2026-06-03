@@ -2,33 +2,100 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { CloudProvider } from '@prisma/client'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
-import { AwsAdapterService } from '../cloud-accounts/adapters/aws.adapter.service'
-import { GcpAdapterService } from '../cloud-accounts/adapters/gcp.adapter.service'
-import { AzureAdapterService } from '../cloud-accounts/adapters/azure.adapter.service'
+import { CloudAdapterRegistry } from '../cloud-accounts/cloud-adapter.registry'
+import { InstanceStatus } from '@prisma/client'
 
 @Injectable()
 export class InstancesService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
-    private aws: AwsAdapterService,
-    private gcp: GcpAdapterService,
-    private azure: AzureAdapterService,
+    private cloudRegistry: CloudAdapterRegistry,
   ) {}
 
-  async findAll(filters?: { projectId?: string; provider?: CloudProvider; cloudAccountId?: string; region?: string }) {
+  async findAll(filters?: {
+    projectId?: string
+    provider?: string
+    cloudAccountId?: string
+    region?: string
+  }) {
+    if (filters?.provider === 'VPS') {
+      return this.findAllVpsAsInstances(filters)
+    }
+
     const rows = await this.prisma.instance.findMany({
       where: {
         deletedAt: null,
         ...(filters?.projectId && { projectId: filters.projectId }),
-        ...(filters?.provider && { provider: filters.provider }),
+        ...(filters?.provider &&
+          filters.provider !== 'VPS' && { provider: filters.provider as CloudProvider }),
         ...(filters?.cloudAccountId && { cloudAccountId: filters.cloudAccountId }),
         ...(filters?.region && { region: filters.region }),
       },
       include: { cloudAccount: { select: { id: true, name: true, provider: true } } },
       orderBy: [{ provider: 'asc' }, { region: 'asc' }, { name: 'asc' }],
     })
-    return rows.map((row) => this.enrichInstance(row))
+
+    const cloud = rows.map((row) => this.enrichInstance(row))
+
+    if (filters?.provider) {
+      return cloud
+    }
+
+    const vps = await this.findAllVpsAsInstances(filters)
+    return [...cloud, ...vps]
+  }
+
+  private async findAllVpsAsInstances(filters?: { projectId?: string; region?: string }) {
+    const vpsRows = await this.prisma.vpsServer.findMany({
+      where: {
+        deletedAt: null,
+        ...(filters?.projectId && { projectId: filters.projectId }),
+      },
+      orderBy: { name: 'asc' },
+    })
+
+    return vpsRows
+      .filter((v) => !filters?.region || v.hostname === filters.region || (v.metadata as Record<string, unknown>)?.['region'] === filters.region)
+      .map((v) => this.enrichVpsAsInstance(v))
+  }
+
+  private enrichVpsAsInstance(vps: Record<string, unknown>) {
+    const meta = (vps['metadata'] as Record<string, unknown>) ?? {}
+    const sshStatus = String(meta['sshStatus'] ?? 'unknown')
+    const statusMap: Record<string, string> = {
+      connected: 'RUNNING',
+      disconnected: 'STOPPED',
+      warning: 'WARNING',
+      error: 'ERROR',
+    }
+    return {
+      id: vps['id'],
+      projectId: vps['projectId'],
+      cloudAccountId: null,
+      externalId: vps['id'],
+      name: vps['name'],
+      provider: 'VPS',
+      region: String(meta['region'] ?? meta['publicIp'] ?? vps['hostname'] ?? '—'),
+      instanceType: 'bare-metal',
+      status: statusMap[sshStatus] ?? 'UNKNOWN',
+      metadata: meta,
+      publicIp: meta['publicIp'] ?? vps['hostname'],
+      privateIp: meta['privateIp'] ?? null,
+      os: meta['os'] ?? null,
+      environment: meta['environment'] ?? null,
+      health: meta['health'] ?? sshStatus,
+      isDemo: meta['isDemo'] ?? false,
+      isVps: true,
+      cpuCores: meta['cpuCores'] ?? null,
+      ramGb: meta['ramGb'] ?? null,
+      diskGb: meta['diskGb'] ?? null,
+      monthlyCost: meta['monthlyCost'] ?? null,
+      mtdCost: meta['mtdCost'] ?? null,
+      tags: meta['tags'] ?? {},
+      hasDocker: meta['hasDocker'] ?? false,
+      hasKubernetes: meta['hasKubernetes'] ?? false,
+    }
   }
 
   async findOne(id: string) {
@@ -36,8 +103,14 @@ export class InstancesService {
       where: { id, deletedAt: null },
       include: { cloudAccount: true, project: true },
     })
-    if (!instance) throw new NotFoundException('Instance not found')
-    return this.enrichInstance(instance)
+    if (instance) return this.enrichInstance(instance)
+
+    const vps = await this.prisma.vpsServer.findUnique({
+      where: { id, deletedAt: null },
+    })
+    if (vps) return this.enrichVpsAsInstance(vps as unknown as Record<string, unknown>)
+
+    throw new NotFoundException('Instance not found')
   }
 
   private enrichInstance<T extends Record<string, unknown>>(instance: T) {
@@ -77,8 +150,9 @@ export class InstancesService {
 
   private async runAction(id: string, action: 'start' | 'stop' | 'restart', userId?: string) {
     const instance = await this.findOne(id)
+    const isVps = Boolean((instance as { isVps?: unknown }).isVps === true)
     const isDemo = Boolean((instance as { isDemo?: unknown }).isDemo === true)
-    if (isDemo) {
+    if (isVps || isDemo) {
       await this.audit.create({
         userId,
         action: `instance.${action}.demo`,
@@ -90,11 +164,22 @@ export class InstancesService {
     }
     if (!instance.cloudAccountId) throw new BadRequestException('Instance has no cloud account')
 
-    const row = instance as { externalId: string; region: string; provider: CloudProvider }
-    const adapter = this.getAdapter(row.provider)
-    if (action === 'start') await adapter.startInstance(row.externalId, row.region)
-    if (action === 'stop') await adapter.stopInstance(row.externalId, row.region)
-    if (action === 'restart') await adapter.restartInstance(row.externalId, row.region)
+    const row = instance as { externalId: string; region: string; cloudAccountId: string }
+    const accountId = row.cloudAccountId
+    let result
+    if (action === 'start') result = await this.cloudRegistry.startInstance(accountId, row.externalId, row.region)
+    if (action === 'stop') result = await this.cloudRegistry.stopInstance(accountId, row.externalId, row.region)
+    if (action === 'restart') result = await this.cloudRegistry.restartInstance(accountId, row.externalId, row.region)
+
+    const statusMap: Record<string, InstanceStatus> = {
+      start: 'RUNNING',
+      stop: 'STOPPED',
+      restart: 'RUNNING',
+    }
+    await this.prisma.instance.update({
+      where: { id },
+      data: { status: statusMap[action] },
+    })
 
     await this.audit.create({
       userId,
@@ -103,14 +188,6 @@ export class InstancesService {
       resourceId: id,
     })
 
-    return { success: true, action }
-  }
-
-  private getAdapter(provider: CloudProvider) {
-    switch (provider) {
-      case CloudProvider.AWS: return this.aws
-      case CloudProvider.GCP: return this.gcp
-      case CloudProvider.AZURE: return this.azure
-    }
+    return { success: true, action, ...result }
   }
 }

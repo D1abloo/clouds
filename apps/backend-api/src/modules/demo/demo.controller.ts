@@ -2,6 +2,7 @@ import { Controller, Get, Post } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { DemoService } from './demo.service'
 import { Public } from '../../common/decorators/auth.decorators'
+import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('Demo')
 @ApiBearerAuth()
@@ -17,14 +18,14 @@ export class DemoController {
   }
 
   @Post('seed')
-  @ApiOperation({ summary: 'Load demo dataset (DEMO_MODE required)' })
-  seed() {
-    return this.demo.seed()
+  @ApiOperation({ summary: 'Load demo dataset (admin, DEMO_MODE required)' })
+  seed(@CurrentUser() user: JwtPayload) {
+    return this.demo.seed(user)
   }
 
   @Post('reset')
-  @ApiOperation({ summary: 'Clear and reload demo dataset' })
-  reset() {
-    return this.demo.reset()
+  @ApiOperation({ summary: 'Clear and reload demo dataset (admin)' })
+  reset(@CurrentUser() user: JwtPayload) {
+    return this.demo.reset(user)
   }
 }

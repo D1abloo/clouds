@@ -80,7 +80,7 @@ export class TerminalPageComponent implements OnInit {
   readonly page = createPageLoader(true)
   readonly hosts = signal<VpsHost[]>([])
 
-  ngOnInit = (): void => {
+  ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadHosts())
   }
 

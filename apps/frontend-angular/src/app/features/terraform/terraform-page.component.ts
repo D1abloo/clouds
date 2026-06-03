@@ -199,7 +199,9 @@ export class TerraformPageComponent implements OnInit {
   runs = (): Record<string, unknown>[] => (this.data()?.['items'] as Record<string, unknown>[]) ?? []
   templates = (): Record<string, unknown>[] => (this.data()?.['templates'] as Record<string, unknown>[]) ?? []
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.load()
+  }
 
   n = (key: string): number => invNum(this.data(), key)
 

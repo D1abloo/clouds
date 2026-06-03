@@ -190,7 +190,9 @@ export class JenkinsPageComponent implements OnInit {
     return this.jobs().filter((j) => !term || String(j['name']).toLowerCase().includes(term))
   })
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.load()
+  }
 
   n = (key: string): number => invNum(this.data(), key)
 

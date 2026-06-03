@@ -1,24 +1,40 @@
-import { Injectable, ForbiddenException } from '@nestjs/common'
+import {
+  Injectable,
+  ForbiddenException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../../common/prisma/prisma.service'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
-import { join } from 'path'
+import { JwtPayload } from '../../common/decorators/current-user.decorator'
+import { seedDemoData } from '../../../prisma/seed-demo'
 
-const execFileAsync = promisify(execFile)
+const ADMIN_ROLES = new Set(['super_admin', 'admin'])
 
 @Injectable()
 export class DemoService {
+  private readonly logger = new Logger(DemoService.name)
+
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
   ) {}
 
-  isDemoMode = (): boolean => this.config.get<string>('DEMO_MODE') === 'true'
+  isDemoMode = (): boolean => this.config.get<string>('DEMO_MODE', 'true') === 'true'
 
   assertDemoMode = (): void => {
     if (!this.isDemoMode()) {
-      throw new ForbiddenException('Demo mode is disabled. Set DEMO_MODE=true in .env')
+      throw new ForbiddenException('Demo mode is disabled. Set DEMO_MODE=true')
+    }
+  }
+
+  assertAdminUser = (user?: JwtPayload): void => {
+    if (!user) {
+      throw new ForbiddenException('Authentication required to manage demo data')
+    }
+    const roles = user.roles ?? []
+    if (!roles.some((r) => ADMIN_ROLES.has(r))) {
+      throw new ForbiddenException('Only admin users can load or reset demo data')
     }
   }
 
@@ -42,19 +58,36 @@ export class DemoService {
     }
   }
 
-  private async runSeedScript(reset: boolean) {
+  private async runSeed(reset: boolean, user?: JwtPayload) {
     this.assertDemoMode()
-    const apiRoot = join(__dirname, '..', '..', '..')
-    const script = reset ? 'prisma:seed:demo:reset' : 'prisma:seed:demo'
-    await execFileAsync('npm', ['run', script], { cwd: apiRoot, env: process.env })
-    return this.getStatus()
+    this.assertAdminUser(user)
+
+    try {
+      this.logger.log(`Demo seed started (reset=${reset}) by ${user?.email ?? 'unknown'}`)
+      const result = await seedDemoData({ clearFirst: reset }, this.prisma)
+      await this.prisma.auditLog.create({
+        data: {
+          action: reset ? 'demo.reset' : 'demo.seed',
+          resource: 'demo_dataset',
+          userId: user?.sub,
+          ipAddress: '127.0.0.1',
+          metadata: result as object,
+        },
+      })
+      return this.getStatus()
+    } catch (err) {
+      this.logger.error('Demo seed failed', err instanceof Error ? err.stack : String(err))
+      throw new InternalServerErrorException(
+        err instanceof Error ? err.message : 'Demo seed failed — ensure base seed ran (roles/users)',
+      )
+    }
   }
 
-  async seed() {
-    return this.runSeedScript(false)
+  seed(user?: JwtPayload) {
+    return this.runSeed(false, user)
   }
 
-  async reset() {
-    return this.runSeedScript(true)
+  reset(user?: JwtPayload) {
+    return this.runSeed(true, user)
   }
 }

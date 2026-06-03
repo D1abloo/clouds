@@ -19,6 +19,9 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
 import { InventoryService } from '../../core/services/inventory.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { DiscoveryService } from '../../core/services/discovery.service'
+import { RealtimeService } from '../../core/services/realtime.service'
+import { ToastService } from '../../core/services/toast.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
 
@@ -143,7 +146,10 @@ type PodRow = Record<string, unknown>
 })
 export class KubernetesPageComponent implements OnInit {
   private readonly inventory = inject(InventoryService)
+  private readonly discovery = inject(DiscoveryService)
+  private readonly realtime = inject(RealtimeService)
   private readonly demoActions = inject(DemoActionsService)
+  private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
 
   readonly page = createPageLoader(true)
@@ -163,7 +169,11 @@ export class KubernetesPageComponent implements OnInit {
     return this.pods().filter((p) => !term || String(p['name']).toLowerCase().includes(term))
   })
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.realtime.connect()
+    this.realtime.on('discovery.updated', () => this.load())
+    this.load()
+  }
 
   n = (key: string): number => invNum(this.data(), key)
 
@@ -179,7 +189,15 @@ export class KubernetesPageComponent implements OnInit {
       this.demoActions.simulate('Scale deployment api-demo to 3 replicas', 900).subscribe()
       return
     }
-    this.load()
+    if (label === 'Refresh') {
+      this.discovery.discoverKubernetes('vps-prod-k8s-master-01').subscribe({
+        next: () => {
+          this.toast.success('Kubernetes discovery completed')
+          this.load()
+        },
+        error: () => this.demoActions.simulate('K8s discovery', 900).subscribe(() => this.load()),
+      })
+    }
   }
 
   showLogs = (row: PodRow): void => {

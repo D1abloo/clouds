@@ -173,7 +173,9 @@ export class BillingPageComponent implements OnInit {
 
   providerKeys = computed(() => Object.keys(this.summary()?.byProvider ?? {}))
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.load()
+  }
 
   load = (): void => {
     this.page.run(this.billing.summary(), {

@@ -19,6 +19,9 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
 import { InventoryService } from '../../core/services/inventory.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { DiscoveryService } from '../../core/services/discovery.service'
+import { RealtimeService } from '../../core/services/realtime.service'
+import { ToastService } from '../../core/services/toast.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
 
@@ -152,7 +155,10 @@ type ContainerRow = Record<string, unknown>
 })
 export class DockerPageComponent implements OnInit {
   private readonly inventory = inject(InventoryService)
+  private readonly discovery = inject(DiscoveryService)
+  private readonly realtime = inject(RealtimeService)
   private readonly demoActions = inject(DemoActionsService)
+  private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
 
   readonly page = createPageLoader(true)
@@ -172,7 +178,11 @@ export class DockerPageComponent implements OnInit {
     return this.items().filter((c) => !term || String(c['name']).toLowerCase().includes(term))
   })
 
-  ngOnInit = (): void => this.load()
+  ngOnInit(): void {
+    this.realtime.connect()
+    this.realtime.on('discovery.updated', () => this.load())
+    this.load()
+  }
 
   n = (key: string): number => invNum(this.data(), key)
 
@@ -184,12 +194,23 @@ export class DockerPageComponent implements OnInit {
   }
 
   handleHeader = (label: string): void => {
-    if (label === 'Start demo container') {
-      this.demoActions.simulate('Start container nginx-demo', 800, 'Container nginx-demo started').subscribe(() => this.load())
+    if (label === 'Refresh') {
+      this.discovery.discoverDocker('vps-prod-docker-01').subscribe({
+        next: () => {
+          this.toast.success('Docker discovery completed')
+          this.load()
+        },
+        error: () => this.demoActions.simulate('Docker discovery', 900).subscribe(() => this.load()),
+      })
       return
     }
-    this.load()
-    this.demoActions.simulate('Docker refresh', 400).subscribe()
+    if (label === 'Start demo container') {
+      this.discovery.discoverDocker('vps-prod-docker-01').subscribe({
+        next: () => this.load(),
+        error: () =>
+          this.demoActions.simulate('Start container nginx-demo', 800, 'Container started').subscribe(() => this.load()),
+      })
+    }
   }
 
   containerAction = (row: ContainerRow, action: string): void => {

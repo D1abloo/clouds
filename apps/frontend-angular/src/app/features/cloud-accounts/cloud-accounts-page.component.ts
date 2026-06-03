@@ -164,7 +164,7 @@ export class CloudAccountsPageComponent implements OnInit {
     )
   })
 
-  ngOnInit = (): void => {
+  ngOnInit(): void {
     this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
       this.provider = data['provider'] as CloudProvider
       this.title = data['title'] as string

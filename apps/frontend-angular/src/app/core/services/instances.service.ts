@@ -10,7 +10,7 @@ export class InstancesService {
 
   list = (filters?: {
     projectId?: string
-    provider?: CloudProvider
+    provider?: CloudProvider | 'VPS'
     cloudAccountId?: string
     region?: string
   }): Observable<Instance[]> =>

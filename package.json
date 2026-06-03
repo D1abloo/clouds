@@ -21,7 +21,8 @@
     "prisma:seed:demo": "npm run prisma:seed:demo -w apps/backend-api",
     "seed:demo": "bash scripts/seed-demo.sh",
     "demo:seed": "bash scripts/demo-seed.sh",
-    "demo:reset": "bash scripts/demo-reset.sh"
+    "demo:reset": "bash scripts/demo-reset.sh",
+    "docker:up": "bash scripts/docker-up.sh"
   },
   "engines": {
     "node": ">=20.0.0",

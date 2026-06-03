@@ -14,7 +14,7 @@ export class InstancesController {
   @ApiOperation({ summary: 'List instances grouped by provider/account/region' })
   findAll(
     @Query('projectId') projectId?: string,
-    @Query('provider') provider?: CloudProvider,
+    @Query('provider') provider?: string,
     @Query('cloudAccountId') cloudAccountId?: string,
     @Query('region') region?: string,
   ) {
