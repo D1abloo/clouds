@@ -14,18 +14,15 @@ export interface BreadcrumbItem {
   standalone: true,
   imports: [RouterLink, MatIconModule],
   template: `
-    <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <nav class="breadcrumbs animate-fade-in" aria-label="Breadcrumb">
       @for (item of crumbs(); track item.label; let last = $last) {
         @if (!last && item.url) {
           <a [routerLink]="item.url">{{ item.label }}</a>
-          <mat-icon class="sep">chevron_right</mat-icon>
         } @else {
-          <span class="current" [attr.aria-current]="last ? 'page' : null">{{
-            item.label
-          }}</span>
-          @if (!last) {
-            <mat-icon class="sep">chevron_right</mat-icon>
-          }
+          <span class="current" [attr.aria-current]="last ? 'page' : null">{{ item.label }}</span>
+        }
+        @if (!last) {
+          <mat-icon class="sep">chevron_right</mat-icon>
         }
       }
     </nav>
@@ -35,22 +32,22 @@ export interface BreadcrumbItem {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 0.25rem;
-      font-size: 0.875rem;
+      gap: 0.15rem;
+      font-size: 0.8125rem;
       color: var(--app-text-muted);
+      margin-bottom: 1rem;
+      padding: 0.35rem 0;
     }
     a {
       color: inherit;
       text-decoration: none;
-      &:hover { text-decoration: underline; }
+      padding: 0.15rem 0.35rem;
+      border-radius: 6px;
+      transition: background 0.2s ease;
+      &:hover { background: color-mix(in srgb, var(--app-accent) 8%, transparent); color: var(--app-accent); }
     }
-    .current { color: inherit; font-weight: 500; }
-    .sep {
-      font-size: 1rem;
-      width: 1rem;
-      height: 1rem;
-      opacity: 0.6;
-    }
+    .current { font-weight: 600; color: inherit; padding: 0.15rem 0.35rem; }
+    .sep { font-size: 1rem; width: 1rem; height: 1rem; opacity: 0.45; }
   `,
 })
 export class BreadcrumbsComponent {
@@ -76,9 +73,7 @@ export class BreadcrumbsComponent {
       const segment = snapshot.url.map((s) => s.path).join('/')
       if (segment) {
         url += `/${segment}`
-        const label =
-          (snapshot.data['breadcrumb'] as string) ??
-          this.formatLabel(segment)
+        const label = (snapshot.data['breadcrumb'] as string) ?? this.formatLabel(segment)
         items.push({ label, url: snapshot.data['breadcrumbLeaf'] ? undefined : url })
       }
     }
@@ -91,8 +86,5 @@ export class BreadcrumbsComponent {
   }
 
   private formatLabel = (segment: string): string =>
-    segment
-      .split('-')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ')
+    segment.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }

@@ -44,8 +44,10 @@ type DashboardData = Record<string, unknown>
   template: `
     <div class="page-container">
       <app-page-header
+        icon="dashboard"
         title="Dashboard"
         description="Global infrastructure overview — instances, costs, alerts and operations"
+        [lastSync]="lastSyncLabel()"
         [actions]="[
           { label: 'Refresh', icon: 'refresh', primary: true },
           { label: 'Export report', icon: 'download' },
@@ -71,7 +73,7 @@ type DashboardData = Record<string, unknown>
         <app-error-state [message]="page.error()!" (retry)="loadData()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card title="Total instances" [value]="n('totalInstances')" icon="dns" />
+          <app-summary-card title="Total instances" [value]="n('totalInstances')" icon="dns" variant="elevated" />
           <app-summary-card
             title="Running"
             [value]="n('runningInstances')"
@@ -226,6 +228,8 @@ export class DashboardComponent implements OnInit {
   }
 
   n = (key: string): number => invNum(this.data(), key)
+
+  lastSyncLabel = (): string => `Updated ${new Date().toLocaleTimeString()}`
 
   loadData = (): void => {
     this.page.run(this.inventory.dashboard(), {

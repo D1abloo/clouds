@@ -24,6 +24,9 @@ import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
+import { PanelCardComponent } from '../../shared/ui/panel-card.component'
+import { ChartCardComponent } from '../../shared/ui/chart-card.component'
+import { SkeletonTableComponent } from '../../shared/ui/skeleton-table.component'
 
 type ContainerRow = Record<string, unknown>
 
@@ -45,12 +48,17 @@ type ContainerRow = Record<string, unknown>
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    PanelCardComponent,
+    ChartCardComponent,
+    SkeletonTableComponent,
   ],
   template: `
     <div class="page-container">
       <app-page-header
+        icon="view_in_ar"
         title="Docker"
         description="Container hosts, images, networks and volumes across VPS"
+        [lastSync]="lastSync()"
         [actions]="[
           { label: 'Start demo container', icon: 'play_arrow', primary: true },
           { label: 'Refresh', icon: 'refresh' },
@@ -59,20 +67,28 @@ type ContainerRow = Record<string, unknown>
       />
 
       @if (page.loading()) {
-        <app-loading-state />
+        <app-skeleton-table [rows]="6" [columns]="5" />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card title="Docker hosts" [value]="n('hosts')" icon="dns" />
-          <app-summary-card title="Running" [value]="n('running')" icon="play_circle" />
-          <app-summary-card title="Stopped" [value]="n('stopped')" icon="stop_circle" />
-          <app-summary-card title="Images" [value]="n('images')" icon="layers" />
-          <app-summary-card title="Volumes" [value]="n('volumes')" icon="storage" />
-          <app-summary-card title="Networks" [value]="n('networks')" icon="hub" />
+          <app-summary-card title="Docker hosts" [value]="n('hosts')" icon="dns" variant="elevated" />
+          <app-summary-card title="Running" [value]="n('running')" icon="play_circle" variant="elevated" trend="Healthy" />
+          <app-summary-card title="Stopped" [value]="n('stopped')" icon="stop_circle" variant="elevated" />
+          <app-summary-card title="Images" [value]="n('images')" icon="layers" variant="elevated" />
+          <app-summary-card title="Volumes" [value]="n('volumes')" icon="storage" variant="elevated" />
+          <app-summary-card title="Networks" [value]="n('networks')" icon="hub" variant="elevated" />
         </div>
 
-        <mat-tab-group>
+        <div class="chart-grid">
+          <app-chart-card title="Containers by status" subtitle="Running vs stopped" kind="donut" [data]="containerStatusChart()" badge="Live" />
+          <app-chart-card title="Containers by host" kind="bar" [data]="containersByHostChart()" />
+          <app-chart-card title="CPU by container" kind="bar" [data]="cpuByContainerChart()" />
+          <app-chart-card title="RAM by container" kind="line" [data]="ramByContainerChart()" />
+        </div>
+
+        <app-panel-card title="Containers" subtitle="All registered Docker containers" icon="view_in_ar">
+          <mat-tab-group class="soft-tabs" animationDuration="280ms">
           <mat-tab label="Containers">
             <div class="tab-panel">
               <div class="filter-row">
@@ -84,7 +100,7 @@ type ContainerRow = Record<string, unknown>
               @if (filtered().length === 0) {
                 <app-empty-state icon="view_in_ar" title="No containers" description="Load demo data or start a demo container." />
               } @else {
-                <table mat-table [dataSource]="filtered()" class="full-table">
+                <table mat-table [dataSource]="filtered()" class="full-table premium-table">
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Name</th>
                     <td mat-cell *matCellDef="let row">{{ row.name }}</td>
@@ -138,6 +154,7 @@ type ContainerRow = Record<string, unknown>
           <mat-tab label="Volumes"><div class="tab-panel"><p>{{ volumeRows().length || n('volumes') }} persistent volumes.</p></div></mat-tab>
           <mat-tab label="Logs"><div class="tab-panel"><pre class="log-preview mono">{{ logPreview() }}</pre></div></mat-tab>
         </mat-tab-group>
+        </app-panel-card>
       }
     </div>
   `,
@@ -189,6 +206,25 @@ export class DockerPageComponent implements OnInit {
   }
 
   n = (key: string): number => invNum(this.data(), key)
+
+  lastSync = (): string => `Synced ${new Date().toLocaleTimeString()}`
+
+  containerStatusChart = (): { label: string; value: number; color?: string }[] => [
+    { label: 'Running', value: this.n('running'), color: '#22c55e' },
+    { label: 'Stopped', value: this.n('stopped'), color: '#64748b' },
+  ]
+
+  containersByHostChart = (): { label: string; value: number }[] => {
+    const hosts = this.hostRows()
+    if (hosts.length === 0) return [{ label: 'host-1', value: this.n('containers') }]
+    return hosts.slice(0, 6).map((h) => ({ label: String(h['hostRef'] ?? h['id']).slice(0, 12), value: Number(h['containerCount'] ?? 1) }))
+  }
+
+  cpuByContainerChart = (): { label: string; value: number }[] =>
+    this.items().slice(0, 6).map((c) => ({ label: String(c['name']).slice(0, 10), value: Number(c['cpu'] ?? 20) }))
+
+  ramByContainerChart = (): { label: string; value: number }[] =>
+    this.items().slice(0, 8).map((c) => ({ label: String(c['name']).slice(0, 8), value: Number(c['ram'] ?? 30) }))
 
   load = (): void => {
     this.page.run(this.docker.pageData(), {

@@ -2,7 +2,37 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-03  
-**Fase actual:** Terraform UI premium + endpoints REST (completado)
+**Fase actual:** UI/UX global premium (completado)
+
+---
+
+## Fase 21 — Rediseño UI/UX global premium ✅
+
+**Estado:** Completada (2026-06-03)
+
+**Design system (`styles.scss`):**
+- Tokens: `--app-bg`, `--app-sidebar`, `--app-topbar`, `--app-accent-dark`, success/warning/danger/info, spacing, radius, shadows
+- Sin bordes duros: cards/tablas/forms con sombras suaves y elevación
+- Overrides Material: form fields outline suaves, dialogs redondeados, tabs `.soft-tabs`
+- Animaciones globales: `fadeIn`, `slideIn`, shimmer skeletons
+
+**Layout:**
+- `MainLayoutComponent` — sidebar + topbar + breadcrumbs + demo banner
+- `SidebarComponent` — secciones (Overview, Clouds, Infrastructure, Automation, Observability, Admin), colapsable, hover animado, badges
+- `TopbarComponent` — búsqueda global, selector proyecto, Demo/Real mode, WebSocket live, refresh, tema, notificaciones, menú usuario
+
+**Componentes reutilizables:**
+- `PanelCardComponent`, `ChartCardComponent`, `FilterBarComponent`
+- `SkeletonCardComponent`, `SkeletonTableComponent`, `SuccessStateComponent`
+- Mejoras: `PageHeaderComponent` (icono, lastSync, demo badge), `SummaryCard`, `StatusBadge`, `MiniChart`, `LoadingState`, `EmptyState`, `ErrorState`, `DemoBanner`, `Breadcrumbs`
+
+**Paneles mejorados:**
+- Dashboard — header premium, cards elevadas
+- Docker — gráficos (status, host, CPU, RAM), panel card, skeleton loading, tabla premium
+- Kubernetes — gráficos (pods status/namespace, CPU, restarts), panel card, skeleton
+- Terraform — (Fase 20) wizard multi-cloud, drawer, tabs premium
+
+**Validación:** `npm run build` frontend OK
 
 ---
 

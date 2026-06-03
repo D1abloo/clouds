@@ -24,6 +24,9 @@ import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
+import { PanelCardComponent } from '../../shared/ui/panel-card.component'
+import { ChartCardComponent } from '../../shared/ui/chart-card.component'
+import { SkeletonTableComponent } from '../../shared/ui/skeleton-table.component'
 
 type PodRow = Record<string, unknown>
 
@@ -45,12 +48,17 @@ type PodRow = Record<string, unknown>
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    PanelCardComponent,
+    ChartCardComponent,
+    SkeletonTableComponent,
   ],
   template: `
     <div class="page-container">
       <app-page-header
+        icon="hub"
         title="Kubernetes"
         description="Clusters, pods, deployments and services"
+        [lastSync]="lastSync()"
         [actions]="[
           { label: 'Scale deployment', icon: 'unfold_more', primary: true },
           { label: 'Refresh', icon: 'refresh' },
@@ -59,20 +67,28 @@ type PodRow = Record<string, unknown>
       />
 
       @if (page.loading()) {
-        <app-loading-state />
+        <app-skeleton-table [rows]="6" [columns]="5" />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card title="Clusters" [value]="n('clusters')" icon="hub" />
-          <app-summary-card title="Namespaces" [value]="n('namespaceCount')" icon="folder" />
-          <app-summary-card title="Pods" [value]="n('podCount')" icon="widgets" />
-          <app-summary-card title="Deployments" [value]="n('deployments')" icon="deployed_code" />
-          <app-summary-card title="Services" [value]="n('services')" icon="lan" />
-          <app-summary-card title="Pods with error" [value]="n('podsWithError')" icon="error" iconColor="warn" />
+          <app-summary-card title="Clusters" [value]="n('clusters')" icon="hub" variant="elevated" />
+          <app-summary-card title="Namespaces" [value]="n('namespaceCount')" icon="folder" variant="elevated" />
+          <app-summary-card title="Pods" [value]="n('podCount')" icon="widgets" variant="elevated" />
+          <app-summary-card title="Deployments" [value]="n('deployments')" icon="deployed_code" variant="elevated" />
+          <app-summary-card title="Services" [value]="n('services')" icon="lan" variant="elevated" />
+          <app-summary-card title="Pods with error" [value]="n('podsWithError')" icon="error" iconColor="warn" variant="elevated" />
         </div>
 
-        <mat-tab-group>
+        <div class="chart-grid">
+          <app-chart-card title="Pods by status" kind="donut" [data]="podsByStatusChart()" badge="Cluster" />
+          <app-chart-card title="Pods by namespace" kind="bar" [data]="podsByNamespaceChart()" />
+          <app-chart-card title="Cluster CPU" kind="line" [data]="clusterCpuChart()" />
+          <app-chart-card title="Restarts by pod" kind="bar" [data]="restartsChart()" />
+        </div>
+
+        <app-panel-card title="Workloads" subtitle="Pods, deployments and cluster resources" icon="hub">
+        <mat-tab-group class="soft-tabs" animationDuration="280ms">
           <mat-tab label="Pods">
             <div class="tab-panel">
               <mat-form-field appearance="outline">
@@ -82,7 +98,7 @@ type PodRow = Record<string, unknown>
               @if (filteredPods().length === 0) {
                 <app-empty-state title="No pods" description="Run demo seed to populate Kubernetes resources." />
               } @else {
-                <table mat-table [dataSource]="filteredPods()" class="full-table">
+                <table mat-table [dataSource]="filteredPods()" class="full-table premium-table">
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Name</th>
                     <td mat-cell *matCellDef="let row">{{ row.name }}</td>
@@ -136,6 +152,7 @@ type PodRow = Record<string, unknown>
           <mat-tab label="Events"><div class="tab-panel"><pre class="mono event-log">{{ eventLog() }}</pre></div></mat-tab>
           <mat-tab label="YAML"><div class="tab-panel"><button mat-stroked-button (click)="showYaml()">View sample deployment YAML</button></div></mat-tab>
         </mat-tab-group>
+        </app-panel-card>
       }
     </div>
   `,
@@ -182,6 +199,35 @@ export class KubernetesPageComponent implements OnInit {
   }
 
   n = (key: string): number => invNum(this.data(), key)
+
+  lastSync = (): string => `Synced ${new Date().toLocaleTimeString()}`
+
+  podsByStatusChart = (): { label: string; value: number; color?: string }[] => {
+    const pods = this.pods()
+    const running = pods.filter((p) => String(p['status']).toLowerCase().includes('run')).length
+    const errors = this.n('podsWithError')
+    const other = Math.max(0, pods.length - running - errors)
+    return [
+      { label: 'Running', value: running || this.n('podCount'), color: '#22c55e' },
+      { label: 'Error', value: errors, color: '#ef4444' },
+      { label: 'Other', value: other, color: '#64748b' },
+    ]
+  }
+
+  podsByNamespaceChart = (): { label: string; value: number }[] => {
+    const map = new Map<string, number>()
+    for (const p of this.pods()) {
+      const ns = String(p['namespace'] ?? 'default')
+      map.set(ns, (map.get(ns) ?? 0) + 1)
+    }
+    return [...map.entries()].slice(0, 6).map(([label, value]) => ({ label, value }))
+  }
+
+  clusterCpuChart = (): { label: string; value: number }[] =>
+    this.pods().slice(0, 8).map((p, i) => ({ label: `t${i + 1}`, value: Number(p['cpu'] ?? 30) }))
+
+  restartsChart = (): { label: string; value: number }[] =>
+    this.pods().slice(0, 6).map((p) => ({ label: String(p['name']).slice(0, 10), value: Number(p['restarts'] ?? 0) }))
 
   load = (): void => {
     this.page.run(this.kubernetes.pageData(), {

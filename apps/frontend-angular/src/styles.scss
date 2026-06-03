@@ -41,37 +41,67 @@ body {
 
 body.light-theme {
   @include mat.all-component-themes($light-theme);
+  --app-bg: #eef1f6;
   --app-surface: #f4f6f9;
   --app-card: #ffffff;
   --app-elevated: #ffffff;
-  --app-border: #e2e8f0;
-  --app-divider: rgba(226, 232, 240, 0.65);
+  --app-sidebar: #ffffff;
+  --app-topbar: rgba(255, 255, 255, 0.92);
+  --app-text: #0f172a;
   --app-text-muted: #64748b;
+  --app-border: #e2e8f0;
+  --app-divider: rgba(226, 232, 240, 0.7);
   --app-accent: #2563eb;
+  --app-accent-dark: #1d4ed8;
+  --app-success: #16a34a;
+  --app-warning: #d97706;
+  --app-danger: #dc2626;
+  --app-info: #0284c7;
   --app-radius-sm: 8px;
   --app-radius-md: 12px;
   --app-radius-lg: 16px;
+  --app-radius-xl: 20px;
+  --app-space-xs: 0.25rem;
+  --app-space-sm: 0.5rem;
+  --app-space-md: 1rem;
+  --app-space-lg: 1.5rem;
+  --app-space-xl: 2rem;
   --app-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --app-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-  --app-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --app-shadow-sm: 0 2px 10px rgba(15, 23, 42, 0.06);
+  --app-shadow-md: 0 8px 28px rgba(15, 23, 42, 0.08);
   --app-shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.12);
 }
 
 body.dark-theme {
   @include mat.all-component-colors($dark-theme);
+  --app-bg: #0b1220;
   --app-surface: #0f172a;
   --app-card: #1e293b;
   --app-elevated: #243044;
-  --app-border: #334155;
-  --app-divider: rgba(51, 65, 85, 0.65);
+  --app-sidebar: #1a2332;
+  --app-topbar: rgba(26, 35, 50, 0.94);
+  --app-text: #f1f5f9;
   --app-text-muted: #94a3b8;
+  --app-border: #334155;
+  --app-divider: rgba(51, 65, 85, 0.7);
   --app-accent: #60a5fa;
+  --app-accent-dark: #3b82f6;
+  --app-success: #4ade80;
+  --app-warning: #fbbf24;
+  --app-danger: #f87171;
+  --app-info: #38bdf8;
   --app-radius-sm: 8px;
   --app-radius-md: 12px;
   --app-radius-lg: 16px;
+  --app-radius-xl: 20px;
+  --app-space-xs: 0.25rem;
+  --app-space-sm: 0.5rem;
+  --app-space-md: 1rem;
+  --app-space-lg: 1.5rem;
+  --app-space-xl: 2rem;
   --app-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --app-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --app-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --app-shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
+  --app-shadow-md: 0 8px 28px rgba(0, 0, 0, 0.35);
   --app-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
 }
 
@@ -214,11 +244,70 @@ body.dark-theme {
   align-items: center;
   justify-content: center;
   min-height: 240px;
-  border: 2px dashed var(--app-border);
-  border-radius: 12px;
+  border: none;
+  border-radius: var(--app-radius-lg);
   color: var(--app-text-muted);
-  background: var(--app-card);
+  background: var(--app-elevated);
+  box-shadow: var(--app-shadow-sm);
 }
+
+/* Material soft fields — no hard outlines */
+.mat-mdc-form-field-appearance-outline {
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    border-color: transparent !important;
+  }
+  .mat-mdc-text-field-wrapper {
+    background: var(--app-elevated);
+    border-radius: var(--app-radius-md);
+    box-shadow: var(--app-shadow-xs);
+    transition: box-shadow 0.2s ease;
+  }
+  &.mat-focused .mat-mdc-text-field-wrapper {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 25%, transparent), var(--app-shadow-sm);
+  }
+}
+
+.mat-mdc-tab-group.soft-tabs .mat-mdc-tab-header {
+  background: transparent;
+}
+
+.mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: var(--app-shadow-lg) !important;
+}
+
+.status-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.status-card {
+  padding: 1.15rem 1.25rem;
+  border-radius: var(--app-radius-lg);
+  background: var(--app-elevated);
+  box-shadow: var(--app-shadow-sm);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  h3 {
+    display: flex; align-items: center; gap: 0.4rem;
+    margin: 0 0 0.35rem; font-size: 0.9rem; font-weight: 600;
+    mat-icon { color: var(--app-accent); font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
+  }
+  p { margin: 0; font-size: 0.82rem; color: var(--app-text-muted); }
+  &:hover { transform: translateY(-2px); box-shadow: var(--app-shadow-md); }
+}
+
+.dashboard-panels {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.muted { color: var(--app-text-muted); font-size: 0.875rem; }
+
+.full-table { width: 100%; }
 
 .status-running { color: #16a34a; }
 .status-stopped { color: #64748b; }

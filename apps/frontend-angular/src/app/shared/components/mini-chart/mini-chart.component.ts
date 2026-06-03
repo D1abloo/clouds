@@ -7,12 +7,14 @@ export type ChartKind = 'bar' | 'donut' | 'line'
   standalone: true,
   template: `
     <div class="mini-chart" [attr.aria-label]="title">
-      <div class="mini-chart__title">{{ title }}</div>
+      @if (title) {
+        <div class="mini-chart__title">{{ title }}</div>
+      }
       @if (kind === 'bar') {
         <div class="mini-chart__bars">
           @for (item of data; track item.label) {
             <div class="bar-col">
-              <div class="bar" [style.height.%]="barHeight(item.value)"></div>
+              <div class="bar" [style.height.%]="barHeight(item.value)" [style.background]="item.color ?? 'linear-gradient(180deg, #3b82f6, #1d4ed8)'"></div>
               <span>{{ item.label }}</span>
             </div>
           }
@@ -23,9 +25,7 @@ export type ChartKind = 'bar' | 'donut' | 'line'
             @for (seg of donutSegments(); track seg.label) {
               <circle
                 class="donut-seg"
-                cx="18"
-                cy="18"
-                r="15.9"
+                cx="18" cy="18" r="15.9"
                 fill="transparent"
                 [attr.stroke]="seg.color"
                 stroke-width="3.2"
@@ -42,18 +42,24 @@ export type ChartKind = 'bar' | 'donut' | 'line'
         </div>
       } @else {
         <svg class="line-chart" viewBox="0 0 200 80" preserveAspectRatio="none">
-          <polyline [attr.points]="linePoints()" fill="none" stroke="#3b82f6" stroke-width="2" />
+          <defs>
+            <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35" />
+              <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <polygon [attr.points]="lineArea()" fill="url(#lineGrad)" />
+          <polyline [attr.points]="linePoints()" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" />
         </svg>
       }
     </div>
   `,
   styles: `
     .mini-chart {
-      background: var(--app-card);
-      border: 1px solid var(--app-border);
-      border-radius: 12px;
-      padding: 1rem;
-      min-height: 200px;
+      background: transparent;
+      border: none;
+      padding: 0;
+      min-height: 160px;
     }
     .mini-chart__title {
       font-size: 0.875rem;
@@ -73,14 +79,14 @@ export type ChartKind = 'bar' | 'donut' | 'line'
       flex-direction: column;
       align-items: center;
       gap: 0.35rem;
-      span { font-size: 0.7rem; color: var(--app-text-muted); }
+      span { font-size: 0.68rem; color: var(--app-text-muted); text-align: center; }
     }
     .bar {
       width: 100%;
       max-width: 48px;
-      background: linear-gradient(180deg, #3b82f6, #1d4ed8);
-      border-radius: 4px 4px 0 0;
+      border-radius: 6px 6px 0 0;
       min-height: 4px;
+      transition: height 0.4s ease;
     }
     .mini-chart__donut-wrap {
       display: flex;
@@ -89,16 +95,10 @@ export type ChartKind = 'bar' | 'donut' | 'line'
     }
     .donut { width: 100px; height: 100px; transform: rotate(-90deg); }
     .donut-legend {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-size: 0.75rem;
+      list-style: none; padding: 0; margin: 0; font-size: 0.75rem;
       li {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        margin-bottom: 0.25rem;
-        span { width: 10px; height: 10px; border-radius: 2px; }
+        display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem;
+        span { width: 10px; height: 10px; border-radius: 3px; }
       }
     }
     .line-chart { width: 100%; height: 120px; }
@@ -138,5 +138,11 @@ export class MiniChartComponent {
         return `${x},${y}`
       })
       .join(' ')
+  }
+
+  lineArea = (): string => {
+    const pts = this.linePoints()
+    if (!pts) return ''
+    return `0,80 ${pts} 200,80`
   }
 }
