@@ -60,10 +60,10 @@ import { createPageLoader } from '../../core/utils/page-load.util'
       />
 
       <div class="summary-grid">
-        <app-summary-card title="Total" [value]="instances().length" icon="dns" />
-        <app-summary-card title="Running" [value]="running()" icon="play_circle" />
-        <app-summary-card title="Stopped" [value]="stopped()" icon="stop_circle" />
-        <app-summary-card title="Providers" [value]="providerCount()" icon="cloud" />
+        <app-summary-card title="Total" [value]="instances().length" icon="dns" variant="elevated" />
+        <app-summary-card title="Running" [value]="running()" icon="play_circle" variant="elevated" />
+        <app-summary-card title="Stopped" [value]="stopped()" icon="stop_circle" variant="elevated" />
+        <app-summary-card title="Providers" [value]="providerCount()" icon="cloud" variant="elevated" />
       </div>
 
       <div class="table-card">
@@ -145,7 +145,8 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             }
           </div>
         } @else {
-          <table mat-table [dataSource]="filtered()" class="full-table">
+          <div class="data-table-wrap">
+          <table mat-table [dataSource]="filtered()" class="premium-table table-row-hover">
             <ng-container matColumnDef="select">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let row">
@@ -178,24 +179,28 @@ import { createPageLoader } from '../../core/utils/page-load.util'
               </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="cols"></tr>
-            <tr mat-row *matRowDef="let row; columns: cols"></tr>
+            <tr mat-row *matRowDef="let row; columns: cols" class="table-row-hover"></tr>
           </table>
+          </div>
         }
       </div>
     </div>
   `,
   styles: `
-    .full-table { width: 100%; }
     a { color: inherit; font-weight: 500; }
-    .bulk-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.5rem; background: var(--app-surface); border-radius: 8px; }
+    .bulk-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.65rem 1rem; background: var(--app-elevated); border-radius: var(--app-radius-md); box-shadow: var(--app-shadow-xs); }
     .instance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
     .instance-card {
-      border: 1px solid var(--app-border);
-      border-radius: 12px;
-      padding: 1rem;
+      border: none;
+      border-radius: var(--app-radius-lg);
+      padding: 1rem 1.15rem;
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
+      background: var(--app-card);
+      box-shadow: var(--app-shadow-sm);
+      transition: box-shadow 0.25s ease, transform 0.2s ease;
+      &:hover { box-shadow: var(--app-shadow-md); transform: translateY(-2px); }
     }
     .empty-action { margin-top: 0.75rem; }
   `,

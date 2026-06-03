@@ -53,7 +53,8 @@ import { TerraformPlanViewerComponent } from './terraform-plan-viewer.component'
     }
     .run-drawer__header {
       display: flex; justify-content: space-between; align-items: flex-start;
-      padding: 1.25rem; border-bottom: 1px solid var(--app-divider);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--app-shadow-xs);
       h3 { margin: 0 0 0.35rem; font-size: 1.1rem; }
     }
     .run-drawer__body {

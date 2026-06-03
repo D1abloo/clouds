@@ -30,18 +30,17 @@ import { environment } from '../../../environments/environment'
     <div class="page-container">
       <app-page-header title="Settings" description="General preferences, users, integrations and demo mode" />
 
-      <mat-tab-group>
+      <div class="table-card">
+      <mat-tab-group class="soft-tabs" animationDuration="280ms">
         <mat-tab label="General">
           <div class="tab-panel">
-            <mat-card>
-              <mat-card-content>
+            <div class="settings-panel surface-elevated">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Backend URL</mat-label>
                   <input matInput [value]="apiUrl" readonly />
                 </mat-form-field>
                 <p>Sync frequency: every 15 minutes (demo)</p>
-              </mat-card-content>
-            </mat-card>
+            </div>
           </div>
         </mat-tab>
         <mat-tab label="Users">
@@ -56,9 +55,8 @@ import { environment } from '../../../environments/environment'
         <mat-tab label="Integrations"><div class="tab-panel"><button mat-stroked-button (click)="simulateAction('Configure webhooks')">Configure webhooks</button></div></mat-tab>
         <mat-tab label="Demo Mode">
           <div class="tab-panel">
-            <mat-card>
-              <mat-card-header><mat-card-title>Demo Mode</mat-card-title></mat-card-header>
-              <mat-card-content>
+            <div class="settings-panel surface-elevated">
+              <h3 class="panel-title">Demo Mode</h3>
                 <p>Simulated cloud data — no real AWS/GCP/Azure resources.</p>
                 <p><strong>Status:</strong> {{ demo.demoMode() ? 'Activo' : 'Desactivado en servidor' }}</p>
                 <p><strong>User:</strong> {{ demoUserLabel }}</p>
@@ -76,8 +74,7 @@ import { environment } from '../../../environments/environment'
                     <button mat-stroked-button color="warn" type="button" [disabled]="!demo.canManageDemo()" (click)="demo.resetDemo()">Reset demo</button>
                   }
                 </div>
-              </mat-card-content>
-            </mat-card>
+            </div>
           </div>
         </mat-tab>
         <mat-tab label="Theme">
@@ -102,10 +99,13 @@ import { environment } from '../../../environments/environment'
           </div>
         </mat-tab>
       </mat-tab-group>
+      </div>
     </div>
   `,
   styles: `
     .full-width { width: 100%; max-width: 480px; }
+    .settings-panel { padding: 1.25rem 1.5rem; border-radius: var(--app-radius-lg); margin-bottom: 0.5rem; }
+    .panel-title { margin: 0 0 0.75rem; font-size: 1.05rem; font-weight: 600; }
     .logout-btn { margin-top: 1rem; }
     .demo-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; align-items: center; }
     .demo-stats { font-size: 0.85rem; color: var(--app-text-muted); }

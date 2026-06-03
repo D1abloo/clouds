@@ -92,21 +92,23 @@ export class JenkinsLaunchDialogComponent {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card title="Servers" [value]="n('serverCount')" icon="dns" />
-          <app-summary-card title="Jobs" [value]="n('jobCount')" icon="work" />
-          <app-summary-card title="Running builds" [value]="n('buildsRunning')" icon="hourglass_top" />
-          <app-summary-card title="Success" [value]="n('buildsSuccess')" icon="check_circle" iconColor="primary" />
-          <app-summary-card title="Failed" [value]="n('buildsFailed')" icon="cancel" iconColor="warn" />
+          <app-summary-card title="Servers" [value]="n('serverCount')" icon="dns" variant="elevated" />
+          <app-summary-card title="Jobs" [value]="n('jobCount')" icon="work" variant="elevated" />
+          <app-summary-card title="Running builds" [value]="n('buildsRunning')" icon="hourglass_top" variant="elevated" />
+          <app-summary-card title="Success" [value]="n('buildsSuccess')" icon="check_circle" iconColor="primary" variant="elevated" />
+          <app-summary-card title="Failed" [value]="n('buildsFailed')" icon="cancel" iconColor="warn" variant="elevated" />
         </div>
 
-        <mat-tab-group>
+        <div class="table-card">
+        <mat-tab-group class="soft-tabs" animationDuration="280ms">
           <mat-tab label="Jobs">
             <div class="tab-panel">
               <mat-form-field appearance="outline">
                 <mat-label>Search jobs</mat-label>
                 <input matInput [formControl]="searchControl" />
               </mat-form-field>
-              <table mat-table [dataSource]="filteredJobs()" class="full-table">
+              <div class="data-table-wrap">
+              <table mat-table [dataSource]="filteredJobs()" class="premium-table table-row-hover">
                 <ng-container matColumnDef="name">
                   <th mat-header-cell *matHeaderCellDef>Job</th>
                   <td mat-cell *matCellDef="let row">{{ row.name }}</td>
@@ -140,8 +142,9 @@ export class JenkinsLaunchDialogComponent {
                   </td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="jobCols"></tr>
-                <tr mat-row *matRowDef="let row; columns: jobCols"></tr>
+                <tr mat-row *matRowDef="let row; columns: jobCols" class="table-row-hover"></tr>
               </table>
+              </div>
             </div>
           </mat-tab>
           <mat-tab label="Builds">
@@ -158,13 +161,13 @@ export class JenkinsLaunchDialogComponent {
           <mat-tab label="Parameters"><div class="tab-panel"><p>branch, environment, deploy_target (demo)</p></div></mat-tab>
           <mat-tab label="History"><div class="tab-panel"><p>{{ builds().length }} builds in history.</p></div></mat-tab>
         </mat-tab-group>
+        </div>
       }
     </div>
   `,
   styles: `
-    .full-table { width: 100%; }
     .build-line { display: flex; align-items: center; gap: 0.5rem; margin: 0.35rem 0; }
-    .log-box { background: var(--app-surface); padding: 1rem; border-radius: 8px; font-size: 0.75rem; max-height: 360px; overflow: auto; }
+    .log-box { background: var(--app-elevated); padding: 1rem; border-radius: var(--app-radius-md); box-shadow: var(--app-shadow-xs); font-size: 0.75rem; max-height: 360px; overflow: auto; }
   `,
 })
 export class JenkinsPageComponent implements OnInit {

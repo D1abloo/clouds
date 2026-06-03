@@ -100,7 +100,7 @@ type ContainerRow = Record<string, unknown>
               @if (filtered().length === 0) {
                 <app-empty-state icon="view_in_ar" title="No containers" description="Load demo data or start a demo container." />
               } @else {
-                <table mat-table [dataSource]="filtered()" class="full-table premium-table">
+                <table mat-table [dataSource]="filtered()" class="premium-table table-row-hover">
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Name</th>
                     <td mat-cell *matCellDef="let row">{{ row.name }}</td>

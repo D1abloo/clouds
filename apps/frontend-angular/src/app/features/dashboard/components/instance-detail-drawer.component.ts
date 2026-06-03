@@ -183,9 +183,11 @@ import { DemoActionsService } from '../../../core/services/demo-actions.service'
       padding: 0;
       margin: 0;
       li {
-        padding: 0.65rem 0;
+        padding: 0.65rem 0.85rem;
+        margin-bottom: 0.35rem;
         font-size: 0.85rem;
-        border-bottom: 1px solid color-mix(in srgb, var(--app-text-muted) 12%, transparent);
+        border-radius: var(--app-radius-sm);
+        background: var(--app-elevated);
       }
     }
     .muted { color: var(--app-text-muted); font-size: 0.875rem; }

@@ -31,7 +31,7 @@ import { MatButtonModule } from '@angular/material/button'
   styles: `
     .filter-bar {
       display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;
-      padding: 1rem 1.25rem; border-bottom: 1px solid var(--app-divider);
+      padding: 1rem 1.25rem 0.85rem;
     }
     .filter-bar__search { min-width: 220px; flex: 1; max-width: 360px; }
     .filter-bar__slots { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; flex: 1; }

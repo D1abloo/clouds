@@ -86,13 +86,16 @@ export class AlertRuleDialogComponent {
       />
 
       <div class="summary-grid">
-        <app-summary-card title="Critical" [value]="counts().critical" icon="error" iconColor="warn" />
-        <app-summary-card title="Warnings" [value]="counts().warning" icon="warning" />
-        <app-summary-card title="Info" [value]="counts().info" icon="info" />
-        <app-summary-card title="Resolved" [value]="counts().resolved" icon="check_circle" />
+        <app-summary-card title="Critical" [value]="counts().critical" icon="error" iconColor="warn" variant="elevated" />
+        <app-summary-card title="Warnings" [value]="counts().warning" icon="warning" variant="elevated" />
+        <app-summary-card title="Info" [value]="counts().info" icon="info" variant="elevated" />
+        <app-summary-card title="Resolved" [value]="counts().resolved" icon="check_circle" variant="elevated" />
+        <app-summary-card title="Rules" [value]="4" icon="rule" variant="elevated" />
+        <app-summary-card title="Silenced" [value]="0" icon="notifications_off" variant="elevated" />
       </div>
 
-      <mat-tab-group>
+      <div class="table-card">
+      <mat-tab-group class="soft-tabs" animationDuration="280ms">
         <mat-tab label="Active">
           <div class="tab-panel">
             <div class="filter-row">
@@ -113,7 +116,8 @@ export class AlertRuleDialogComponent {
             } @else if (filtered().length === 0) {
               <app-empty-state icon="check_circle" title="All clear" description="No active alerts." />
             } @else {
-              <table mat-table [dataSource]="filtered()" class="full-table">
+              <div class="data-table-wrap">
+              <table mat-table [dataSource]="filtered()" class="premium-table table-row-hover">
                 <ng-container matColumnDef="severity">
                   <th mat-header-cell *matHeaderCellDef>Severity</th>
                   <td mat-cell *matCellDef="let row">{{ row.severity }}</td>
@@ -146,8 +150,9 @@ export class AlertRuleDialogComponent {
                   </td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="cols"></tr>
-                <tr mat-row *matRowDef="let row; columns: cols"></tr>
+                <tr mat-row *matRowDef="let row; columns: cols" class="table-row-hover"></tr>
               </table>
+              </div>
             }
           </div>
         </mat-tab>
@@ -156,9 +161,10 @@ export class AlertRuleDialogComponent {
         <mat-tab label="Silenced"><div class="tab-panel"><p>0 silenced alerts.</p></div></mat-tab>
         <mat-tab label="Notifications"><div class="tab-panel"><p>Routes: in-app, email, Slack demo, Teams demo</p></div></mat-tab>
       </mat-tab-group>
+      </div>
     </div>
   `,
-  styles: `.full-table { width: 100%; }`,
+  styles: ``,
 })
 export class AlertsPageComponent implements OnInit {
   private readonly service = inject(AlertsService)

@@ -64,7 +64,8 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           </div>
         </header>
 
-        <mat-tab-group>
+        <div class="table-card">
+        <mat-tab-group class="soft-tabs" animationDuration="280ms">
           <mat-tab label="Summary">
             <div class="tab-panel">
               <dl class="detail-list wide">
@@ -104,6 +105,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           <mat-tab label="Alerts"><div class="tab-panel"><p>0 active alerts for this instance</p></div></mat-tab>
           <mat-tab label="Audit"><div class="tab-panel"><p>Last: instance.sync · terraform.plan (demo)</p><a routerLink="/audit">View audit log</a></div></mat-tab>
         </mat-tab-group>
+        </div>
       }
     </div>
   `,

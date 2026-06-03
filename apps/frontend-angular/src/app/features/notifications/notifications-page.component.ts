@@ -12,6 +12,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
@@ -28,6 +29,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
     DatePipe,
     ReactiveFormsModule,
     PageHeaderComponent,
+    SummaryCardComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -52,7 +54,15 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
-      <mat-tab-group>
+      <div class="summary-grid page-section">
+        <app-summary-card title="Unread" [value]="unreadCount()" icon="mark_email_unread" variant="elevated" />
+        <app-summary-card title="Total" [value]="items().length" icon="inbox" variant="elevated" />
+        <app-summary-card title="Critical" [value]="criticalCount()" icon="error" iconColor="warn" variant="elevated" />
+        <app-summary-card title="Channels" [value]="5" icon="settings_ethernet" variant="elevated" />
+      </div>
+
+      <div class="table-card">
+      <mat-tab-group class="soft-tabs" animationDuration="280ms">
         <mat-tab label="Inbox">
           <div class="tab-panel">
             <div class="filter-row">
@@ -111,15 +121,22 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           </div>
         </mat-tab>
       </mat-tab-group>
+      </div>
     </div>
   `,
   styles: `
     .notification-list { padding: 0; }
-    .unread { background: rgba(59, 130, 246, 0.06); }
+    .unread { background: color-mix(in srgb, var(--app-accent) 8%, transparent); border-radius: var(--app-radius-sm); }
     .meta { display: flex; align-items: center; gap: 0.25rem; }
     .date { font-size: 0.75rem; color: var(--app-text-muted); }
-    .channels { max-width: 420px; }
-    .channel-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--app-border); }
+    .channels { max-width: 480px; padding: 0.5rem 1rem; }
+    .channel-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.85rem 1rem; margin-bottom: 0.5rem;
+      border-radius: var(--app-radius-md);
+      background: var(--app-elevated);
+      box-shadow: var(--app-shadow-xs);
+    }
   `,
 })
 export class NotificationsPageComponent implements OnInit {
@@ -145,6 +162,9 @@ export class NotificationsPageComponent implements OnInit {
       return matchTerm && matchRead
     })
   })
+
+  unreadCount = computed(() => this.items().filter((i) => !i.read).length)
+  criticalCount = computed(() => this.items().filter((i) => (i as { severity?: string }).severity === 'critical').length)
 
   ngOnInit(): void {
     this.load()

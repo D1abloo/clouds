@@ -71,14 +71,16 @@ type InstanceRow = Record<string, unknown>
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card [title]="accountLabel" [value]="n('accounts')" icon="account_balance" />
-          <app-summary-card title="Instances" [value]="n('instances')" icon="dns" />
-          <app-summary-card title="Active regions" [value]="n('regions')" icon="public" />
-          <app-summary-card title="Monthly cost" [value]="formatCost(n('monthlyCost'))" icon="payments" />
-          <app-summary-card title="Alerts" [value]="n('alerts')" icon="warning" iconColor="warn" />
+          <app-summary-card [title]="accountLabel" [value]="n('accounts')" icon="account_balance" variant="elevated" />
+          <app-summary-card title="Instances" [value]="n('instances')" icon="dns" variant="elevated" />
+          <app-summary-card title="Active regions" [value]="n('regions')" icon="public" variant="elevated" />
+          <app-summary-card title="Monthly cost" [value]="formatCost(n('monthlyCost'))" icon="payments" variant="elevated" />
+          <app-summary-card title="Alerts" [value]="n('alerts')" icon="warning" iconColor="warn" variant="elevated" />
+          <app-summary-card title="Sync status" [value]="syncStatus()" icon="sync" [trend]="lastSyncLabel()" variant="elevated" />
         </div>
 
-        <mat-tab-group animationDuration="200ms" (selectedIndexChange)="tabIndex.set($event)">
+        <div class="table-card">
+        <mat-tab-group class="soft-tabs" animationDuration="280ms" (selectedIndexChange)="tabIndex.set($event)">
           <mat-tab label="Accounts">
             <div class="tab-panel">
               <div class="filter-row table-toolbar">
@@ -90,7 +92,7 @@ type InstanceRow = Record<string, unknown>
               @if (accounts().length === 0) {
                 <app-empty-state icon="cloud_off" title="No accounts" description="Add a demo account to sync inventory." />
               } @else {
-                <table mat-table [dataSource]="accounts()" class="full-table">
+                <table mat-table [dataSource]="accounts()" class="premium-table table-row-hover">
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Name</th>
                     <td mat-cell *matCellDef="let row">{{ row.name }}</td>
@@ -150,7 +152,7 @@ type InstanceRow = Record<string, unknown>
               @if (filteredInstances().length === 0) {
                 <app-empty-state title="No instances" description="Sync inventory or load demo data." />
               } @else {
-                <table mat-table [dataSource]="filteredInstances()" class="full-table">
+                <table mat-table [dataSource]="filteredInstances()" class="premium-table table-row-hover">
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Name</th>
                     <td mat-cell *matCellDef="let row">
@@ -209,7 +211,7 @@ type InstanceRow = Record<string, unknown>
 
           <mat-tab label="Regions">
             <div class="tab-panel">
-              <table mat-table [dataSource]="regions()" class="full-table">
+              <table mat-table [dataSource]="regions()" class="premium-table table-row-hover">
                 <ng-container matColumnDef="code">
                   <th mat-header-cell *matHeaderCellDef>Region</th>
                   <td mat-cell *matCellDef="let row">{{ row.code ?? row.regionCode }}</td>
@@ -230,7 +232,7 @@ type InstanceRow = Record<string, unknown>
 
           <mat-tab [label]="securityTabLabel">
             <div class="tab-panel">
-              <table mat-table [dataSource]="mockSecurity()" class="full-table">
+              <table mat-table [dataSource]="mockSecurity()" class="premium-table table-row-hover">
                 <ng-container matColumnDef="name">
                   <th mat-header-cell *matHeaderCellDef>Name</th>
                   <td mat-cell *matCellDef="let row">{{ row.name }}</td>
@@ -251,7 +253,7 @@ type InstanceRow = Record<string, unknown>
 
           <mat-tab label="Volumes">
             <div class="tab-panel">
-              <table mat-table [dataSource]="mockVolumes()" class="full-table">
+              <table mat-table [dataSource]="mockVolumes()" class="premium-table table-row-hover">
                 <ng-container matColumnDef="id">
                   <th mat-header-cell *matHeaderCellDef>Volume ID</th>
                   <td mat-cell *matCellDef="let row" class="mono">{{ row.id }}</td>
@@ -295,11 +297,11 @@ type InstanceRow = Record<string, unknown>
             </div>
           </mat-tab>
         </mat-tab-group>
+        </div>
       }
     </div>
   `,
   styles: `
-    .full-table { width: 100%; }
     a { color: inherit; font-weight: 500; }
   `,
 })
@@ -566,5 +568,17 @@ export class CloudProviderHubComponent implements OnInit {
   formatCost = (value?: number): string => {
     if (value === undefined || value === null) return '—'
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
+  }
+
+  syncStatus = (): string => {
+    const s = this.summary()?.['syncStatus'] as string | undefined
+    if (s) return s
+    return this.instances().length > 0 ? 'Synced' : 'Pending'
+  }
+
+  lastSyncLabel = (): string => {
+    const ts = this.summary()?.['lastSyncAt'] as string | undefined
+    if (ts) return `Last sync ${new Date(ts).toLocaleString()}`
+    return 'Demo inventory'
   }
 }

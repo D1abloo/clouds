@@ -1,8 +1,60 @@
 # CloudOps Control Center — Progress Tracker
 
 Plan maestro: `prompts_cursor_por_fases.md`  
-Última ejecución: 2026-06-03  
-**Fase actual:** Dashboard completo premium (completado)
+Última ejecución: 2026-06-02  
+**Fase actual:** Design system global borderless (Fase 24 — completado)
+
+---
+
+## Fase 24 — Design system global borderless + UI premium ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Objetivo:** Eliminar bordes duros en todo el panel y unificar cards, tablas, tabs, modales y formularios con elevación suave, espaciado y tipografía premium — no solo Dashboard/AWS.
+
+### Componentes reutilizables creados/mejorados
+
+| Componente | Cambio |
+|------------|--------|
+| `AppCardComponent` (`shared/ui/app-card.component.ts`) | Contenedor elevado sin bordes, header opcional, hover suave |
+| `SummaryCardComponent` | Rediseño premium: icono, título, valor, subtítulo/trend, `variant="elevated"`, tooltips |
+| `PanelCardComponent` | Eliminado `border-bottom` del header |
+| `FilterBarComponent` | Eliminado borde inferior del toolbar |
+
+### Overrides globales (`styles.scss`)
+
+- `.table-card`, `.surface-elevated`, `.premium-table`, `.soft-tabs`, `.info-banner`, `.soft-divider`
+- Material sin bordes: `mat-card`, `mat-tab-group`, `mat-stroked-button`, `mat-menu`, `mat-paginator`, `mat-dialog`, outlines de form fields suavizados
+- `.page-container` ampliado a `1680px` + animación `fadeIn`
+- Tablas: headers uppercase, filas con hover, sin bordes de celda
+
+### Pantallas actualizadas (sidebar completo)
+
+| Sección | Cambios |
+|---------|---------|
+| **AWS / GCP / Azure** (`cloud-provider-hub`) | 6 stat cards elevated, sync status, tabs `soft-tabs`, tablas `premium-table`, contenido en `table-card` |
+| **Instances** | Stat cards elevated, grid cards sin borde (shadow), tabla premium |
+| **VPS / Bare Metal** | Stat cards elevated, `soft-tabs`, tabla premium |
+| **Docker / Kubernetes / Terraform** | Ya tenían elevated; tablas unificadas a `premium-table table-row-hover` |
+| **Jenkins** | Stat cards elevated, `table-card` + `soft-tabs`, log box elevado |
+| **Billing** | 6 stat cards, `info-banner`, charts en `page-section`, tabs en `table-card` |
+| **Alerts** | 6 stat cards (rules/silenced), tabs premium, tabla con hover |
+| **Notifications** | 4 stat cards nuevas, channels sin bordes (cards elevadas), inbox en `table-card` |
+| **Audit** | 4 stat cards nuevas, filtros en toolbar, tabla premium |
+| **Settings** | `soft-tabs`, paneles `surface-elevated` (sin `mat-card` con borde) |
+| **Instance detail / drawers** | Tabs en `table-card`, listas sin divisores duros, run drawer sin `border-bottom` |
+| **Login** | Demo hint con shadow en lugar de borde |
+
+### Cómo se eliminaron los bordes
+
+1. Sustitución sistemática de `border: 1px solid` por `box-shadow` (`--app-shadow-xs/sm/md`)
+2. Separación visual por `padding`, `gap` y fondos `--app-card` / `--app-elevated`
+3. Tabs Material: override global `border-bottom: none` + clase `.soft-tabs`
+4. Botones outlined/stroked: fondo elevado + shadow en lugar de outline
+5. Tablas: clase `.premium-table` — `th`/`td` sin border, hover en filas
+6. Toolbars/filtros: `.table-toolbar` y `.filter-bar` sin línea divisoria; `.soft-divider` opcional
+
+**Validación:** `npm run build -w apps/frontend-angular` OK
 
 ---
 

@@ -98,7 +98,7 @@ type PodRow = Record<string, unknown>
               @if (filteredPods().length === 0) {
                 <app-empty-state title="No pods" description="Run demo seed to populate Kubernetes resources." />
               } @else {
-                <table mat-table [dataSource]="filteredPods()" class="full-table premium-table">
+                <table mat-table [dataSource]="filteredPods()" class="premium-table table-row-hover">
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Name</th>
                     <td mat-cell *matCellDef="let row">{{ row.name }}</td>

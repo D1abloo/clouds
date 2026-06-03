@@ -32,8 +32,7 @@ import { MatIconModule } from '@angular/material/icon'
     }
     .panel-card__header {
       display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-      gap: 0.75rem; padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--app-divider);
+      gap: 0.75rem; padding: 1rem 1.25rem 0.85rem;
     }
     .panel-card__title {
       display: flex; align-items: flex-start; gap: 0.65rem;

@@ -49,7 +49,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
-      <p class="estimate-banner"><mat-icon>info</mat-icon> Data marked as estimated — demo mode</p>
+      <p class="info-banner"><mat-icon>info</mat-icon> Data marked as estimated — demo mode</p>
 
       @if (page.loading()) {
         <app-loading-state />
@@ -57,24 +57,25 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card title="Today" [value]="formatCost(summary()?.daily)" icon="today" />
-          <app-summary-card title="This week" [value]="formatCost(summary()?.weekly)" icon="date_range" />
-          <app-summary-card title="This month" [value]="formatCost(summary()?.totalMonthly)" icon="calendar_month" />
-          <app-summary-card title="Forecast" [value]="formatCost(summary()?.forecastMonthly)" icon="trending_up" />
-          <app-summary-card title="Top provider" [value]="topProvider()" icon="cloud" />
-          <app-summary-card title="Cost alerts" [value]="3" icon="warning" iconColor="warn" />
+          <app-summary-card title="Today" [value]="formatCost(summary()?.daily)" icon="today" variant="elevated" />
+          <app-summary-card title="This week" [value]="formatCost(summary()?.weekly)" icon="date_range" variant="elevated" />
+          <app-summary-card title="This month" [value]="formatCost(summary()?.totalMonthly)" icon="calendar_month" variant="elevated" />
+          <app-summary-card title="Forecast" [value]="formatCost(summary()?.forecastMonthly)" icon="trending_up" variant="elevated" />
+          <app-summary-card title="Top provider" [value]="topProvider()" icon="cloud" variant="elevated" />
+          <app-summary-card title="Cost alerts" [value]="3" icon="warning" iconColor="warn" variant="elevated" />
         </div>
 
-        <div class="chart-grid">
+        <div class="chart-grid page-section">
           <app-mini-chart title="Cost by provider" kind="bar" [data]="providerChart()" />
           <app-mini-chart title="Daily trend" kind="line" [data]="dailyTrend()" />
           <app-mini-chart title="Forecast" kind="line" [data]="forecastChart()" />
         </div>
 
-        <mat-tab-group>
+        <div class="table-card">
+        <mat-tab-group class="soft-tabs" animationDuration="280ms">
           <mat-tab label="Overview">
             <div class="tab-panel">
-              <div class="filter-row">
+              <div class="filter-row table-toolbar">
                 <mat-form-field appearance="outline">
                   <mat-label>Search</mat-label>
                   <input matInput [formControl]="searchControl" />
@@ -89,7 +90,8 @@ import { createPageLoader } from '../../core/utils/page-load.util'
                   </mat-select>
                 </mat-form-field>
               </div>
-              <table mat-table [dataSource]="filteredRows()" class="full-table">
+              <div class="data-table-wrap">
+              <table mat-table [dataSource]="filteredRows()" class="premium-table table-row-hover">
                 <ng-container matColumnDef="provider">
                   <th mat-header-cell *matHeaderCellDef>Provider</th>
                   <td mat-cell *matCellDef="let row">{{ row.provider }}</td>
@@ -103,8 +105,9 @@ import { createPageLoader } from '../../core/utils/page-load.util'
                   <td mat-cell *matCellDef="let row">{{ formatCost(row.amount) }}</td>
                 </ng-container>
                 <tr mat-header-row *matHeaderRowDef="cols"></tr>
-                <tr mat-row *matRowDef="let row; columns: cols"></tr>
+                <tr mat-row *matRowDef="let row; columns: cols" class="table-row-hover"></tr>
               </table>
+              </div>
             </div>
           </mat-tab>
           @for (tab of ['AWS', 'GCP', 'Azure', 'VPS', 'By instance', 'Forecast', 'Alerts']; track tab) {
@@ -115,22 +118,11 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             </mat-tab>
           }
         </mat-tab-group>
+        </div>
       }
     </div>
   `,
-  styles: `
-    .estimate-banner {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.5rem 0.75rem;
-      background: rgba(245, 158, 11, 0.12);
-      border-radius: 8px;
-      font-size: 0.85rem;
-      margin-bottom: 1rem;
-    }
-    .full-table { width: 100%; }
-  `,
+  styles: ``,
 })
 export class BillingPageComponent implements OnInit {
   private readonly billing = inject(BillingService)

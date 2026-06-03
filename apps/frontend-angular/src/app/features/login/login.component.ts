@@ -53,9 +53,10 @@ import { environment } from '../../../environments/environment'
     .error { color: #ef4444; font-size: 0.875rem; margin-bottom: 0.5rem; }
     .demo-hint {
       background: rgba(59, 130, 246, 0.12);
-      border: 1px solid rgba(59, 130, 246, 0.35);
-      border-radius: 8px;
-      padding: 0.75rem;
+      border: none;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2), var(--app-shadow-xs);
+      border-radius: var(--app-radius-md);
+      padding: 0.75rem 1rem;
       margin-bottom: 1rem;
       font-size: 0.8rem;
       p { margin: 0.25rem 0; }

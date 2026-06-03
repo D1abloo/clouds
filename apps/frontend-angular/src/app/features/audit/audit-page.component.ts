@@ -11,6 +11,7 @@ import { MatDialog } from '@angular/material/dialog'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
+import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
@@ -27,6 +28,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
     DatePipe,
     ReactiveFormsModule,
     PageHeaderComponent,
+    SummaryCardComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -49,8 +51,15 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
+      <div class="summary-grid page-section">
+        <app-summary-card title="Events today" [value]="filtered().length" icon="history" variant="elevated" />
+        <app-summary-card title="Actions" [value]="actionOptions().length" icon="bolt" variant="elevated" />
+        <app-summary-card title="Users" [value]="3" icon="group" variant="elevated" />
+        <app-summary-card title="Resources" [value]="12" icon="category" variant="elevated" />
+      </div>
+
       <div class="table-card">
-        <div class="filter-row">
+        <div class="filter-row table-toolbar">
           <mat-form-field appearance="outline"><mat-label>Search</mat-label><input matInput [formControl]="searchControl" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Action</mat-label>
             <mat-select [formControl]="actionControl">
@@ -69,7 +78,8 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         } @else if (filtered().length === 0) {
           <app-empty-state title="No audit entries" />
         } @else {
-          <table mat-table [dataSource]="filtered()" class="full-table">
+          <div class="data-table-wrap">
+          <table mat-table [dataSource]="filtered()" class="premium-table table-row-hover">
             <ng-container matColumnDef="action">
               <th mat-header-cell *matHeaderCellDef>Action</th>
               <td mat-cell *matCellDef="let row">
@@ -89,14 +99,14 @@ import { createPageLoader } from '../../core/utils/page-load.util'
               <td mat-cell *matCellDef="let row">{{ row.createdAt | date: 'medium' }}</td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="cols"></tr>
-            <tr mat-row *matRowDef="let row; columns: cols"></tr>
+            <tr mat-row *matRowDef="let row; columns: cols" class="table-row-hover"></tr>
           </table>
+          </div>
         }
       </div>
     </div>
   `,
   styles: `
-    .full-table { width: 100%; }
     .link-btn { padding: 0; min-width: 0; text-transform: none; }
   `,
 })

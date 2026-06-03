@@ -126,22 +126,24 @@ export class VpsCommandDialogComponent {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid">
-          <app-summary-card title="Total VPS" [value]="hosts().length" icon="dns" />
-          <app-summary-card title="Connected" [value]="connected()" icon="link" />
-          <app-summary-card title="Disconnected" [value]="disconnected()" icon="link_off" iconColor="warn" />
-          <app-summary-card title="With Docker" [value]="withDocker()" icon="view_in_ar" />
-          <app-summary-card title="With Kubernetes" [value]="withK8s()" icon="hub" />
-          <app-summary-card title="Alerts" [value]="2" icon="warning" iconColor="warn" />
+          <app-summary-card title="Total VPS" [value]="hosts().length" icon="dns" variant="elevated" />
+          <app-summary-card title="Connected" [value]="connected()" icon="link" variant="elevated" />
+          <app-summary-card title="Disconnected" [value]="disconnected()" icon="link_off" iconColor="warn" variant="elevated" />
+          <app-summary-card title="With Docker" [value]="withDocker()" icon="view_in_ar" variant="elevated" />
+          <app-summary-card title="With Kubernetes" [value]="withK8s()" icon="hub" variant="elevated" />
+          <app-summary-card title="Alerts" [value]="2" icon="warning" iconColor="warn" variant="elevated" />
         </div>
 
-        <mat-tab-group>
+        <div class="table-card">
+        <mat-tab-group class="soft-tabs" animationDuration="280ms">
           <mat-tab label="Servers">
             <div class="tab-panel">
               <mat-form-field appearance="outline"><mat-label>Search</mat-label><input matInput [formControl]="searchControl" /></mat-form-field>
               @if (filtered().length === 0) {
                 <app-empty-state title="No VPS hosts" description="Add a VPS or load demo data." />
               } @else {
-                <table mat-table [dataSource]="filtered()" class="full-table">
+                <div class="data-table-wrap">
+                <table mat-table [dataSource]="filtered()" class="premium-table table-row-hover">
                   <ng-container matColumnDef="name"><th mat-header-cell *matHeaderCellDef>Name</th><td mat-cell *matCellDef="let row">{{ row.name }}</td></ng-container>
                   <ng-container matColumnDef="host"><th mat-header-cell *matHeaderCellDef>IP</th><td mat-cell *matCellDef="let row" class="mono">{{ row.host }}</td></ng-container>
                   <ng-container matColumnDef="port"><th mat-header-cell *matHeaderCellDef>SSH</th><td mat-cell *matCellDef="let row">{{ row.port ?? 22 }}</td></ng-container>
@@ -165,8 +167,9 @@ export class VpsCommandDialogComponent {
                     </td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="cols"></tr>
-                  <tr mat-row *matRowDef="let row; columns: cols"></tr>
+                  <tr mat-row *matRowDef="let row; columns: cols" class="table-row-hover"></tr>
                 </table>
+                </div>
               }
             </div>
           </mat-tab>
@@ -178,10 +181,11 @@ export class VpsCommandDialogComponent {
           <mat-tab label="Metrics"><div class="tab-panel"><p>CPU/RAM/disk collected every 5m (demo).</p></div></mat-tab>
           <mat-tab label="Audit"><div class="tab-panel"><p>SSH sessions logged to <a routerLink="/audit">Audit</a>.</p></div></mat-tab>
         </mat-tab-group>
+        </div>
       }
     </div>
   `,
-  styles: `.full-table { width: 100%; } a { color: inherit; }`,
+  styles: `a { color: inherit; }`,
 })
 export class VpsListComponent implements OnInit {
   private readonly service = inject(VpsService)
