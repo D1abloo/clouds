@@ -17,7 +17,7 @@ export class InstancesService {
   ) {}
 
   async findAll(filters?: { projectId?: string; provider?: CloudProvider; cloudAccountId?: string; region?: string }) {
-    return this.prisma.instance.findMany({
+    const rows = await this.prisma.instance.findMany({
       where: {
         deletedAt: null,
         ...(filters?.projectId && { projectId: filters.projectId }),
@@ -28,6 +28,7 @@ export class InstancesService {
       include: { cloudAccount: { select: { id: true, name: true, provider: true } } },
       orderBy: [{ provider: 'asc' }, { region: 'asc' }, { name: 'asc' }],
     })
+    return rows.map((row) => this.enrichInstance(row))
   }
 
   async findOne(id: string) {
@@ -36,7 +37,30 @@ export class InstancesService {
       include: { cloudAccount: true, project: true },
     })
     if (!instance) throw new NotFoundException('Instance not found')
-    return instance
+    return this.enrichInstance(instance)
+  }
+
+  private enrichInstance<T extends Record<string, unknown>>(instance: T) {
+    const meta = (instance['metadata'] as Record<string, unknown>) ?? {}
+    return {
+      ...instance,
+      publicIp: meta['publicIp'] ?? null,
+      privateIp: meta['privateIp'] ?? null,
+      os: meta['os'] ?? null,
+      environment: meta['environment'] ?? null,
+      health: meta['health'] ?? null,
+      isDemo: meta['isDemo'] ?? false,
+      cpuCores: meta['cpuCores'] ?? null,
+      ramGb: meta['ramGb'] ?? null,
+      diskGb: meta['diskGb'] ?? null,
+      monthlyCost: meta['monthlyCost'] ?? null,
+      mtdCost: meta['mtdCost'] ?? null,
+      tags: meta['tags'] ?? {},
+      systemd: meta['systemd'] ?? [],
+      ports: meta['ports'] ?? [],
+      hasDocker: meta['hasDocker'] ?? false,
+      hasKubernetes: meta['hasKubernetes'] ?? false,
+    }
   }
 
   async start(id: string, userId?: string) {
@@ -53,12 +77,24 @@ export class InstancesService {
 
   private async runAction(id: string, action: 'start' | 'stop' | 'restart', userId?: string) {
     const instance = await this.findOne(id)
+    const isDemo = Boolean((instance as { isDemo?: unknown }).isDemo === true)
+    if (isDemo) {
+      await this.audit.create({
+        userId,
+        action: `instance.${action}.demo`,
+        resource: 'instance',
+        resourceId: id,
+        metadata: { mock: true, blocked: action === 'stop' || action === 'restart' ? false : false },
+      })
+      return { success: true, action, demo: true, message: `Demo mode: ${action} simulated (no real cloud API call)` }
+    }
     if (!instance.cloudAccountId) throw new BadRequestException('Instance has no cloud account')
 
-    const adapter = this.getAdapter(instance.provider)
-    if (action === 'start') await adapter.startInstance(instance.externalId, instance.region)
-    if (action === 'stop') await adapter.stopInstance(instance.externalId, instance.region)
-    if (action === 'restart') await adapter.restartInstance(instance.externalId, instance.region)
+    const row = instance as { externalId: string; region: string; provider: CloudProvider }
+    const adapter = this.getAdapter(row.provider)
+    if (action === 'start') await adapter.startInstance(row.externalId, row.region)
+    if (action === 'stop') await adapter.stopInstance(row.externalId, row.region)
+    if (action === 'restart') await adapter.restartInstance(row.externalId, row.region)
 
     await this.audit.create({
       userId,

@@ -1,0 +1,6 @@
+-- AlterEnum
+ALTER TYPE "InstanceStatus" ADD VALUE IF NOT EXISTS 'WARNING';
+ALTER TYPE "InstanceStatus" ADD VALUE IF NOT EXISTS 'ERROR';
+
+-- AlterTable
+ALTER TABLE "vps_servers" ADD COLUMN IF NOT EXISTS "metadata" JSONB;

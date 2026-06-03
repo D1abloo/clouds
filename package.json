@@ -19,7 +19,9 @@
     "prisma:studio": "npm run prisma:studio -w apps/backend-api",
     "prisma:seed": "npm run prisma:seed -w apps/backend-api",
     "prisma:seed:demo": "npm run prisma:seed:demo -w apps/backend-api",
-    "seed:demo": "bash scripts/seed-demo.sh"
+    "seed:demo": "bash scripts/seed-demo.sh",
+    "demo:seed": "bash scripts/demo-seed.sh",
+    "demo:reset": "bash scripts/demo-reset.sh"
   },
   "engines": {
     "node": ">=20.0.0",

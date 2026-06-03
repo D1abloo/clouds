@@ -9,6 +9,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle'
 import { AuthService } from '../../core/services/auth.service'
 import { ThemeService } from '../../core/services/theme.service'
 import { BreadcrumbsComponent } from '../breadcrumbs/breadcrumbs.component'
+import { DemoBannerComponent } from '../../shared/components/demo-banner/demo-banner.component'
 
 interface NavItem {
   label: string
@@ -24,6 +25,7 @@ interface NavItem {
     MatSidenavModule, MatListModule, MatIconModule,
     MatToolbarModule, MatButtonModule, MatSlideToggleModule,
     BreadcrumbsComponent,
+    DemoBannerComponent,
   ],
   template: `
     <mat-sidenav-container class="layout-container">
@@ -51,6 +53,7 @@ interface NavItem {
         </mat-toolbar>
         <main class="content">
           <app-breadcrumbs />
+          <app-demo-banner />
           <router-outlet />
         </main>
       </mat-sidenav-content>

@@ -217,6 +217,28 @@ Plan maestro: `prompts_cursor_por_fases.md`
 
 ---
 
+**Fase actual:** Dataset demo ampliado (18 instancias + 8 VPS)
+
+---
+
+## Dataset demo ampliado ✅
+
+**Estado:** Completado
+
+**Entregables:**
+- `prisma/demo/demo-catalog.ts` — 18 instancias (6 AWS, 6 GCP, 6 Azure) + 8 VPS
+- `prisma/demo/clear-demo.ts` — limpieza idempotente
+- `prisma/seed-demo.ts` — métricas (2160 samples), Docker, K8s, Jenkins, Terraform, billing, alertas, audit
+- `src/modules/demo/` — API `GET /demo/status`, `POST /demo/seed`, `POST /demo/reset`
+- Frontend: banner Demo Mode, badge DEMO en instancias, Settings con load/reset
+- Usuario: `demo@cloudops.local` / `Demo1234!`
+- Comandos: `npm run demo:seed`, `npm run demo:reset`
+- Docs: `docs/demo-mode.md`
+
+**Validación:** `npm run demo:reset` OK · builds OK
+
+---
+
 ## Bugfix — Loaders infinitos en Angular ✅
 
 **Estado:** Completado

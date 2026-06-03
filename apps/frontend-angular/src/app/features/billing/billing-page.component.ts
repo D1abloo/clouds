@@ -44,6 +44,17 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
             [value]="summary()?.currency ?? 'USD'"
             icon="attach_money"
           />
+          <app-summary-card
+            title="Daily / Weekly"
+            [value]="formatCost(summary()?.daily) + ' / ' + formatCost(summary()?.weekly)"
+            icon="today"
+          />
+          <app-summary-card
+            title="Forecast"
+            [value]="formatCost(summary()?.forecastMonthly)"
+            [subtitle]="varianceLabel()"
+            icon="trending_up"
+          />
         </div>
         <app-chart-placeholder label="Cost by provider" />
         @if (summary()?.byProvider) {
@@ -99,5 +110,12 @@ export class BillingPageComponent implements OnInit {
       style: 'currency',
       currency: this.summary()?.currency ?? 'USD',
     }).format(value)
+  }
+
+  varianceLabel = (): string => {
+    const v = this.summary()?.varianceVsPreviousMonth
+    if (v === undefined || v === null) return ''
+    const sign = v >= 0 ? '+' : ''
+    return `${sign}${v.toFixed(1)}% vs last month`
   }
 }

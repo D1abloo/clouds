@@ -40,6 +40,15 @@ export interface Instance {
   cloudAccountId?: string
   publicIp?: string
   privateIp?: string
+  os?: string
+  environment?: string
+  health?: string
+  isDemo?: boolean
+  cpuCores?: number
+  ramGb?: number
+  diskGb?: number
+  monthlyCost?: number
+  mtdCost?: number
 }
 
 export interface VpsHost {
@@ -89,9 +98,14 @@ export interface AuditLog {
 
 export interface BillingSummary {
   totalCost?: number
+  totalMonthly?: number
   currency?: string
   byProvider?: Record<string, number>
   period?: string
+  daily?: number
+  weekly?: number
+  forecastMonthly?: number
+  varianceVsPreviousMonth?: number
 }
 
 export interface JenkinsServer {

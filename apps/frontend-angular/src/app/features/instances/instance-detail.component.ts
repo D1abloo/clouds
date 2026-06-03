@@ -44,8 +44,11 @@ import { createPageLoader } from '../../core/utils/page-load.util'
               <mat-icon>arrow_back</mat-icon>
               Instances
             </a>
-            <h1>{{ instance()!.name }}</h1>
+            <h1>{{ instance()!.name }} @if (instance()!.isDemo) { <span class="demo-chip">DEMO</span> }</h1>
             <app-status-badge [value]="instance()!.status" />
+            @if (instance()!.health) {
+              <span class="health">Health: {{ instance()!.health }}</span>
+            }
           </div>
           <div class="actions">
             <button mat-stroked-button type="button" (click)="handleAction('start')">
@@ -70,6 +73,9 @@ import { createPageLoader } from '../../core/utils/page-load.util'
                 <dt>Type</dt><dd>{{ instance()!.instanceType ?? '—' }}</dd>
                 <dt>Public IP</dt><dd class="mono">{{ instance()!.publicIp ?? '—' }}</dd>
                 <dt>Private IP</dt><dd class="mono">{{ instance()!.privateIp ?? '—' }}</dd>
+                <dt>Environment</dt><dd>{{ instance()!.environment ?? '—' }}</dd>
+                <dt>CPU / RAM / Disk</dt><dd>{{ instance()!.cpuCores ?? '—' }} cores · {{ instance()!.ramGb ?? '—' }} GB · {{ instance()!.diskGb ?? '—' }} GB</dd>
+                <dt>Monthly cost</dt><dd>{{ formatCost(instance()!.monthlyCost) }} (MTD {{ formatCost(instance()!.mtdCost) }})</dd>
               </dl>
             </mat-card-content>
           </mat-card>
@@ -96,6 +102,17 @@ import { createPageLoader } from '../../core/utils/page-load.util'
       margin-bottom: 0.5rem;
     }
     .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .demo-chip {
+      margin-left: 0.5rem;
+      padding: 0.15rem 0.45rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #2563eb;
+      vertical-align: middle;
+    }
+    .health { margin-left: 0.75rem; font-size: 0.85rem; color: var(--app-text-muted); }
     .detail-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -171,5 +188,10 @@ export class InstanceDetailComponent implements OnInit {
           error: () => this.toast.error(`${labels[action]} failed`),
         })
       })
+  }
+
+  formatCost = (value?: number | null): string => {
+    if (value === undefined || value === null) return '—'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
   }
 }

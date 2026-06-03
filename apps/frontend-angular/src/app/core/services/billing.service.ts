@@ -17,9 +17,14 @@ export class BillingService {
           Object.values(byProvider).reduce((s, v) => s + v, 0)
         return {
           totalCost: totalMonthly,
+          totalMonthly,
           byProvider,
           currency: (raw['currency'] as string) ?? 'USD',
           period: (raw['period'] as string) ?? 'Current month',
+          daily: raw['daily'] as number | undefined,
+          weekly: raw['weekly'] as number | undefined,
+          forecastMonthly: raw['forecastMonthly'] as number | undefined,
+          varianceVsPreviousMonth: raw['varianceVsPreviousMonth'] as number | undefined,
         } satisfies BillingSummary
       }),
     )

@@ -97,8 +97,20 @@ export class VpsService {
     })
   }
 
-  private sanitize(vps: { id: string; name: string; hostname: string; port: number; username: string; sshKeyRef: string; [key: string]: unknown }) {
-    const { sshKeyRef, ...rest } = vps
-    return { ...rest, hasSshKey: !!sshKeyRef }
+  private sanitize(vps: { id: string; name: string; hostname: string; port: number; username: string; sshKeyRef: string; metadata?: unknown; [key: string]: unknown }) {
+    const { sshKeyRef, metadata, ...rest } = vps
+    const meta = (metadata as Record<string, unknown>) ?? {}
+    return {
+      ...rest,
+      host: rest.hostname,
+      hasSshKey: !!sshKeyRef,
+      isDemo: meta.isDemo ?? false,
+      status: meta.sshStatus ?? (rest.isActive ? 'connected' : 'disconnected'),
+      os: meta.os ?? null,
+      environment: meta.environment ?? null,
+      publicIp: meta.publicIp ?? null,
+      privateIp: meta.privateIp ?? null,
+      metadata: meta,
+    }
   }
 }

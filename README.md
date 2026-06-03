@@ -50,13 +50,16 @@ npm run dev:frontend  # http://localhost:4200
 
 ## Modo demo
 
-Carga datos de prueba en PostgreSQL sin conectar AWS, GCP, Azure, Jenkins ni SSH reales:
+Carga **18 instancias cloud + 8 VPS** con métricas, Docker, Kubernetes, billing, alertas y más:
 
 ```bash
-npm run seed:demo
+npm run demo:seed    # cargar dataset demo
+npm run demo:reset   # limpiar y recargar
 ```
 
-Ver credenciales y recursos en [docs/datos-demo.md](docs/datos-demo.md). Activa `DEMO_MODE=true` en `.env` para mocks seguros en adaptadores cloud.
+Ver [docs/demo-mode.md](docs/demo-mode.md). Usuario: `demo@cloudops.local` / `Demo1234!`
+
+Activa `DEMO_MODE=true` en `.env` para mocks seguros y API `/demo/*`.
 
 ## Variables de entorno
 

@@ -25,6 +25,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditModule } from './modules/audit/audit.module'
 import { RealtimeModule } from './modules/realtime/realtime.module'
 import { HealthModule } from './modules/health/health.module'
+import { DemoModule } from './modules/demo/demo.module'
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { HealthModule } from './modules/health/health.module'
     AuditModule,
     RealtimeModule,
     HealthModule,
+    DemoModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

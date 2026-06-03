@@ -73,6 +73,9 @@ import { createPageLoader } from '../../core/utils/page-load.util'
               <th mat-header-cell *matHeaderCellDef>Name</th>
               <td mat-cell *matCellDef="let row">
                 <a [routerLink]="['/instances', row.id]">{{ row.name }}</a>
+                @if (row.isDemo) {
+                  <span class="demo-chip">DEMO</span>
+                }
               </td>
             </ng-container>
             <ng-container matColumnDef="provider">
@@ -104,6 +107,16 @@ import { createPageLoader } from '../../core/utils/page-load.util'
     .search-field { min-width: 200px; flex: 1; }
     table { width: 100%; }
     a { color: inherit; font-weight: 500; }
+    .demo-chip {
+      margin-left: 0.5rem;
+      padding: 0.1rem 0.4rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #2563eb;
+      vertical-align: middle;
+    }
   `,
 })
 export class InstancesListComponent implements OnInit {

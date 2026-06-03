@@ -1,0 +1,592 @@
+import { CloudProvider, InstanceStatus } from '@prisma/client'
+
+export type DemoEnvironment = 'prod' | 'staging' | 'dev'
+
+export interface DemoInstanceDef {
+  id: string
+  externalId: string
+  name: string
+  provider: CloudProvider
+  accountId: string
+  region: string
+  status: InstanceStatus
+  instanceType: string
+  os: string
+  environment: DemoEnvironment
+  publicIp: string
+  privateIp: string
+  cpuCores: number
+  ramGb: number
+  diskGb: number
+  uptimeDays: number
+  monthlyCost: number
+  mtdCost: number
+  health: 'healthy' | 'warning' | 'error' | 'unknown'
+  tags: Record<string, string>
+  hasDocker?: boolean
+  hasKubernetes?: boolean
+}
+
+export interface DemoVpsDef {
+  id: string
+  name: string
+  hostname: string
+  port: number
+  username: string
+  os: string
+  sshStatus: 'connected' | 'disconnected' | 'warning'
+  environment: DemoEnvironment
+  publicIp: string
+  privateIp: string
+  cpuCores: number
+  ramGb: number
+  diskGb: number
+  monthlyCost: number
+  hasDocker?: boolean
+  hasKubernetes?: boolean
+}
+
+const meta = (
+  def: Omit<DemoInstanceDef, 'id' | 'externalId' | 'accountId'>,
+  accountName: string,
+) => ({
+  isDemo: true,
+  accountName,
+  environment: def.environment,
+  os: def.os,
+  publicIp: def.publicIp,
+  privateIp: def.privateIp,
+  cpuCores: def.cpuCores,
+  ramGb: def.ramGb,
+  diskGb: def.diskGb,
+  uptimeDays: def.uptimeDays,
+  monthlyCost: def.monthlyCost,
+  mtdCost: def.mtdCost,
+  health: def.health,
+  tags: def.tags,
+  hasDocker: def.hasDocker ?? false,
+  hasKubernetes: def.hasKubernetes ?? false,
+  lastCheckedAt: new Date().toISOString(),
+  systemd: buildSystemd(def),
+  ports: buildPorts(def),
+})
+
+const buildSystemd = (def: { name?: string; hasDocker?: boolean; hasKubernetes?: boolean; environment: DemoEnvironment }) => [
+  { name: 'ssh', status: 'active' },
+  { name: 'docker', status: def.hasDocker ? 'active' : 'inactive' },
+  { name: 'kubelet', status: def.hasKubernetes ? 'active' : 'inactive' },
+  { name: 'nginx', status: def.environment === 'prod' ? 'active' : 'inactive' },
+  { name: 'postgresql', status: (def.name ?? '').includes('db') || (def.name ?? '').includes('postgres') ? 'active' : 'inactive' },
+  { name: 'redis', status: (def.name ?? '').includes('api') ? 'active' : 'inactive' },
+  { name: 'prometheus', status: (def.name ?? '').includes('monitor') || (def.name ?? '').includes('k8s') ? 'active' : 'failed' },
+  { name: 'grafana', status: (def.name ?? '').includes('monitor') ? 'active' : 'inactive' },
+  { name: 'jenkins', status: (def.name ?? '').includes('worker') || (def.name ?? '').includes('staging') ? 'active' : 'inactive' },
+]
+
+const buildPorts = (def: { name?: string; hasDocker?: boolean }) => {
+  const n = def.name ?? ''
+  const base = [
+    { port: 22, service: 'SSH' },
+    { port: 80, service: 'HTTP' },
+    { port: 443, service: 'HTTPS' },
+  ]
+  if (n.includes('api')) base.push({ port: 3000, service: 'API' }, { port: 4200, service: 'Angular' })
+  if (n.includes('db') || n.includes('postgres')) base.push({ port: 5432, service: 'PostgreSQL' })
+  if (n.includes('api') || n.includes('worker')) base.push({ port: 6379, service: 'Redis' })
+  if (n.includes('docker') || def.hasDocker) base.push({ port: 8080, service: 'Jenkins' })
+  if (n.includes('monitor') || n.includes('k8s')) base.push({ port: 9090, service: 'Prometheus' })
+  return base
+}
+
+export const DEMO_ACCOUNTS = {
+  aws: { id: 'demo-aws-account-001', name: 'AWS Demo Account', accountId: '123456789012' },
+  gcp: { id: 'demo-gcp-account-001', name: 'GCP Demo Project', accountId: 'demo-gcp-project' },
+  azure: { id: 'demo-azure-account-001', name: 'Azure Demo Subscription', accountId: 'demo-subscription-id' },
+} as const
+
+export const DEMO_AWS_INSTANCES: DemoInstanceDef[] = [
+  {
+    id: 'demo-inst-aws-prod-web-01',
+    externalId: 'i-demo-aws-prod-web-01',
+    name: 'aws-prod-web-01',
+    provider: CloudProvider.AWS,
+    accountId: DEMO_ACCOUNTS.aws.id,
+    region: 'eu-west-1',
+    status: InstanceStatus.RUNNING,
+    instanceType: 't3.medium',
+    os: 'Ubuntu 22.04',
+    environment: 'prod',
+    publicIp: '203.0.113.10',
+    privateIp: '10.0.1.10',
+    cpuCores: 2,
+    ramGb: 4,
+    diskGb: 80,
+    uptimeDays: 45,
+    monthlyCost: 42.5,
+    mtdCost: 28.3,
+    health: 'healthy',
+    tags: { env: 'prod', role: 'web', team: 'platform' },
+  },
+  {
+    id: 'demo-inst-aws-prod-api-01',
+    externalId: 'i-demo-aws-prod-api-01',
+    name: 'aws-prod-api-01',
+    provider: CloudProvider.AWS,
+    accountId: DEMO_ACCOUNTS.aws.id,
+    region: 'eu-west-1',
+    status: InstanceStatus.RUNNING,
+    instanceType: 't3.small',
+    os: 'Debian 12',
+    environment: 'prod',
+    publicIp: '203.0.113.11',
+    privateIp: '10.0.1.11',
+    cpuCores: 2,
+    ramGb: 2,
+    diskGb: 60,
+    uptimeDays: 30,
+    monthlyCost: 28.0,
+    mtdCost: 18.6,
+    health: 'healthy',
+    tags: { env: 'prod', role: 'api' },
+  },
+  {
+    id: 'demo-inst-aws-prod-db-01',
+    externalId: 'i-demo-aws-prod-db-01',
+    name: 'aws-prod-db-01',
+    provider: CloudProvider.AWS,
+    accountId: DEMO_ACCOUNTS.aws.id,
+    region: 'eu-south-2',
+    status: InstanceStatus.WARNING,
+    instanceType: 'm6i.large',
+    os: 'Amazon Linux 2023',
+    environment: 'prod',
+    publicIp: '203.0.113.12',
+    privateIp: '10.0.2.10',
+    cpuCores: 4,
+    ramGb: 8,
+    diskGb: 200,
+    uptimeDays: 90,
+    monthlyCost: 95.0,
+    mtdCost: 62.1,
+    health: 'warning',
+    tags: { env: 'prod', role: 'database' },
+  },
+  {
+    id: 'demo-inst-aws-staging-worker-01',
+    externalId: 'i-demo-aws-staging-worker-01',
+    name: 'aws-staging-worker-01',
+    provider: CloudProvider.AWS,
+    accountId: DEMO_ACCOUNTS.aws.id,
+    region: 'us-east-1',
+    status: InstanceStatus.RUNNING,
+    instanceType: 't3.micro',
+    os: 'Ubuntu 22.04',
+    environment: 'staging',
+    publicIp: '198.51.100.20',
+    privateIp: '10.1.0.20',
+    cpuCores: 1,
+    ramGb: 1,
+    diskGb: 30,
+    uptimeDays: 12,
+    monthlyCost: 8.5,
+    mtdCost: 5.2,
+    health: 'healthy',
+    tags: { env: 'staging', role: 'worker' },
+  },
+  {
+    id: 'demo-inst-aws-dev-docker-01',
+    externalId: 'i-demo-aws-dev-docker-01',
+    name: 'aws-dev-docker-01',
+    provider: CloudProvider.AWS,
+    accountId: DEMO_ACCOUNTS.aws.id,
+    region: 'us-east-1',
+    status: InstanceStatus.STOPPED,
+    instanceType: 't3.small',
+    os: 'Debian 12',
+    environment: 'dev',
+    publicIp: '198.51.100.21',
+    privateIp: '10.2.0.21',
+    cpuCores: 2,
+    ramGb: 2,
+    diskGb: 50,
+    uptimeDays: 0,
+    monthlyCost: 15.0,
+    mtdCost: 3.1,
+    health: 'unknown',
+    tags: { env: 'dev', role: 'docker' },
+    hasDocker: true,
+  },
+  {
+    id: 'demo-inst-aws-k8s-node-01',
+    externalId: 'i-demo-aws-k8s-node-01',
+    name: 'aws-k8s-node-01',
+    provider: CloudProvider.AWS,
+    accountId: DEMO_ACCOUNTS.aws.id,
+    region: 'eu-south-2',
+    status: InstanceStatus.ERROR,
+    instanceType: 'm6i.large',
+    os: 'Amazon Linux 2023',
+    environment: 'prod',
+    publicIp: '203.0.113.15',
+    privateIp: '10.0.3.15',
+    cpuCores: 4,
+    ramGb: 16,
+    diskGb: 120,
+    uptimeDays: 5,
+    monthlyCost: 110.0,
+    mtdCost: 18.0,
+    health: 'error',
+    tags: { env: 'prod', role: 'kubernetes' },
+    hasDocker: true,
+    hasKubernetes: true,
+  },
+]
+
+export const DEMO_GCP_INSTANCES: DemoInstanceDef[] = [
+  {
+    id: 'demo-inst-gcp-prod-web-01',
+    externalId: 'gcp-demo-prod-web-01',
+    name: 'gcp-prod-web-01',
+    provider: CloudProvider.GCP,
+    accountId: DEMO_ACCOUNTS.gcp.id,
+    region: 'europe-west1-b',
+    status: InstanceStatus.RUNNING,
+    instanceType: 'e2-medium',
+    os: 'Ubuntu 22.04',
+    environment: 'prod',
+    publicIp: '203.0.113.30',
+    privateIp: '10.10.1.10',
+    cpuCores: 2,
+    ramGb: 4,
+    diskGb: 80,
+    uptimeDays: 60,
+    monthlyCost: 38.0,
+    mtdCost: 25.0,
+    health: 'healthy',
+    tags: { env: 'prod', role: 'web' },
+  },
+  {
+    id: 'demo-inst-gcp-prod-api-01',
+    externalId: 'gcp-demo-prod-api-01',
+    name: 'gcp-prod-api-01',
+    provider: CloudProvider.GCP,
+    accountId: DEMO_ACCOUNTS.gcp.id,
+    region: 'europe-west1-b',
+    status: InstanceStatus.RUNNING,
+    instanceType: 'e2-small',
+    os: 'Debian 12',
+    environment: 'prod',
+    publicIp: '203.0.113.31',
+    privateIp: '10.10.1.11',
+    cpuCores: 2,
+    ramGb: 2,
+    diskGb: 50,
+    uptimeDays: 40,
+    monthlyCost: 22.0,
+    mtdCost: 14.5,
+    health: 'healthy',
+    tags: { env: 'prod', role: 'api' },
+  },
+  {
+    id: 'demo-inst-gcp-prod-analytics-01',
+    externalId: 'gcp-demo-prod-analytics-01',
+    name: 'gcp-prod-analytics-01',
+    provider: CloudProvider.GCP,
+    accountId: DEMO_ACCOUNTS.gcp.id,
+    region: 'europe-southwest1-a',
+    status: InstanceStatus.WARNING,
+    instanceType: 'n2-standard-2',
+    os: 'Container-Optimized OS',
+    environment: 'prod',
+    publicIp: '203.0.113.32',
+    privateIp: '10.10.2.10',
+    cpuCores: 2,
+    ramGb: 8,
+    diskGb: 100,
+    uptimeDays: 25,
+    monthlyCost: 75.0,
+    mtdCost: 50.0,
+    health: 'warning',
+    tags: { env: 'prod', role: 'analytics' },
+  },
+  {
+    id: 'demo-inst-gcp-staging-worker-01',
+    externalId: 'gcp-demo-staging-worker-01',
+    name: 'gcp-staging-worker-01',
+    provider: CloudProvider.GCP,
+    accountId: DEMO_ACCOUNTS.gcp.id,
+    region: 'us-central1-a',
+    status: InstanceStatus.RUNNING,
+    instanceType: 'e2-micro',
+    os: 'Ubuntu 22.04',
+    environment: 'staging',
+    publicIp: '198.51.100.40',
+    privateIp: '10.11.0.10',
+    cpuCores: 1,
+    ramGb: 1,
+    diskGb: 30,
+    uptimeDays: 8,
+    monthlyCost: 6.5,
+    mtdCost: 4.0,
+    health: 'healthy',
+    tags: { env: 'staging', role: 'worker' },
+  },
+  {
+    id: 'demo-inst-gcp-dev-docker-01',
+    externalId: 'gcp-demo-dev-docker-01',
+    name: 'gcp-dev-docker-01',
+    provider: CloudProvider.GCP,
+    accountId: DEMO_ACCOUNTS.gcp.id,
+    region: 'us-central1-a',
+    status: InstanceStatus.STOPPED,
+    instanceType: 'e2-small',
+    os: 'Debian 12',
+    environment: 'dev',
+    publicIp: '198.51.100.41',
+    privateIp: '10.12.0.10',
+    cpuCores: 2,
+    ramGb: 2,
+    diskGb: 40,
+    uptimeDays: 0,
+    monthlyCost: 12.0,
+    mtdCost: 2.5,
+    health: 'unknown',
+    tags: { env: 'dev', role: 'docker' },
+    hasDocker: true,
+  },
+  {
+    id: 'demo-inst-gcp-k8s-node-01',
+    externalId: 'gcp-demo-k8s-node-01',
+    name: 'gcp-k8s-node-01',
+    provider: CloudProvider.GCP,
+    accountId: DEMO_ACCOUNTS.gcp.id,
+    region: 'europe-southwest1-a',
+    status: InstanceStatus.ERROR,
+    instanceType: 'n2-standard-2',
+    os: 'Container-Optimized OS',
+    environment: 'prod',
+    publicIp: '203.0.113.35',
+    privateIp: '10.10.3.10',
+    cpuCores: 4,
+    ramGb: 8,
+    diskGb: 100,
+    uptimeDays: 3,
+    monthlyCost: 85.0,
+    mtdCost: 12.0,
+    health: 'error',
+    tags: { env: 'prod', role: 'kubernetes' },
+    hasDocker: true,
+    hasKubernetes: true,
+  },
+]
+
+export const DEMO_AZURE_INSTANCES: DemoInstanceDef[] = [
+  {
+    id: 'demo-inst-azure-prod-web-01',
+    externalId: 'azure-demo-prod-web-01',
+    name: 'azure-prod-web-01',
+    provider: CloudProvider.AZURE,
+    accountId: DEMO_ACCOUNTS.azure.id,
+    region: 'westeurope',
+    status: InstanceStatus.RUNNING,
+    instanceType: 'Standard_B2s',
+    os: 'Ubuntu 22.04',
+    environment: 'prod',
+    publicIp: '203.0.113.50',
+    privateIp: '10.20.1.10',
+    cpuCores: 2,
+    ramGb: 4,
+    diskGb: 64,
+    uptimeDays: 55,
+    monthlyCost: 35.0,
+    mtdCost: 23.0,
+    health: 'healthy',
+    tags: { env: 'prod', role: 'web' },
+  },
+  {
+    id: 'demo-inst-azure-prod-api-01',
+    externalId: 'azure-demo-prod-api-01',
+    name: 'azure-prod-api-01',
+    provider: CloudProvider.AZURE,
+    accountId: DEMO_ACCOUNTS.azure.id,
+    region: 'westeurope',
+    status: InstanceStatus.RUNNING,
+    instanceType: 'Standard_B1s',
+    os: 'Debian 12',
+    environment: 'prod',
+    publicIp: '203.0.113.51',
+    privateIp: '10.20.1.11',
+    cpuCores: 1,
+    ramGb: 1,
+    diskGb: 32,
+    uptimeDays: 35,
+    monthlyCost: 18.0,
+    mtdCost: 12.0,
+    health: 'healthy',
+    tags: { env: 'prod', role: 'api' },
+  },
+  {
+    id: 'demo-inst-azure-prod-db-01',
+    externalId: 'azure-demo-prod-db-01',
+    name: 'azure-prod-db-01',
+    provider: CloudProvider.AZURE,
+    accountId: DEMO_ACCOUNTS.azure.id,
+    region: 'spaincentral',
+    status: InstanceStatus.WARNING,
+    instanceType: 'Standard_D2s_v5',
+    os: 'Windows Server 2022',
+    environment: 'prod',
+    publicIp: '203.0.113.52',
+    privateIp: '10.20.2.10',
+    cpuCores: 2,
+    ramGb: 8,
+    diskGb: 128,
+    uptimeDays: 70,
+    monthlyCost: 88.0,
+    mtdCost: 58.0,
+    health: 'warning',
+    tags: { env: 'prod', role: 'database' },
+  },
+  {
+    id: 'demo-inst-azure-staging-worker-01',
+    externalId: 'azure-demo-staging-worker-01',
+    name: 'azure-staging-worker-01',
+    provider: CloudProvider.AZURE,
+    accountId: DEMO_ACCOUNTS.azure.id,
+    region: 'eastus',
+    status: InstanceStatus.RUNNING,
+    instanceType: 'Standard_B1s',
+    os: 'Ubuntu 22.04',
+    environment: 'staging',
+    publicIp: '198.51.100.60',
+    privateIp: '10.21.0.10',
+    cpuCores: 1,
+    ramGb: 1,
+    diskGb: 30,
+    uptimeDays: 10,
+    monthlyCost: 9.0,
+    mtdCost: 5.5,
+    health: 'healthy',
+    tags: { env: 'staging', role: 'worker' },
+  },
+  {
+    id: 'demo-inst-azure-dev-docker-01',
+    externalId: 'azure-demo-dev-docker-01',
+    name: 'azure-dev-docker-01',
+    provider: CloudProvider.AZURE,
+    accountId: DEMO_ACCOUNTS.azure.id,
+    region: 'eastus',
+    status: InstanceStatus.STOPPED,
+    instanceType: 'Standard_B2s',
+    os: 'Debian 12',
+    environment: 'dev',
+    publicIp: '198.51.100.61',
+    privateIp: '10.22.0.10',
+    cpuCores: 2,
+    ramGb: 4,
+    diskGb: 50,
+    uptimeDays: 0,
+    monthlyCost: 20.0,
+    mtdCost: 4.0,
+    health: 'unknown',
+    tags: { env: 'dev', role: 'docker' },
+    hasDocker: true,
+  },
+  {
+    id: 'demo-inst-azure-k8s-node-01',
+    externalId: 'azure-demo-k8s-node-01',
+    name: 'azure-k8s-node-01',
+    provider: CloudProvider.AZURE,
+    accountId: DEMO_ACCOUNTS.azure.id,
+    region: 'spaincentral',
+    status: InstanceStatus.ERROR,
+    instanceType: 'Standard_D2s_v5',
+    os: 'Ubuntu 22.04',
+    environment: 'prod',
+    publicIp: '203.0.113.55',
+    privateIp: '10.20.3.10',
+    cpuCores: 4,
+    ramGb: 8,
+    diskGb: 100,
+    uptimeDays: 2,
+    monthlyCost: 92.0,
+    mtdCost: 10.0,
+    health: 'error',
+    tags: { env: 'prod', role: 'kubernetes' },
+    hasDocker: true,
+    hasKubernetes: true,
+  },
+]
+
+export const DEMO_VPS_HOSTS: DemoVpsDef[] = [
+  { id: 'demo-vps-prod-nginx-01', name: 'vps-prod-nginx-01', hostname: '192.0.2.10', port: 22, username: 'ubuntu', os: 'Ubuntu 22.04', sshStatus: 'connected', environment: 'prod', publicIp: '203.0.113.100', privateIp: '192.0.2.10', cpuCores: 2, ramGb: 4, diskGb: 40, monthlyCost: 25.0 },
+  { id: 'demo-vps-prod-postgres-01', name: 'vps-prod-postgres-01', hostname: '192.0.2.11', port: 22, username: 'postgres', os: 'Debian 12', sshStatus: 'connected', environment: 'prod', publicIp: '203.0.113.101', privateIp: '192.0.2.11', cpuCores: 4, ramGb: 8, diskGb: 200, monthlyCost: 45.0 },
+  { id: 'demo-vps-prod-docker-01', name: 'vps-prod-docker-01', hostname: '198.51.100.10', port: 22, username: 'docker', os: 'Ubuntu 22.04', sshStatus: 'connected', environment: 'prod', publicIp: '203.0.113.102', privateIp: '198.51.100.10', cpuCores: 4, ramGb: 8, diskGb: 120, monthlyCost: 40.0, hasDocker: true },
+  { id: 'demo-vps-prod-k8s-master-01', name: 'vps-prod-k8s-master-01', hostname: '198.51.100.11', port: 22, username: 'k8s', os: 'Rocky Linux 9', sshStatus: 'connected', environment: 'prod', publicIp: '203.0.113.103', privateIp: '198.51.100.11', cpuCores: 4, ramGb: 16, diskGb: 100, monthlyCost: 65.0, hasDocker: true, hasKubernetes: true },
+  { id: 'demo-vps-prod-k8s-worker-01', name: 'vps-prod-k8s-worker-01', hostname: '198.51.100.12', port: 22, username: 'k8s', os: 'Rocky Linux 9', sshStatus: 'warning', environment: 'prod', publicIp: '203.0.113.104', privateIp: '198.51.100.12', cpuCores: 8, ramGb: 32, diskGb: 200, monthlyCost: 95.0, hasKubernetes: true },
+  { id: 'demo-vps-staging-api-01', name: 'vps-staging-api-01', hostname: '203.0.113.110', port: 22, username: 'deploy', os: 'Debian 12', sshStatus: 'connected', environment: 'staging', publicIp: '203.0.113.110', privateIp: '203.0.113.110', cpuCores: 2, ramGb: 4, diskGb: 60, monthlyCost: 20.0 },
+  { id: 'demo-vps-dev-sandbox-01', name: 'vps-dev-sandbox-01', hostname: '203.0.113.120', port: 2222, username: 'dev', os: 'Ubuntu 22.04', sshStatus: 'disconnected', environment: 'dev', publicIp: '203.0.113.120', privateIp: '203.0.113.120', cpuCores: 1, ramGb: 2, diskGb: 30, monthlyCost: 10.0, hasDocker: true },
+  { id: 'demo-vps-monitoring-01', name: 'vps-monitoring-01', hostname: '203.0.113.130', port: 22, username: 'monitor', os: 'Rocky Linux 9', sshStatus: 'connected', environment: 'prod', publicIp: '203.0.113.130', privateIp: '203.0.113.130', cpuCores: 4, ramGb: 8, diskGb: 150, monthlyCost: 55.0, hasDocker: true },
+]
+
+export const ALL_DEMO_INSTANCES = [
+  ...DEMO_AWS_INSTANCES,
+  ...DEMO_GCP_INSTANCES,
+  ...DEMO_AZURE_INSTANCES,
+]
+
+export const buildInstanceMetadata = (def: DemoInstanceDef, accountName: string) =>
+  meta(def, accountName)
+
+export const buildVpsMetadata = (def: DemoVpsDef) => ({
+  isDemo: true,
+  os: def.os,
+  sshStatus: def.sshStatus,
+  environment: def.environment,
+  publicIp: def.publicIp,
+  privateIp: def.privateIp,
+  cpuCores: def.cpuCores,
+  ramGb: def.ramGb,
+  diskGb: def.diskGb,
+  monthlyCost: def.monthlyCost,
+  hasDocker: def.hasDocker ?? false,
+  hasKubernetes: def.hasKubernetes ?? false,
+  systemd: buildSystemd({ ...def, name: def.name }),
+  ports: buildPorts({ name: def.name, hasDocker: def.hasDocker }),
+})
+
+export const DEMO_DOCKER_CONTAINERS = [
+  { id: 'demo-docker-c-nginx', containerId: 'c-nginx', name: 'nginx', image: 'nginx:1.25', status: 'running' },
+  { id: 'demo-docker-c-postgres', containerId: 'c-postgres', name: 'postgres', image: 'postgres:16', status: 'running' },
+  { id: 'demo-docker-c-redis', containerId: 'c-redis', name: 'redis', image: 'redis:7-alpine', status: 'running' },
+  { id: 'demo-docker-c-api', containerId: 'c-api', name: 'api-server', image: 'cloudops/api:dev', status: 'running' },
+  { id: 'demo-docker-c-worker', containerId: 'c-worker', name: 'worker', image: 'cloudops/worker:dev', status: 'running' },
+  { id: 'demo-docker-c-prometheus', containerId: 'c-prom', name: 'prometheus', image: 'prom/prometheus:latest', status: 'running' },
+  { id: 'demo-docker-c-grafana', containerId: 'c-grafana', name: 'grafana', image: 'grafana/grafana:latest', status: 'running' },
+  { id: 'demo-docker-c-jenkins', containerId: 'c-jenkins', name: 'jenkins-agent', image: 'jenkins/inbound-agent:latest', status: 'exited' },
+]
+
+export const DEMO_K8S_RESOURCES = [
+  { id: 'demo-k8s-ns-default', kind: 'Namespace', namespace: null, name: 'default', status: 'Active' },
+  { id: 'demo-k8s-ns-kube', kind: 'Namespace', namespace: null, name: 'kube-system', status: 'Active' },
+  { id: 'demo-k8s-ns-mon', kind: 'Namespace', namespace: null, name: 'monitoring', status: 'Active' },
+  { id: 'demo-k8s-ns-prod', kind: 'Namespace', namespace: null, name: 'production', status: 'Active' },
+  { id: 'demo-k8s-ns-stg', kind: 'Namespace', namespace: null, name: 'staging', status: 'Active' },
+  { id: 'demo-k8s-pod-api', kind: 'Pod', namespace: 'production', name: 'api-server-0', status: 'Running' },
+  { id: 'demo-k8s-pod-worker', kind: 'Pod', namespace: 'production', name: 'worker-0', status: 'Running' },
+  { id: 'demo-k8s-pod-crash', kind: 'Pod', namespace: 'staging', name: 'legacy-app-0', status: 'CrashLoopBackOff' },
+  { id: 'demo-k8s-pod-pending', kind: 'Pod', namespace: 'staging', name: 'batch-job-0', status: 'Pending' },
+  { id: 'demo-k8s-dep-api', kind: 'Deployment', namespace: 'production', name: 'api-server', status: 'Available' },
+  { id: 'demo-k8s-dep-web', kind: 'Deployment', namespace: 'production', name: 'frontend', status: 'Available' },
+  { id: 'demo-k8s-svc-api', kind: 'Service', namespace: 'production', name: 'api-server', status: 'ClusterIP' },
+  { id: 'demo-k8s-svc-web', kind: 'Service', namespace: 'production', name: 'frontend', status: 'LoadBalancer' },
+]
+
+export const DEMO_JENKINS_JOBS = [
+  'deploy-api',
+  'deploy-frontend',
+  'backup-postgres',
+  'restart-services',
+  'terraform-plan',
+  'terraform-apply',
+]

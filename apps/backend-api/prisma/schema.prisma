@@ -19,6 +19,8 @@ enum InstanceStatus {
   PENDING
   TERMINATED
   UNKNOWN
+  WARNING
+  ERROR
 }
 
 enum AlertSeverity {
@@ -193,6 +195,7 @@ model VpsServer {
   username    String
   sshKeyRef   String    @map("ssh_key_ref")
   isActive    Boolean   @default(true) @map("is_active")
+  metadata    Json?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
