@@ -72,9 +72,11 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
       [open]="drawerOpen()"
       [project]="drawerProject()"
       [webhooks]="drawerWebhooks()"
+      [lastSyncAt]="account()?.lastSyncAt ?? null"
       (close)="closeDrawer()"
       (sync)="syncProjects()"
       (deploy)="openDeploy($event)"
+      (viewDeploymentLogs)="viewDeploymentLogs($event)"
     />
 
     <app-github-logs-panel
@@ -168,6 +170,20 @@ export class GitlabRepositoriesPageComponent implements OnInit {
     this.drawerOpen.set(false)
     this.drawerProject.set(null)
     this.drawerWebhooks.set([])
+  }
+
+  viewDeploymentLogs = (d: { id: string }): void => {
+    this.logsTitle.set(this.drawerProject()?.fullPath ?? 'GitLab')
+    this.gitlab.deploymentLogs(d.id).subscribe({
+      next: (r) => {
+        this.logsText.set(r.logs)
+        this.logsOpen.set(true)
+      },
+      error: () => {
+        this.logsText.set('[GitLab] Registros demo del despliegue\n[OK] Pipeline deploy\n[OK] Environment actualizado')
+        this.logsOpen.set(true)
+      },
+    })
   }
 
   openDeploy = (project: GitlabProject): void => {
