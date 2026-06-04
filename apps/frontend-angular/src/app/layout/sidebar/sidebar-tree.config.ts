@@ -2,7 +2,8 @@ import type { NavIconTone } from './sidebar-nav.config'
 
 export type SidebarBrand = 'aws' | 'gcp' | 'azure'
 
-export interface SidebarLeaf {
+export interface SidebarLinkItem {
+  kind: 'link'
   id: string
   label: string
   route: string
@@ -10,26 +11,31 @@ export interface SidebarLeaf {
   badgeKey?: string
 }
 
-export interface SidebarBranch {
+export interface SidebarSectionItem {
+  kind: 'section'
   id: string
   label: string
-  icon?: string
-  tone?: NavIconTone
   brand?: SidebarBrand
-  badgeKey?: string
-  defaultRoute?: string
-  children: SidebarLeaf[]
 }
+
+export type SidebarNavItem = SidebarLinkItem | SidebarSectionItem
 
 export interface SidebarGroup {
   id: string
   label: string
   icon: string
   tone: NavIconTone
-  branches: SidebarBranch[]
+  items: SidebarNavItem[]
 }
 
-const mkLeaf = (id: string, label: string, route: string, icon?: string, badgeKey?: string): SidebarLeaf => ({
+const mkLink = (
+  id: string,
+  label: string,
+  route: string,
+  icon?: string,
+  badgeKey?: string,
+): SidebarLinkItem => ({
+  kind: 'link',
   id,
   label,
   route,
@@ -37,40 +43,26 @@ const mkLeaf = (id: string, label: string, route: string, icon?: string, badgeKe
   badgeKey,
 })
 
-const mkBranch = (
-  id: string,
-  label: string,
-  route: string,
-  icon: string,
-  tone?: NavIconTone,
-  badgeKey?: string,
-  children?: SidebarLeaf[],
-): SidebarBranch => ({
+const mkSection = (id: string, label: string, brand?: SidebarBrand): SidebarSectionItem => ({
+  kind: 'section',
   id,
   label,
-  icon,
-  tone,
-  badgeKey,
-  defaultRoute: route,
-  children: children ?? [mkLeaf(`${id}-main`, label, route, icon, badgeKey)],
+  brand,
 })
 
-const cloudBranch = (provider: 'aws' | 'gcp' | 'azure', label: string, brand: SidebarBrand): SidebarBranch => {
+const cloudItems = (provider: 'aws' | 'gcp' | 'azure', title: string, brand: SidebarBrand): SidebarNavItem[] => {
   const base = `/cloud/${provider}`
-  return {
-    id: provider,
-    label,
-    brand,
-    defaultRoute: `${base}/overview`,
-    children: [
-      mkLeaf(`${provider}-overview`, 'Overview', `${base}/overview`, 'dashboard'),
-      mkLeaf(`${provider}-accounts`, provider === 'gcp' ? 'Projects' : provider === 'azure' ? 'Subscriptions' : 'Accounts', `${base}/accounts`, 'account_balance'),
-      mkLeaf(`${provider}-instances`, provider === 'gcp' ? 'Compute' : provider === 'azure' ? 'VMs' : 'EC2', `${base}/instances`, 'dns'),
-      mkLeaf(`${provider}-network`, 'Network', `${base}/network`, 'hub'),
-      mkLeaf(`${provider}-billing`, 'Billing', `${base}/billing`, 'payments'),
-      mkLeaf(`${provider}-metrics`, 'Metrics', `${base}/metrics`, 'monitoring'),
-    ],
-  }
+  const accountsLabel = provider === 'gcp' ? 'Projects' : provider === 'azure' ? 'Subscriptions' : 'Accounts'
+  const instancesLabel = provider === 'gcp' ? 'Compute' : provider === 'azure' ? 'VMs' : 'EC2'
+  return [
+    mkSection(`${provider}-section`, title, brand),
+    mkLink(`${provider}-overview`, 'Overview', `${base}/overview`, 'dashboard'),
+    mkLink(`${provider}-accounts`, accountsLabel, `${base}/accounts`, 'account_balance'),
+    mkLink(`${provider}-instances`, instancesLabel, `${base}/instances`, 'dns'),
+    mkLink(`${provider}-network`, 'Network', `${base}/network`, 'hub'),
+    mkLink(`${provider}-billing`, 'Billing', `${base}/billing`, 'payments'),
+    mkLink(`${provider}-metrics`, 'Metrics', `${base}/metrics`, 'monitoring'),
+  ]
 }
 
 export const SIDEBAR_TREE: SidebarGroup[] = [
@@ -79,12 +71,12 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     label: 'Overview',
     icon: 'space_dashboard',
     tone: 'violet',
-    branches: [
-      mkBranch('dashboard', 'Dashboard', '/dashboard', 'space_dashboard', 'violet'),
-      mkBranch('command-center', 'Command Center', '/command-center', 'bolt', 'amber', 'command-center'),
-      mkBranch('resource-explorer', 'Resource Explorer', '/resource-explorer', 'travel_explore', 'cyan'),
-      mkBranch('topology-map', 'Topology Map', '/topology-map', 'account_tree', 'indigo'),
-      mkBranch('health-center', 'Health Center', '/health-center', 'favorite', 'green', 'health'),
+    items: [
+      mkLink('dashboard', 'Dashboard', '/dashboard', 'space_dashboard'),
+      mkLink('command-center', 'Command Center', '/command-center', 'bolt', 'command-center'),
+      mkLink('resource-explorer', 'Resource Explorer', '/resource-explorer', 'travel_explore'),
+      mkLink('topology-map', 'Topology Map', '/topology-map', 'account_tree'),
+      mkLink('health-center', 'Health Center', '/health-center', 'favorite', 'health'),
     ],
   },
   {
@@ -92,10 +84,10 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     label: 'Clouds',
     icon: 'cloud',
     tone: 'cyan',
-    branches: [
-      cloudBranch('aws', 'AWS', 'aws'),
-      cloudBranch('gcp', 'GCP', 'gcp'),
-      cloudBranch('azure', 'Azure', 'azure'),
+    items: [
+      ...cloudItems('aws', 'AWS', 'aws'),
+      ...cloudItems('gcp', 'GCP', 'gcp'),
+      ...cloudItems('azure', 'Azure', 'azure'),
     ],
   },
   {
@@ -103,15 +95,15 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     label: 'Infrastructure',
     icon: 'dns',
     tone: 'blue',
-    branches: [
-      mkBranch('instances', 'Instances', '/instances/all-instances', 'dns', 'blue', 'instances'),
-      mkBranch('vps', 'VPS / Bare Metal', '/vps/overview', 'computer', 'orange', 'vps'),
-      mkBranch('docker', 'Docker', '/docker/containers', 'view_in_ar', 'cyan'),
-      mkBranch('kubernetes', 'Kubernetes', '/kubernetes/pods', 'hub', 'indigo'),
-      mkBranch('network', 'Network', '/network', 'device_hub', 'blue', 'network'),
-      mkBranch('storage', 'Storage', '/storage', 'storage', 'violet'),
-      mkBranch('backups', 'Backups', '/backups', 'backup', 'green', 'backups'),
-      mkBranch('capacity-planner', 'Capacity Planner', '/capacity-planner', 'analytics', 'cyan', 'capacity'),
+    items: [
+      mkLink('instances', 'Instances', '/instances/all-instances', 'dns', 'instances'),
+      mkLink('vps', 'VPS / Bare Metal', '/vps/overview', 'computer', 'vps'),
+      mkLink('docker', 'Docker', '/docker/containers', 'view_in_ar'),
+      mkLink('kubernetes', 'Kubernetes', '/kubernetes/pods', 'hub'),
+      mkLink('network', 'Network', '/network', 'device_hub', 'network'),
+      mkLink('storage', 'Storage', '/storage', 'storage'),
+      mkLink('backups', 'Backups', '/backups', 'backup', 'backups'),
+      mkLink('capacity-planner', 'Capacity Planner', '/capacity-planner', 'analytics', 'capacity'),
     ],
   },
   {
@@ -119,15 +111,15 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     label: 'Automation',
     icon: 'precision_manufacturing',
     tone: 'amber',
-    branches: [
-      mkBranch('jenkins', 'Jenkins', '/jenkins/jobs', 'precision_manufacturing', 'amber', 'jenkins'),
-      mkBranch('terraform', 'Terraform', '/terraform/workspaces', 'account_tree', 'violet'),
-      mkBranch('deployments', 'Deployments', '/deployments', 'rocket_launch', 'cyan', 'deployments'),
-      mkBranch('terminal', 'Terminal', '/terminal/active-sessions', 'terminal', 'slate'),
-      mkBranch('runbooks', 'Runbooks', '/runbooks', 'menu_book', 'green'),
-      mkBranch('scheduler', 'Scheduler', '/scheduler', 'schedule', 'blue', 'scheduler'),
-      mkBranch('service-catalog', 'Service Catalog', '/service-catalog', 'category', 'violet'),
-      mkBranch('approvals', 'Approvals', '/approvals', 'rule', 'amber', 'approvals'),
+    items: [
+      mkLink('jenkins', 'Jenkins', '/jenkins/jobs', 'precision_manufacturing', 'jenkins'),
+      mkLink('terraform', 'Terraform', '/terraform/workspaces', 'account_tree'),
+      mkLink('deployments', 'Deployments', '/deployments', 'rocket_launch', 'deployments'),
+      mkLink('terminal', 'Terminal', '/terminal/active-sessions', 'terminal'),
+      mkLink('runbooks', 'Runbooks', '/runbooks', 'menu_book'),
+      mkLink('scheduler', 'Scheduler', '/scheduler', 'schedule', 'scheduler'),
+      mkLink('service-catalog', 'Service Catalog', '/service-catalog', 'category'),
+      mkLink('approvals', 'Approvals', '/approvals', 'rule', 'approvals'),
     ],
   },
   {
@@ -135,16 +127,16 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     label: 'Observability',
     icon: 'monitoring',
     tone: 'green',
-    branches: [
-      mkBranch('metrics', 'Metrics', '/metrics/overview', 'monitoring', 'green'),
-      mkBranch('logs', 'Logs', '/logs', 'article', 'cyan', 'logs'),
-      mkBranch('billing', 'Billing', '/billing/overview', 'payments', 'green', 'billing'),
-      mkBranch('cost-optimizer', 'Cost Optimizer', '/cost-optimizer', 'savings', 'green', 'cost'),
-      mkBranch('alerts', 'Alerts', '/alerts/active', 'notifications_active', 'amber', 'alerts'),
-      mkBranch('incidents', 'Incidents', '/incidents', 'crisis_alert', 'amber', 'incidents'),
-      mkBranch('notifications', 'Notifications', '/notifications/all', 'notifications', 'blue', 'notifications'),
-      mkBranch('reports', 'Reports', '/reports', 'assessment', 'violet'),
-      mkBranch('change-management', 'Change Management', '/change-management', 'change_circle', 'slate', 'changes'),
+    items: [
+      mkLink('metrics', 'Metrics', '/metrics/overview', 'monitoring'),
+      mkLink('logs', 'Logs', '/logs', 'article', 'logs'),
+      mkLink('billing', 'Billing', '/billing/overview', 'payments', 'billing'),
+      mkLink('cost-optimizer', 'Cost Optimizer', '/cost-optimizer', 'savings', 'cost'),
+      mkLink('alerts', 'Alerts', '/alerts/active', 'notifications_active', 'alerts'),
+      mkLink('incidents', 'Incidents', '/incidents', 'crisis_alert', 'incidents'),
+      mkLink('notifications', 'Notifications', '/notifications/all', 'notifications', 'notifications'),
+      mkLink('reports', 'Reports', '/reports', 'assessment'),
+      mkLink('change-management', 'Change Management', '/change-management', 'change_circle', 'changes'),
     ],
   },
   {
@@ -152,12 +144,12 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     label: 'Security',
     icon: 'security',
     tone: 'pink',
-    branches: [
-      mkBranch('security-center', 'Security Center', '/security-center', 'security', 'pink', 'security'),
-      mkBranch('secrets-manager', 'Secrets Manager', '/secrets-manager', 'key', 'violet', 'secrets'),
-      mkBranch('compliance', 'Compliance / Policies', '/compliance', 'policy', 'amber', 'compliance'),
-      mkBranch('access-control', 'Access Control', '/access-control', 'admin_panel_settings', 'indigo'),
-      mkBranch('audit', 'Audit', '/audit/activity-logs', 'history', 'slate'),
+    items: [
+      mkLink('security-center', 'Security Center', '/security-center', 'security', 'security'),
+      mkLink('secrets-manager', 'Secrets Manager', '/secrets-manager', 'key', 'secrets'),
+      mkLink('compliance', 'Compliance / Policies', '/compliance', 'policy', 'compliance'),
+      mkLink('access-control', 'Access Control', '/access-control', 'admin_panel_settings'),
+      mkLink('audit', 'Audit', '/audit/activity-logs', 'history'),
     ],
   },
   {
@@ -165,14 +157,14 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     label: 'Admin',
     icon: 'settings',
     tone: 'slate',
-    branches: [
-      mkBranch('users', 'Users', '/admin/users', 'group', 'violet'),
-      mkBranch('roles', 'Roles', '/admin/roles', 'badge', 'cyan'),
-      mkBranch('api-tokens', 'API Tokens', '/admin/api-tokens', 'token', 'violet', 'tokens'),
-      mkBranch('webhooks', 'Webhooks', '/admin/webhooks', 'webhook', 'cyan'),
-      mkBranch('settings', 'Settings', '/settings/general', 'settings', 'slate'),
-      mkBranch('demo-mode', 'Demo Mode', '/admin/demo-mode', 'science', 'amber'),
-      mkBranch('ai-assistant', 'AI Assistant', '/ai-assistant', 'smart_toy', 'violet', 'copilot'),
+    items: [
+      mkLink('users', 'Users', '/admin/users', 'group'),
+      mkLink('roles', 'Roles', '/admin/roles', 'badge'),
+      mkLink('api-tokens', 'API Tokens', '/admin/api-tokens', 'token', 'tokens'),
+      mkLink('webhooks', 'Webhooks', '/admin/webhooks', 'webhook'),
+      mkLink('settings', 'Settings', '/settings/general', 'settings'),
+      mkLink('demo-mode', 'Demo Mode', '/admin/demo-mode', 'science'),
+      mkLink('ai-assistant', 'AI Assistant', '/ai-assistant', 'smart_toy', 'copilot'),
     ],
   },
 ]
@@ -181,21 +173,19 @@ export interface FlatNavEntry {
   label: string
   route: string
   group: string
-  branch: string
   icon?: string
 }
 
 export const flattenSidebarNav = (): FlatNavEntry[] => {
   const out: FlatNavEntry[] = []
   for (const g of SIDEBAR_TREE) {
-    for (const b of g.branches) {
-      for (const leafItem of b.children) {
+    for (const item of g.items) {
+      if (item.kind === 'link') {
         out.push({
-          label: `${b.label} › ${leafItem.label}`,
-          route: leafItem.route,
+          label: item.label,
+          route: item.route,
           group: g.label,
-          branch: b.label,
-          icon: leafItem.icon,
+          icon: item.icon,
         })
       }
     }

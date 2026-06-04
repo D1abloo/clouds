@@ -2,7 +2,22 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Pulido premium Fase 30 (completado)
+**Fase actual:** Sidebar simplificado Fase 31 (completado)
+
+---
+
+## Fase 31 — Sidebar un solo nivel desplegable ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Problema:** Grupos → branches → leaves creaba acordeones anidados y etiquetas duplicadas (ej. Security Center › Security Center).
+
+**Solución:**
+- Estructura plana: `SidebarGroup.items[]` con links directos
+- Un solo desplegable por sección (Overview, Clouds, Security, Admin…)
+- Clouds: cabeceras visuales AWS/GCP/Azure (sin acordeón) + links Overview, Accounts, EC2…
+- Eliminado `sidebar-nav-branch.component.ts`
+- Menor indentación en `sidebar-nav-leaf`
 
 ---
 

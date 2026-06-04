@@ -296,16 +296,21 @@ export class SidebarComponent {
     return this.navTree
       .map((g) => ({
         ...g,
-        branches: g.branches.filter(
-          (b) =>
-            b.label.toLowerCase().includes(q) ||
-            g.label.toLowerCase().includes(q) ||
-            b.children.some(
-              (c) => c.label.toLowerCase().includes(q) || c.route.toLowerCase().includes(q),
-            ),
-        ),
+        items: g.items.filter((item) => {
+          if (item.kind === 'link') {
+            return (
+              item.label.toLowerCase().includes(q) ||
+              item.route.toLowerCase().includes(q) ||
+              g.label.toLowerCase().includes(q)
+            )
+          }
+          return (
+            item.label.toLowerCase().includes(q) ||
+            g.label.toLowerCase().includes(q)
+          )
+        }),
       }))
-      .filter((g) => g.branches.length > 0)
+      .filter((g) => g.items.length > 0)
   })
 
   readonly favoriteEntries = computed(() => {

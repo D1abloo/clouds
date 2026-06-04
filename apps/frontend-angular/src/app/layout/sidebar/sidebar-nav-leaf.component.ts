@@ -42,7 +42,7 @@ import { SidebarService } from './sidebar.service'
       display: flex;
       align-items: center;
       gap: 0.45rem;
-      padding: 0.38rem 0.5rem 0.38rem 1.65rem;
+      padding: 0.42rem 0.5rem 0.42rem 0.85rem;
       margin: 1px 0.35rem;
       border-radius: 10px;
       text-decoration: none;
