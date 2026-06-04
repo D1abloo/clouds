@@ -6,7 +6,8 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { ChartCardComponent } from '../../shared/ui/chart-card.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import { chartColor } from '../../shared/theme/chart-palette'
+import { MatDialog } from '@angular/material/dialog'
+import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
 
 interface DemoRow {
   name: string
@@ -74,7 +75,7 @@ interface DemoRow {
                     <td><app-status-badge [value]="row.status" /></td>
                     <td>{{ row.detail }}</td>
                     @if (showCost()) { <td>{{ row.cost }}</td> }
-                    <td><button type="button" class="hub-link-btn">View</button></td>
+                    <td><button type="button" class="hub-link-btn" (click)="viewRow(row)">View</button></td>
                   </tr>
                 }
               </tbody>
@@ -125,6 +126,8 @@ interface DemoRow {
 })
 export class SectionHubComponent {
   private readonly route = inject(ActivatedRoute)
+  private readonly demo = inject(DemoActionsService)
+  private readonly dialog = inject(MatDialog)
 
   readonly headerActions = [
     { label: 'Refresh', icon: 'refresh' },
@@ -184,6 +187,20 @@ export class SectionHubComponent {
       .join(' ')
 
   handleAction = (label: string): void => {
-    void label
+    this.demo.simulate(`${this.title()}: ${label}`, 600).subscribe()
+  }
+
+  viewRow = (row: DemoRow): void => {
+    this.dialog.open(DetailDialogComponent, {
+      width: '480px',
+      data: {
+        title: row.name,
+        rows: [
+          { label: 'Status', value: row.status },
+          { label: 'Detail', value: row.detail },
+          ...(row.cost ? [{ label: 'Cost', value: row.cost }] : []),
+        ],
+      },
+    })
   }
 }
