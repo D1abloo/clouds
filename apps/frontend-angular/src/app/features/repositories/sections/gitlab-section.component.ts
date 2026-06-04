@@ -6,13 +6,17 @@ import { MatCardModule } from '@angular/material/card'
 import { MatTableModule } from '@angular/material/table'
 import { MatTabsModule } from '@angular/material/tabs'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
+import { GitlabAccountCardComponent } from '../components/gitlab-account-card.component'
+import { GitlabSyncStatusComponent } from '../components/gitlab-sync-status.component'
 import type { GitlabAccount, GitlabGroup, GitlabProject } from '../utils/gitlab-demo-catalog'
 import {
+  CLIENT_DEMO_GITLAB_DEPLOYMENTS,
   CLIENT_DEMO_GITLAB_ENVIRONMENTS,
   CLIENT_DEMO_GITLAB_MRS,
   CLIENT_DEMO_GITLAB_PIPELINES,
   CLIENT_DEMO_GITLAB_RELEASES,
   CLIENT_DEMO_GITLAB_RUNNERS,
+  CLIENT_DEMO_GITLAB_WEBHOOKS,
 } from '../utils/gitlab-demo-catalog'
 
 @Component({
@@ -26,20 +30,28 @@ import {
     MatTableModule,
     MatTabsModule,
     StatusBadgeComponent,
+    GitlabAccountCardComponent,
+    GitlabSyncStatusComponent,
   ],
   template: `
     <div class="gitlab-page">
+      @if (account) {
+        <app-gitlab-account-card [account]="account" [demoMode]="demoMode" [projectCount]="projects.length" />
+      }
+
       <mat-card class="gitlab-hero">
         <div class="gitlab-hero__head">
           <span class="gitlab-mark" aria-hidden="true">GitLab</span>
           <div>
-            <h3>Cuentas GitLab</h3>
-            <p>Proyectos, grupos, pipelines, runners y environments</p>
-            @if (account) {
-              <p class="account-line"><strong>{{ account.label }}</strong> — {{ account.username }} ({{ account.statusLabel }})</p>
-            }
+            <h3>Conexión GitLab</h3>
+            <p>Personal Access Token · grupos · subgrupos · CI/CD integrado</p>
           </div>
         </div>
+        <app-gitlab-sync-status
+          [status]="syncStatus"
+          [lastSyncAt]="account?.lastSyncAt ?? null"
+          [projectCount]="projects.length"
+        />
         <div class="gitlab-hero__actions">
           <button mat-flat-button class="gitlab-primary" type="button" (click)="addAccount.emit()">
             <mat-icon>person_add</mat-icon> Añadir cuenta GitLab
@@ -180,6 +192,29 @@ import {
             }
           </div>
         </mat-tab>
+        <mat-tab label="Webhooks GitLab">
+          <div class="tab-panel">
+            @for (wh of gitlabWebhooks; track wh['id']) {
+              <div class="pipe-row">
+                <strong>{{ wh['event'] }}</strong>
+                <span class="muted">{{ wh['projectPath'] }}</span>
+                <app-status-badge [value]="wh['active'] ? 'SUCCESS' : 'STOPPED'" />
+              </div>
+            }
+            <button mat-stroked-button type="button" (click)="createWebhook.emit()">Crear webhook GitLab</button>
+          </div>
+        </mat-tab>
+        <mat-tab label="Despliegues GitLab">
+          <div class="tab-panel">
+            @for (d of gitlabDeployments; track d['id']) {
+              <div class="pipe-row">
+                <strong>{{ d['projectPath'] }}</strong>
+                <span class="muted">{{ d['targetName'] }} · {{ d['branch'] }}</span>
+                <app-status-badge [value]="d['status'] === 'success' ? 'SUCCESS' : 'RUNNING'" />
+              </div>
+            }
+          </div>
+        </mat-tab>
       </mat-tab-group>
     </div>
   `,
@@ -234,7 +269,11 @@ export class GitlabSectionComponent {
   @Input() projects: GitlabProject[] = []
   @Input() groups: GitlabGroup[] = []
   @Input() account: GitlabAccount | null = null
+  @Input() demoMode = true
+  @Input() syncStatus: 'connected' | 'disconnected' = 'connected'
 
+  readonly gitlabWebhooks = CLIENT_DEMO_GITLAB_WEBHOOKS
+  readonly gitlabDeployments = CLIENT_DEMO_GITLAB_DEPLOYMENTS
   readonly pipelines = CLIENT_DEMO_GITLAB_PIPELINES
   readonly mergeRequests = CLIENT_DEMO_GITLAB_MRS
   readonly runners = CLIENT_DEMO_GITLAB_RUNNERS
@@ -253,6 +292,7 @@ export class GitlabSectionComponent {
   readonly openExternal = output<GitlabProject>()
   readonly viewMrs = output<void>()
   readonly viewPipelines = output<void>()
+  readonly createWebhook = output<void>()
 
   mrBadge = (s: unknown): string => (s === 'opened' ? 'RUNNING' : s === 'merged' ? 'SUCCESS' : 'STOPPED')
   pipeBadge = (s: unknown): string => {

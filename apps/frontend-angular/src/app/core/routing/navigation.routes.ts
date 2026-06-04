@@ -111,10 +111,26 @@ export const NAVIGATION_ROUTES: Routes = [
     data: { breadcrumb: 'Kubernetes', module: 'kubernetes' },
   },
   {
+    path: 'repositories/github',
+    loadComponent: () =>
+      import('../../features/repositories/github-repositories-page.component').then(
+        (m) => m.GithubRepositoriesPageComponent,
+      ),
+    data: { breadcrumb: 'GitHub', module: 'repositories' },
+  },
+  {
+    path: 'repositories/gitlab',
+    loadComponent: () =>
+      import('../../features/repositories/gitlab-repositories-page.component').then(
+        (m) => m.GitlabRepositoriesPageComponent,
+      ),
+    data: { breadcrumb: 'GitLab', module: 'repositories' },
+  },
+  {
     path: 'repositories/:section',
     loadComponent: () =>
-      import('../../features/repositories/repositories-page.component').then(
-        (m) => m.RepositoriesPageComponent,
+      import('../../features/repositories/repositories-global-page.component').then(
+        (m) => m.RepositoriesGlobalPageComponent,
       ),
     data: { breadcrumb: 'Repositorios', module: 'repositories' },
   },

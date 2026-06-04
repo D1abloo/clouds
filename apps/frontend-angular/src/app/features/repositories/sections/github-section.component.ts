@@ -7,12 +7,19 @@ import { MatCardModule } from '@angular/material/card'
 import { MatTableModule } from '@angular/material/table'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatSelectModule } from '@angular/material/select'
+import { MatTabsModule } from '@angular/material/tabs'
 import { NavIconComponent } from '../../../shared/components/nav-icon/nav-icon.component'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
 import { GithubAccountCardComponent } from '../components/github-account-card.component'
 import { GithubSyncStatusComponent } from '../components/github-sync-status.component'
 import type { GithubAccount, GithubConnection, GithubRepo } from '../../../core/services/github.service'
-import { CLIENT_DEMO_GITHUB_ACTIONS, CLIENT_DEMO_GITHUB_ISSUES } from '../utils/github-demo-catalog'
+import {
+  CLIENT_DEMO_GITHUB_ACTIONS,
+  CLIENT_DEMO_GITHUB_ISSUES,
+  CLIENT_DEMO_GITHUB_PRS,
+  CLIENT_DEMO_DEPLOYMENTS,
+  CLIENT_DEMO_WEBHOOKS,
+} from '../utils/github-demo-catalog'
 
 @Component({
   selector: 'app-github-section',
@@ -26,6 +33,7 @@ import { CLIENT_DEMO_GITHUB_ACTIONS, CLIENT_DEMO_GITHUB_ISSUES } from '../utils/
     MatTableModule,
     MatFormFieldModule,
     MatSelectModule,
+    MatTabsModule,
     NavIconComponent,
     StatusBadgeComponent,
     GithubAccountCardComponent,
@@ -95,59 +103,92 @@ import { CLIENT_DEMO_GITHUB_ACTIONS, CLIENT_DEMO_GITHUB_ISSUES } from '../utils/
         </mat-card>
       </div>
 
-      <mat-card class="table-card github-repos">
-        <h3>Repositorios GitHub</h3>
-        <p class="hint">Organización <strong>cloudops-lab</strong> — datos demo</p>
-        <mat-form-field appearance="outline" class="repo-select">
-          <mat-label>Repositorio activo</mat-label>
-          <mat-select [formControl]="repoControl">
-            @for (r of repos; track r.id) {
-              <mat-option [value]="r.id">{{ r.fullName }}</mat-option>
+      <mat-tab-group class="soft-tabs github-tabs" animationDuration="200ms">
+        <mat-tab label="Repositorios">
+          <div class="tab-panel">
+            <mat-form-field appearance="outline" class="repo-select">
+              <mat-label>Repositorio activo</mat-label>
+              <mat-select [formControl]="repoControl">
+                @for (r of repos; track r.id) {
+                  <mat-option [value]="r.id">{{ r.fullName }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <table mat-table [dataSource]="repos" class="premium-table">
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Repositorio</th>
+                <td mat-cell *matCellDef="let row">
+                  <strong>{{ row.name }}</strong>
+                  <span class="tag">GitHub</span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="language">
+                <th mat-header-cell *matHeaderCellDef>Lenguaje</th>
+                <td mat-cell *matCellDef="let row">{{ row.language }}</td>
+              </ng-container>
+              <ng-container matColumnDef="stars">
+                <th mat-header-cell *matHeaderCellDef>Stars</th>
+                <td mat-cell *matCellDef="let row">{{ row.stars }}</td>
+              </ng-container>
+              <ng-container matColumnDef="branch">
+                <th mat-header-cell *matHeaderCellDef>Rama principal</th>
+                <td mat-cell *matCellDef="let row">{{ row.defaultBranch }}</td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                <td mat-cell *matCellDef="let row">
+                  <button mat-stroked-button type="button" (click)="openDetail.emit(row)">Detalle</button>
+                  <button mat-stroked-button type="button" (click)="deploy.emit(row)">Desplegar</button>
+                  <button mat-button type="button" (click)="openExternal.emit(row)">Abrir en GitHub</button>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="cols"></tr>
+              <tr mat-row *matRowDef="let row; columns: cols" class="clickable" (click)="openDetail.emit(row)"></tr>
+            </table>
+          </div>
+        </mat-tab>
+        <mat-tab label="Pull Requests">
+          <div class="tab-panel">
+            @for (pr of pullRequests; track pr['id']) {
+              <div class="list-row">
+                <strong>#{{ pr['number'] }} {{ pr['title'] }}</strong>
+                <span class="muted">{{ pr['repoFullName'] }}</span>
+                <app-status-badge [value]="pr['state'] === 'open' ? 'RUNNING' : 'SUCCESS'" />
+              </div>
             }
-          </mat-select>
-        </mat-form-field>
-        <table mat-table [dataSource]="repos" class="premium-table">
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>Repositorio</th>
-            <td mat-cell *matCellDef="let row">
-              <strong>{{ row.name }}</strong>
-              <span class="tag">GitHub</span>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="language">
-            <th mat-header-cell *matHeaderCellDef>Lenguaje</th>
-            <td mat-cell *matCellDef="let row">{{ row.language }}</td>
-          </ng-container>
-          <ng-container matColumnDef="stars">
-            <th mat-header-cell *matHeaderCellDef>Stars</th>
-            <td mat-cell *matCellDef="let row">{{ row.stars }}</td>
-          </ng-container>
-          <ng-container matColumnDef="branch">
-            <th mat-header-cell *matHeaderCellDef>Rama principal</th>
-            <td mat-cell *matCellDef="let row">{{ row.defaultBranch }}</td>
-          </ng-container>
-          <ng-container matColumnDef="updated">
-            <th mat-header-cell *matHeaderCellDef>Actualizado</th>
-            <td mat-cell *matCellDef="let row">{{ row.updatedAt | date: 'short' }}</td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let row">
-              <button mat-stroked-button type="button" (click)="openDetail.emit(row); $event.stopPropagation()">
-                Detalle
-              </button>
-              <button mat-stroked-button type="button" (click)="deploy.emit(row); $event.stopPropagation()">
-                Desplegar
-              </button>
-              <button mat-button type="button" (click)="openExternal.emit(row); $event.stopPropagation()">
-                Abrir en GitHub
-              </button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="cols"></tr>
-          <tr mat-row *matRowDef="let row; columns: cols" class="clickable" (click)="openDetail.emit(row)"></tr>
-        </table>
-      </mat-card>
+          </div>
+        </mat-tab>
+        <mat-tab label="Webhooks GitHub">
+          <div class="tab-panel">
+            @for (wh of githubWebhooks; track wh['id']) {
+              <div class="list-row">
+                <strong>{{ wh['event'] }}</strong>
+                <span class="muted">{{ wh['repoFullName'] }}</span>
+              </div>
+            }
+            <button mat-stroked-button type="button" (click)="createWebhook.emit()">Crear webhook GitHub</button>
+          </div>
+        </mat-tab>
+        <mat-tab label="Despliegues GitHub">
+          <div class="tab-panel">
+            @for (d of githubDeployments; track d['id']) {
+              <div class="list-row">
+                <strong>{{ d['repoFullName'] }}</strong>
+                <span class="muted">{{ d['targetName'] }} · {{ d['branch'] }}</span>
+                <app-status-badge [value]="d['status'] === 'success' ? 'SUCCESS' : 'RUNNING'" />
+              </div>
+            }
+          </div>
+        </mat-tab>
+        <mat-tab label="Logs GitHub">
+          <div class="tab-panel">
+            <pre class="log-preview">[GitHub] Sync cloudops-lab OK
+[GitHub] workflow build-and-test #128 success
+[GitHub] webhook push delivered</pre>
+            <button mat-stroked-button type="button" (click)="viewLogs.emit()">Ver logs GitHub</button>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
     </div>
   `,
   styles: `
@@ -185,6 +226,23 @@ import { CLIENT_DEMO_GITHUB_ACTIONS, CLIENT_DEMO_GITHUB_ISSUES } from '../utils/
     }
     .clickable { cursor: pointer; }
     .muted { font-size: 0.75rem; color: var(--app-text-muted); }
+    .tab-panel { padding: 1rem 0; }
+    .list-row {
+      padding: 0.55rem 0;
+      border-bottom: 1px solid var(--app-border-subtle);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .log-preview {
+      font-family: ui-monospace, monospace;
+      font-size: 0.75rem;
+      padding: 0.75rem;
+      background: var(--app-elevated);
+      border-radius: var(--app-radius-sm);
+    }
   `,
 })
 export class GithubSectionComponent {
@@ -197,13 +255,18 @@ export class GithubSectionComponent {
 
   readonly actions = CLIENT_DEMO_GITHUB_ACTIONS
   readonly issues = CLIENT_DEMO_GITHUB_ISSUES
-  readonly cols = ['name', 'language', 'stars', 'branch', 'updated', 'actions']
+  readonly pullRequests = CLIENT_DEMO_GITHUB_PRS
+  readonly githubWebhooks = CLIENT_DEMO_WEBHOOKS
+  readonly githubDeployments = CLIENT_DEMO_DEPLOYMENTS
+  readonly cols = ['name', 'language', 'stars', 'branch', 'actions']
 
   readonly addAccount = output<void>()
   readonly connectDemo = output<void>()
   readonly validate = output<void>()
   readonly sync = output<void>()
   readonly viewActions = output<void>()
+  readonly createWebhook = output<void>()
+  readonly viewLogs = output<void>()
   readonly openDetail = output<GithubRepo>()
   readonly deploy = output<GithubRepo>()
   readonly openExternal = output<GithubRepo>()

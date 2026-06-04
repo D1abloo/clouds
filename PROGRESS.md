@@ -33,12 +33,19 @@ Cada ítem del sidebar **Repositorios** tiene interfaz, métricas, pestañas, da
 - GitLab: `gitlab-demo-catalog.ts` — 5 proyectos, grupos, pipelines, MRs, runners, environments, releases.
 - Global: `repositories-global-demo.util.ts` — ramas y commits agregados; webhooks/deployments mezclados en página.
 
-**Archivos clave**
+**Páginas separadas (sin mezclar estado)**
 
-- Shell: `repositories-page.component.ts` + `repositories-section.config.ts`
-- Secciones: `sections/github-section`, `gitlab-section`, `webhooks-global-section`, `branches-global-section`, `commits-global-section`, `pull-requests-github-section`, `deployments-global-section`
+| Ruta | Componente | Servicio / datos |
+|------|------------|------------------|
+| `/repositories/github` | `github-repositories-page` | `GithubService` + catálogo GitHub |
+| `/repositories/gitlab` | `gitlab-repositories-page` | `GitlabService` + catálogo GitLab |
+| `/repositories/webhooks` … `deployments` | `repositories-global-page` | Agregados GH+GL (ramas, commits, webhooks globales) |
 
-**Rutas:** sin cambios (`/repositories/:section`). Sidebar intacto.
+- GitHub: `github-account-card`, `github-sync-status`, drawer repositorio, diálogo despliegue GitHub.
+- GitLab: `gitlab-account-card`, `gitlab-sync-status`, drawer proyecto, `gitlab-deploy-dialog` (environments/runners).
+- Global: no inicializa cuenta GitHub al abrir GitLab ni viceversa.
+
+**Rutas:** mismas URLs en sidebar. Sidebar intacto.
 
 ---
 
