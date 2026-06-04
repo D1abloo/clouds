@@ -15,7 +15,7 @@ Cada ítem del sidebar **Repositorios** tiene interfaz, métricas, pestañas, da
 | Sección | Propósito | UI distintiva | Terminología / datos |
 |--------|-----------|---------------|----------------------|
 | **GitHub** | Cuentas, repos, Actions, despliegue | Acento oscuro GitHub, widgets Actions/Issues/OAuth, tabla de repositorios | Repositorios, Pull Requests, GitHub Actions, stars |
-| **GitLab** | Proyectos, grupos, pipelines | Acento naranja/morado, pestañas Proyectos/Grupos/MR/Pipelines/Runners/Environments/Releases | Proyectos, Merge Requests, Pipelines, Runners |
+| **GitLab** | Proyectos, grupos, pipelines, issues, variables CI | Logo oficial SVG local (`assets/logos/gitlab.svg`), widgets Pipelines/Issues/PAT, pestañas Proyectos/Grupos/MR/Issues/Pipelines/Runners/Variables/Environments/Releases/Webhooks/Despliegues/Logs | Proyectos, MR, Pipelines, Runners, drawer 12 pestañas |
 | **Webhooks** | Panel global multi-proveedor | Pestañas Resumen, GitHub, GitLab, Payloads, Reintentos, Errores, Configuración | Webhooks GH + GL + despliegue, payloads demo |
 | **Ramas** | Ramas GH + GL unificadas | Tabla con proveedor, CI y deploy por rama; filtros Todas/Protegidas/Stale | Repo o proyecto, rama protegida, CI por rama |
 | **Commits** | Historial cross-provider | Timeline de commits con diff +/- y revisión relacionada | SHA, autor, CI, PR o MR vinculado |
@@ -30,7 +30,8 @@ Cada ítem del sidebar **Repositorios** tiene interfaz, métricas, pestañas, da
 **Datos demo separados**
 
 - GitHub: `github-demo-catalog.ts` — 6 repos (`cloudops-api`, `cloudops-frontend`, `docker-nginx-app`, `k8s-demo-app`, `terraform-modules`, `monitoring-stack`), Actions, PRs, issues.
-- GitLab: `gitlab-demo-catalog.ts` — 5 proyectos, grupos, pipelines, MRs, runners, environments, releases.
+- GitLab: `gitlab-demo-catalog.ts` — 5 proyectos, grupos, pipelines, MRs, runners, environments, releases, issues, variables CI/CD.
+- Logo GitLab: `src/assets/logos/gitlab.svg` + `BRAND_LOGO_SVG.gitlab` (press kit multicolor).
 - Global: `repositories-global-demo.util.ts` — ramas y commits agregados; webhooks/deployments mezclados en página.
 
 **Páginas separadas (sin mezclar estado)**
@@ -292,7 +293,7 @@ Dashboard, AWS/GCP/Azure hub, Instances, VPS, Docker, K8s, Jenkins, Terraform, B
 
 ### Errores pendientes
 
-- Webhooks: redirect a API Tokens (panel dedicado opcional)
+- Admin: Tokens API y Webhooks con páginas dedicadas (`admin-api-tokens-page`, `admin-webhooks-page`)
 - Roles admin: section-hub genérico (funcional)
 
 ---

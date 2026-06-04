@@ -92,7 +92,7 @@ type InstanceRow = Record<string, unknown>
               <div class="hub-quick-actions">
                 <button type="button" class="hub-action-chip" (click)="handleHeaderAction('Sync')">Sync</button>
                 <button type="button" class="hub-action-chip" (click)="handleHeaderAction('Launch')">Launch</button>
-                <button type="button" class="hub-action-chip" (click)="handleHeaderAction('Add account')">Add account</button>
+                <button type="button" class="hub-action-chip" (click)="handleHeaderAction('Añadir cuenta')">Añadir cuenta</button>
               </div>
               <p>{{ providerLabel }} control plane — accounts, compute, networking and cost in one place.</p>
             </div>
@@ -381,10 +381,10 @@ export class CloudProviderHubComponent implements OnInit {
   readonly volCols = ['id', 'size', 'type', 'attached']
 
   readonly headerActions = [
-    { label: 'Add account', icon: 'add', primary: true },
-    { label: 'Launch instance', icon: 'rocket_launch' },
-    { label: 'Sync inventory', icon: 'sync' },
-    { label: 'List regions', icon: 'public' },
+    { label: 'Añadir cuenta', icon: 'add', primary: true },
+    { label: 'Lanzar instancia', icon: 'rocket_launch' },
+    { label: 'Sincronizar inventario', icon: 'sync' },
+    { label: 'Ver regiones', icon: 'public' },
   ]
 
   private readonly searchTerm = toSignal(
@@ -505,9 +505,14 @@ export class CloudProviderHubComponent implements OnInit {
   n = (key: string): number => invNum(this.summary(), key)
 
   handleHeaderAction = (label: string): void => {
-    if (label === 'Add account') {
+    if (label === 'Añadir cuenta' || label === 'Add account') {
       this.dialog
-        .open(CloudAccountFormDialogComponent, { width: '520px', data: { provider: this.provider } })
+        .open(CloudAccountFormDialogComponent, {
+          width: '760px',
+          maxWidth: '95vw',
+          panelClass: 'cloud-account-wizard-panel',
+          data: { suggestedProvider: this.provider },
+        })
         .afterClosed()
         .subscribe((res) => {
           if (res?.created) {
@@ -517,7 +522,7 @@ export class CloudProviderHubComponent implements OnInit {
         })
       return
     }
-    if (label === 'Launch instance') {
+    if (label === 'Lanzar instancia' || label === 'Launch instance') {
       const acc = this.accounts()[0]
       if (!acc?.['id']) {
         this.toast.error('Add a cloud account first')
@@ -534,7 +539,7 @@ export class CloudProviderHubComponent implements OnInit {
         })
       return
     }
-    if (label === 'Sync inventory') {
+    if (label === 'Sincronizar inventario' || label === 'Sync inventory') {
       const list = this.accounts()
       if (list.length === 0) {
         this.accountsService.syncAll().subscribe({
@@ -550,7 +555,7 @@ export class CloudProviderHubComponent implements OnInit {
       list.forEach((a) => this.syncAccount(a))
       return
     }
-    if (label === 'List regions') {
+    if (label === 'Ver regiones' || label === 'List regions') {
       this.tabIndex.set(2)
     }
   }

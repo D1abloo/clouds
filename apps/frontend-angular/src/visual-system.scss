@@ -68,6 +68,10 @@
     background: linear-gradient(135deg, color-mix(in srgb, #7b42bc 22%, transparent), color-mix(in srgb, #a855f7 8%, transparent));
     mat-icon { color: #7b42bc; }
   }
+  &.tone-gitlab {
+    background: linear-gradient(135deg, color-mix(in srgb, #fc6d26 22%, transparent), color-mix(in srgb, #6b4fbb 10%, transparent));
+    mat-icon { color: #fc6d26; }
+  }
 }
 
 /* Tables */

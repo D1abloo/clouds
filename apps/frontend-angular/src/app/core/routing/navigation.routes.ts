@@ -53,8 +53,22 @@ export const NAVIGATION_ROUTES: Routes = [
   { path: 'capacity-planner', ...platform('CapacityPlannerComponent', 'Capacity Planner') },
   { path: 'change-management', ...platform('ChangeManagementComponent', 'Change Management') },
   { path: 'access-control', ...platform('AccessControlComponent', 'Access Control') },
-  { path: 'admin/api-tokens', ...platform('ApiTokensComponent', 'Tokens API') },
-  { path: 'admin/webhooks', ...platform('AdminWebhooksComponent', 'Webhooks') },
+  {
+    path: 'admin/api-tokens',
+    loadComponent: () =>
+      import('../../features/admin/admin-api-tokens-page.component').then(
+        (m) => m.AdminApiTokensPageComponent,
+      ),
+    data: { breadcrumb: 'Tokens API' },
+  },
+  {
+    path: 'admin/webhooks',
+    loadComponent: () =>
+      import('../../features/admin/admin-webhooks-page.component').then(
+        (m) => m.AdminWebhooksPageComponent,
+      ),
+    data: { breadcrumb: 'Webhooks' },
+  },
   { path: 'admin/users', ...platform('UsersAdminComponent', 'Users') },
   { path: 'admin/roles', ...hub('roles', 'Roles', 'Roles') },
   {

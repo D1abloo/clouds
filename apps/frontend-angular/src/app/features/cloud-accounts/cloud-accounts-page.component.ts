@@ -23,6 +23,7 @@ import {
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { createPageLoader } from '../../core/utils/page-load.util'
+import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.component'
 
 @Component({
   selector: 'app-cloud-accounts-page',
@@ -55,9 +56,9 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             <input matInput [formControl]="searchControl" aria-label="Filter accounts" />
             <mat-icon matPrefix>search</mat-icon>
           </mat-form-field>
-          <button mat-flat-button color="primary" type="button" disabled>
+          <button mat-flat-button color="primary" type="button" (click)="openAddAccountWizard()">
             <mat-icon>add</mat-icon>
-            Add account
+            Añadir cuenta
           </button>
         </div>
 
@@ -184,6 +185,20 @@ export class CloudAccountsPageComponent implements OnInit {
       next: () => this.toast.success(`Validated ${account.name}`),
       error: () => this.toast.error(`Validation failed for ${account.name}`),
     })
+  }
+
+  openAddAccountWizard = (): void => {
+    this.dialog
+      .open(CloudAccountFormDialogComponent, {
+        width: '760px',
+        maxWidth: '95vw',
+        panelClass: 'cloud-account-wizard-panel',
+        data: { suggestedProvider: this.provider },
+      })
+      .afterClosed()
+      .subscribe((res) => {
+        if (res?.created) this.loadAccounts()
+      })
   }
 
   handleSync = (account: CloudAccount): void => {

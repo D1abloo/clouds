@@ -401,6 +401,7 @@ export class SidebarComponent {
       capacity: 7,
       instances: 26,
       'github-repos': 6,
+      'gitlab-projects': 5,
       'github-webhooks': 7,
       'github-deployments': 4,
     }

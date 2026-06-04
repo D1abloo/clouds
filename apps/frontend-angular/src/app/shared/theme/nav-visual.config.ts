@@ -16,6 +16,7 @@ export type NavVisualTone =
   | 'k8s'
   | 'jenkins'
   | 'terraform'
+  | 'gitlab'
 
 export interface NavVisualMeta {
   icon?: string
@@ -42,7 +43,7 @@ const entries: { match: (p: string) => boolean; meta: NavVisualMeta }[] = [
   { match: (p) => p.startsWith('/backups'), meta: { icon: 'archive', tone: 'blue', label: 'Copias de seguridad' } },
   { match: (p) => p.startsWith('/capacity-planner'), meta: { icon: 'trending_up', tone: 'blue', label: 'Planificador de capacidad' } },
   { match: (p) => p.startsWith('/repositories/github'), meta: { logo: 'github', tone: 'violet', label: 'GitHub' } },
-  { match: (p) => p.startsWith('/repositories/gitlab'), meta: { icon: 'code', tone: 'violet', label: 'GitLab' } },
+  { match: (p) => p.startsWith('/repositories/gitlab'), meta: { logo: 'gitlab', tone: 'gitlab', label: 'GitLab' } },
   { match: (p) => p.startsWith('/repositories/webhooks'), meta: { icon: 'webhook', tone: 'violet', label: 'Webhooks' } },
   { match: (p) => p.startsWith('/repositories/branches'), meta: { icon: 'account_tree', tone: 'violet', label: 'Ramas' } },
   { match: (p) => p.startsWith('/repositories/commits'), meta: { icon: 'history_edu', tone: 'violet', label: 'Commits' } },

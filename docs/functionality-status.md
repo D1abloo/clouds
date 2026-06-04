@@ -80,7 +80,7 @@ Estado tras **Fase 29 (pulido final)**. Todas las opciones del sidebar tienen ru
 | Users | `/admin/users` | ✅ Demo |
 | Roles | `/admin/roles` | ✅ Demo (section-hub) |
 | API Tokens | `/admin/api-tokens` | ✅ Demo |
-| Webhooks | `/admin/webhooks` | ↩️ Redirect → API Tokens |
+| Webhooks | `/admin/webhooks` | ✅ Demo (entregas, payloads, config HTTP) |
 | Settings | `/settings/general` | ✅ Demo |
 | Demo Mode | `/admin/demo-mode` | ✅ Live API |
 | AI Assistant | `/ai-assistant` | ✅ Demo |
@@ -90,7 +90,8 @@ Estado tras **Fase 29 (pulido final)**. Todas las opciones del sidebar tienen ru
 | Acción | Comportamiento |
 |--------|----------------|
 | Refresh / Sync | Recarga datos; fallback demo si API falla |
-| Add account / Launch / Validate | Modal + toast demo |
+| Añadir cuenta cloud | Asistente 3 pasos (AWS/GCP/Azure), logos, demo, español |
+| Launch / Validate | Modal + toast demo |
 | Start / Stop / Restart | Acción simulada + audit demo |
 | Export / Generate plan / Apply | Toast + audit demo |
 | Load demo / Reset demo | `/admin/demo-mode` |
@@ -103,5 +104,5 @@ Estado tras **Fase 29 (pulido final)**. Todas las opciones del sidebar tienen ru
 
 ## Pendientes menores
 
-- Webhooks: panel dedicado (hoy redirige a API Tokens)
+- Webhooks admin: página dedicada separada de Tokens API (`admin-webhooks-page`)
 - Roles: usa section-hub genérico (funcional con demo)

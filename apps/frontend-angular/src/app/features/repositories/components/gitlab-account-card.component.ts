@@ -1,18 +1,21 @@
 import { Component, Input } from '@angular/core'
 import { DatePipe } from '@angular/common'
 import { MatIconModule } from '@angular/material/icon'
+import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
 import type { GitlabAccount } from '../utils/gitlab-demo-catalog'
 
 @Component({
   selector: 'app-gitlab-account-card',
   standalone: true,
-  imports: [DatePipe, MatIconModule, StatusBadgeComponent],
+  imports: [DatePipe, MatIconModule, BrandLogoComponent, StatusBadgeComponent],
   template: `
     @if (account) {
       <div class="account-card">
         <div class="account-card__head">
-          <span class="account-card__mark">GL</span>
+          <div class="account-card__logo">
+            <app-brand-logo logo="gitlab" size="lg" />
+          </div>
           <div>
             <h3>{{ account.label }}</h3>
             <p class="account-card__user">&#64;{{ account.username }}</p>
@@ -55,18 +58,19 @@ import type { GitlabAccount } from '../utils/gitlab-demo-catalog'
       border: 1px solid color-mix(in srgb, #fc6d26 25%, transparent);
     }
     .account-card__head { display: flex; gap: 0.85rem; align-items: flex-start; }
-    .account-card__mark {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
+    .account-card__logo {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      color: #fff;
-      background: linear-gradient(135deg, #fc6d26, #6b4fbb);
+      width: 48px;
+      height: 48px;
+      padding: 6px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 2px 8px color-mix(in srgb, #fc6d26 25%, transparent);
       flex-shrink: 0;
     }
+    .account-card__logo ::ng-deep .brand-logo { width: 2rem; height: 2rem; }
     h3 { margin: 0; font-size: 1rem; }
     .account-card__user { margin: 0.2rem 0 0; font-size: 0.85rem; color: var(--app-text-muted); }
     .account-card__grid {

@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { FormControl } from '@angular/forms'
 import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
@@ -54,6 +55,7 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
           [account]="account()"
           [demoMode]="demoMode()"
           [syncStatus]="syncStatus()"
+          [projectControl]="projectControl"
           (addAccount)="runDemo('Añadir cuenta GitLab')"
           (connectDemo)="connectDemo()"
           (validate)="validate()"
@@ -64,6 +66,7 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
           (viewMrs)="runDemo('Ver merge requests')"
           (viewPipelines)="runDemo('Ver pipelines')"
           (createWebhook)="runDemo('Crear webhook GitLab')"
+          (viewLogs)="openGitlabLogs()"
         />
       }
     </div>
@@ -93,6 +96,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   private readonly dialog = inject(MatDialog)
 
   readonly meta = REPOSITORIES_SECTION_META.gitlab
+  readonly projectControl = new FormControl<string>('', { nonNullable: true })
   readonly loading = signal(false)
   readonly account = signal<GitlabAccount | null>(null)
   readonly projects = signal<GitlabProject[]>([])
@@ -130,6 +134,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
         this.account.set(state.account)
         this.projects.set(state.projects)
         this.groups.set(state.groups)
+        if (state.projects[0]) this.projectControl.setValue(state.projects[0].id)
         this.demoMode.set(true)
         this.loading.set(false)
       },
@@ -138,6 +143,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
         this.account.set(boot.account)
         this.projects.set(boot.projects)
         this.groups.set(boot.groups)
+        if (boot.projects[0]) this.projectControl.setValue(boot.projects[0].id)
         this.loading.set(false)
       },
     })
@@ -170,6 +176,18 @@ export class GitlabRepositoriesPageComponent implements OnInit {
     this.drawerOpen.set(false)
     this.drawerProject.set(null)
     this.drawerWebhooks.set([])
+  }
+
+  openGitlabLogs = (): void => {
+    this.logsTitle.set('Logs GitLab — plataforma')
+    this.logsText.set(
+      `[GitLab] ${new Date().toISOString()} sync proyectos OK\n` +
+        '[GitLab] pipeline cloudops-platform/gitlab-payment-service #1842 success\n' +
+        '[GitLab] runner shared-runner-01 online · tags docker,linux\n' +
+        '[GitLab] MR !42 opened · feat: idempotencia en cobros\n' +
+        '[GitLab] environment production actualizado',
+    )
+    this.logsOpen.set(true)
   }
 
   viewDeploymentLogs = (d: { id: string }): void => {

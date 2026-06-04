@@ -9,6 +9,7 @@ export type NavLogoKey =
   | 'terraform'
   | 'postgresql'
   | 'github'
+  | 'gitlab'
   | 'redis'
   | 'prometheus'
   | 'grafana'

@@ -209,6 +209,7 @@ export class ModuleAreaTabsComponent {
       capacity: 7,
       instances: 26,
       'github-repos': 4,
+      'gitlab-projects': 5,
       'github-webhooks': 2,
       'github-deployments': 2,
     }

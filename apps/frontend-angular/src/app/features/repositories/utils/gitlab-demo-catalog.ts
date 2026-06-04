@@ -168,6 +168,19 @@ export const CLIENT_DEMO_GITLAB_DEPLOYMENTS: Record<string, unknown>[] = [
   { id: 'gl-dep-2', provider: 'gitlab', projectPath: 'cloudops-platform/gitlab-inventory-service', branch: 'develop', targetName: 'vps-staging-02', targetType: 'vps', status: 'running', createdAt: now() },
 ]
 
+export const CLIENT_DEMO_GITLAB_ISSUES: Record<string, unknown>[] = [
+  { id: 'gl-issue-1', projectPath: 'cloudops-platform/gitlab-payment-service', iid: 12, title: 'Timeout en webhook de cobros', state: 'opened', labels: ['bug', 'payments'], assignee: 'ana.dev' },
+  { id: 'gl-issue-2', projectPath: 'cloudops-platform/gitlab-inventory-service', iid: 8, title: 'Documentar API de sincronización', state: 'opened', labels: ['documentation'], assignee: 'luis.cloud' },
+  { id: 'gl-issue-3', projectPath: 'release-eng/gitlab-release-manager', iid: 3, title: 'Automatizar changelog', state: 'closed', labels: ['enhancement'], assignee: 'release-bot' },
+]
+
+export const CLIENT_DEMO_GITLAB_CI_VARS: Record<string, unknown>[] = [
+  { id: 'gl-var-1', key: 'KUBECONFIG_PROD', masked: true, protected: true, environment: 'production', projectPath: 'cloudops-platform/gitlab-payment-service' },
+  { id: 'gl-var-2', key: 'AWS_ROLE_ARN', masked: true, protected: true, environment: 'production', projectPath: 'cloudops-platform/gitlab-inventory-service' },
+  { id: 'gl-var-3', key: 'SLACK_WEBHOOK_URL', masked: true, protected: false, environment: 'all', projectPath: 'devops-templates/gitlab-devops-templates' },
+  { id: 'gl-var-4', key: 'CHART_VERSION', masked: false, protected: false, environment: 'staging', projectPath: 'release-eng/gitlab-release-manager' },
+]
+
 export const buildGitlabDemoBootstrap = () => ({
   account: CLIENT_DEMO_GITLAB_ACCOUNT,
   projects: CLIENT_DEMO_GITLAB_PROJECTS,
@@ -179,4 +192,6 @@ export const buildGitlabDemoBootstrap = () => ({
   releases: CLIENT_DEMO_GITLAB_RELEASES,
   webhooks: CLIENT_DEMO_GITLAB_WEBHOOKS,
   deployments: CLIENT_DEMO_GITLAB_DEPLOYMENTS,
+  issues: CLIENT_DEMO_GITLAB_ISSUES,
+  ciVariables: CLIENT_DEMO_GITLAB_CI_VARS,
 })

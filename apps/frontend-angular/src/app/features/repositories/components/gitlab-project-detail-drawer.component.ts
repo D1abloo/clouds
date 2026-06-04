@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTabsModule } from '@angular/material/tabs'
 import { MatProgressBarModule } from '@angular/material/progress-bar'
+import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
 import { DemoActionsService } from '../../../core/services/demo-actions.service'
 import type { GitlabProject } from '../utils/gitlab-demo-catalog'
@@ -25,6 +26,7 @@ import {
     MatIconModule,
     MatTabsModule,
     MatProgressBarModule,
+    BrandLogoComponent,
     StatusBadgeComponent,
   ],
   template: `
@@ -33,7 +35,9 @@ import {
       <aside class="gl-drawer animate-slide-in" role="dialog" aria-labelledby="gl-drawer-title">
         <header class="gl-drawer__head">
           <div class="gl-drawer__brand">
-            <span class="gitlab-logo" aria-hidden="true">GitLab</span>
+            <div class="gl-drawer__logo" aria-hidden="true">
+              <app-brand-logo logo="gitlab" size="lg" />
+            </div>
             <div class="gl-drawer__titles">
               <span class="gl-drawer__name">{{ project.name }}</span>
               <h2 id="gl-drawer-title">{{ project.fullPath }}</h2>
@@ -409,20 +413,19 @@ import {
       border-bottom: 1px solid var(--app-border-subtle);
     }
     .gl-drawer__brand { display: flex; gap: 0.85rem; min-width: 0; flex: 1; }
-    .gitlab-logo {
-      display: inline-flex;
+    .gl-drawer__logo {
+      display: flex;
       align-items: center;
       justify-content: center;
-      min-width: 3rem;
+      width: 3rem;
       height: 3rem;
-      padding: 0 0.45rem;
+      padding: 0.35rem;
       border-radius: 8px;
-      font-weight: 800;
-      font-size: 0.7rem;
-      color: #fff;
-      background: linear-gradient(135deg, #fc6d26, #6b4fbb);
+      background: #fff;
+      box-shadow: 0 2px 10px color-mix(in srgb, #fc6d26 22%, transparent);
       flex-shrink: 0;
     }
+    .gl-drawer__logo ::ng-deep .brand-logo { width: 2rem; height: 2rem; }
     .gl-drawer__titles { min-width: 0; }
     .gl-drawer__name {
       display: block;

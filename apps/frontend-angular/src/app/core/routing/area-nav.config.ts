@@ -197,7 +197,7 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     description: 'GitHub, ramas, commits, pull requests y despliegues',
     tabs: [
       { id: 'github', label: 'GitHub', route: '/repositories/github', logo: 'github', badgeKey: 'github-repos' },
-      { id: 'gitlab', label: 'GitLab', route: '/repositories/gitlab', icon: 'code' },
+      { id: 'gitlab', label: 'GitLab', route: '/repositories/gitlab', logo: 'gitlab', badgeKey: 'gitlab-projects' },
       { id: 'webhooks', label: 'Webhooks', route: '/repositories/webhooks', icon: 'webhook', badgeKey: 'github-webhooks' },
       { id: 'branches', label: 'Ramas', route: '/repositories/branches', icon: 'account_tree' },
       { id: 'commits', label: 'Commits', route: '/repositories/commits', icon: 'history_edu' },
