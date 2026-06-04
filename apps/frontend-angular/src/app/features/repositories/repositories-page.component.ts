@@ -372,9 +372,15 @@ const SECTION_TITLES: Record<string, { title: string; description: string }> = {
       [repo]="drawerRepo()"
       [branches]="branches()"
       [commits]="commits()"
+      [pullRequests]="pullRequests()"
+      [webhooks]="drawerWebhooks()"
+      [deployments]="deployments()"
+      [lastSyncAt]="connection()?.lastSyncAt ?? primaryAccount()?.lastSyncAt ?? null"
+      [demoMode]="demoMode()"
       (close)="closeDrawer()"
       (sync)="handleRepoSync($event)"
       (deploy)="openDeploy($event)"
+      (viewDeploymentLogs)="viewLogs($event)"
     />
   `,
   styles: `
@@ -467,6 +473,7 @@ export class RepositoriesPageComponent implements OnInit {
   readonly deployments = signal<Record<string, unknown>[]>([])
   readonly drawerOpen = signal(false)
   readonly drawerRepo = signal<GithubRepo | null>(null)
+  readonly drawerWebhooks = signal<Record<string, unknown>[]>([])
   readonly logsOpen = signal(false)
   readonly logsText = signal('')
   readonly logsTitle = signal('')
@@ -752,6 +759,8 @@ export class RepositoriesPageComponent implements OnInit {
   }
 
   loadRepoDetails = (repoId: string): void => {
+    const repo =
+      this.drawerRepo() ?? this.repos().find((r) => r.id === repoId) ?? null
     this.github
       .branches(repoId)
       .pipe(catchError(() => of({ items: [] })))
@@ -764,6 +773,18 @@ export class RepositoriesPageComponent implements OnInit {
       .pullRequests(repoId)
       .pipe(catchError(() => of({ items: [] })))
       .subscribe((p) => this.pullRequests.set(p.items))
+    this.github
+      .repoWebhooks(repoId)
+      .pipe(
+        catchError(() => of({ items: [] })),
+        map((w) => {
+          if (w.items.length) return w.items
+          const fullName = repo?.fullName
+          if (!fullName) return []
+          return CLIENT_DEMO_WEBHOOKS.filter((wh) => wh['repoFullName'] === fullName)
+        }),
+      )
+      .subscribe((items) => this.drawerWebhooks.set(items))
   }
 
   openDrawer = (repo: GithubRepo): void => {
@@ -776,6 +797,7 @@ export class RepositoriesPageComponent implements OnInit {
   closeDrawer = (): void => {
     this.drawerOpen.set(false)
     this.drawerRepo.set(null)
+    this.drawerWebhooks.set([])
   }
 
   openDeploy = (repo: GithubRepo): void => {
