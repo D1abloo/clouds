@@ -27,9 +27,12 @@ import {
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
-import { catchError, of, switchMap } from 'rxjs'
+import { catchError, finalize, map, of, switchMap, type Observable } from 'rxjs'
 import { GithubAccountDialogComponent } from './components/github-account-dialog.component'
+import { GithubAccountCardComponent } from './components/github-account-card.component'
 import { GithubSyncStatusComponent } from './components/github-sync-status.component'
+import { buildGithubInventoryFallback } from './utils/github-inventory-fallback'
+import type { GithubDemoConnectResult } from '../../core/services/github.service'
 import { DeployProjectDialogComponent } from './components/deploy-project-dialog.component'
 import { RepositoryDetailDrawerComponent } from './components/repository-detail-drawer.component'
 import { GithubLogsPanelComponent } from './components/github-logs-panel.component'
@@ -62,6 +65,7 @@ const SECTION_TITLES: Record<string, { title: string; description: string }> = {
     StatusBadgeComponent,
     NavIconComponent,
     GithubSyncStatusComponent,
+    GithubAccountCardComponent,
     RepositoryDetailDrawerComponent,
     GithubLogsPanelComponent,
     MatTableModule,
@@ -81,8 +85,8 @@ const SECTION_TITLES: Record<string, { title: string; description: string }> = {
         (actionClick)="handleHeader($event)"
       />
 
-      @if (page.loading()) {
-        <app-loading-state message="Cargando repositorios…" />
+      @if (bootstrapping() || page.loading()) {
+        <app-loading-state message="Conectando cuenta GitHub demo…" />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
@@ -94,16 +98,15 @@ const SECTION_TITLES: Record<string, { title: string; description: string }> = {
         </div>
 
         @if (section() === 'github') {
+          @if (primaryAccount()) {
+            <app-github-account-card [account]="primaryAccount()" [demoMode]="demoMode()" />
+          }
           <mat-card class="connect-card">
             <div class="connect-card__head">
               <app-nav-icon logo="github" size="lg" />
               <div>
-                <strong>Cuentas GitHub</strong>
-                @if (primaryAccount()) {
-                  <p>Activa: <strong>{{ primaryAccount()!.username }}</strong> ({{ primaryAccount()!.label }})</p>
-                } @else {
-                  <p>No hay cuenta. Añade una cuenta o usa el modo demostración.</p>
-                }
+                <strong>Integración GitHub</strong>
+                <p>Gestión de repositorios, despliegues y webhooks (modo demo disponible)</p>
               </div>
             </div>
             <app-github-sync-status
@@ -231,11 +234,17 @@ const SECTION_TITLES: Record<string, { title: string; description: string }> = {
           </div>
         }
 
-        @if (needsRepo() && !selectedRepoId()) {
+        @if (needsRepo() && !repos().length) {
+          <app-empty-state
+            icon="folder_open"
+            title="Sin repositorios"
+            message="Pulsa «Conectar demo» en la pestaña GitHub para cargar repositorios ficticios."
+          />
+        } @else if (needsRepo() && !selectedRepoId()) {
           <app-empty-state
             icon="folder_open"
             title="Selecciona un repositorio"
-            message="Conecta GitHub, sincroniza y elige un repositorio en la pestaña GitHub."
+            message="Elige un repositorio en la pestaña GitHub o en el selector superior."
           />
         } @else if (section() === 'branches') {
           <div class="table-card">
@@ -415,7 +424,8 @@ export class RepositoriesPageComponent implements OnInit {
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
 
-  readonly page = createPageLoader(true)
+  readonly page = createPageLoader(false)
+  readonly bootstrapping = signal(true)
   readonly data = signal<Record<string, unknown> | null>(null)
   readonly connection = signal<GithubConnection | null>(null)
   readonly accounts = signal<GithubAccount[]>([])
@@ -464,38 +474,126 @@ export class RepositoriesPageComponent implements OnInit {
     ['branches', 'commits', 'pull-requests'].includes(this.section())
 
   ngOnInit(): void {
-    this.load()
-    this.refreshAccounts()
-    this.loadConnection()
-    this.loadDemoRepos()
-    this.github.webhooks().subscribe((w) => this.webhooks.set(w.items))
-    this.github.deployments().subscribe((d) => this.deployments.set(d.items))
+    this.bootstrapGithubDemo()
     this.repoControl.valueChanges.subscribe((id) => {
       if (id) {
         this.selectRepo(id)
         this.loadRepoDetails(id)
       }
     })
+    this.route.paramMap.subscribe(() => {
+      const repoId = this.repoControl.value || this.repos()[0]?.id
+      if (repoId && this.needsRepo()) this.loadRepoDetails(repoId)
+    })
+  }
+
+  bootstrapGithubDemo = (): void => {
+    this.bootstrapping.set(true)
+    this.github
+      .connectDemo()
+      .pipe(
+        catchError(() =>
+          this.github.demoRepos().pipe(
+            switchMap((r) =>
+              of({
+                demoMode: true,
+                account: {
+                  id: 'demo-github-account-001',
+                  label: 'GitHub Demo Account',
+                  username: 'cloudops-demo',
+                  organization: 'cloudops-lab',
+                  accountType: 'demo',
+                  accountTypeLabel: 'Demo',
+                  status: 'connected',
+                  statusLabel: 'Conectada',
+                  avatarUrl: 'https://github.com/cloudops-demo.png',
+                  lastSyncAt: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                },
+                connection: {
+                  connected: true,
+                  username: 'cloudops-demo',
+                  repoCount: r.count,
+                  accountId: 'demo-github-account-001',
+                  demoMode: true,
+                  lastSyncAt: new Date().toISOString(),
+                },
+                repos: r.items,
+                synced: r.count,
+                message: 'Modo demo (sin API)',
+              } as GithubDemoConnectResult),
+            ),
+          ),
+        ),
+        finalize(() => this.bootstrapping.set(false)),
+      )
+      .subscribe((state) => {
+        this.applyDemoBootstrap(state)
+        this.load()
+        this.reloadAuxiliaryTables()
+      })
+  }
+
+  applyDemoBootstrap = (state: GithubDemoConnectResult): void => {
+    this.demoMode.set(true)
+    this.accounts.set([state.account])
+    this.connection.set(state.connection)
+    this.repos.set(state.repos)
+    if (state.repos.length) {
+      this.repoControl.setValue(state.repos[0].id)
+      this.selectedRepoId.set(state.repos[0].id)
+      this.loadRepoDetails(state.repos[0].id)
+    }
+    this.data.set({
+      connected: true,
+      username: state.account.username,
+      demoMode: true,
+      repoCount: state.synced,
+      branchCount: state.synced * 4,
+      commitCount: state.synced * 4,
+      openPullRequests: state.synced * 2,
+      webhookCount: 4,
+      deploymentCount: 4,
+      repoItems: state.repos,
+      lastSyncAt: state.connection.lastSyncAt,
+    })
+  }
+
+  reloadAuxiliaryTables = (): void => {
+    this.github
+      .webhooks()
+      .pipe(catchError(() => of({ items: [] })))
+      .subscribe((w) => this.webhooks.set(w.items))
+    this.github
+      .deployments()
+      .pipe(catchError(() => of({ items: [] })))
+      .subscribe((d) => this.deployments.set(d.items))
   }
 
   n = (key: string): number => invNum(this.data(), key)
 
   load = (): void => {
     this.page.run(this.inventory.github(), {
-      onSuccess: (d) => {
-        this.data.set(d)
-        const items = (d['repoItems'] as GithubRepo[]) ?? []
-        if (items.length) {
-          this.repos.set(items)
-          this.demoMode.set(!!d['demoMode'] || !!(d['username'] as string | null))
-          if (!this.selectedRepoId()) {
-            this.repoControl.setValue(items[0].id)
-            this.loadRepoDetails(items[0].id)
-          }
-        }
+      onSuccess: (d) => this.mergeInventory(d),
+      fallback: () => {
+        const base = buildGithubInventoryFallback()
+        base['repoItems'] = this.repos().length ? this.repos() : base['repoItems']
+        return base
       },
       errorMessage: 'No se pudo cargar el inventario de repositorios',
     })
+  }
+
+  mergeInventory = (d: Record<string, unknown>): void => {
+    const items = (d['repoItems'] as GithubRepo[]) ?? []
+    if (items.length) this.repos.set(items)
+    this.data.set({ ...d, repoItems: this.repos() })
+    this.demoMode.set(!!d['demoMode'] || this.demoMode())
+    const first = this.repos()[0]
+    if (first && !this.repoControl.value) {
+      this.repoControl.setValue(first.id)
+      this.loadRepoDetails(first.id)
+    }
   }
 
   refreshAccounts = (): void => {
@@ -567,22 +665,28 @@ export class RepositoriesPageComponent implements OnInit {
   }
 
   handleQuickConnect = (): void => {
-    this.github.connect({ username: 'cloudops-demo' }).subscribe({
-      next: (c) => {
-        this.connection.set(c)
-        this.demoActions.simulate('Cuenta GitHub conectada', 400, c.message ?? 'Conectado').subscribe()
-        this.refreshAccounts()
-        this.handleSync()
-      },
-    })
+    this.bootstrapping.set(true)
+    this.github
+      .connectDemo()
+      .pipe(finalize(() => this.bootstrapping.set(false)))
+      .subscribe({
+        next: (state) => {
+          this.applyDemoBootstrap(state)
+          this.demoActions.simulate('Cuenta GitHub demo', 400, state.message).subscribe()
+          this.reloadAuxiliaryTables()
+        },
+      })
   }
 
   handleValidate = (): void => {
     const acc = this.primaryAccount()
     if (!acc) return
-    this.github.validateAccount(acc.id).subscribe({
-      next: (r) => this.demoActions.simulate('Validación', 400, r.message).subscribe(),
-    })
+    this.github
+      .validateAccount(acc.id)
+      .pipe(catchError(() => of({ valid: true, message: 'Conexión demo validada' })))
+      .subscribe({
+        next: (r) => this.demoActions.simulate('Validación', 400, r.message ?? 'OK').subscribe(),
+      })
   }
 
   handleDisconnect = (): void => {
@@ -608,33 +712,34 @@ export class RepositoriesPageComponent implements OnInit {
 
   handleSync = (): void => {
     const acc = this.primaryAccount()
+    let sync$: Observable<{ synced: number; repos?: GithubRepo[] }>
     if (acc) {
-      this.github.syncAccount(acc.id).subscribe({
+      sync$ = this.github
+        .syncAccount(acc.id)
+        .pipe(map((r) => ({ synced: r.synced, repos: this.repos() })))
+    } else {
+      sync$ = this.github
+        .connectDemo()
+        .pipe(map((s) => ({ synced: s.synced, repos: s.repos })))
+    }
+    sync$
+      .pipe(
+        catchError(() =>
+          this.github.demoRepos().pipe(map((r) => ({ synced: r.count, repos: r.items }))),
+        ),
+      )
+      .subscribe({
         next: (res) => {
-          this.refreshRepos()
-          this.loadConnection()
+          const items = res.repos ?? this.repos()
+          if (items.length) this.repos.set(items)
+          this.connection.update((c) =>
+            c ? { ...c, lastSyncAt: new Date().toISOString(), repoCount: res.synced } : c,
+          )
           this.load()
+          this.reloadAuxiliaryTables()
           this.demoActions.simulate('Sincronización', 600, `${res.synced} repositorios`).subscribe()
         },
-        error: (err) => {
-          this.demoActions.simulate('Error', 300, err?.error?.message ?? 'Error al sincronizar').subscribe()
-        },
       })
-      return
-    }
-    this.github.sync().subscribe({
-      next: (res) => {
-        this.repos.set(res.repos)
-        this.connection.update((c) => (c ? { ...c, lastSyncAt: res.lastSyncAt, repoCount: res.synced } : c))
-        this.demoActions.simulate('Sincronización GitHub', 600, `${res.synced} repositorios`).subscribe()
-        if (res.repos.length) this.repoControl.setValue(res.repos[0].id)
-        this.load()
-        this.refreshAccounts()
-      },
-      error: (err) => {
-        this.demoActions.simulate('Error sync', 300, err?.error?.message ?? 'Conecta primero').subscribe()
-      },
-    })
   }
 
   handleRepoSync = (repoId: string): void => {
@@ -652,9 +757,18 @@ export class RepositoriesPageComponent implements OnInit {
   }
 
   loadRepoDetails = (repoId: string): void => {
-    this.github.branches(repoId).subscribe((b) => this.branches.set(b.items))
-    this.github.commits(repoId).subscribe((c) => this.commits.set(c.items))
-    this.github.pullRequests(repoId).subscribe((p) => this.pullRequests.set(p.items))
+    this.github
+      .branches(repoId)
+      .pipe(catchError(() => of({ items: [] })))
+      .subscribe((b) => this.branches.set(b.items))
+    this.github
+      .commits(repoId)
+      .pipe(catchError(() => of({ items: [] })))
+      .subscribe((c) => this.commits.set(c.items))
+    this.github
+      .pullRequests(repoId)
+      .pipe(catchError(() => of({ items: [] })))
+      .subscribe((p) => this.pullRequests.set(p.items))
   }
 
   openDrawer = (repo: GithubRepo): void => {

@@ -23,6 +23,7 @@ export class GithubDemoService implements OnModuleInit {
   private readonly logger = new Logger(GithubDemoService.name)
   private readonly memoryDeployments: MemoryDeployment[] = []
   private dbReady = false
+  private demoSessionActive = true
 
   constructor(private readonly prisma: PrismaService) {
     this.seedMemoryDeployments()
@@ -153,13 +154,25 @@ export class GithubDemoService implements OnModuleInit {
     return this.dbReady
   }
 
+  isSessionActive(): boolean {
+    return this.demoSessionActive
+  }
+
+  activateSession(): void {
+    this.demoSessionActive = true
+  }
+
+  deactivateSession(): void {
+    this.demoSessionActive = false
+  }
+
   async ensureDemoAccountInDatabase(): Promise<void> {
     try {
       const account = await this.prisma.githubAccount.upsert({
         where: { id: DEMO_GITHUB_ACCOUNT_ID },
         create: {
           id: DEMO_GITHUB_ACCOUNT_ID,
-          label: 'GitHub Demo',
+          label: 'GitHub Demo Account',
           username: 'cloudops-demo',
           tokenRef: 'demo:cloudops',
           status: 'connected',

@@ -10,6 +10,10 @@ export class GithubSummaryService {
     private readonly demo: GithubDemoService,
   ) {}
 
+  demoSummary() {
+    return this.demo.demoSummary()
+  }
+
   async summaryForInventory() {
     if (!this.demo.isDbReady()) {
       return this.demo.demoSummary()

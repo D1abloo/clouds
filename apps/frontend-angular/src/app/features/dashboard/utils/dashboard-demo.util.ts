@@ -95,10 +95,12 @@ export const buildDemoDashboard = (): DashboardData => {
       { id: '2', title: 'Disco casi lleno azure-db-5', severity: 'WARNING', status: 'open' },
     ],
     recentActivity: [
+      { id: 'gh-1', action: 'github.demo.connect', resource: 'github', createdAt: new Date().toISOString() },
       { id: '1', action: 'instance.sync', resource: 'aws-prod-app-1', createdAt: new Date().toISOString() },
       { id: '2', action: 'terraform.apply', resource: 'demo-aws-ec2', createdAt: new Date().toISOString() },
     ],
     notifications: [
+      { id: 'gh-n1', title: 'GitHub', message: 'Cuenta demo conectada — 8 repositorios', severity: 'INFO' },
       { id: '1', title: 'Sync completed', message: 'AWS account synced successfully', severity: 'INFO' },
       { id: '2', title: 'Build failed', message: 'Jenkins terraform-apply #4 failed', severity: 'WARNING' },
     ],
@@ -112,6 +114,17 @@ export const buildDemoDashboard = (): DashboardData => {
     kubernetes: { clusters: 2, nodes: 6, namespaces: 8, pods: 42, errors: 2, deployments: 14, services: 11 },
     jenkins: { servers: 1, jobs: 12, running: 2, success: 48, failed: 4 },
     terraform: { workspaces: 4, runs: 18, plans: 6, applies: 4, errors: 1, templates: 6 },
+    github: {
+      connected: true,
+      username: 'cloudops-demo',
+      organization: 'cloudops-lab',
+      repoCount: 8,
+      branchCount: 32,
+      openPullRequests: 16,
+      webhookCount: 4,
+      deploymentCount: 4,
+      demoMode: true,
+    },
     billing: { total: 4820 },
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, map, of } from 'rxjs'
+import type { GithubRepo } from './github.service'
 import { ApiClientService } from './api-client.service'
 import { CloudProvider } from '../models/api.models'
 import { DockerService } from './docker.service'
@@ -42,14 +43,40 @@ export class InventoryService {
       .pipe(catchError((): Observable<Record<string, unknown>> => of({ jobCount: 0, jobItems: [] })))
 
   github = (): Observable<Record<string, unknown>> =>
-    this.api
-      .get<Record<string, unknown>>('inventory/github')
-      .pipe(
-        catchError(
-          (): Observable<Record<string, unknown>> =>
-            of({ connected: false, repoCount: 0, repoItems: [] }),
-        ),
-      )
+    this.api.get<Record<string, unknown>>('inventory/github').pipe(
+      catchError((): Observable<Record<string, unknown>> => {
+        return this.api.get<{ count: number; items: GithubRepo[] }>('github/demo/repos').pipe(
+          map((r) => ({
+            connected: true,
+            username: 'cloudops-demo',
+            demoMode: true,
+            repoCount: r.count,
+            branchCount: r.count * 4,
+            commitCount: r.count * 4,
+            openPullRequests: r.count * 2,
+            webhookCount: 4,
+            deploymentCount: 4,
+            repoItems: r.items,
+            lastSyncAt: new Date().toISOString(),
+          })),
+          catchError(() =>
+            of({
+              connected: true,
+              username: 'cloudops-demo',
+              demoMode: true,
+              repoCount: 8,
+              branchCount: 32,
+              commitCount: 32,
+              openPullRequests: 16,
+              webhookCount: 4,
+              deploymentCount: 4,
+              repoItems: [],
+              lastSyncAt: new Date().toISOString(),
+            }),
+          ),
+        )
+      }),
+    )
 
   provider = (p: CloudProvider): Observable<Record<string, unknown>> =>
     this.api

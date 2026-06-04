@@ -56,6 +56,20 @@ export type GithubDeploymentDemo = {
 
 export const DEMO_GITHUB_ACCOUNT_ID = 'demo-github-account-001'
 
+/** Perfil fijo de la cuenta GitHub demo (UI en español) */
+export const DEMO_GITHUB_ACCOUNT_PROFILE = {
+  id: DEMO_GITHUB_ACCOUNT_ID,
+  label: 'GitHub Demo Account',
+  username: 'cloudops-demo',
+  organization: 'cloudops-lab',
+  accountType: 'demo',
+  accountTypeLabel: 'Demo',
+  status: 'connected',
+  statusLabel: 'Conectada',
+  tokenRef: 'demo:cloudops',
+  avatarUrl: 'https://github.com/cloudops-demo.png',
+}
+
 /** ID estable en API/BD para un repo demo */
 export const githubApiRepoId = (demoSlug: string): string => `gh-repo-${demoSlug}`
 

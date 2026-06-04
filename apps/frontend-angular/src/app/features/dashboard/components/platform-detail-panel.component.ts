@@ -11,6 +11,7 @@ const PLATFORM_LOGO: Record<string, NavLogoKey> = {
   k8s: 'kubernetes',
   jenkins: 'jenkins',
   terraform: 'terraform',
+  github: 'github',
 }
 
 @Component({
@@ -75,6 +76,7 @@ const PLATFORM_LOGO: Record<string, NavLogoKey> = {
     .platform-panel--k8s mat-icon { color: #8b5cf6; }
     .platform-panel--jenkins mat-icon { color: #f97316; }
     .platform-panel--terraform mat-icon { color: #6366f1; }
+    .platform-panel--github mat-icon { color: #24292f; }
     .platform-panel__metrics {
       display: flex;
       flex-direction: column;

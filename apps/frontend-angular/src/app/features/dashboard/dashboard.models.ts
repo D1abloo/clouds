@@ -48,5 +48,6 @@ export interface DashboardData {
   kubernetes?: Record<string, unknown>
   jenkins?: Record<string, unknown>
   terraform?: Record<string, unknown>
+  github?: Record<string, unknown>
   billing?: Record<string, unknown>
 }

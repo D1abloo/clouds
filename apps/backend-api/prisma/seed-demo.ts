@@ -288,7 +288,7 @@ export async function seedDemoData(
     where: { id: 'demo-github-account-001' },
     create: {
       id: 'demo-github-account-001',
-      label: 'GitHub Demo',
+      label: 'GitHub Demo Account',
       username: 'cloudops-demo',
       tokenRef: 'demo:cloudops',
       status: 'connected',

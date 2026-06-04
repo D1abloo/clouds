@@ -116,7 +116,7 @@ export class InventoryService {
   }
 
   async dashboardOverview() {
-    const [instances, vps, alerts, billing, notifications, audit, docker, k8s, jenkins, terraform] =
+    const [instances, vps, alerts, billing, notifications, audit, docker, k8s, jenkins, terraform, github] =
       await Promise.all([
         this.prisma.instance.findMany({ where: { deletedAt: null } }),
         this.prisma.vpsServer.findMany({ where: { deletedAt: null } }),
@@ -128,6 +128,7 @@ export class InventoryService {
         this.kubernetesSummary(),
         this.jenkinsSummary(),
         this.terraformSummary(),
+        this.githubSummarySvc.summaryForInventory().catch(() => this.githubSummarySvc.demoSummary()),
       ])
 
     const byProvider = instances.reduce(
@@ -354,6 +355,17 @@ export class InventoryService {
           account: b.billingAccount?.accountId,
           provider: b.billingAccount?.provider,
         })),
+      },
+      github: {
+        connected: github.connected,
+        username: github.username,
+        organization: 'cloudops-lab',
+        repoCount: github.repoCount,
+        branchCount: github.branchCount,
+        openPullRequests: github.openPullRequests,
+        webhookCount: github.webhookCount,
+        deploymentCount: github.deploymentCount,
+        demoMode: Boolean((github as { demoMode?: boolean }).demoMode),
       },
     }
   }

@@ -9,10 +9,24 @@ export interface GithubAccount {
   label: string
   username: string
   status: string
+  statusLabel?: string
+  organization?: string
+  accountType?: string
+  accountTypeLabel?: string
   avatarUrl?: string | null
   lastValidatedAt?: string | null
   lastSyncAt?: string | null
   createdAt: string
+  demoMode?: boolean
+}
+
+export interface GithubDemoConnectResult {
+  demoMode: boolean
+  account: GithubAccount
+  connection: GithubConnection
+  repos: GithubRepo[]
+  synced: number
+  message: string
 }
 
 export interface GithubConnection {
@@ -46,6 +60,9 @@ export class GithubService {
 
   demoRepos = (): Observable<{ demoMode: boolean; count: number; items: GithubRepo[] }> =>
     this.api.get('github/demo/repos')
+
+  connectDemo = (): Observable<GithubDemoConnectResult> =>
+    this.api.post('github/demo/connect', {})
 
   accounts = (): Observable<{ items: GithubAccount[] }> =>
     this.api.get('github/accounts')

@@ -186,6 +186,15 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
               [metrics]="tfPanelMetrics()"
               [details]="tfDetails()"
             />
+            <app-platform-detail-panel
+              title="GitHub"
+              [subtitle]="githubLabel()"
+              icon="code"
+              tone="github"
+              route="/repositories/github"
+              [metrics]="githubPanelMetrics()"
+              [details]="githubDetails()"
+            />
           </div>
         </app-dashboard-section>
 
@@ -322,6 +331,7 @@ export class DashboardComponent implements OnInit {
   k8sN = (key: string): number => invNum(this.data()?.kubernetes as Record<string, unknown>, key)
   jenkinsN = (key: string): number => invNum(this.data()?.jenkins as Record<string, unknown>, key)
   tfN = (key: string): number => invNum(this.data()?.terraform as Record<string, unknown>, key)
+  githubN = (key: string): number => invNum(this.data()?.github as Record<string, unknown>, key)
 
   instanceList = (): DashboardInstanceRow[] => this.data()?.instanceList ?? []
 
@@ -391,6 +401,14 @@ export class DashboardComponent implements OnInit {
         icon: 'notifications_active',
         tone: 'danger',
         badge: 'Activas',
+      },
+      {
+        label: 'Repos GitHub',
+        value: this.githubN('repoCount'),
+        icon: 'folder',
+        logo: 'github',
+        tone: 'default',
+        subtitle: `${this.githubN('openPullRequests')} PR abiertos`,
       },
     ]
   })
@@ -542,6 +560,11 @@ export class DashboardComponent implements OnInit {
     `${this.jenkinsN('jobs')} jobs · ${this.jenkinsN('running')} en curso · ${this.jenkinsN('failed')} fallidos`
   tfLabel = (): string =>
     `${this.tfN('runs')} ejecuciones · ${this.tfN('errors')} errores · ${this.tfN('workspaces')} workspaces`
+  githubLabel = (): string => {
+    const g = this.data()?.github as Record<string, unknown> | undefined
+    const user = (g?.['username'] as string) ?? 'cloudops-demo'
+    return `${user} · ${this.githubN('repoCount')} repos · org cloudops-lab`
+  }
 
   dockerPanelMetrics = (): { label: string; value: string | number }[] => [
     { label: 'Hosts', value: this.dockerN('hosts') },
@@ -579,6 +602,19 @@ export class DashboardComponent implements OnInit {
   k8sDetails = (): string[] => ['default/app-0 — En ejecución', 'kube-system/coredns — En ejecución']
   jenkinsDetails = (): string[] => ['terraform-apply #4 — FALLO', 'deploy-prod #12 — ÉXITO']
   tfDetails = (): string[] => ['demo-aws-ec2 — APLICADO', 'demo-gcp-vm — PLANIFICADO']
+  githubPanelMetrics = (): { label: string; value: string | number }[] => [
+    { label: 'Repositorios', value: this.githubN('repoCount') },
+    { label: 'Ramas', value: this.githubN('branchCount') },
+    { label: 'PR abiertos', value: this.githubN('openPullRequests') },
+    { label: 'Webhooks', value: this.githubN('webhookCount') },
+    { label: 'Despliegues', value: this.githubN('deploymentCount') },
+    { label: 'Estado', value: 'Conectada' },
+  ]
+  githubDetails = (): string[] => [
+    'cloudops-org/cloudops-api',
+    'cloudops-org/cloudops-ui',
+    'Modo demo — sin token real',
+  ]
 
   recentAlerts = (): Record<string, unknown>[] => (this.data()?.recentAlerts as Record<string, unknown>[]) ?? []
   recentActivity = (): Record<string, unknown>[] => (this.data()?.recentActivity as Record<string, unknown>[]) ?? []

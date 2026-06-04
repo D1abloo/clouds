@@ -1,3 +1,4 @@
+import { DEMO_GITHUB_ACCOUNT_ID, DEMO_GITHUB_ACCOUNT_PROFILE } from './github-demo.data'
 import type {
   GithubAccount,
   GithubBranch,
@@ -8,16 +9,43 @@ import type {
   GithubWebhook,
 } from '@prisma/client'
 
-export const mapAccount = (a: GithubAccount) => ({
-  id: a.id,
-  label: a.label,
-  username: a.username,
-  status: a.status,
-  avatarUrl: a.avatarUrl,
-  lastValidatedAt: a.lastValidatedAt?.toISOString() ?? null,
-  lastSyncAt: a.lastSyncAt?.toISOString() ?? null,
-  createdAt: a.createdAt.toISOString(),
-})
+const statusLabelEs = (status: string): string => {
+  if (status === 'connected') return 'Conectada'
+  if (status === 'pending') return 'Pendiente'
+  if (status === 'invalid') return 'Inválida'
+  return status
+}
+
+export const mapAccount = (a: GithubAccount) => {
+  const isDemo =
+    a.id === DEMO_GITHUB_ACCOUNT_ID || a.tokenRef?.startsWith('demo:') || a.tokenRef === 'demo'
+  return {
+    id: a.id,
+    label: a.label,
+    username: a.username,
+    organization: isDemo ? DEMO_GITHUB_ACCOUNT_PROFILE.organization : '—',
+    accountType: isDemo ? 'demo' : 'standard',
+    accountTypeLabel: isDemo ? DEMO_GITHUB_ACCOUNT_PROFILE.accountTypeLabel : 'Estándar',
+    status: a.status,
+    statusLabel: statusLabelEs(a.status),
+    avatarUrl: a.avatarUrl,
+    lastValidatedAt: a.lastValidatedAt?.toISOString() ?? null,
+    lastSyncAt: a.lastSyncAt?.toISOString() ?? null,
+    createdAt: a.createdAt.toISOString(),
+    demoMode: isDemo,
+  }
+}
+
+export const mapDemoAccountProfile = () => {
+  const now = new Date().toISOString()
+  return {
+    ...DEMO_GITHUB_ACCOUNT_PROFILE,
+    lastValidatedAt: now,
+    lastSyncAt: now,
+    createdAt: now,
+    demoMode: true,
+  }
+}
 
 export const mapRepo = (r: GithubRepository) => ({
   id: r.id,

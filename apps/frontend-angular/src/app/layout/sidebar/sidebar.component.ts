@@ -399,9 +399,9 @@ export class SidebarComponent {
       copilot: 1,
       capacity: 7,
       instances: 26,
-      'github-repos': 4,
-      'github-webhooks': 2,
-      'github-deployments': 2,
+      'github-repos': 8,
+      'github-webhooks': 4,
+      'github-deployments': 4,
     }
     const n = demo[key]
     return n && n > 0 ? n : null

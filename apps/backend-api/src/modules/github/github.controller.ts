@@ -35,6 +35,12 @@ export class GithubController {
     }
   }
 
+  @Post('demo/connect')
+  @ApiOperation({ summary: 'Conectar cuenta GitHub demo (sin credenciales reales)' })
+  connectDemo(@CurrentUser() user: JwtPayload) {
+    return this.accounts.connectDemo(user.sub)
+  }
+
   // ── Accounts (new API) ─────────────────────────────────────
   @Get('accounts')
   @ApiOperation({ summary: 'Listar cuentas GitHub' })
