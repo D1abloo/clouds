@@ -78,6 +78,7 @@ import { AuthStore } from '../../core/stores/auth.store'
               [label]="fav.label"
               [route]="fav.route"
               [icon]="fav.icon ?? 'star'"
+              [logo]="fav.logo"
               [collapsed]="false"
             />
           }
@@ -91,6 +92,7 @@ import { AuthStore } from '../../core/stores/auth.store'
               [label]="hit.label"
               [route]="hit.route"
               [icon]="hit.icon ?? 'chevron_right'"
+              [logo]="hit.logo"
               [collapsed]="false"
             />
           }
