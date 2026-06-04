@@ -23,7 +23,10 @@
     "seed:demo": "bash scripts/seed-demo.sh",
     "demo:seed": "bash scripts/demo-seed.sh",
     "demo:reset": "bash scripts/demo-reset.sh",
-    "docker:up": "bash scripts/docker-up.sh"
+    "docker:up": "bash scripts/docker-up.sh",
+    "github:demo:verify": "npm run github:demo:verify -w apps/backend-api",
+    "github:demo:test": "npm run github:demo:test -w apps/backend-api",
+    "github:demo:setup": "bash scripts/github-demo-setup.sh"
   },
   "engines": {
     "node": ">=20.0.0",

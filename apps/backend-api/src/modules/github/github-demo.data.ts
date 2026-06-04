@@ -54,6 +54,34 @@ export type GithubDeploymentDemo = {
   createdAt: string
 }
 
+export const DEMO_GITHUB_ACCOUNT_ID = 'demo-github-account-001'
+
+/** ID estable en API/BD para un repo demo */
+export const githubApiRepoId = (demoSlug: string): string => `gh-repo-${demoSlug}`
+
+export const toApiRepoFromDemo = (
+  d: GithubRepoDemo,
+  accountId = DEMO_GITHUB_ACCOUNT_ID,
+) => ({
+  id: githubApiRepoId(d.id),
+  accountId,
+  name: d.name,
+  fullName: d.fullName,
+  description: d.description,
+  defaultBranch: d.defaultBranch,
+  language: d.language,
+  stars: d.stars,
+  visibility: d.visibility,
+  htmlUrl: `https://github.com/${d.fullName}`,
+  updatedAt: d.updatedAt,
+})
+
+export const resolveDemoSlugFromRepoId = (repoId: string): string | null => {
+  if (repoId.startsWith('gh-repo-')) return repoId.slice('gh-repo-'.length)
+  const hit = DEMO_GITHUB_REPOS.find((r) => r.id === repoId || githubApiRepoId(r.id) === repoId)
+  return hit?.id ?? null
+}
+
 export const DEMO_GITHUB_REPOS: GithubRepoDemo[] = [
   {
     id: 'repo-cloudops-api',
@@ -99,12 +127,57 @@ export const DEMO_GITHUB_REPOS: GithubRepoDemo[] = [
     visibility: 'public',
     updatedAt: '2026-05-25T09:00:00Z',
   },
+  {
+    id: 'repo-saas-worker',
+    name: 'saas-worker',
+    fullName: 'cloudops-org/saas-worker',
+    description: 'Workers de colas y tareas programadas',
+    defaultBranch: 'main',
+    language: 'TypeScript',
+    stars: 21,
+    visibility: 'private',
+    updatedAt: '2026-06-02T09:15:00Z',
+  },
+  {
+    id: 'repo-monitoring',
+    name: 'monitoring-stack',
+    fullName: 'cloudops-org/monitoring-stack',
+    description: 'Prometheus, Grafana y alertas',
+    defaultBranch: 'main',
+    language: 'YAML',
+    stars: 12,
+    visibility: 'private',
+    updatedAt: '2026-05-31T16:40:00Z',
+  },
+  {
+    id: 'repo-helm',
+    name: 'helm-charts',
+    fullName: 'cloudops-org/helm-charts',
+    description: 'Charts Helm para despliegues K8s',
+    defaultBranch: 'main',
+    language: 'Smarty',
+    stars: 9,
+    visibility: 'public',
+    updatedAt: '2026-05-29T11:20:00Z',
+  },
+  {
+    id: 'repo-auth-gateway',
+    name: 'auth-gateway',
+    fullName: 'cloudops-org/auth-gateway',
+    description: 'Gateway OAuth2 / JWT para el SaaS',
+    defaultBranch: 'develop',
+    language: 'Go',
+    stars: 27,
+    visibility: 'private',
+    updatedAt: '2026-06-01T14:05:00Z',
+  },
 ]
 
 export const demoBranches = (repoId: string): GithubBranchDemo[] => [
   { name: 'main', protected: true, lastCommitSha: 'a1b2c3d', lastCommitMessage: 'feat: dashboard metrics grid' },
   { name: 'develop', protected: false, lastCommitSha: 'e4f5g6h', lastCommitMessage: 'chore: bump deps' },
   { name: 'feature/github-integration', protected: false, lastCommitSha: 'i7j8k9l', lastCommitMessage: 'feat: github module' },
+  { name: 'release/v1.2', protected: true, lastCommitSha: 'm3n4o5p', lastCommitMessage: 'chore: release v1.2.0' },
 ].map((b) => ({ ...b, lastCommitSha: `${b.lastCommitSha}-${repoId.slice(-4)}` }))
 
 export const demoCommits = (repoId: string): GithubCommitDemo[] => [
@@ -129,6 +202,13 @@ export const demoCommits = (repoId: string): GithubCommitDemo[] => [
     date: '2026-05-30T09:15:00Z',
     branch: 'develop',
   },
+  {
+    sha: `sha-${repoId}-4`,
+    message: 'test: e2e github demo repos',
+    author: 'qa@cloudops.local',
+    date: '2026-05-29T08:00:00Z',
+    branch: 'feature/github-integration',
+  },
 ]
 
 export const demoPullRequests = (repoId: string): GithubPullRequestDemo[] => [
@@ -152,6 +232,16 @@ export const demoPullRequests = (repoId: string): GithubPullRequestDemo[] => [
     head: 'feature/k8s-deploy',
     createdAt: '2026-05-28T12:00:00Z',
   },
+  {
+    id: 103,
+    number: 22,
+    title: 'Repos ficticios modo demo',
+    state: 'open',
+    author: 'dev',
+    base: 'develop',
+    head: 'feature/demo-repos',
+    createdAt: '2026-06-02T07:30:00Z',
+  },
 ]
 
 export const DEMO_WEBHOOKS: GithubWebhookDemo[] = [
@@ -168,6 +258,20 @@ export const DEMO_WEBHOOKS: GithubWebhookDemo[] = [
     event: 'pull_request',
     url: 'https://hooks.cloudops.local/github/pr',
     active: true,
+  },
+  {
+    id: 'wh-3',
+    repoFullName: 'cloudops-org/saas-worker',
+    event: 'workflow_run',
+    url: 'https://hooks.cloudops.local/github/workflow',
+    active: true,
+  },
+  {
+    id: 'wh-4',
+    repoFullName: 'cloudops-org/monitoring-stack',
+    event: 'push',
+    url: 'https://hooks.cloudops.local/github/monitoring',
+    active: false,
   },
 ]
 
@@ -189,5 +293,23 @@ export const DEMO_DEPLOYMENTS: GithubDeploymentDemo[] = [
     targetName: 'vps-prod-nginx-01',
     status: 'running',
     createdAt: '2026-06-02T10:30:00Z',
+  },
+  {
+    id: 'dep-3',
+    repoFullName: 'cloudops-org/saas-worker',
+    branch: 'main',
+    targetType: 'docker',
+    targetName: 'docker-host-01',
+    status: 'success',
+    createdAt: '2026-05-31T18:00:00Z',
+  },
+  {
+    id: 'dep-4',
+    repoFullName: 'cloudops-org/helm-charts',
+    branch: 'main',
+    targetType: 'kubernetes',
+    targetName: 'cluster-staging-02',
+    status: 'failed',
+    createdAt: '2026-05-30T12:00:00Z',
   },
 ]

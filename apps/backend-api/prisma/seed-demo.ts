@@ -273,6 +273,138 @@ export async function seedDemoData(
     }
   }
 
+  // ── GitHub ───────────────────────────────────────────────────
+  const {
+    DEMO_GITHUB_REPOS,
+    DEMO_WEBHOOKS,
+    DEMO_DEPLOYMENTS,
+    demoBranches,
+    demoCommits,
+    demoPullRequests,
+    githubApiRepoId,
+  } = await import('../src/modules/github/github-demo.data')
+
+  const githubAccount = await prisma.githubAccount.upsert({
+    where: { id: 'demo-github-account-001' },
+    create: {
+      id: 'demo-github-account-001',
+      label: 'GitHub Demo',
+      username: 'cloudops-demo',
+      tokenRef: 'demo:cloudops',
+      status: 'connected',
+      avatarUrl: 'https://github.com/cloudops-demo.png',
+      lastValidatedAt: new Date(),
+      lastSyncAt: new Date(),
+    },
+    update: { status: 'connected', lastSyncAt: new Date() },
+  })
+
+  for (const demo of DEMO_GITHUB_REPOS) {
+    const repo = await prisma.githubRepository.upsert({
+      where: {
+        accountId_fullName: { accountId: githubAccount.id, fullName: demo.fullName },
+      },
+      create: {
+        id: githubApiRepoId(demo.id),
+        accountId: githubAccount.id,
+        name: demo.name,
+        fullName: demo.fullName,
+        description: demo.description,
+        defaultBranch: demo.defaultBranch,
+        language: demo.language,
+        stars: demo.stars,
+        visibility: demo.visibility,
+        htmlUrl: `https://github.com/${demo.fullName}`,
+        lastSyncAt: new Date(),
+      },
+      update: { lastSyncAt: new Date() },
+    })
+    await prisma.githubBranch.deleteMany({ where: { repoId: repo.id } })
+    await prisma.githubCommit.deleteMany({ where: { repoId: repo.id } })
+    await prisma.githubPullRequest.deleteMany({ where: { repoId: repo.id } })
+    for (const b of demoBranches(demo.id)) {
+      await prisma.githubBranch.create({
+        data: {
+          repoId: repo.id,
+          name: b.name,
+          isProtected: b.protected,
+          lastSha: b.lastCommitSha,
+          lastMessage: b.lastCommitMessage,
+        },
+      })
+    }
+    for (const c of demoCommits(demo.id)) {
+      await prisma.githubCommit.create({
+        data: {
+          repoId: repo.id,
+          sha: c.sha,
+          message: c.message,
+          author: c.author,
+          branch: c.branch,
+          committedAt: new Date(c.date),
+        },
+      })
+    }
+    for (const pr of demoPullRequests(demo.id)) {
+      await prisma.githubPullRequest.create({
+        data: {
+          repoId: repo.id,
+          number: pr.number,
+          title: pr.title,
+          state: pr.state,
+          author: pr.author,
+          baseBranch: pr.base,
+          headBranch: pr.head,
+          createdAt: new Date(pr.createdAt),
+        },
+      })
+    }
+  }
+
+  const whCount = await prisma.githubWebhook.count({ where: { accountId: githubAccount.id } })
+  if (whCount === 0) {
+    for (const wh of DEMO_WEBHOOKS) {
+      const repo = await prisma.githubRepository.findFirst({
+        where: { accountId: githubAccount.id, fullName: wh.repoFullName },
+      })
+      await prisma.githubWebhook.create({
+        data: {
+          id: `gh-wh-${wh.id}`,
+          accountId: githubAccount.id,
+          repoId: repo?.id,
+          event: wh.event,
+          url: wh.url,
+          secretRef: 'demo:secret',
+          isActive: wh.active,
+        },
+      })
+    }
+  }
+
+  const depCount = await prisma.githubDeployment.count()
+  if (depCount === 0) {
+    for (const d of DEMO_DEPLOYMENTS) {
+      const repo = await prisma.githubRepository.findFirst({
+        where: { fullName: d.repoFullName },
+      })
+      if (!repo) continue
+      await prisma.githubDeployment.create({
+        data: {
+          id: `gh-dep-${d.id}`,
+          repoId: repo.id,
+          branch: d.branch,
+          targetType: d.targetType,
+          targetId: d.targetName,
+          targetName: d.targetName,
+          status: d.status,
+          logs: `[demo] Despliegue ${d.repoFullName}@${d.branch}`,
+          finishedAt: d.status === 'success' ? new Date(d.createdAt) : null,
+          createdAt: new Date(d.createdAt),
+        },
+      })
+    }
+  }
+
   // ── Terraform ────────────────────────────────────────────────
   const tfWorkspace = await prisma.terraformWorkspace.upsert({
     where: { id: 'demo-tf-ws-aws' },

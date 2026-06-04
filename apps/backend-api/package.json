@@ -15,7 +15,9 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed.ts",
     "prisma:seed:demo": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed-demo.ts",
-    "prisma:seed:demo:reset": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed-demo.ts --reset"
+    "prisma:seed:demo:reset": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed-demo.ts --reset",
+    "github:demo:verify": "npx --yes tsx scripts/verify-github-demo-catalog.mjs",
+    "github:demo:test": "node scripts/test-github-demo.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-ec2": "^3.700.0",

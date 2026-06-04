@@ -9,4 +9,6 @@ fi
 echo "==> CloudOps — demo:seed (base + demo dataset)"
 ./scripts/seed.sh
 npm run prisma:seed:demo -w apps/backend-api
-echo "==> Demo seed complete. Login: demo@cloudops.local / Demo1234!"
+npm run github:demo:verify -w apps/backend-api
+echo "==> Demo seed complete. Login: admin@cloudops.local / Admin123!"
+echo "    GitHub: 8 repos ficticios en Repositorios → GitHub (cuenta cloudops-demo)"

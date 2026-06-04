@@ -450,3 +450,121 @@ model InstanceTemplate {
 
   @@map("instance_templates")
 }
+
+model GithubAccount {
+  id              String             @id @default(uuid())
+  label           String             @default("GitHub")
+  username        String
+  tokenRef        String             @map("token_ref")
+  status          String             @default("pending")
+  avatarUrl       String?            @map("avatar_url")
+  createdById     String?            @map("created_by_id")
+  lastValidatedAt DateTime?          @map("last_validated_at")
+  lastSyncAt      DateTime?          @map("last_sync_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  repositories    GithubRepository[]
+  webhooks        GithubWebhook[]
+
+  @@map("github_accounts")
+}
+
+model GithubRepository {
+  id            String              @id @default(uuid())
+  accountId     String              @map("account_id")
+  name          String
+  fullName      String              @map("full_name")
+  description   String?
+  defaultBranch String              @default("main") @map("default_branch")
+  language      String?
+  stars         Int                 @default(0)
+  visibility    String              @default("private")
+  htmlUrl       String?             @map("html_url")
+  lastSyncAt    DateTime?           @map("last_sync_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  account       GithubAccount       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  branches      GithubBranch[]
+  commits       GithubCommit[]
+  pullRequests  GithubPullRequest[]
+  deployments   GithubDeployment[]
+  webhooks      GithubWebhook[]
+
+  @@unique([accountId, fullName])
+  @@map("github_repositories")
+}
+
+model GithubBranch {
+  id          String           @id @default(uuid())
+  repoId      String           @map("repo_id")
+  name        String
+  isProtected Boolean          @default(false) @map("is_protected")
+  lastSha     String?          @map("last_sha")
+  lastMessage String?          @map("last_message")
+  repo        GithubRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, name])
+  @@map("github_branches")
+}
+
+model GithubCommit {
+  id          String           @id @default(uuid())
+  repoId      String           @map("repo_id")
+  sha         String
+  message     String
+  author      String
+  branch      String
+  committedAt DateTime         @map("committed_at")
+  repo        GithubRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@index([repoId, branch])
+  @@map("github_commits")
+}
+
+model GithubPullRequest {
+  id         String           @id @default(uuid())
+  repoId     String           @map("repo_id")
+  number     Int
+  title      String
+  state      String
+  author     String
+  baseBranch String           @map("base_branch")
+  headBranch String           @map("head_branch")
+  createdAt  DateTime         @map("created_at")
+  repo       GithubRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@unique([repoId, number])
+  @@map("github_pull_requests")
+}
+
+model GithubWebhook {
+  id        String            @id @default(uuid())
+  accountId String?           @map("account_id")
+  repoId    String?           @map("repo_id")
+  event     String
+  url       String
+  secretRef String?           @map("secret_ref")
+  isActive  Boolean           @default(true) @map("is_active")
+  createdAt DateTime          @default(now()) @map("created_at")
+  account   GithubAccount?    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  repo      GithubRepository? @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@map("github_webhooks")
+}
+
+model GithubDeployment {
+  id          String           @id @default(uuid())
+  repoId      String           @map("repo_id")
+  branch      String
+  targetType  String           @map("target_type")
+  targetId    String           @map("target_id")
+  targetName  String           @map("target_name")
+  status      String           @default("running")
+  logs        String?          @db.Text
+  createdById String?          @map("created_by_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  finishedAt  DateTime?        @map("finished_at")
+  repo        GithubRepository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  @@index([repoId, createdAt])
+  @@map("github_deployments")
+}

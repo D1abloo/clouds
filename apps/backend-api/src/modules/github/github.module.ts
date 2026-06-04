@@ -1,13 +1,32 @@
 import { Module, forwardRef } from '@nestjs/common'
 import { AuditModule } from '../audit/audit.module'
+import { NotificationsModule } from '../notifications/notifications.module'
 import { RealtimeModule } from '../realtime/realtime.module'
 import { GithubController } from './github.controller'
-import { GithubService } from './github.service'
+import { GithubAccountsService } from './github-accounts.service'
+import { GithubRepositoriesService } from './github-repositories.service'
+import { GithubBranchesService } from './github-branches.service'
+import { GithubCommitsService } from './github-commits.service'
+import { GithubPullRequestsService } from './github-pull-requests.service'
+import { GithubWebhooksService } from './github-webhooks.service'
+import { GithubDeploymentsService } from './github-deployments.service'
+import { GithubDemoService } from './github-demo.service'
+import { GithubSummaryService } from './github-summary.service'
 
 @Module({
-  imports: [AuditModule, forwardRef(() => RealtimeModule)],
+  imports: [AuditModule, NotificationsModule, forwardRef(() => RealtimeModule)],
   controllers: [GithubController],
-  providers: [GithubService],
-  exports: [GithubService],
+  providers: [
+    GithubDemoService,
+    GithubAccountsService,
+    GithubRepositoriesService,
+    GithubBranchesService,
+    GithubCommitsService,
+    GithubPullRequestsService,
+    GithubWebhooksService,
+    GithubDeploymentsService,
+    GithubSummaryService,
+  ],
+  exports: [GithubSummaryService, GithubAccountsService],
 })
 export class GithubModule {}

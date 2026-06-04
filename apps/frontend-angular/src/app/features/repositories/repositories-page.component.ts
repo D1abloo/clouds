@@ -9,7 +9,7 @@ import { MatSelectModule } from '@angular/material/select'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatCardModule } from '@angular/material/card'
-import { MatDialog, MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog'
+import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
@@ -20,21 +20,19 @@ import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.comp
 import { InventoryService } from '../../core/services/inventory.service'
 import {
   GithubService,
-  type DeployTargetType,
+  type GithubAccount,
   type GithubConnection,
   type GithubRepo,
 } from '../../core/services/github.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
-import { catchError, of } from 'rxjs'
-
-const DEPLOY_TARGETS: { id: string; name: string; type: DeployTargetType }[] = [
-  { id: 'aws-prod-app-1', name: 'aws-prod-app-1', type: 'instance' },
-  { id: 'vps-prod-nginx-01', name: 'vps-prod-nginx-01', type: 'vps' },
-  { id: 'docker-host-01', name: 'docker-host-01', type: 'docker' },
-  { id: 'cluster-prod-01', name: 'cluster-prod-01', type: 'kubernetes' },
-]
+import { catchError, of, switchMap } from 'rxjs'
+import { GithubAccountDialogComponent } from './components/github-account-dialog.component'
+import { GithubSyncStatusComponent } from './components/github-sync-status.component'
+import { DeployProjectDialogComponent } from './components/deploy-project-dialog.component'
+import { RepositoryDetailDrawerComponent } from './components/repository-detail-drawer.component'
+import { GithubLogsPanelComponent } from './components/github-logs-panel.component'
 
 const SECTION_TITLES: Record<string, { title: string; description: string }> = {
   github: {
@@ -47,68 +45,6 @@ const SECTION_TITLES: Record<string, { title: string; description: string }> = {
   commits: { title: 'Commits', description: 'Historial de commits' },
   'pull-requests': { title: 'Pull Requests', description: 'Pull requests abiertos y fusionados' },
   deployments: { title: 'Despliegues', description: 'Despliegues desde repositorios a instancias, VPS, Docker o K8s' },
-}
-
-@Component({
-  selector: 'app-repo-deploy-dialog',
-  standalone: true,
-  imports: [
-    MatDialogModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatInputModule,
-    MatButtonModule,
-    ReactiveFormsModule,
-  ],
-  template: `
-    <h2 mat-dialog-title>Desplegar repositorio</h2>
-    <mat-dialog-content>
-      <p class="deploy-hint">{{ data.repoName }}</p>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Rama</mat-label>
-        <input matInput [formControl]="branch" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Destino</mat-label>
-        <mat-select [formControl]="targetId">
-          @for (t of targets; track t.id) {
-            <mat-option [value]="t.id">{{ t.name }} ({{ targetLabel(t.type) }})</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close type="button">Cancelar</button>
-      <button mat-flat-button color="primary" type="button" [mat-dialog-close]="result()">Desplegar</button>
-    </mat-dialog-actions>
-  `,
-  styles: `
-    .full { width: 100%; }
-    .deploy-hint { margin: 0 0 1rem; color: var(--app-text-muted); font-size: 0.85rem; }
-  `,
-})
-export class RepoDeployDialogComponent {
-  readonly data = inject<{ repoName: string; defaultBranch: string }>(MAT_DIALOG_DATA)
-  readonly branch = new FormControl('', { nonNullable: true })
-
-  constructor() {
-    this.branch.setValue(this.data.defaultBranch)
-  }
-  readonly targetId = new FormControl(DEPLOY_TARGETS[0].id, { nonNullable: true })
-  readonly targets = DEPLOY_TARGETS
-
-  targetLabel = (t: DeployTargetType): string =>
-    ({ instance: 'Instancia', vps: 'VPS', docker: 'Docker', kubernetes: 'Kubernetes' })[t]
-
-  result = () => {
-    const target = DEPLOY_TARGETS.find((t) => t.id === this.targetId.value)!
-    return {
-      branch: this.branch.value,
-      targetType: target.type,
-      targetId: target.id,
-      targetName: target.name,
-    }
-  }
 }
 
 @Component({
@@ -125,6 +61,9 @@ export class RepoDeployDialogComponent {
     ErrorStateComponent,
     StatusBadgeComponent,
     NavIconComponent,
+    GithubSyncStatusComponent,
+    RepositoryDetailDrawerComponent,
+    GithubLogsPanelComponent,
     MatTableModule,
     MatFormFieldModule,
     MatInputModule,
@@ -159,35 +98,52 @@ export class RepoDeployDialogComponent {
             <div class="connect-card__head">
               <app-nav-icon logo="github" size="lg" />
               <div>
-                <strong>Cuenta GitHub</strong>
-                @if (connection()?.connected) {
-                  <p>Conectado como <strong>{{ connection()?.username }}</strong>
-                    @if (connection()?.lastSyncAt) {
-                      · Última sync {{ connection()?.lastSyncAt | date: 'short' }}
-                    }
-                  </p>
+                <strong>Cuentas GitHub</strong>
+                @if (primaryAccount()) {
+                  <p>Activa: <strong>{{ primaryAccount()!.username }}</strong> ({{ primaryAccount()!.label }})</p>
                 } @else {
-                  <p>No hay cuenta conectada. Usa el token demo o conéctate en modo demostración.</p>
+                  <p>No hay cuenta. Añade una cuenta o usa el modo demostración.</p>
                 }
               </div>
             </div>
+            <app-github-sync-status
+              [status]="syncStatus()"
+              [lastSyncAt]="connection()?.lastSyncAt ?? primaryAccount()?.lastSyncAt ?? null"
+              [repoCount]="connection()?.repoCount ?? repos().length"
+            />
+            @if (demoMode()) {
+              <p class="demo-badge">Modo demo — {{ repos().length }} repositorios ficticios disponibles</p>
+            }
             <div class="connect-card__actions">
-              @if (!connection()?.connected) {
-                <button mat-flat-button color="primary" type="button" (click)="handleConnect()">
-                  <mat-icon>link</mat-icon> Conectar GitHub
+              <button mat-flat-button color="primary" type="button" (click)="openAddAccount()">
+                <mat-icon>person_add</mat-icon> Añadir cuenta
+              </button>
+              @if (primaryAccount()) {
+                <button mat-stroked-button type="button" (click)="handleValidate()">
+                  <mat-icon>verified</mat-icon> Validar
                 </button>
-              } @else {
                 <button mat-stroked-button type="button" (click)="handleSync()">
-                  <mat-icon>sync</mat-icon> Sincronizar repos
+                  <mat-icon>sync</mat-icon> Sincronizar
                 </button>
                 <button mat-stroked-button type="button" (click)="handleDisconnect()">
-                  <mat-icon>link_off</mat-icon> Desconectar
+                  <mat-icon>link_off</mat-icon> Eliminar cuenta
+                </button>
+              } @else {
+                <button mat-stroked-button type="button" (click)="handleQuickConnect()">
+                  <mat-icon>link</mat-icon> Conectar demo
                 </button>
               }
             </div>
+            @if (accounts().length > 1) {
+              <ul class="account-list">
+                @for (a of accounts(); track a.id) {
+                  <li>{{ a.label }} — {{ a.username }} ({{ a.status }})</li>
+                }
+              </ul>
+            }
           </mat-card>
 
-          @if (connection()?.connected) {
+          @if (repos().length || demoMode()) {
             <div class="table-card">
               <h3>Repositorios sincronizados</h3>
               <mat-form-field appearance="outline" class="repo-select">
@@ -219,13 +175,21 @@ export class RepoDeployDialogComponent {
                   <ng-container matColumnDef="actions">
                     <th mat-header-cell *matHeaderCellDef>Acciones</th>
                     <td mat-cell *matCellDef="let row">
-                      <button mat-stroked-button type="button" (click)="selectRepo(row.id); openDeploy(row)">
+                      <button mat-stroked-button type="button" (click)="openDrawer(row); $event.stopPropagation()">
+                        <mat-icon>info</mat-icon> Detalle
+                      </button>
+                      <button mat-stroked-button type="button" (click)="openDeploy(row); $event.stopPropagation()">
                         <mat-icon>rocket_launch</mat-icon> Desplegar
                       </button>
                     </td>
                   </ng-container>
                   <tr mat-header-row *matHeaderRowDef="repoCols"></tr>
-                  <tr mat-row *matRowDef="let row; columns: repoCols" (click)="selectRepo(row.id)"></tr>
+                  <tr
+                    mat-row
+                    *matRowDef="let row; columns: repoCols"
+                    class="clickable-row"
+                    (click)="openDrawer(row)"
+                  ></tr>
                 </table>
               </div>
             </div>
@@ -369,13 +333,35 @@ export class RepoDeployDialogComponent {
                 <th mat-header-cell *matHeaderCellDef>Fecha</th>
                 <td mat-cell *matCellDef="let row">{{ row.createdAt | date: 'short' }}</td>
               </ng-container>
+              <ng-container matColumnDef="logs">
+                <th mat-header-cell *matHeaderCellDef>Registros</th>
+                <td mat-cell *matCellDef="let row">
+                  <button mat-button type="button" (click)="viewLogs(row)">Ver logs</button>
+                </td>
+              </ng-container>
               <tr mat-header-row *matHeaderRowDef="deployCols"></tr>
               <tr mat-row *matRowDef="let row; columns: deployCols"></tr>
             </table>
+            <app-github-logs-panel
+              [open]="logsOpen()"
+              [logs]="logsText()"
+              [title]="logsTitle()"
+              (close)="closeLogs()"
+            />
           </div>
         }
       }
     </div>
+
+    <app-repository-detail-drawer
+      [open]="drawerOpen()"
+      [repo]="drawerRepo()"
+      [branches]="branches()"
+      [commits]="commits()"
+      (close)="closeDrawer()"
+      (sync)="handleRepoSync($event)"
+      (deploy)="openDeploy($event)"
+    />
   `,
   styles: `
     .connect-card {
@@ -387,14 +373,21 @@ export class RepoDeployDialogComponent {
       display: flex;
       gap: 1rem;
       align-items: flex-start;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
       p { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--app-text-muted); }
     }
     .connect-card__actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
+      margin-top: 0.85rem;
       button { display: inline-flex; align-items: center; gap: 0.35rem; }
+    }
+    .account-list {
+      margin: 0.75rem 0 0;
+      padding-left: 1.1rem;
+      font-size: 0.8rem;
+      color: var(--app-text-muted);
     }
     .table-card {
       padding: 1.15rem 1.25rem;
@@ -406,6 +399,13 @@ export class RepoDeployDialogComponent {
     }
     .repo-select { width: min(100%, 420px); margin-bottom: 1rem; }
     .mono { font-family: ui-monospace, monospace; font-size: 0.78rem; }
+    .clickable-row { cursor: pointer; }
+    .demo-badge {
+      margin: 0.65rem 0 0;
+      font-size: 0.8rem;
+      color: var(--app-primary, #1565c0);
+      font-weight: 500;
+    }
   `,
 })
 export class RepositoriesPageComponent implements OnInit {
@@ -418,6 +418,7 @@ export class RepositoriesPageComponent implements OnInit {
   readonly page = createPageLoader(true)
   readonly data = signal<Record<string, unknown> | null>(null)
   readonly connection = signal<GithubConnection | null>(null)
+  readonly accounts = signal<GithubAccount[]>([])
   readonly repos = signal<GithubRepo[]>([])
   readonly selectedRepoId = signal<string | null>(null)
   readonly branches = signal<Record<string, unknown>[]>([])
@@ -425,6 +426,12 @@ export class RepositoriesPageComponent implements OnInit {
   readonly pullRequests = signal<Record<string, unknown>[]>([])
   readonly webhooks = signal<Record<string, unknown>[]>([])
   readonly deployments = signal<Record<string, unknown>[]>([])
+  readonly drawerOpen = signal(false)
+  readonly drawerRepo = signal<GithubRepo | null>(null)
+  readonly logsOpen = signal(false)
+  readonly logsText = signal('')
+  readonly logsTitle = signal('')
+  readonly demoMode = signal(false)
 
   readonly repoControl = new FormControl<string>('', { nonNullable: true })
 
@@ -433,18 +440,34 @@ export class RepositoriesPageComponent implements OnInit {
   readonly branchCols = ['name', 'protected', 'commit']
   readonly commitCols = ['sha', 'message', 'author', 'branch', 'date']
   readonly prCols = ['number', 'title', 'state', 'author', 'branches']
-  readonly deployCols = ['repo', 'branch', 'target', 'status', 'date']
+  readonly deployCols = ['repo', 'branch', 'target', 'status', 'date', 'logs']
 
   readonly section = computed(() => this.route.snapshot.paramMap.get('section') ?? 'github')
 
   readonly headerMeta = computed(() => SECTION_TITLES[this.section()] ?? SECTION_TITLES['github'])
+
+  readonly primaryAccount = computed(() => {
+    const connected = this.accounts().find((a) => a.status === 'connected')
+    return connected ?? this.accounts()[0] ?? null
+  })
+
+  readonly syncStatus = computed((): 'connected' | 'pending' | 'invalid' | 'disconnected' => {
+    if (this.connection()?.connected) return 'connected'
+    const acc = this.primaryAccount()
+    if (!acc) return 'disconnected'
+    if (acc.status === 'connected') return 'connected'
+    if (acc.status === 'invalid') return 'invalid'
+    return 'pending'
+  })
 
   readonly needsRepo = (): boolean =>
     ['branches', 'commits', 'pull-requests'].includes(this.section())
 
   ngOnInit(): void {
     this.load()
+    this.refreshAccounts()
     this.loadConnection()
+    this.loadDemoRepos()
     this.github.webhooks().subscribe((w) => this.webhooks.set(w.items))
     this.github.deployments().subscribe((d) => this.deployments.set(d.items))
     this.repoControl.valueChanges.subscribe((id) => {
@@ -462,13 +485,24 @@ export class RepositoriesPageComponent implements OnInit {
       onSuccess: (d) => {
         this.data.set(d)
         const items = (d['repoItems'] as GithubRepo[]) ?? []
-        if (items.length && !this.selectedRepoId()) {
+        if (items.length) {
           this.repos.set(items)
-          this.repoControl.setValue(items[0].id)
+          this.demoMode.set(!!d['demoMode'] || !!(d['username'] as string | null))
+          if (!this.selectedRepoId()) {
+            this.repoControl.setValue(items[0].id)
+            this.loadRepoDetails(items[0].id)
+          }
         }
       },
       errorMessage: 'No se pudo cargar el inventario de repositorios',
     })
+  }
+
+  refreshAccounts = (): void => {
+    this.github
+      .accounts()
+      .pipe(catchError(() => of({ items: [] as GithubAccount[] })))
+      .subscribe((r) => this.accounts.set(r.items))
   }
 
   loadConnection = (): void => {
@@ -477,40 +511,117 @@ export class RepositoriesPageComponent implements OnInit {
       .pipe(catchError(() => of({ connected: false, username: null, repoCount: 0 })))
       .subscribe((c) => {
         this.connection.set(c)
-        if (c.connected) this.refreshRepos()
+        if ((c as GithubConnection & { demoMode?: boolean }).demoMode) this.demoMode.set(true)
+        if (c.connected || c.repoCount > 0) this.refreshRepos()
+        else this.loadDemoRepos()
       })
   }
 
   refreshRepos = (): void => {
     this.github.repositories().subscribe((r) => {
       this.repos.set(r.items)
+      this.demoMode.set(!!(r as { demoMode?: boolean }).demoMode || r.items.length > 0)
       if (r.items.length && !this.repoControl.value) {
         this.repoControl.setValue(r.items[0].id)
+        this.loadRepoDetails(r.items[0].id)
       }
     })
   }
 
-  handleConnect = (): void => {
+  loadDemoRepos = (): void => {
+    this.github
+      .repositories()
+      .pipe(catchError(() => this.github.demoRepos()))
+      .subscribe((r) => {
+        if (r.items.length) {
+          this.repos.set(r.items)
+          this.demoMode.set(true)
+          if (!this.repoControl.value) {
+            this.repoControl.setValue(r.items[0].id)
+            this.loadRepoDetails(r.items[0].id)
+          }
+        }
+      })
+  }
+
+  openAddAccount = (): void => {
+    const ref = this.dialog.open(GithubAccountDialogComponent, { width: '440px' })
+    ref.afterClosed().subscribe((body) => {
+      if (!body) return
+      this.github
+        .createAccount(body)
+        .pipe(
+          switchMap((acc) =>
+            this.github.validateAccount(acc.id).pipe(switchMap(() => this.github.syncAccount(acc.id))),
+          ),
+        )
+        .subscribe({
+          next: () => {
+            this.demoActions.simulate('Cuenta añadida', 500, 'Validada y sincronizada').subscribe()
+            this.refreshAccounts()
+            this.loadConnection()
+            this.handleSync()
+          },
+        })
+    })
+  }
+
+  handleQuickConnect = (): void => {
     this.github.connect({ username: 'cloudops-demo' }).subscribe({
       next: (c) => {
         this.connection.set(c)
         this.demoActions.simulate('Cuenta GitHub conectada', 400, c.message ?? 'Conectado').subscribe()
+        this.refreshAccounts()
         this.handleSync()
       },
     })
   }
 
+  handleValidate = (): void => {
+    const acc = this.primaryAccount()
+    if (!acc) return
+    this.github.validateAccount(acc.id).subscribe({
+      next: (r) => this.demoActions.simulate('Validación', 400, r.message).subscribe(),
+    })
+  }
+
   handleDisconnect = (): void => {
-    this.github.disconnect().subscribe({
+    const acc = this.primaryAccount()
+    if (!acc) {
+      this.github.disconnect().subscribe(() => this.resetConnection())
+      return
+    }
+    this.github.deleteAccount(acc.id).subscribe({
       next: () => {
-        this.connection.set({ connected: false, username: null, repoCount: 0 })
-        this.repos.set([])
-        this.demoActions.simulate('GitHub desconectado', 300).subscribe()
+        this.resetConnection()
+        this.demoActions.simulate('Cuenta eliminada', 300).subscribe()
       },
     })
   }
 
+  resetConnection = (): void => {
+    this.connection.set({ connected: false, username: null, repoCount: 0 })
+    this.repos.set([])
+    this.accounts.set([])
+    this.refreshAccounts()
+  }
+
   handleSync = (): void => {
+    const acc = this.primaryAccount()
+    if (acc) {
+      this.github.syncAccount(acc.id).subscribe({
+        next: (res) => {
+          this.refreshRepos()
+          this.loadConnection()
+          this.load()
+          this.demoActions.simulate('Sincronización', 600, `${res.synced} repositorios`).subscribe()
+        },
+        error: (err) => {
+          this.demoActions.simulate('Error', 300, err?.error?.message ?? 'Error al sincronizar').subscribe()
+        },
+      })
+      return
+    }
     this.github.sync().subscribe({
       next: (res) => {
         this.repos.set(res.repos)
@@ -518,9 +629,19 @@ export class RepositoriesPageComponent implements OnInit {
         this.demoActions.simulate('Sincronización GitHub', 600, `${res.synced} repositorios`).subscribe()
         if (res.repos.length) this.repoControl.setValue(res.repos[0].id)
         this.load()
+        this.refreshAccounts()
       },
       error: (err) => {
         this.demoActions.simulate('Error sync', 300, err?.error?.message ?? 'Conecta primero').subscribe()
+      },
+    })
+  }
+
+  handleRepoSync = (repoId: string): void => {
+    this.github.syncRepository(repoId).subscribe({
+      next: () => {
+        this.loadRepoDetails(repoId)
+        this.demoActions.simulate('Repositorio sincronizado', 400).subscribe()
       },
     })
   }
@@ -536,34 +657,63 @@ export class RepositoriesPageComponent implements OnInit {
     this.github.pullRequests(repoId).subscribe((p) => this.pullRequests.set(p.items))
   }
 
+  openDrawer = (repo: GithubRepo): void => {
+    this.selectRepo(repo.id)
+    this.loadRepoDetails(repo.id)
+    this.drawerRepo.set(repo)
+    this.drawerOpen.set(true)
+  }
+
+  closeDrawer = (): void => {
+    this.drawerOpen.set(false)
+    this.drawerRepo.set(null)
+  }
+
   openDeploy = (repo: GithubRepo): void => {
-    const ref = this.dialog.open(RepoDeployDialogComponent, {
+    const ref = this.dialog.open(DeployProjectDialogComponent, {
       width: '420px',
       data: { repoName: repo.fullName, defaultBranch: repo.defaultBranch },
     })
     ref.afterClosed().subscribe((result) => {
       if (!result) return
-      this.github
-        .deploy({
-          repoId: repo.id,
-          branch: result.branch,
-          targetType: result.targetType,
-          targetId: result.targetId,
-          targetName: result.targetName,
-        })
-        .subscribe({
-          next: (res) => {
-            this.demoActions.simulate('Despliegue', 800, res.message).subscribe()
-            this.github.deployments().subscribe((d) => this.deployments.set(d.items))
-          },
-        })
+      this.github.deployRepository(repo.id, result).subscribe({
+        next: (res) => {
+          this.demoActions.simulate('Despliegue', 800, res.message).subscribe()
+          this.github.deployments().subscribe((d) => this.deployments.set(d.items))
+          if (res.deployment?.['id']) {
+            this.viewLogs({ id: res.deployment['id'], repoFullName: repo.fullName })
+          }
+        },
+      })
     })
   }
+
+  viewLogs = (row: Record<string, unknown>): void => {
+    const id = String(row['id'] ?? '')
+    this.logsTitle.set(String(row['repoFullName'] ?? ''))
+    if (row['logs']) {
+      this.logsText.set(String(row['logs']))
+      this.logsOpen.set(true)
+      return
+    }
+    this.github.deploymentLogs(id).subscribe({
+      next: (r) => {
+        this.logsText.set(r.logs)
+        this.logsOpen.set(true)
+      },
+      error: () => {
+        this.logsText.set('No hay registros para este despliegue.')
+        this.logsOpen.set(true)
+      },
+    })
+  }
+
+  closeLogs = (): void => this.logsOpen.set(false)
 
   headerActions = (): { label: string; icon?: string; primary?: boolean }[] => {
     if (this.section() === 'github') {
       return [
-        { label: 'Conectar GitHub', icon: 'link', primary: true },
+        { label: 'Añadir cuenta', icon: 'person_add', primary: true },
         { label: 'Sincronizar', icon: 'sync' },
         { label: 'Desplegar', icon: 'rocket_launch' },
       ]
@@ -572,7 +722,7 @@ export class RepositoriesPageComponent implements OnInit {
   }
 
   handleHeader = (label: string): void => {
-    if (label === 'Conectar GitHub') this.handleConnect()
+    if (label === 'Añadir cuenta') this.openAddAccount()
     else if (label === 'Sincronizar') this.handleSync()
     else if (label === 'Desplegar') {
       const repo = this.repos().find((r) => r.id === this.selectedRepoId()) ?? this.repos()[0]

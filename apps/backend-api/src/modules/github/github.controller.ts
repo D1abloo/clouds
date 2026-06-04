@@ -1,76 +1,184 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common'
+import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
-import { GithubService } from './github.service'
+import { GithubAccountsService } from './github-accounts.service'
+import { GithubRepositoriesService } from './github-repositories.service'
+import { GithubBranchesService } from './github-branches.service'
+import { GithubCommitsService } from './github-commits.service'
+import { GithubPullRequestsService } from './github-pull-requests.service'
+import { GithubWebhooksService } from './github-webhooks.service'
+import { GithubDeploymentsService } from './github-deployments.service'
+import { GithubDemoService } from './github-demo.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('GitHub')
 @ApiBearerAuth()
 @Controller('github')
 export class GithubController {
-  constructor(private readonly service: GithubService) {}
+  constructor(
+    private readonly accounts: GithubAccountsService,
+    private readonly repositories: GithubRepositoriesService,
+    private readonly branches: GithubBranchesService,
+    private readonly commits: GithubCommitsService,
+    private readonly pullRequests: GithubPullRequestsService,
+    private readonly webhooks: GithubWebhooksService,
+    private readonly deployments: GithubDeploymentsService,
+    private readonly demo: GithubDemoService,
+  ) {}
 
+  @Get('demo/repos')
+  @ApiOperation({ summary: 'Repositorios ficticios del modo demo' })
+  demoRepos() {
+    return {
+      demoMode: true,
+      count: this.demo.listMemoryRepos().length,
+      items: this.demo.listMemoryRepos(),
+    }
+  }
+
+  // ── Accounts (new API) ─────────────────────────────────────
+  @Get('accounts')
+  @ApiOperation({ summary: 'Listar cuentas GitHub' })
+  listAccounts() {
+    return this.accounts.list()
+  }
+
+  @Post('accounts')
+  createAccount(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: { label?: string; username?: string; token?: string },
+  ) {
+    return this.accounts.create(user.sub, body)
+  }
+
+  @Post('accounts/:id/validate')
+  validateAccount(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.accounts.validate(user.sub, id)
+  }
+
+  @Post('accounts/:id/sync')
+  syncAccount(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.accounts.sync(user.sub, id)
+  }
+
+  @Delete('accounts/:id')
+  deleteAccount(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.accounts.remove(user.sub, id)
+  }
+
+  // ── Legacy connection aliases ──────────────────────────────
   @Get('connection')
-  @ApiOperation({ summary: 'Estado de conexión GitHub' })
   connection(@CurrentUser() user: JwtPayload) {
-    return this.service.getConnection(user.sub)
+    return this.accounts.getLegacyConnection(user.sub)
   }
 
   @Post('connect')
   connect(@CurrentUser() user: JwtPayload, @Body() body: { token?: string; username?: string }) {
-    return this.service.connect(user.sub, body)
+    return this.accounts.legacyConnect(user.sub, body)
   }
 
   @Post('disconnect')
   disconnect(@CurrentUser() user: JwtPayload) {
-    return this.service.disconnect(user.sub)
+    return this.accounts.legacyDisconnect(user.sub)
   }
 
   @Post('sync')
-  sync(@CurrentUser() user: JwtPayload) {
-    return this.service.syncRepositories(user.sub)
+  async legacySync(@CurrentUser() user: JwtPayload) {
+    const conn = await this.accounts.getLegacyConnection(user.sub)
+    if (!conn.accountId) {
+      await this.accounts.legacyConnect(user.sub, {})
+      const accountId = (await this.accounts.getLegacyConnection(user.sub)).accountId!
+      const sync = await this.accounts.sync(user.sub, accountId)
+      const repos = await this.repositories.list()
+      return { synced: sync.synced, repos: repos.items, lastSyncAt: sync.lastSyncAt }
+    }
+    const sync = await this.accounts.sync(user.sub, conn.accountId)
+    const repos = await this.repositories.list()
+    return { synced: sync.synced, repos: repos.items, lastSyncAt: sync.lastSyncAt }
   }
 
+  // ── Repositories ───────────────────────────────────────────
   @Get('repositories')
-  repositories(@CurrentUser() user: JwtPayload) {
-    return this.service.listRepositories(user.sub)
+  listRepositories(@Query('accountId') accountId?: string) {
+    return this.repositories.list(accountId)
   }
 
-  @Get('repositories/:repoId')
-  repository(@CurrentUser() user: JwtPayload, @Param('repoId') repoId: string) {
-    return this.service.getRepository(user.sub, repoId)
+  @Get('repositories/:id')
+  getRepository(@Param('id') id: string) {
+    return this.repositories.getOne(id)
   }
 
-  @Get('repositories/:repoId/branches')
-  branches(@CurrentUser() user: JwtPayload, @Param('repoId') repoId: string) {
-    return this.service.listBranches(user.sub, repoId)
+  @Post('repositories/:id/sync')
+  syncRepository(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.repositories.syncOne(user.sub, id)
   }
 
-  @Get('repositories/:repoId/commits')
-  commits(
+  @Get('repositories/:id/branches')
+  listBranches(@Param('id') id: string) {
+    return this.branches.listByRepo(id)
+  }
+
+  @Get('repositories/:id/commits')
+  listCommits(@Param('id') id: string, @Query('branch') branch?: string) {
+    return this.commits.listByRepo(id, branch)
+  }
+
+  @Get('repositories/:id/pull-requests')
+  listPullRequests(@Param('id') id: string) {
+    return this.pullRequests.listByRepo(id)
+  }
+
+  @Get('repositories/:id/webhooks')
+  listRepoWebhooks(@Param('id') id: string) {
+    return this.webhooks.listByRepo(id)
+  }
+
+  @Post('repositories/:id/deploy')
+  deployRepository(
     @CurrentUser() user: JwtPayload,
-    @Param('repoId') repoId: string,
-    @Query('branch') branch?: string,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      branch: string
+      targetType: 'instance' | 'vps' | 'docker' | 'kubernetes'
+      targetId: string
+      targetName?: string
+    },
   ) {
-    return this.service.listCommits(user.sub, repoId, branch)
+    return this.deployments.deploy(user.sub, id, body)
   }
 
-  @Get('repositories/:repoId/pull-requests')
-  pullRequests(@CurrentUser() user: JwtPayload, @Param('repoId') repoId: string) {
-    return this.service.listPullRequests(user.sub, repoId)
-  }
-
+  // ── Webhooks ───────────────────────────────────────────────
   @Get('webhooks')
-  webhooks() {
-    return this.service.listWebhooks()
+  listWebhooks() {
+    return this.webhooks.listAll()
   }
 
+  @Post('webhooks')
+  createWebhook(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: { repoId?: string; accountId?: string; event: string; url: string; secret?: string },
+  ) {
+    return this.webhooks.create(user.sub, body)
+  }
+
+  @Delete('webhooks/:id')
+  deleteWebhook(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.webhooks.remove(user.sub, id)
+  }
+
+  // ── Deployments ────────────────────────────────────────────
   @Get('deployments')
-  deployments(@CurrentUser() user: JwtPayload) {
-    return this.service.listDeployments(user.sub)
+  listDeployments() {
+    return this.deployments.listAll()
+  }
+
+  @Get('deployments/:id/logs')
+  deploymentLogs(@Param('id') id: string) {
+    return this.deployments.getLogs(id)
   }
 
   @Post('deploy')
-  deploy(
+  legacyDeploy(
     @CurrentUser() user: JwtPayload,
     @Body()
     body: {
@@ -81,6 +189,6 @@ export class GithubController {
       targetName?: string
     },
   ) {
-    return this.service.deploy(user.sub, body)
+    return this.deployments.deploy(user.sub, body.repoId, body)
   }
 }

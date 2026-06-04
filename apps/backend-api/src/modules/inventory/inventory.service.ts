@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { CloudProvider } from '@prisma/client'
-import {
-  DEMO_DEPLOYMENTS,
-  DEMO_GITHUB_REPOS,
-  DEMO_WEBHOOKS,
-} from '../github/github-demo.data'
+import { GithubSummaryService } from '../github/github-summary.service'
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly githubSummarySvc: GithubSummaryService,
+  ) {}
 
   async dockerSummary() {
     const [hosts, containers] = await Promise.all([
@@ -88,18 +87,7 @@ export class InventoryService {
   }
 
   async githubSummary() {
-    return {
-      connected: false,
-      username: null,
-      repoCount: DEMO_GITHUB_REPOS.length,
-      branchCount: DEMO_GITHUB_REPOS.length * 3,
-      commitCount: DEMO_GITHUB_REPOS.length * 3,
-      openPullRequests: 4,
-      webhookCount: DEMO_WEBHOOKS.length,
-      deploymentCount: DEMO_DEPLOYMENTS.length,
-      repoItems: DEMO_GITHUB_REPOS,
-      lastSyncAt: null,
-    }
+    return this.githubSummarySvc.summaryForInventory()
   }
 
   async jenkinsSummary() {
