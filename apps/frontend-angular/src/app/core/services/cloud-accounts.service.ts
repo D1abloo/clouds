@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable, map } from 'rxjs'
+import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { CloudAccount, CloudProvider } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
+import { demoCloudAccounts } from '../demo/demo-fallback.data'
 
 export interface CreateCloudAccountPayload {
   projectId: string
@@ -31,9 +32,13 @@ export class CloudAccountsService {
     this.api.get('cloud-accounts/meta/default-project')
 
   list = (projectId?: string, provider?: CloudProvider): Observable<CloudAccount[]> =>
-    this.api
-      .get<unknown>('cloud-accounts', { projectId, provider })
-      .pipe(map((res) => unwrapList<CloudAccount>(res)))
+    this.api.get<unknown>('cloud-accounts', { projectId, provider }).pipe(
+      map((res) => {
+        const rows = unwrapList<CloudAccount>(res)
+        return rows.length ? rows : demoCloudAccounts(provider)
+      }),
+      catchError(() => of(demoCloudAccounts(provider))),
+    )
 
   get = (id: string): Observable<CloudAccount> => this.api.get<CloudAccount>(`cloud-accounts/${id}`)
 

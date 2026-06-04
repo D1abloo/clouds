@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable, map } from 'rxjs'
+import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { CloudProvider, Instance } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
+import { demoInstances } from '../demo/demo-fallback.data'
 
 @Injectable({ providedIn: 'root' })
 export class InstancesService {
@@ -18,8 +19,10 @@ export class InstancesService {
       map((res) => {
         const list = unwrapList<Instance>(res)
         if (list.length) return list
-        return flattenGroupedInstances(res)
+        const grouped = flattenGroupedInstances(res)
+        return grouped.length ? grouped : demoInstances()
       }),
+      catchError(() => of(demoInstances())),
     )
 
   getOne = (id: string): Observable<Instance> =>

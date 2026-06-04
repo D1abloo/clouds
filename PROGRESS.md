@@ -1,8 +1,59 @@
 # CloudOps Control Center — Progress Tracker
 
 Plan maestro: `prompts_cursor_por_fases.md`  
-Última ejecución: 2026-06-04  
-**Fase actual:** Módulos avanzados Fase 28 (completado)
+Última ejecución: 2026-06-02  
+**Fase actual:** Pulido final Fase 29 (completado)
+
+---
+
+## Fase 29 — Pulido final (UI, demo, loaders, docs) ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Objetivo:** Pulir diseño global, eliminar bordes duros, conectar sidebar, demo completo, corregir loaders y documentar.
+
+### Pulido visual
+
+- Tema light **borderless** (`--app-border: transparent`)
+- Tablas con headers tintados, hover por fila, sin bordes
+- Topbar con sombra suave (sin `border-bottom`)
+- Paleta `--chart-vivid-*` en light theme
+- Clases `.soft-panel`, `.btn-hover-lift`
+
+### Pantallas pulidas
+
+- Dashboard: rutas cloud corregidas, sección **Global health**, refresh con fallback demo
+- Topbar: breadcrumbs para todas las rutas del sidebar
+- Command palette: 24 destinos incluyendo módulos avanzados
+- Platform modules: loader con timeout 5s, nunca infinito
+
+### Funcionalidades conectadas
+
+- Todas las opciones del sidebar → rutas reales (ver [docs/functionality-status.md](docs/functionality-status.md))
+- Botones Refresh/Sync/Export → acción real o `DemoActionsService`
+- Help topbar → `/settings/general`
+
+### Datos demo añadidos
+
+- `core/demo/demo-fallback.data.ts` — alerts, billing, VPS, audit, notifications, instances, cloud accounts
+- Servicios HTTP con `catchError` + listas vacías → demo
+
+### Loaders corregidos
+
+- `createPageLoader`: timeout 20s + `finalize()` + opción `fallback`
+- Dashboard refresh: `catchError` → demo dashboard
+- Platform module page: timeout 5s
+
+### Documentación
+
+- [docs/design-system.md](docs/design-system.md)
+- [docs/functionality-status.md](docs/functionality-status.md)
+- [docs/demo-mode.md](docs/demo-mode.md) — sección fallback frontend
+
+### Errores pendientes
+
+- Webhooks: redirect a API Tokens (panel dedicado opcional)
+- Roles admin: section-hub genérico (funcional)
 
 ---
 

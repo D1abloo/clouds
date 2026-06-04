@@ -110,6 +110,8 @@ npm run seed:demo      # Base seed + dataset demo completo
 | [Billing](docs/billing.md) | Facturación cloud |
 | [Sidebar modules](docs/sidebar-modules.md) | Navegación lateral y módulos Fase 27 |
 | [Advanced modules](docs/advanced-modules.md) | Resource Explorer, Topology, Copilot, Runbooks… Fase 28 |
+| [Design system](docs/design-system.md) | Tokens, borderless UI, componentes Fase 29 |
+| [Functionality status](docs/functionality-status.md) | Estado de cada módulo y botones Fase 29 |
 | [Despliegue local](docs/despliegue-local.md) | Docker Compose |
 | [Kubernetes](docs/despliegue-kubernetes.md) | Manifests K8s |
 | [Runbook](docs/runbook.md) | Operaciones |

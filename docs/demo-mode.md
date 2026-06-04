@@ -77,3 +77,17 @@ docker compose -f infra/docker-compose.yml exec postgres psql -U cloudops -d clo
 npm run prisma:migrate
 npm run demo:seed
 ```
+
+## Fallback automático en frontend (Fase 29)
+
+Aunque el backend no esté disponible, el frontend Angular carga datos demo automáticamente:
+
+| Servicio | Fallback |
+|----------|----------|
+| Dashboard | `buildDemoDashboard()` |
+| Instances, VPS, Alerts, Billing, Audit, Notifications | `core/demo/demo-fallback.data.ts` |
+| Cloud accounts | Cuentas demo por proveedor |
+| Docker, K8s, Jenkins, Terraform | `InventoryService` con `catchError` |
+
+Los loaders usan timeout de 20s y siempre cierran con `finalize()`. Ver [docs/functionality-status.md](functionality-status.md).
+

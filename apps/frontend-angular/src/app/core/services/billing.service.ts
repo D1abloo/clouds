@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable, map } from 'rxjs'
+import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { BillingSummary, CloudProvider } from '../models/api.models'
+import { demoBillingSummary } from '../demo/demo-fallback.data'
 
 @Injectable({ providedIn: 'root' })
 export class BillingService {
@@ -27,6 +28,7 @@ export class BillingService {
           varianceVsPreviousMonth: raw['varianceVsPreviousMonth'] as number | undefined,
         } satisfies BillingSummary
       }),
+      catchError(() => of(demoBillingSummary())),
     )
 
   sync = (provider: CloudProvider, accountId: string): Observable<unknown> =>

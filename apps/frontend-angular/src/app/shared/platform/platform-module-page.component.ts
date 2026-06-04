@@ -17,7 +17,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatMenuModule } from '@angular/material/menu'
 import { MatDialog } from '@angular/material/dialog'
-import { debounceTime, startWith, delay, of } from 'rxjs'
+import { debounceTime, startWith, delay, of, timeout, finalize } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../components/page-header/page-header.component'
 import { SummaryCardComponent } from '../components/summary-card/summary-card.component'
@@ -280,13 +280,14 @@ export class PlatformModulePageComponent implements OnInit {
     this.loading.set(true)
     this.error.set(null)
     of(true)
-      .pipe(delay(400))
+      .pipe(
+        delay(400),
+        timeout(5000),
+        finalize(() => this.loading.set(false)),
+      )
       .subscribe({
-        next: () => this.loading.set(false),
-        error: () => {
-          this.loading.set(false)
-          this.error.set('Failed to load module data (demo)')
-        },
+        next: () => {},
+        error: () => {},
       })
   }
 

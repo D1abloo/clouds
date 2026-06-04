@@ -224,7 +224,8 @@ interface PaletteItem {
       display: flex;
       gap: 1.25rem;
       padding: 0.6rem 1rem;
-      border-top: 0.5px solid var(--sidebar-border);
+      border-top: none;
+      box-shadow: 0 -1px 0 color-mix(in srgb, var(--app-text-muted) 8%, transparent);
       font-size: 0.68rem;
       color: var(--sidebar-text-faint);
 
@@ -251,20 +252,29 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
 
   private readonly allItems: PaletteItem[] = [
     { label: 'Dashboard', description: 'Overview of all resources', icon: 'dashboard', action: () => this.router.navigate(['/dashboard']) },
-    { label: 'AWS Accounts', description: 'Manage Amazon Web Services', icon: 'cloud', action: () => this.router.navigate(['/cloud/aws']) },
-    { label: 'GCP Accounts', description: 'Manage Google Cloud Platform', icon: 'cloud', action: () => this.router.navigate(['/cloud/gcp']) },
-    { label: 'Azure Accounts', description: 'Manage Microsoft Azure', icon: 'cloud', action: () => this.router.navigate(['/cloud/azure']) },
-    { label: 'VPS / Bare Metal', description: 'External VPS and servers', icon: 'dns', action: () => this.router.navigate(['/vps']) },
-    { label: 'SSH Terminal', description: 'Open web terminal', icon: 'terminal', action: () => this.router.navigate(['/ssh']) },
-    { label: 'Docker', description: 'Container management', icon: 'view_in_ar', action: () => this.router.navigate(['/docker']) },
-    { label: 'Kubernetes', description: 'Cluster management', icon: 'hub', action: () => this.router.navigate(['/kubernetes']) },
-    { label: 'Jenkins', description: 'CI/CD automation', icon: 'build_circle', action: () => this.router.navigate(['/jenkins']) },
-    { label: 'Terraform', description: 'Infrastructure as code', icon: 'layers', action: () => this.router.navigate(['/terraform']) },
-    { label: 'Billing', description: 'Cloud cost management', icon: 'receipt_long', action: () => this.router.navigate(['/billing']) },
-    { label: 'Alerts', description: 'Active alerts and rules', icon: 'notifications_active', action: () => this.router.navigate(['/alerts']) },
-    { label: 'Notifications', description: 'Recent notifications', icon: 'notifications', action: () => this.router.navigate(['/notifications']) },
-    { label: 'Audit Log', description: 'Action history', icon: 'manage_search', action: () => this.router.navigate(['/audit']) },
-    { label: 'Settings', description: 'Application settings', icon: 'tune', action: () => this.router.navigate(['/settings']) },
+    { label: 'Command Center', description: 'Operational queue and quick actions', icon: 'bolt', action: () => this.router.navigate(['/command-center']) },
+    { label: 'Resource Explorer', description: 'Search resources globally', icon: 'travel_explore', action: () => this.router.navigate(['/resource-explorer']) },
+    { label: 'Health Center', description: 'Global health and SLA', icon: 'favorite', action: () => this.router.navigate(['/health-center']) },
+    { label: 'AWS', description: 'Amazon Web Services overview', icon: 'cloud', action: () => this.router.navigate(['/cloud/aws/overview']) },
+    { label: 'GCP', description: 'Google Cloud Platform overview', icon: 'cloud', action: () => this.router.navigate(['/cloud/gcp/overview']) },
+    { label: 'Azure', description: 'Microsoft Azure overview', icon: 'cloud', action: () => this.router.navigate(['/cloud/azure/overview']) },
+    { label: 'Instances', description: 'All cloud instances', icon: 'dns', action: () => this.router.navigate(['/instances/all-instances']) },
+    { label: 'VPS / Bare Metal', description: 'External VPS and servers', icon: 'computer', action: () => this.router.navigate(['/vps/overview']) },
+    { label: 'Docker', description: 'Container management', icon: 'view_in_ar', action: () => this.router.navigate(['/docker/containers']) },
+    { label: 'Kubernetes', description: 'Cluster management', icon: 'hub', action: () => this.router.navigate(['/kubernetes/pods']) },
+    { label: 'Jenkins', description: 'CI/CD automation', icon: 'build_circle', action: () => this.router.navigate(['/jenkins/jobs']) },
+    { label: 'Terraform', description: 'Infrastructure as code', icon: 'layers', action: () => this.router.navigate(['/terraform/workspaces']) },
+    { label: 'Billing', description: 'Cloud cost management', icon: 'receipt_long', action: () => this.router.navigate(['/billing/overview']) },
+    { label: 'Cost Optimizer', description: 'Savings recommendations', icon: 'savings', action: () => this.router.navigate(['/cost-optimizer']) },
+    { label: 'Alerts', description: 'Active alerts and rules', icon: 'notifications_active', action: () => this.router.navigate(['/alerts/active']) },
+    { label: 'Logs', description: 'Centralized logs', icon: 'article', action: () => this.router.navigate(['/logs']) },
+    { label: 'Security Center', description: 'Findings and posture', icon: 'security', action: () => this.router.navigate(['/security-center']) },
+    { label: 'Notifications', description: 'Recent notifications', icon: 'notifications', action: () => this.router.navigate(['/notifications/all']) },
+    { label: 'Audit Log', description: 'Action history', icon: 'manage_search', action: () => this.router.navigate(['/audit/activity-logs']) },
+    { label: 'Runbooks', description: 'Operational runbooks', icon: 'menu_book', action: () => this.router.navigate(['/runbooks']) },
+    { label: 'AI Assistant', description: 'CloudOps Copilot demo', icon: 'smart_toy', action: () => this.router.navigate(['/ai-assistant']) },
+    { label: 'Settings', description: 'Application settings', icon: 'tune', action: () => this.router.navigate(['/settings/general']) },
+    { label: 'Demo Mode', description: 'Load and reset demo data', icon: 'science', action: () => this.router.navigate(['/admin/demo-mode']) },
   ]
 
   readonly filtered = computed(() => {

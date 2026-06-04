@@ -20,30 +20,8 @@ import { ThemeService } from '../../core/services/theme.service'
 import { DemoService } from '../../core/services/demo.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { AlertsStore } from '../../core/stores/alerts.store'
+import { resolveRouteLabel } from '../../core/routing/route-labels'
 import { CommandPaletteComponent } from './command-palette.component'
-
-const ROUTE_LABELS: Record<string, string> = {
-  dashboard: 'Dashboard',
-  'accounts/aws': 'AWS',
-  'accounts/gcp': 'GCP',
-  'accounts/azure': 'Azure',
-  'cloud/aws': 'AWS',
-  'cloud/gcp': 'GCP',
-  'cloud/azure': 'Azure',
-  vps: 'VPS / Bare Metal',
-  instances: 'Instances',
-  terminal: 'SSH Terminal',
-  ssh: 'SSH Terminal',
-  docker: 'Docker',
-  kubernetes: 'Kubernetes',
-  jenkins: 'Jenkins',
-  terraform: 'Terraform',
-  billing: 'Billing',
-  alerts: 'Alerts',
-  notifications: 'Notifications',
-  audit: 'Audit Log',
-  settings: 'Settings',
-}
 
 @Component({
   selector: 'app-topbar',
@@ -63,7 +41,7 @@ const ROUTE_LABELS: Record<string, string> = {
       <app-command-palette (closeRequest)="paletteOpen.set(false)" />
     }
 
-    <header class="sticky top-0 z-[90] flex h-topbar min-h-topbar items-center gap-2 border-b border-[color:var(--sidebar-border)] bg-[color:var(--app-topbar)] px-4 backdrop-blur-md">
+    <header class="topbar">
       <div class="flex items-center gap-1 text-[0.82rem]">
         <span class="font-medium text-[color:var(--sidebar-text-muted)]">CloudOps</span>
         @if (pageLabel()) {
@@ -132,7 +110,8 @@ const ROUTE_LABELS: Record<string, string> = {
         type="button"
         class="topbar-btn"
         aria-label="Help"
-        matTooltip="Documentation"
+        matTooltip="Settings & documentation"
+        routerLink="/settings/general"
       >
         <mat-icon>help_outline</mat-icon>
       </button>
@@ -147,7 +126,7 @@ const ROUTE_LABELS: Record<string, string> = {
       height: 48px;
       min-height: 48px;
       background: var(--app-topbar);
-      border-bottom: 0.5px solid var(--sidebar-border);
+      box-shadow: var(--app-shadow-xs);
       position: sticky;
       top: 0;
       z-index: 90;
@@ -286,8 +265,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
   }
 
   private updateBreadcrumb(url: string): void {
-    const path = url.replace(/^\//, '').split('?')[0]
-    const label = ROUTE_LABELS[path] ?? ROUTE_LABELS[path.split('/')[0]] ?? ''
-    this.pageLabel.set(label)
+    this.pageLabel.set(resolveRouteLabel(url))
   }
 }

@@ -21,7 +21,9 @@ import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
 import { TimeRange } from './components/time-range-selector.component'
 import { DashboardData, DashboardInstanceRow } from './dashboard.models'
-import { finalize } from 'rxjs'
+import { finalize, catchError, of } from 'rxjs'
+import { buildDemoDashboard } from './utils/dashboard-demo.util'
+import { PlatformSummaryCardComponent } from './components/platform-summary-card.component'
 
 @Component({
   selector: 'app-dashboard',
@@ -41,6 +43,7 @@ import { finalize } from 'rxjs'
     InstanceDetailDrawerComponent,
     ProviderSummaryPanelComponent,
     PlatformDetailPanelComponent,
+    PlatformSummaryCardComponent,
   ],
   template: `
     <div class="dashboard-page">
@@ -114,7 +117,7 @@ import { finalize } from 'rxjs'
               subtitle="EC2 instances, accounts and regions"
               icon="cloud"
               tone="aws"
-              route="/accounts/aws"
+              route="/cloud/aws/overview"
               [metrics]="awsMetrics()"
               [extraLines]="awsLines()"
             />
@@ -123,7 +126,7 @@ import { finalize } from 'rxjs'
               subtitle="Compute Engine projects and zones"
               icon="cloud_circle"
               tone="gcp"
-              route="/accounts/gcp"
+              route="/cloud/gcp/overview"
               [metrics]="gcpMetrics()"
               [extraLines]="gcpLines()"
             />
@@ -132,7 +135,7 @@ import { finalize } from 'rxjs'
               subtitle="Virtual machines and subscriptions"
               icon="cloud_queue"
               tone="azure"
-              route="/accounts/azure"
+              route="/cloud/azure/overview"
               [metrics]="azureMetrics()"
               [extraLines]="azureLines()"
             />
@@ -189,6 +192,47 @@ import { finalize } from 'rxjs'
           </div>
         </app-dashboard-section>
 
+        <app-dashboard-section title="Global health" subtitle="Platform-wide health score and critical services" icon="favorite">
+          <div class="health-grid">
+            <app-platform-summary-card
+              title="Health Center"
+              summary="Global score, SLA and service checks"
+              icon="favorite"
+              tone="default"
+              route="/health-center"
+              [metrics]="healthMetrics()"
+              [delay]="0"
+            />
+            <app-platform-summary-card
+              title="Command Center"
+              summary="Operational queue and quick actions"
+              icon="bolt"
+              tone="jenkins"
+              route="/command-center"
+              [metrics]="commandMetrics()"
+              [delay]="40"
+            />
+            <app-platform-summary-card
+              title="Billing"
+              summary="Spend, forecast and variance"
+              icon="payments"
+              tone="terraform"
+              route="/billing/overview"
+              [metrics]="billingMetrics()"
+              [delay]="80"
+            />
+            <app-platform-summary-card
+              title="Alerts"
+              summary="Open incidents and severity breakdown"
+              icon="notifications_active"
+              tone="docker"
+              route="/alerts/active"
+              [metrics]="alertsMetrics()"
+              [delay]="120"
+            />
+          </div>
+        </app-dashboard-section>
+
         <div class="panels-grid">
           <app-alerts-table [rows]="recentAlerts()" />
           <app-activity-timeline [events]="recentActivity()" />
@@ -216,7 +260,7 @@ import { finalize } from 'rxjs'
       gap: 1.1rem;
     }
     .charts-grid--wide { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-    .provider-grid, .platform-grid {
+    .provider-grid, .platform-grid, .health-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 1.1rem;
@@ -273,15 +317,26 @@ export class DashboardComponent implements OnInit {
         this.lastSyncAt.set(new Date())
       },
       errorMessage: 'Could not load dashboard',
+      fallback: buildDemoDashboard,
     })
   }
 
   handleRefresh = (): void => {
     this.refreshing.set(true)
-    this.inventory.dashboard().pipe(finalize(() => this.refreshing.set(false))).subscribe({
-      next: (d) => { this.data.set(d); this.lastSyncAt.set(new Date()); this.demoActions.simulate('Dashboard refresh', 300).subscribe() },
-      error: () => this.page.error.set('Refresh failed'),
-    })
+    this.inventory
+      .dashboard()
+      .pipe(
+        catchError(() => of(buildDemoDashboard())),
+        finalize(() => this.refreshing.set(false)),
+      )
+      .subscribe({
+        next: (d) => {
+          this.data.set(d)
+          this.lastSyncAt.set(new Date())
+          this.page.error.set(null)
+          this.demoActions.simulate('Dashboard refresh', 300).subscribe()
+        },
+      })
   }
 
   handleExport = (): void => {
@@ -417,6 +472,31 @@ export class DashboardComponent implements OnInit {
       ...n,
       severity: n.severity ?? 'INFO',
     }))
+
+  healthMetrics = (): { label: string; value: string | number }[] => [
+    { label: 'Score', value: '94%' },
+    { label: 'Services', value: 18 },
+    { label: 'Degraded', value: 2 },
+    { label: 'SLA', value: '99.2%' },
+  ]
+  commandMetrics = (): { label: string; value: string | number }[] => [
+    { label: 'Queue', value: 3 },
+    { label: 'Pending', value: 5 },
+    { label: 'Running', value: 2 },
+    { label: 'Done', value: 48 },
+  ]
+  billingMetrics = (): { label: string; value: string | number }[] => [
+    { label: 'Monthly', value: this.formatSpend(this.n('monthlySpend')) },
+    { label: 'Forecast', value: this.formatSpend(Math.round(this.n('monthlySpend') * 1.06)) },
+    { label: 'Variance', value: '−4%' },
+    { label: 'Providers', value: 4 },
+  ]
+  alertsMetrics = (): { label: string; value: string | number }[] => [
+    { label: 'Open', value: this.n('alertsOpen') },
+    { label: 'Critical', value: 3 },
+    { label: 'Warning', value: 4 },
+    { label: 'Info', value: 2 },
+  ]
 
   formatSpend = (value?: number): string => {
     if (value === undefined || value === null) return '$0'
