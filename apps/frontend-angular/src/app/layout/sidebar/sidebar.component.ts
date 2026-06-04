@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core'
+import { ChangeDetectionStrategy, Component, inject, computed, effect } from '@angular/core'
 import { Router, RouterLink, NavigationEnd } from '@angular/router'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { filter, map, startWith } from 'rxjs'
@@ -13,6 +13,7 @@ import {
   resolveAreaFromPath,
   flattenAreaNavForSearch,
 } from './sidebar-tree.config'
+import { SidebarNavGroupComponent } from './sidebar-nav-group.component'
 import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
 import { SidebarSearchComponent } from './sidebar-search.component'
 import { AlertsStore } from '../../core/stores/alerts.store'
@@ -31,6 +32,7 @@ import { AuthStore } from '../../core/stores/auth.store'
     MatDividerModule,
     RouterLink,
     OrgSwitcherComponent,
+    SidebarNavGroupComponent,
     SidebarNavLeafComponent,
     SidebarSearchComponent,
   ],
@@ -96,22 +98,13 @@ import { AuthStore } from '../../core/stores/auth.store'
             <p class="sidebar-nav__empty">No matches for "{{ sidebarSvc.searchQuery() }}"</p>
           }
         } @else {
-          @for (mod of mainModules; track mod.id) {
-            <a
-              class="sidebar-module"
-              [class.sidebar-module--active]="isModuleActive(mod.id)"
-              [routerLink]="mod.route"
-              [matTooltip]="collapsed() ? mod.label : ''"
-              matTooltipPosition="right"
-            >
-              <span class="sidebar-module__icon" [class]="'tone-' + mod.tone">
-                <mat-icon>{{ mod.icon }}</mat-icon>
-              </span>
-              @if (!collapsed()) {
-                <span class="sidebar-module__label">{{ mod.label }}</span>
-                <mat-icon class="sidebar-module__arrow">chevron_right</mat-icon>
-              }
-            </a>
+          @for (mod of visibleModules(); track mod.id) {
+            <app-sidebar-nav-group
+              [module]="mod"
+              [collapsed]="collapsed()"
+              [active]="isModuleActive(mod.id)"
+              [badgeResolver]="resolveBadge"
+            />
           }
         }
       </nav>
@@ -230,57 +223,6 @@ import { AuthStore } from '../../core/stores/auth.store'
       color: var(--sidebar-text-muted);
       text-align: center;
     }
-    .sidebar-module {
-      display: flex;
-      align-items: center;
-      gap: 0.55rem;
-      margin: 0.2rem 0.15rem;
-      padding: 0.55rem 0.6rem;
-      border-radius: 12px;
-      text-decoration: none;
-      color: var(--sidebar-text-muted);
-      border: none;
-      transition: background 0.2s, color 0.2s, transform 0.18s;
-      &:hover {
-        background: var(--sidebar-item-hover);
-        color: var(--sidebar-text);
-        transform: translateX(3px);
-      }
-    }
-    .sidebar-module--active {
-      background: linear-gradient(90deg, color-mix(in srgb, var(--sidebar-primary) 18%, transparent), var(--sidebar-item-active));
-      color: var(--sidebar-primary);
-      box-shadow: inset 3px 0 0 var(--sidebar-primary);
-    }
-    .sidebar-module__icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      mat-icon { font-size: 1.05rem; width: 1.05rem; height: 1.05rem; }
-    }
-    .tone-violet { background: color-mix(in srgb, #a78bfa 22%, transparent); mat-icon { color: #a78bfa; } }
-    .tone-cyan { background: color-mix(in srgb, #22d3ee 22%, transparent); mat-icon { color: #22d3ee; } }
-    .tone-blue { background: color-mix(in srgb, #38bdf8 22%, transparent); mat-icon { color: #38bdf8; } }
-    .tone-amber { background: color-mix(in srgb, #fbbf24 22%, transparent); mat-icon { color: #fbbf24; } }
-    .tone-green { background: color-mix(in srgb, #34d399 22%, transparent); mat-icon { color: #34d399; } }
-    .tone-pink { background: color-mix(in srgb, #f472b6 22%, transparent); mat-icon { color: #f472b6; } }
-    .tone-slate { background: color-mix(in srgb, #94a3b8 18%, transparent); mat-icon { color: #94a3b8; } }
-    .sidebar-module__label {
-      flex: 1;
-      font-size: 0.84rem;
-      font-weight: 700;
-      min-width: 0;
-    }
-    .sidebar-module__arrow {
-      font-size: 1rem !important;
-      width: 1rem !important;
-      height: 1rem !important;
-      opacity: 0.45;
-    }
     .sidebar-footer { padding: 0.5rem; margin-top: auto; }
     .sidebar-user {
       display: flex;
@@ -339,7 +281,7 @@ import { AuthStore } from '../../core/stores/auth.store'
       }
       .app-sidebar--collapsed {
         transform: translateX(-100%);
-        width: 240px;
+        width: 272px;
       }
     }
   `,
@@ -365,7 +307,29 @@ export class SidebarComponent {
     { initialValue: this.router.url },
   )
 
+  constructor() {
+    effect(() => {
+      const path = this.url().split('?')[0]
+      const area = resolveAreaFromPath(path)
+      if (area) this.sidebarSvc.setExpanded(area.id, true)
+    })
+  }
+
   readonly searchActive = computed(() => this.sidebarSvc.searchQuery().length > 0)
+
+  readonly visibleModules = computed(() => {
+    const q = this.sidebarSvc.searchQuery()
+    if (!q) return this.mainModules
+    return this.mainModules.filter(
+      (m) =>
+        m.label.toLowerCase().includes(q) ||
+        m.tabs.some(
+          (t) =>
+            t.label.toLowerCase().includes(q) ||
+            t.route.toLowerCase().includes(q),
+        ),
+    )
+  })
 
   readonly searchHits = computed(() => {
     const q = this.sidebarSvc.searchQuery()
@@ -391,6 +355,37 @@ export class SidebarComponent {
     const path = this.url().split('?')[0]
     const area = resolveAreaFromPath(path)
     return area?.id === moduleId
+  }
+
+  readonly resolveBadge = (key?: string): number | null => {
+    if (!key) return null
+    const demo: Record<string, number> = {
+      alerts: this.alertsStore.activeAlerts() || 12,
+      vps: this.vpsStore.totalHosts() || 6,
+      jenkins: this.jenkinsStore.failedBuilds() || 3,
+      billing: 4,
+      notifications: 8,
+      approvals: 4,
+      incidents: 3,
+      logs: 84,
+      backups: 2,
+      security: 9,
+      secrets: 5,
+      deployments: 6,
+      'command-center': 5,
+      cost: 15,
+      network: 8,
+      health: 4,
+      compliance: 14,
+      scheduler: 12,
+      changes: 47,
+      tokens: 2,
+      copilot: 1,
+      capacity: 7,
+      instances: 26,
+    }
+    const n = demo[key]
+    return n && n > 0 ? n : null
   }
 
   readonly userInitials = computed(() => {

@@ -1,22 +1,22 @@
 # Sidebar navigation — CloudOps Control Center
 
-## Regla de navegación (Fase 32)
+## Regla de navegación
 
-**El sidebar es solo navegación principal.** No hay listas largas ni acordeones anidados.
+1. **Un solo nivel desplegable** en el sidebar: cada grupo (Overview, Security, Admin…) se expande/colapsa con el chevron. No hay acordeones dentro de acordeones.
+2. **Enlaces directos** bajo cada grupo (Security Center, Secrets Manager…), sin duplicar el nombre del grupo.
+3. **Tabs en el panel principal** (`app-module-area-tabs`) para la misma área, sin hacer scroll largo solo en el sidebar.
 
-Las opciones internas de cada área se muestran en el **panel principal** como tabs/chips (`app-module-area-tabs`), no dentro del sidebar.
+## Módulos del sidebar (7 desplegables)
 
-## Módulos del sidebar (7)
-
-| Módulo | Ruta por defecto |
-|--------|------------------|
-| Overview | `/dashboard` |
-| Clouds | `/cloud/aws/overview` |
-| Infrastructure | `/instances/all-instances` |
-| Automation | `/jenkins/jobs` |
-| Observability | `/metrics/overview` |
-| Security | `/security-center` |
-| Admin | `/admin/users` |
+| Módulo | Clic en cabecera | Contenido al expandir |
+|--------|------------------|------------------------|
+| Overview | Abre/cierra | Dashboard, Command Center, Resource Explorer… |
+| Clouds | Abre/cierra | AWS, GCP, Azure |
+| Infrastructure | Abre/cierra | Instances, VPS, Docker, K8s… |
+| Automation | Abre/cierra | Jenkins, Terraform, Terminal… |
+| Observability | Abre/cierra | Metrics, Logs, Billing, Alerts… |
+| Security | Abre/cierra | Security Center, Secrets, Compliance, Audit… |
+| Admin | Abre/cierra | Users, Roles, Settings, Demo Mode… |
 
 ## Tabs en panel principal (ejemplos)
 
