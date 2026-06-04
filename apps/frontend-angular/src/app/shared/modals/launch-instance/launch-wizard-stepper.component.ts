@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 
-export type WizardStepId = 1 | 2 | 3 | 4
+export type WizardStepId = 1 | 2 | 3 | 4 | 5
 
 export interface WizardStepDef {
   id: WizardStepId
@@ -10,9 +10,10 @@ export interface WizardStepDef {
 
 export const LAUNCH_WIZARD_STEPS: WizardStepDef[] = [
   { id: 1, label: 'Provider' },
-  { id: 2, label: 'Configure' },
-  { id: 3, label: 'Review' },
-  { id: 4, label: 'Launch' },
+  { id: 2, label: 'Account' },
+  { id: 3, label: 'Configure' },
+  { id: 4, label: 'Options' },
+  { id: 5, label: 'Plan' },
 ]
 
 @Component({

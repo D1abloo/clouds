@@ -74,6 +74,7 @@ export class LaunchInstanceModalComponent implements OnInit {
   readonly showGcpScript = signal(false)
   readonly planPreview = signal('')
   readonly hclPreview = signal('')
+  readonly planGenerated = signal(false)
   readonly confirmText = signal('')
   readonly launching = signal(false)
   readonly launchPercent = signal(0)
@@ -116,7 +117,11 @@ export class LaunchInstanceModalComponent implements OnInit {
     () => this.costEstimate().monthly > this.settingsStore.monthlyCostThresholdUsd(),
   )
 
-  readonly launchEnabled = computed(() => this.confirmText() === 'LAUNCH')
+  readonly launchEnabled = computed(
+    () => this.confirmText() === 'LAUNCH' && this.planGenerated() && !this.launching(),
+  )
+
+  readonly costDaily = computed(() => this.costEstimate().hourly * 24)
 
   readonly summaryRows = computed(() => {
     const f = this.form()
@@ -227,7 +232,7 @@ export class LaunchInstanceModalComponent implements OnInit {
 
   nextStep = (): void => {
     const s = this.step()
-    if (s < 4) {
+    if (s < 5) {
       this.animDir.set('forward')
       this.step.set((s + 1) as WizardStepId)
     }
@@ -250,10 +255,18 @@ export class LaunchInstanceModalComponent implements OnInit {
       next: (res) => {
         this.hclPreview.set(res.hcl)
         this.planPreview.set(res.plan)
+        this.planGenerated.set(true)
+        this.toast.success('Terraform plan generated')
       },
       error: () => {
-        this.hclPreview.set('module "web_instance" { source = "../../modules/aws/instance" }')
-        this.planPreview.set('Plan: 1 to add, 0 to change, 0 to destroy.')
+        this.hclPreview.set(`resource "aws_instance" "${this.form().name.replace(/-/g, '_')}" {
+  ami           = "ami-demo"
+  instance_type = "${this.activeInstanceType()}"
+  tags          = { Name = "${this.form().name}" }
+}`)
+        this.planPreview.set('Plan: 1 to add, 0 to change, 0 to destroy.\n\n~ aws_instance.web (demo)\n    + instance_type = "' + this.activeInstanceType() + '"')
+        this.planGenerated.set(true)
+        this.toast.info('Demo plan generated (simulated)')
       },
     })
   }

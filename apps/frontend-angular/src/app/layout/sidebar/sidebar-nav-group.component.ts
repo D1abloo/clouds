@@ -50,7 +50,10 @@ import { SidebarNavBranchComponent } from './sidebar-nav-branch.component'
       color: var(--sidebar-text);
       transition: background 0.2s, transform 0.18s;
     }
-    .nav-group__head:hover { transform: translateX(2px); }
+    .nav-group__head:hover {
+      transform: translateX(2px);
+      background: color-mix(in srgb, var(--sidebar-primary) 12%, transparent);
+    }
     .nav-group__icon {
       width: 32px;
       height: 32px;
@@ -65,6 +68,9 @@ import { SidebarNavBranchComponent } from './sidebar-nav-branch.component'
     .tone-blue { background: color-mix(in srgb, #38bdf8 22%, transparent); mat-icon { color: #38bdf8; } }
     .tone-amber { background: color-mix(in srgb, #fbbf24 22%, transparent); mat-icon { color: #fbbf24; } }
     .tone-green { background: color-mix(in srgb, #34d399 22%, transparent); mat-icon { color: #34d399; } }
+    .tone-pink { background: color-mix(in srgb, #f472b6 22%, transparent); mat-icon { color: #f472b6; } }
+    .tone-indigo { background: color-mix(in srgb, #818cf8 22%, transparent); mat-icon { color: #818cf8; } }
+    .tone-orange { background: color-mix(in srgb, #fb923c 22%, transparent); mat-icon { color: #fb923c; } }
     .tone-slate { background: color-mix(in srgb, #94a3b8 18%, transparent); mat-icon { color: #94a3b8; } }
     .nav-group__label {
       flex: 1;

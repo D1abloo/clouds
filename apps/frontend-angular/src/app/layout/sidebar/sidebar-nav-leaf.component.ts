@@ -58,9 +58,9 @@ import { SidebarService } from './sidebar.service'
       transform: translateX(4px);
     }
     .nav-leaf--active {
-      background: var(--sidebar-item-active);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--sidebar-primary) 18%, transparent), var(--sidebar-item-active));
       color: var(--sidebar-primary);
-      box-shadow: inset 3px 0 0 var(--sidebar-primary);
+      box-shadow: inset 3px 0 0 var(--sidebar-primary), 0 2px 12px color-mix(in srgb, var(--sidebar-primary) 15%, transparent);
     }
     .nav-leaf__icon {
       font-size: 0.95rem !important;

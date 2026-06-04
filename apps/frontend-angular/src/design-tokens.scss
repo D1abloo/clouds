@@ -1,0 +1,73 @@
+/* CloudOps Control Center — Premium SaaS design tokens */
+
+:root,
+body.light-theme,
+body.dark-theme {
+  /* Status — vivid */
+  --status-running: #22c55e;
+  --status-healthy: #10b981;
+  --status-warning: #f59e0b;
+  --status-error: #ef4444;
+  --status-critical: #dc2626;
+  --status-stopped: #94a3b8;
+  --status-info: #3b82f6;
+  --status-pending: #0ea5e9;
+
+  /* Module brands */
+  --brand-aws: #ff9900;
+  --brand-gcp: #4285f4;
+  --brand-azure: #0078d4;
+  --brand-docker: #0ea5e9;
+  --brand-k8s: #326ce5;
+  --brand-jenkins: #d24939;
+  --brand-terraform: #7b42bc;
+  --brand-billing: #16a34a;
+  --brand-security: #a855f7;
+  --brand-alerts: #f97316;
+
+  /* Chart vivid (shared) */
+  --chart-vivid-1: #6366f1;
+  --chart-vivid-2: #22d3ee;
+  --chart-vivid-3: #a855f7;
+  --chart-vivid-4: #f97316;
+  --chart-vivid-5: #22c55e;
+  --chart-vivid-6: #ec4899;
+  --chart-vivid-7: #eab308;
+  --chart-vivid-8: #3b82f6;
+
+  /* Elevation — no borders */
+  --elev-1: var(--app-shadow-xs);
+  --elev-2: var(--app-shadow-sm);
+  --elev-3: var(--app-shadow-md);
+  --elev-4: var(--app-shadow-lg);
+
+  /* Motion */
+  --motion-fast: 0.18s ease;
+  --motion-normal: 0.28s ease;
+  --motion-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-card {
+  background: var(--app-card);
+  border: none;
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--elev-2);
+  transition: transform var(--motion-normal), box-shadow var(--motion-normal);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-3);
+  }
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

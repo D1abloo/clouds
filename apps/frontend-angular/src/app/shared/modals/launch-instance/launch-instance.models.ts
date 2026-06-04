@@ -36,6 +36,9 @@ export interface LaunchInstanceFormState {
   azureNsgMode: 'existing' | 'new'
   azureNsgName: string
   azureOsDisk: 'Standard_HDD' | 'Standard_SSD' | 'Premium_SSD'
+  tags: string
+  gcpZone: string
+  azureSubscription: string
 }
 
 export const DEFAULT_LAUNCH_FORM = (): LaunchInstanceFormState => ({
@@ -74,4 +77,7 @@ export const DEFAULT_LAUNCH_FORM = (): LaunchInstanceFormState => ({
   azureNsgMode: 'existing',
   azureNsgName: 'nsg-web',
   azureOsDisk: 'Premium_SSD',
+  tags: 'env=production,team=platform',
+  gcpZone: 'europe-west1-b',
+  azureSubscription: 'CloudOps Production',
 })

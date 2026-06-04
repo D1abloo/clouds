@@ -32,8 +32,14 @@
 }
 
 .launch-stepper__label {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .launch-stepper__label { display: none; }
+  .launch-stepper__line { min-width: 12px; margin: 0 0.25rem; }
 }
 
 .launch-stepper__line {

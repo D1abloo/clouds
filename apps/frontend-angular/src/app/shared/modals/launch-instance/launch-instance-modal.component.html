@@ -2,7 +2,7 @@
   <header class="launch-modal__header">
     <div>
       <h2>Launch instance</h2>
-      <p>Provision cloud VMs with Terraform workflow</p>
+      <p>Multi-cloud provisioning with Terraform plan-first workflow</p>
     </div>
     <button type="button" class="launch-modal__close" mat-dialog-close aria-label="Close">
       <mat-icon>close</mat-icon>
@@ -14,6 +14,7 @@
   <div class="launch-modal__body" [class.launch-modal__body--forward]="animDir() === 'forward'" [class.launch-modal__body--back]="animDir() === 'back'">
     @if (step() === 1) {
       <section class="launch-step">
+        <p class="launch-step__hint">Select your cloud provider</p>
         <div class="provider-grid">
           @for (p of providers; track p) {
             <button
@@ -29,10 +30,16 @@
             </button>
           }
         </div>
+      </section>
+    }
+
+    @if (step() === 2) {
+      <section class="launch-step">
+        <p class="launch-step__hint">Account and location</p>
         <div class="launch-field-row">
           <label class="launch-label">Cloud account</label>
           <select class="launch-select" [ngModel]="form().accountId" (ngModelChange)="patchForm({ accountId: $event }); onAccountChange()">
-            <option value="">Select account</option>
+            <option value="">Select account (demo)</option>
             @for (a of accountsForProvider(); track a.id) {
               <option [value]="a.id">{{ a.name }}</option>
             }
@@ -46,229 +53,212 @@
             }
           </select>
         </div>
-      </section>
-    }
-
-    @if (step() === 2) {
-      <section class="launch-step launch-step--configure">
-        <div class="configure-cols">
-          <div class="configure-col configure-col--left">
-            @if (form().provider === 'AWS') {
-              <div class="launch-field-row">
-                <label class="launch-label">AMI</label>
-                <select class="launch-select" [ngModel]="form().ami" (ngModelChange)="patchForm({ ami: $event })">
-                  @for (a of amiOptions; track a) { <option [value]="a">{{ a }}</option> }
-                </select>
-              </div>
-              <div class="launch-field-row">
-                <label class="launch-label">Key pair</label>
-                <select class="launch-select" [ngModel]="form().keyPair" (ngModelChange)="patchForm({ keyPair: $event })">
-                  @for (k of keyPairs; track k) { <option [value]="k">{{ k }}</option> }
-                </select>
-              </div>
-              <div class="launch-field-row">
-                <label class="launch-label">VPC</label>
-                <select class="launch-select" [ngModel]="form().vpcId" (ngModelChange)="patchForm({ vpcId: $event })">
-                  @for (n of networks(); track n.id) { <option [value]="n.id">{{ n.name }}</option> }
-                </select>
-              </div>
-              <div class="launch-field-row">
-                <label class="launch-label">Subnet</label>
-                <select class="launch-select" [ngModel]="form().subnetId" (ngModelChange)="patchForm({ subnetId: $event })">
-                  @for (n of networks(); track n.id) { <option [value]="n.id">{{ n.name }}</option> }
-                </select>
-              </div>
-              <div class="launch-field-row">
-                <label class="launch-label">Security groups</label>
-                <div class="chip-row">
-                  @for (sg of securityGroupOptions(); track sg.id) {
-                    <button
-                      type="button"
-                      class="launch-chip"
-                      [class.launch-chip--on]="form().securityGroups.includes(sg.id)"
-                      (click)="toggleSecurityGroup(sg.id)"
-                    >{{ sg.name }}</button>
-                  }
-                </div>
-              </div>
-            }
-            @if (form().provider === 'GCP') {
-              <div class="family-cards">
-                @for (fam of ['general', 'compute', 'memory']; track fam) {
-                  <button
-                    type="button"
-                    class="family-card"
-                    [class.family-card--on]="form().gcpFamily === fam"
-                    (click)="setGcpFamily(fam)"
-                  >{{ fam === 'general' ? 'General Purpose' : fam === 'compute' ? 'Compute Optimized' : 'Memory Optimized' }}</button>
-                }
-              </div>
-              <div class="launch-field-row">
-                <label class="launch-label">Machine type</label>
-                <select class="launch-select" [ngModel]="form().gcpMachineType" (ngModelChange)="patchForm({ gcpMachineType: $event })">
-                  <option value="e2-medium">e2-medium</option>
-                  <option value="n2-standard-2">n2-standard-2</option>
-                  <option value="c2-standard-4">c2-standard-4</option>
-                </select>
-              </div>
-              <div class="launch-field-row">
-                <label class="launch-label">VPC / Subnet</label>
-                <input class="launch-input" [ngModel]="form().gcpVpc" (ngModelChange)="patchForm({ gcpVpc: $event })" placeholder="VPC" />
-                <input class="launch-input" [ngModel]="form().gcpSubnet" (ngModelChange)="patchForm({ gcpSubnet: $event })" placeholder="Subnet" />
-              </div>
-              <label class="launch-toggle">
-                <input type="checkbox" [ngModel]="form().gcpExternalIp" (ngModelChange)="patchForm({ gcpExternalIp: $event })" />
-                External IP
-              </label>
-            }
-            @if (form().provider === 'AZURE') {
-              <div class="image-list">
-                @for (img of azureImages; track img.name) {
-                  <button
-                    type="button"
-                    class="image-card"
-                    [class.image-card--on]="form().azureImage === img.name"
-                    (click)="patchForm({ azureImage: img.name })"
-                  >
-                    <strong>{{ img.name }}</strong>
-                    <span>{{ img.publisher }} · {{ img.offer }} · {{ img.sku }}</span>
-                  </button>
-                }
-              </div>
-              <div class="auth-toggle">
-                <button type="button" [class.auth-toggle__on]="form().azureAuth === 'ssh'" (click)="patchForm({ azureAuth: 'ssh' })">SSH key</button>
-                <button type="button" [class.auth-toggle__on]="form().azureAuth === 'password'" (click)="patchForm({ azureAuth: 'password' })">Password</button>
-              </div>
-              @if (form().azureAuth === 'ssh') {
-                <textarea class="launch-textarea" rows="3" [ngModel]="form().azureSshKey" (ngModelChange)="patchForm({ azureSshKey: $event })" placeholder="Paste public SSH key"></textarea>
-              } @else {
-                <input class="launch-input" [type]="showPassword() ? 'text' : 'password'" [ngModel]="form().azurePassword" (ngModelChange)="patchForm({ azurePassword: $event })" placeholder="Password" />
-                <input class="launch-input" [type]="showPassword() ? 'text' : 'password'" [ngModel]="form().azureConfirmPassword" (ngModelChange)="patchForm({ azureConfirmPassword: $event })" placeholder="Confirm password" />
-                <button type="button" class="launch-link" (click)="showPassword.set(!showPassword())">Show/hide</button>
-              }
-              <div class="launch-field-row">
-                <label class="launch-label">Resource group</label>
-                <select class="launch-select" [ngModel]="form().azureResourceGroup" (ngModelChange)="patchForm({ azureResourceGroup: $event })">
-                  <option value="rg-cloudops">rg-cloudops</option>
-                  <option value="rg-staging">rg-staging</option>
-                </select>
-              </div>
-            }
+        @if (form().provider === 'GCP') {
+          <div class="launch-field-row">
+            <label class="launch-label">Zone</label>
+            <input class="launch-input" [ngModel]="form().gcpZone" (ngModelChange)="patchForm({ gcpZone: $event })" placeholder="europe-west1-b" />
           </div>
-          <div class="configure-col configure-col--right">
-            @if (form().provider === 'AWS') {
-              <div class="type-table-wrap">
-                <table class="type-table">
-                  <thead>
-                    <tr><th>Type</th><th>vCPUs</th><th>RAM</th><th>Network</th><th>$/hr</th></tr>
-                  </thead>
-                  <tbody>
-                    @for (group of awsGroups; track group.name) {
-                      <tr class="type-table__group" (click)="toggleGroup(group)">
-                        <td colspan="5">{{ group.name }} {{ group.open ? '▼' : '▶' }}</td>
-                      </tr>
-                      @if (group.open) {
-                        @for (t of group.types; track t; let i = $index) {
-                          <tr
-                            class="type-table__row"
-                            [class.type-table__row--alt]="i % 2 === 1"
-                            [class.type-table__row--selected]="form().instanceType === t"
-                            (click)="patchForm({ instanceType: t })"
-                          >
-                            <td>{{ t }}</td>
-                            <td>{{ pricing.estimateCost('AWS', t).row?.vcpus ?? '—' }}</td>
-                            <td>{{ pricing.estimateCost('AWS', t).row?.ramGb ?? '—' }} GB</td>
-                            <td>{{ pricing.estimateCost('AWS', t).row?.network ?? '—' }}</td>
-                            <td>{{ formatMoney(pricing.estimateCost('AWS', t).hourly) }}</td>
-                          </tr>
-                        }
-                      }
-                    }
-                  </tbody>
-                </table>
-              </div>
-              <div class="ebs-block">
-                <span class="launch-label">EBS type</span>
-                <div class="toggle-row">
-                  @for (dt of ['gp3', 'io2', 'gp2']; track dt) {
-                    <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().ebsType === dt" (click)="setEbsType(dt)">{{ dt }}</button>
-                  }
-                </div>
-                <label class="launch-label">Size {{ form().ebsSizeGb }} GB</label>
-                <input type="range" min="8" max="500" [ngModel]="form().ebsSizeGb" (ngModelChange)="patchForm({ ebsSizeGb: +$event })" />
-                @if (form().ebsType === 'io2') {
-                  <label class="launch-label">IOPS {{ form().ebsIops }}</label>
-                  <input type="range" min="100" max="16000" [ngModel]="form().ebsIops" (ngModelChange)="patchForm({ ebsIops: +$event })" />
-                }
-              </div>
-            }
-            @if (form().provider === 'GCP') {
-              <div class="os-cards">
-                @for (os of gcpOsOptions; track os) {
-                  <button type="button" class="os-card" [class.os-card--on]="form().gcpDiskOs === os" (click)="patchForm({ gcpDiskOs: os })">{{ os }}</button>
-                }
-              </div>
-              <div class="toggle-row">
-                @for (dt of ['pd-balanced', 'pd-ssd', 'pd-extreme']; track dt) {
-                  <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().gcpDiskType === dt" (click)="setGcpDiskType(dt)">{{ dt }}</button>
-                }
-              </div>
-              <label class="launch-label">Disk {{ form().gcpDiskSizeGb }} GB</label>
-              <input type="range" min="10" max="500" [ngModel]="form().gcpDiskSizeGb" (ngModelChange)="patchForm({ gcpDiskSizeGb: +$event })" />
-              <button type="button" class="launch-link" (click)="showGcpScript.set(!showGcpScript())">Startup script</button>
-              @if (showGcpScript()) {
-                <textarea class="launch-textarea launch-textarea--mono" rows="5" [ngModel]="form().gcpStartupScript" (ngModelChange)="patchForm({ gcpStartupScript: $event })"></textarea>
-              }
-            }
-            @if (form().provider === 'AZURE') {
-              <div class="type-table-wrap">
-                <table class="type-table">
-                  <thead><tr><th>Size</th><th>vCPUs</th><th>RAM</th><th>$/hr</th></tr></thead>
-                  <tbody>
-                    @for (group of azureGroups; track group.name) {
-                      <tr class="type-table__group" (click)="toggleGroup(group)"><td colspan="4">{{ group.name }}</td></tr>
-                      @if (group.open) {
-                        @for (t of group.types; track t; let i = $index) {
-                          <tr
-                            class="type-table__row"
-                            [class.type-table__row--alt]="i % 2 === 1"
-                            [class.type-table__row--selected]="form().azureVmSize === t"
-                            (click)="patchForm({ azureVmSize: t })"
-                          >
-                            <td>{{ t }}</td>
-                            <td>{{ pricing.estimateCost('AZURE', t).row?.vcpus }}</td>
-                            <td>{{ pricing.estimateCost('AZURE', t).row?.ramGb }} GB</td>
-                            <td>{{ formatMoney(pricing.estimateCost('AZURE', t).hourly) }}</td>
-                          </tr>
-                        }
-                      }
-                    }
-                  </tbody>
-                </table>
-              </div>
-              <div class="launch-field-row">
-                <label class="launch-label">NSG</label>
-                <select class="launch-select" [ngModel]="form().azureNsgMode" (ngModelChange)="patchForm({ azureNsgMode: $event })">
-                  <option value="existing">Use existing</option>
-                  <option value="new">Create new</option>
-                </select>
-              </div>
-              @if (form().azureNsgMode === 'new') {
-                <input class="launch-input" [ngModel]="form().azureNsgName" (ngModelChange)="patchForm({ azureNsgName: $event })" placeholder="NSG name" />
-              }
-              <div class="toggle-row">
-                @for (dt of ['Standard_HDD', 'Standard_SSD', 'Premium_SSD']; track dt) {
-                  <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().azureOsDisk === dt" (click)="setAzureOsDisk(dt)">{{ dt }}</button>
-                }
-              </div>
-            }
+        }
+        @if (form().provider === 'AZURE') {
+          <div class="launch-field-row">
+            <label class="launch-label">Subscription</label>
+            <input class="launch-input" [ngModel]="form().azureSubscription" (ngModelChange)="patchForm({ azureSubscription: $event })" />
           </div>
-        </div>
+          <div class="launch-field-row">
+            <label class="launch-label">Resource group</label>
+            <select class="launch-select" [ngModel]="form().azureResourceGroup" (ngModelChange)="patchForm({ azureResourceGroup: $event })">
+              <option value="rg-cloudops">rg-cloudops</option>
+              <option value="rg-staging">rg-staging</option>
+            </select>
+          </div>
+        }
       </section>
     }
 
     @if (step() === 3) {
       <section class="launch-step">
+        <p class="launch-step__hint">Instance configuration</p>
+        <div class="launch-field-row">
+          <label class="launch-label">Instance name</label>
+          <input class="launch-input" [ngModel]="form().name" (ngModelChange)="patchForm({ name: $event })" placeholder="web-prod-01" />
+        </div>
+        <div class="launch-field-row">
+          <label class="launch-label">Tags</label>
+          <input class="launch-input" [ngModel]="form().tags" (ngModelChange)="patchForm({ tags: $event })" placeholder="env=prod,team=platform" />
+        </div>
+        @if (form().provider === 'AWS') {
+          <div class="launch-field-row">
+            <label class="launch-label">AMI</label>
+            <select class="launch-select" [ngModel]="form().ami" (ngModelChange)="patchForm({ ami: $event })">
+              @for (a of amiOptions; track a) { <option [value]="a">{{ a }}</option> }
+            </select>
+          </div>
+          <div class="launch-field-row">
+            <label class="launch-label">Key pair</label>
+            <select class="launch-select" [ngModel]="form().keyPair" (ngModelChange)="patchForm({ keyPair: $event })">
+              @for (k of keyPairs; track k) { <option [value]="k">{{ k }}</option> }
+            </select>
+          </div>
+          <div class="launch-field-row">
+            <label class="launch-label">VPC / Subnet</label>
+            <select class="launch-select" [ngModel]="form().vpcId" (ngModelChange)="patchForm({ vpcId: $event })">
+              @for (n of networks(); track n.id) { <option [value]="n.id">{{ n.name }}</option> }
+            </select>
+            <select class="launch-select" [ngModel]="form().subnetId" (ngModelChange)="patchForm({ subnetId: $event })">
+              @for (n of networks(); track n.id) { <option [value]="n.id">{{ n.name }}</option> }
+            </select>
+          </div>
+          <div class="launch-field-row">
+            <label class="launch-label">Security groups</label>
+            <div class="chip-row">
+              @for (sg of securityGroupOptions(); track sg.id) {
+                <button type="button" class="launch-chip" [class.launch-chip--on]="form().securityGroups.includes(sg.id)" (click)="toggleSecurityGroup(sg.id)">{{ sg.name }}</button>
+              }
+            </div>
+          </div>
+        }
+        @if (form().provider === 'GCP') {
+          <div class="family-cards">
+            @for (fam of ['general', 'compute', 'memory']; track fam) {
+              <button type="button" class="family-card" [class.family-card--on]="form().gcpFamily === fam" (click)="setGcpFamily(fam)">
+                {{ fam === 'general' ? 'General Purpose' : fam === 'compute' ? 'Compute' : 'Memory' }}
+              </button>
+            }
+          </div>
+          <div class="launch-field-row">
+            <label class="launch-label">Machine type</label>
+            <select class="launch-select" [ngModel]="form().gcpMachineType" (ngModelChange)="patchForm({ gcpMachineType: $event })">
+              <option value="e2-medium">e2-medium</option>
+              <option value="n2-standard-2">n2-standard-2</option>
+              <option value="c2-standard-4">c2-standard-4</option>
+            </select>
+          </div>
+          <div class="launch-field-row">
+            <label class="launch-label">VPC / Subnet</label>
+            <input class="launch-input" [ngModel]="form().gcpVpc" (ngModelChange)="patchForm({ gcpVpc: $event })" placeholder="VPC" />
+            <input class="launch-input" [ngModel]="form().gcpSubnet" (ngModelChange)="patchForm({ gcpSubnet: $event })" placeholder="Subnet" />
+          </div>
+          <label class="launch-toggle">
+            <input type="checkbox" [ngModel]="form().gcpExternalIp" (ngModelChange)="patchForm({ gcpExternalIp: $event })" />
+            External IP
+          </label>
+        }
+        @if (form().provider === 'AZURE') {
+          <div class="image-list">
+            @for (img of azureImages; track img.name) {
+              <button type="button" class="image-card" [class.image-card--on]="form().azureImage === img.name" (click)="patchForm({ azureImage: img.name })">
+                <strong>{{ img.name }}</strong>
+                <span>{{ img.publisher }} · {{ img.sku }}</span>
+              </button>
+            }
+          </div>
+          <div class="auth-toggle">
+            <button type="button" [class.auth-toggle__on]="form().azureAuth === 'ssh'" (click)="patchForm({ azureAuth: 'ssh' })">SSH key</button>
+            <button type="button" [class.auth-toggle__on]="form().azureAuth === 'password'" (click)="patchForm({ azureAuth: 'password' })">Password</button>
+          </div>
+          @if (form().azureAuth === 'ssh') {
+            <textarea class="launch-textarea" rows="3" [ngModel]="form().azureSshKey" (ngModelChange)="patchForm({ azureSshKey: $event })" placeholder="Paste public SSH key"></textarea>
+          }
+        }
+      </section>
+    }
+
+    @if (step() === 4) {
+      <section class="launch-step launch-step--configure">
+        <p class="launch-step__hint">Provider-specific options</p>
+        @if (form().provider === 'AWS') {
+          <div class="type-table-wrap">
+            <table class="type-table">
+              <thead><tr><th>Type</th><th>vCPUs</th><th>RAM</th><th>$/hr</th></tr></thead>
+              <tbody>
+                @for (group of awsGroups; track group.name) {
+                  <tr class="type-table__group" (click)="toggleGroup(group)"><td colspan="4">{{ group.name }} {{ group.open ? '▼' : '▶' }}</td></tr>
+                  @if (group.open) {
+                    @for (t of group.types; track t; let i = $index) {
+                      <tr class="type-table__row" [class.type-table__row--selected]="form().instanceType === t" (click)="patchForm({ instanceType: t })">
+                        <td>{{ t }}</td>
+                        <td>{{ pricing.estimateCost('AWS', t).row?.vcpus ?? '—' }}</td>
+                        <td>{{ pricing.estimateCost('AWS', t).row?.ramGb ?? '—' }} GB</td>
+                        <td>{{ formatMoney(pricing.estimateCost('AWS', t).hourly) }}</td>
+                      </tr>
+                    }
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="ebs-block">
+            <span class="launch-label">EBS type</span>
+            <div class="toggle-row">
+              @for (dt of ['gp3', 'io2', 'gp2']; track dt) {
+                <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().ebsType === dt" (click)="setEbsType(dt)">{{ dt }}</button>
+              }
+            </div>
+            <label class="launch-label">Size {{ form().ebsSizeGb }} GB</label>
+            <input type="range" min="8" max="500" [ngModel]="form().ebsSizeGb" (ngModelChange)="patchForm({ ebsSizeGb: +$event })" />
+          </div>
+        }
+        @if (form().provider === 'GCP') {
+          <div class="os-cards">
+            @for (os of gcpOsOptions; track os) {
+              <button type="button" class="os-card" [class.os-card--on]="form().gcpDiskOs === os" (click)="patchForm({ gcpDiskOs: os })">{{ os }}</button>
+            }
+          </div>
+          <div class="toggle-row">
+            @for (dt of ['pd-balanced', 'pd-ssd', 'pd-extreme']; track dt) {
+              <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().gcpDiskType === dt" (click)="setGcpDiskType(dt)">{{ dt }}</button>
+            }
+          </div>
+          <label class="launch-label">Disk {{ form().gcpDiskSizeGb }} GB</label>
+          <input type="range" min="10" max="500" [ngModel]="form().gcpDiskSizeGb" (ngModelChange)="patchForm({ gcpDiskSizeGb: +$event })" />
+        }
+        @if (form().provider === 'AZURE') {
+          <div class="type-table-wrap">
+            <table class="type-table">
+              <thead><tr><th>Size</th><th>vCPUs</th><th>RAM</th><th>$/hr</th></tr></thead>
+              <tbody>
+                @for (group of azureGroups; track group.name) {
+                  <tr class="type-table__group" (click)="toggleGroup(group)"><td colspan="4">{{ group.name }}</td></tr>
+                  @if (group.open) {
+                    @for (t of group.types; track t) {
+                      <tr class="type-table__row" [class.type-table__row--selected]="form().azureVmSize === t" (click)="patchForm({ azureVmSize: t })">
+                        <td>{{ t }}</td>
+                        <td>{{ pricing.estimateCost('AZURE', t).row?.vcpus }}</td>
+                        <td>{{ pricing.estimateCost('AZURE', t).row?.ramGb }} GB</td>
+                        <td>{{ formatMoney(pricing.estimateCost('AZURE', t).hourly) }}</td>
+                      </tr>
+                    }
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="toggle-row">
+            @for (dt of ['Standard_HDD', 'Standard_SSD', 'Premium_SSD']; track dt) {
+              <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().azureOsDisk === dt" (click)="setAzureOsDisk(dt)">{{ dt }}</button>
+            }
+          </div>
+        }
+      </section>
+    }
+
+    @if (step() === 5) {
+      <section class="launch-step">
+        <p class="launch-step__hint">Cost estimate & Terraform plan</p>
+        <div class="cost-cards">
+          <div class="cost-card">
+            <span>Hourly</span>
+            <strong>{{ formatMoney(costEstimate().hourly) }}</strong>
+          </div>
+          <div class="cost-card">
+            <span>Daily</span>
+            <strong>{{ formatMoney(costDaily()) }}</strong>
+          </div>
+          <div class="cost-card cost-card--highlight">
+            <span>Monthly</span>
+            <strong>{{ formatMoney(costEstimate().monthly) }}</strong>
+          </div>
+        </div>
         <table class="summary-table">
           @for (row of summaryRows(); track row.label; let i = $index) {
             <tr [class.summary-table__alt]="i % 2 === 1">
@@ -276,26 +266,23 @@
               <td class="summary-table__value">{{ row.value }}</td>
             </tr>
           }
-          <tr>
-            <td class="summary-table__label">Est. cost</td>
-            <td class="summary-table__value">{{ formatMoney(costEstimate().hourly) }}/hr · {{ formatMoney(costEstimate().monthly) }}/mo</td>
-          </tr>
         </table>
         @if (costOverThreshold()) {
-          <p class="cost-warn">Monthly estimate exceeds your threshold ({{ settingsStore.monthlyCostThresholdUsd() | number }} USD).</p>
+          <p class="cost-warn">Monthly estimate exceeds threshold ({{ settingsStore.monthlyCostThresholdUsd() | number }} USD).</p>
         }
-        <button type="button" class="launch-link launch-link--left" (click)="saveTemplate()">Save as template</button>
-      </section>
-    }
-
-    @if (step() === 4) {
-      <section class="launch-step">
-        <p class="launch-compact">{{ form().provider }} · {{ form().region }} · {{ activeInstanceType() }} · {{ form().name }}</p>
-        <button type="button" class="launch-btn-secondary" (click)="generatePlan()">Generate Terraform plan</button>
+        <button type="button" class="launch-btn-secondary" (click)="generatePlan()">
+          <mat-icon>architecture</mat-icon>
+          Generate Terraform plan
+        </button>
         @if (planPreview() || hclPreview()) {
-          <pre class="plan-terminal">{{ hclPreview() }}{{ planPreview() }}</pre>
+          <pre class="plan-terminal">{{ hclPreview() }}
+
+{{ planPreview() }}</pre>
         }
-        <label class="launch-label">Type "LAUNCH" to confirm</label>
+        @if (!planGenerated()) {
+          <p class="plan-hint">Generate a plan before launching. Apply requires confirmation.</p>
+        }
+        <label class="launch-label">Type "LAUNCH" to confirm apply</label>
         <input class="launch-input" [ngModel]="confirmText()" (ngModelChange)="confirmText.set($event)" placeholder="LAUNCH" />
         @if (launching()) {
           <div class="progress-track">
@@ -303,6 +290,7 @@
           </div>
           <span class="progress-label">{{ launchStepLabel() }} {{ launchPercent() }}%</span>
         }
+        <button type="button" class="launch-link launch-link--left" (click)="saveTemplate()">Save as template</button>
       </section>
     }
   </div>
@@ -312,10 +300,10 @@
     @if (step() > 1) {
       <button type="button" class="launch-btn-cancel" (click)="prevStep()">Back</button>
     }
-    @if (step() < 4) {
+    @if (step() < 5) {
       <button type="button" class="launch-btn-primary" (click)="nextStep()">Continue</button>
     } @else {
-      <button type="button" class="launch-btn-primary" [disabled]="!launchEnabled() || launching()" (click)="launch()">Launch instance</button>
+      <button type="button" class="launch-btn-primary" [disabled]="!launchEnabled()" (click)="launch()">Launch instance</button>
     }
   </footer>
 </div>

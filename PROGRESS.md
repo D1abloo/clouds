@@ -2,7 +2,46 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Pulido final Fase 29 (completado)
+**Fase actual:** Pulido premium Fase 30 (completado)
+
+---
+
+## Fase 30 — Pulido premium SaaS (UI final + launch wizard) ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Objetivo:** Panel premium colorido, borderless, launch wizard profesional, modales y tokens de diseño.
+
+### Diseño premium
+
+- `design-tokens.scss` — status colors, module brands, chart vivid, elevation, motion
+- Paleta gráficos unificada vía CSS variables
+- Sidebar: grupos con tonos pink/indigo/orange, active state con gradiente
+- Detail dialog rediseñado (header con icono, sin bordes, sombras suaves)
+
+### Launch instance wizard (5 pasos)
+
+1. **Provider** — AWS / GCP / Azure
+2. **Account** — cuenta, región, zona, subscription, resource group
+3. **Configure** — nombre, tags, AMI/imagen, red, SSH
+4. **Options** — tipos de instancia, EBS/disco, NSG
+5. **Plan & Launch** — coste hora/día/mes, generate plan obligatorio, confirmación "LAUNCH"
+
+- No apply sin plan generado (`planGenerated` signal)
+- Fallback demo plan si API falla
+- Cost cards visuales en paso final
+
+### Continuidad Fase 29
+
+- Demo fallbacks en servicios HTTP
+- Dashboard health section + rutas cloud corregidas
+- Loaders con timeout 20s
+- Command palette ampliado
+- Docs: design-system, functionality-status
+
+### GitHub
+
+- Commit local listo; configurar `git remote` para push
 
 ---
 
