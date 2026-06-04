@@ -15,6 +15,24 @@ const platform = (exportName: string, breadcrumb: string) => ({
 })
 
 export const NAVIGATION_ROUTES: Routes = [
+  {
+    path: 'resource-explorer',
+    loadComponent: () =>
+      import('../../features/advanced/resource-explorer.component').then((m) => m.ResourceExplorerComponent),
+    data: { breadcrumb: 'Resource Explorer' },
+  },
+  {
+    path: 'topology-map',
+    loadComponent: () =>
+      import('../../features/advanced/topology-map.component').then((m) => m.TopologyMapComponent),
+    data: { breadcrumb: 'Topology Map' },
+  },
+  {
+    path: 'ai-assistant',
+    loadComponent: () =>
+      import('../../features/advanced/ai-assistant.component').then((m) => m.AiAssistantComponent),
+    data: { breadcrumb: 'AI Assistant' },
+  },
   { path: 'command-center', ...platform('CommandCenterComponent', 'Command Center') },
   { path: 'deployments', ...platform('DeploymentsComponent', 'Deployments') },
   { path: 'backups', ...platform('BackupsComponent', 'Backups') },
@@ -28,7 +46,15 @@ export const NAVIGATION_ROUTES: Routes = [
   { path: 'reports', ...platform('ReportsComponent', 'Reports') },
   { path: 'service-catalog', ...platform('ServiceCatalogComponent', 'Service Catalog') },
   { path: 'approvals', ...platform('ApprovalsComponent', 'Approvals') },
+  { path: 'runbooks', ...platform('RunbooksComponent', 'Runbooks') },
+  { path: 'scheduler', ...platform('SchedulerComponent', 'Scheduler') },
+  { path: 'health-center', ...platform('HealthCenterComponent', 'Health Center') },
+  { path: 'compliance', ...platform('ComplianceComponent', 'Compliance') },
+  { path: 'capacity-planner', ...platform('CapacityPlannerComponent', 'Capacity Planner') },
+  { path: 'change-management', ...platform('ChangeManagementComponent', 'Change Management') },
   { path: 'access-control', ...platform('AccessControlComponent', 'Access Control') },
+  { path: 'admin/api-tokens', ...platform('ApiTokensComponent', 'API Tokens') },
+  { path: 'admin/webhooks', redirectTo: 'admin/api-tokens', pathMatch: 'full' },
   { path: 'admin/users', ...platform('UsersAdminComponent', 'Users') },
   { path: 'admin/roles', ...hub('roles', 'Roles', 'Roles') },
   {

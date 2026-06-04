@@ -8,6 +8,8 @@ import { ChartCardComponent } from '../../shared/ui/chart-card.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { MatDialog } from '@angular/material/dialog'
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
+import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { chartColor } from '../../shared/theme/chart-palette'
 
 interface DemoRow {
   name: string

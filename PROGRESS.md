@@ -2,7 +2,34 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-04  
-**Fase actual:** Módulos de plataforma + sidebar ampliado (Fase 27 — completado)
+**Fase actual:** Módulos avanzados Fase 28 (completado)
+
+---
+
+## Fase 28 — Módulos avanzados (Resource Explorer, Topology, Copilot…) ✅
+
+**Estado:** Completada (2026-06-04)
+
+**Objetivo:** Completar la plataforma con 10 funcionalidades avanzadas y sidebar actualizado.
+
+### Nuevos módulos
+
+| # | Módulo | Ruta | Tipo |
+|---|--------|------|------|
+| 1 | Resource Explorer | `/resource-explorer` | Custom — búsqueda global agrupada |
+| 2 | Topology Map | `/topology-map` | Custom — grafo SVG interactivo |
+| 3 | Runbooks | `/runbooks` | Platform — 8 runbooks demo |
+| 4 | Scheduler | `/scheduler` | Platform — tareas programadas |
+| 5 | Health Center | `/health-center` | Platform — salud global |
+| 6 | Compliance / Policies | `/compliance` | Platform — violaciones y reglas |
+| 7 | Capacity Planner | `/capacity-planner` | Platform — resize y forecast |
+| 8 | Change Management | `/change-management` | Platform — changelog |
+| 9 | API Tokens / Webhooks | `/admin/api-tokens` | Platform — integraciones |
+| 10 | AI Assistant | `/ai-assistant` | Custom — Copilot demo |
+
+### Documentación
+
+- [docs/advanced-modules.md](docs/advanced-modules.md)
 
 ---
 

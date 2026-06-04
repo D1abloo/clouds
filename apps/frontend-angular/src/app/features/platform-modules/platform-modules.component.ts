@@ -16,6 +16,13 @@ import {
   STORAGE_CONFIG,
   ACCESS_CONTROL_CONFIG,
   USERS_CONFIG,
+  RUNBOOKS_CONFIG,
+  SCHEDULER_CONFIG,
+  HEALTH_CENTER_CONFIG,
+  COMPLIANCE_CONFIG,
+  CAPACITY_PLANNER_CONFIG,
+  CHANGE_MANAGEMENT_CONFIG,
+  API_TOKENS_CONFIG,
 } from '../../shared/platform/platform-modules.demo'
 
 @Component({
@@ -181,4 +188,81 @@ export class AccessControlComponent {
 })
 export class UsersAdminComponent {
   readonly config = USERS_CONFIG
+}
+
+@Component({
+  selector: 'app-runbooks',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class RunbooksComponent {
+  readonly config = RUNBOOKS_CONFIG
+}
+
+@Component({
+  selector: 'app-scheduler',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class SchedulerComponent {
+  readonly config = SCHEDULER_CONFIG
+}
+
+@Component({
+  selector: 'app-health-center',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class HealthCenterComponent {
+  readonly config = HEALTH_CENTER_CONFIG
+}
+
+@Component({
+  selector: 'app-compliance',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class ComplianceComponent {
+  readonly config = COMPLIANCE_CONFIG
+}
+
+@Component({
+  selector: 'app-capacity-planner',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class CapacityPlannerComponent {
+  readonly config = CAPACITY_PLANNER_CONFIG
+}
+
+@Component({
+  selector: 'app-change-management',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class ChangeManagementComponent {
+  readonly config = CHANGE_MANAGEMENT_CONFIG
+}
+
+@Component({
+  selector: 'app-api-tokens',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class ApiTokensComponent {
+  readonly config = API_TOKENS_CONFIG
 }

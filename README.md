@@ -17,6 +17,11 @@ Plataforma unificada para gestionar **AWS**, **GCP**, **Azure**, VPS externas, D
 - **Security Center, Secrets Manager, Access Control** — postura de seguridad
 - **Logs, Incidents, Cost Optimizer, Reports** — observabilidad avanzada
 - **Service Catalog y Approvals** — catálogo y flujos de aprobación
+- **Resource Explorer** — búsqueda global de recursos
+- **Topology Map** — mapa visual de infraestructura
+- **Runbooks, Scheduler, Health Center** — operaciones avanzadas
+- **Compliance, Capacity Planner, Change Management** — gobernanza y planificación
+- **API Tokens / Webhooks, AI Assistant** — integraciones y copilot demo
 - Facturación cloud estimada por proveedor y cuenta
 - RBAC, auditoría y gestión segura de secretos (Vault refs)
 
@@ -104,6 +109,7 @@ npm run seed:demo      # Base seed + dataset demo completo
 | [SSH](docs/ssh.md) | Terminal web |
 | [Billing](docs/billing.md) | Facturación cloud |
 | [Sidebar modules](docs/sidebar-modules.md) | Navegación lateral y módulos Fase 27 |
+| [Advanced modules](docs/advanced-modules.md) | Resource Explorer, Topology, Copilot, Runbooks… Fase 28 |
 | [Despliegue local](docs/despliegue-local.md) | Docker Compose |
 | [Kubernetes](docs/despliegue-kubernetes.md) | Manifests K8s |
 | [Runbook](docs/runbook.md) | Operaciones |

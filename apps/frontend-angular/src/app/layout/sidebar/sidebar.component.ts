@@ -333,6 +333,13 @@ export class SidebarComponent {
       'command-center': 5,
       cost: 15,
       network: 8,
+      health: 4,
+      compliance: 14,
+      scheduler: 12,
+      changes: 47,
+      tokens: 2,
+      copilot: 1,
+      capacity: 7,
     }
     const n = demo[key]
     return n && n > 0 ? n : null

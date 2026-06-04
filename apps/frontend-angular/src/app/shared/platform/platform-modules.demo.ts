@@ -854,6 +854,403 @@ export const USERS_CONFIG: PlatformModuleConfig = {
   ],
 }
 
+export const RUNBOOKS_CONFIG: PlatformModuleConfig = {
+  id: 'runbooks',
+  title: 'Runbooks',
+  description: 'Operational runbooks — execute demo procedures, view steps, logs and associate with instances or alerts.',
+  icon: 'menu_book',
+  headerActions: [
+    { label: 'Run runbook', icon: 'play_arrow', primary: true },
+    { label: 'Create runbook', icon: 'add' },
+    { label: 'Import', icon: 'upload' },
+  ],
+  summaryCards: [
+    { title: 'Available', value: 8, icon: 'menu_book', iconColor: 'purple' },
+    { title: 'Executed (7d)', value: 34, icon: 'history', iconColor: 'cyan' },
+    { title: 'Success rate', value: '94%', icon: 'check_circle', iconColor: 'success' },
+    { title: 'Linked alerts', value: 3, icon: 'link', iconColor: 'warn' },
+  ],
+  quickActions: [
+    { label: 'Restart Nginx', icon: 'refresh' },
+    { label: 'Clean disk', icon: 'cleaning_services' },
+    { label: 'Check K8s pods', icon: 'hub' },
+  ],
+  tabs: [
+    {
+      label: 'Runbooks',
+      searchPlaceholder: 'Search runbook…',
+      columns: [
+        { key: 'name', label: 'Runbook' },
+        { key: 'steps', label: 'Steps' },
+        { key: 'duration', label: 'Avg duration' },
+        { key: 'linkedTo', label: 'Linked to' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { name: 'Restart Nginx', steps: 4, duration: '45s', linkedTo: 'web-prod-01', status: 'running' },
+        { name: 'Clean disk', steps: 6, duration: '2m', linkedTo: 'vps-bastion-01', status: 'running' },
+        { name: 'Restart Docker', steps: 3, duration: '1m', linkedTo: 'docker-host', status: 'running' },
+        { name: 'Check Kubernetes pods', steps: 5, duration: '1m 30s', linkedTo: 'prod-cluster', status: 'running' },
+        { name: 'Backup PostgreSQL', steps: 7, duration: '8m', linkedTo: 'db-primary', status: 'running' },
+        { name: 'Diagnose SSH', steps: 5, duration: '2m', linkedTo: 'vps-bastion-01', status: 'running' },
+        { name: 'Check open ports', steps: 4, duration: '1m', linkedTo: 'Alert: open ports', status: 'warning' },
+        { name: 'High CPU investigation', steps: 8, duration: '5m', linkedTo: 'Alert: High CPU', status: 'warning' },
+      ],
+    },
+    {
+      label: 'Execution logs',
+      columns: [
+        { key: 'runbook', label: 'Runbook' },
+        { key: 'result', label: 'Result' },
+        { key: 'log', label: 'Log excerpt' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { runbook: 'Restart Nginx', result: 'SUCCESS', log: 'nginx -t OK · systemctl restart nginx', status: 'success' },
+        { runbook: 'High CPU investigation', result: 'WARNING', log: 'Top process: java (78% CPU)', status: 'warning' },
+      ],
+    },
+  ],
+}
+
+export const SCHEDULER_CONFIG: PlatformModuleConfig = {
+  id: 'scheduler',
+  title: 'Scheduler',
+  description: 'Schedule instance power actions, Jenkins jobs, SSH commands, backups, syncs and reports.',
+  icon: 'schedule',
+  headerActions: [
+    { label: 'New schedule', icon: 'add', primary: true },
+    { label: 'Run now', icon: 'play_arrow' },
+    { label: 'Pause all', icon: 'pause' },
+  ],
+  summaryCards: [
+    { title: 'Active schedules', value: 12, icon: 'event', iconColor: 'cyan' },
+    { title: 'Next run', value: '14 min', icon: 'timer', iconColor: 'purple' },
+    { title: 'Completed (24h)', value: 28, icon: 'check_circle', iconColor: 'success' },
+    { title: 'Failed', value: 1, icon: 'error', iconColor: 'warn' },
+  ],
+  tabs: [
+    {
+      label: 'Scheduled tasks',
+      searchPlaceholder: 'Search task…',
+      filters: [{ key: 'type', label: 'Type', options: ['', 'instance', 'jenkins', 'ssh', 'backup', 'sync', 'report', 'docker'] }],
+      columns: [
+        { key: 'name', label: 'Task' },
+        { key: 'type', label: 'Type' },
+        { key: 'cron', label: 'Schedule' },
+        { key: 'nextRun', label: 'Next run' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { name: 'Stop staging instances', type: 'instance', cron: '0 22 * * 1-5', nextRun: 'Today 22:00', status: 'running' },
+        { name: 'Start dev environment', type: 'instance', cron: '0 7 * * 1-5', nextRun: 'Tomorrow 07:00', status: 'running' },
+        { name: 'Nightly integration tests', type: 'jenkins', cron: '0 3 * * *', nextRun: 'Tomorrow 03:00', status: 'running' },
+        { name: 'Disk cleanup SSH', type: 'ssh', cron: '0 4 * * 0', nextRun: 'Sun 04:00', status: 'running' },
+        { name: 'Daily AWS backup', type: 'backup', cron: '0 2 * * *', nextRun: 'Tomorrow 02:00', status: 'running' },
+        { name: 'Sync GCP inventory', type: 'sync', cron: '*/30 * * * *', nextRun: 'In 14 min', status: 'running' },
+        { name: 'Weekly cost report', type: 'report', cron: '0 8 * * 1', nextRun: 'Mon 08:00', status: 'running' },
+        { name: 'Prune Docker images', type: 'docker', cron: '0 5 * * 0', nextRun: 'Sun 05:00', status: 'running' },
+      ],
+      charts: [{ title: 'Executions this week', kind: 'bar', data: bars() }],
+    },
+    {
+      label: 'History',
+      columns: [
+        { key: 'task', label: 'Task' },
+        { key: 'executedAt', label: 'Executed', type: 'date' },
+        { key: 'duration', label: 'Duration' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { task: 'Sync GCP inventory', executedAt: ts(30), duration: '42s', status: 'success' },
+        { task: 'Daily AWS backup', executedAt: ts(720), duration: '12m', status: 'success' },
+        { task: 'Prune Docker images', executedAt: ts(1440), duration: '—', status: 'failed' },
+      ],
+    },
+  ],
+}
+
+export const HEALTH_CENTER_CONFIG: PlatformModuleConfig = {
+  id: 'health-center',
+  title: 'Health Center',
+  description: 'Global health overview — healthy, warning and critical resources across all platforms.',
+  icon: 'favorite',
+  headerActions: [
+    { label: 'Run health check', icon: 'monitor_heart', primary: true },
+    { label: 'Export report', icon: 'download' },
+    { label: 'Silence warnings', icon: 'notifications_off' },
+  ],
+  summaryCards: [
+    { title: 'Healthy', value: 142, icon: 'check_circle', iconColor: 'success', trend: '94%' },
+    { title: 'Warning', value: 8, icon: 'warning', iconColor: 'warn' },
+    { title: 'Critical', value: 4, icon: 'error', iconColor: 'warn' },
+    { title: 'Down', value: 2, icon: 'power_off', iconColor: 'warn' },
+  ],
+  quickActions: [
+    { label: 'Restart failed pods', icon: 'restart_alt' },
+    { label: 'Retry Jenkins builds', icon: 'replay' },
+    { label: 'Open incidents', icon: 'crisis_alert' },
+  ],
+  tabs: [
+    {
+      label: 'Affected resources',
+      filters: [{ key: 'status', label: 'Status', options: ['', 'running', 'warning', 'failed', 'stopped'] }],
+      columns: [
+        { key: 'resource', label: 'Resource' },
+        { key: 'type', label: 'Type' },
+        { key: 'provider', label: 'Provider' },
+        { key: 'issue', label: 'Issue' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { resource: 'worker-crash-loop', type: 'K8s Pod', provider: 'K8s', issue: 'CrashLoopBackOff', status: 'failed' },
+        { resource: 'integration-tests #841', type: 'Jenkins', provider: 'Jenkins', issue: 'Build failed', status: 'failed' },
+        { resource: 'web-prod-01', type: 'Instance', provider: 'AWS', issue: 'High CPU 92%', status: 'warning' },
+        { resource: 'snap-staging', type: 'Backup', provider: 'VPS', issue: 'Last backup failed', status: 'failed' },
+        { resource: 'terraform-staging', type: 'Terraform', provider: 'Terraform', issue: 'Apply failed', status: 'failed' },
+        { resource: 'nginx-edge', type: 'Docker', provider: 'Docker', issue: 'Container stopped', status: 'stopped' },
+        { resource: 'AWS billing', type: 'Cost', provider: 'AWS', issue: '+18% anomaly', status: 'warning' },
+      ],
+      charts: [
+        { title: 'Health mix', kind: 'donut', data: donut() },
+        { title: 'Issues over 24h', kind: 'line', data: bars() },
+      ],
+    },
+    {
+      label: 'By category',
+      columns: [
+        { key: 'category', label: 'Category' },
+        { key: 'healthy', label: 'Healthy' },
+        { key: 'warning', label: 'Warning' },
+        { key: 'critical', label: 'Critical' },
+      ],
+      rows: [
+        { category: 'Instances', healthy: 48, warning: 2, critical: 0 },
+        { category: 'Kubernetes', healthy: 22, warning: 2, critical: 1 },
+        { category: 'Jenkins', healthy: 12, warning: 0, critical: 1 },
+        { category: 'Backups', healthy: 11, warning: 1, critical: 1 },
+      ],
+    },
+  ],
+}
+
+export const COMPLIANCE_CONFIG: PlatformModuleConfig = {
+  id: 'compliance',
+  title: 'Compliance / Policies',
+  description: 'Policy violations — missing tags, backups, encryption, open ports, budget overruns and expiring secrets.',
+  icon: 'policy',
+  headerActions: [
+    { label: 'Run scan', icon: 'radar', primary: true },
+    { label: 'Remediate all', icon: 'healing' },
+    { label: 'Export', icon: 'download' },
+  ],
+  summaryCards: [
+    { title: 'Violations', value: 14, icon: 'gpp_bad', iconColor: 'warn' },
+    { title: 'Critical', value: 3, icon: 'priority_high', iconColor: 'warn' },
+    { title: 'Rules active', value: 12, icon: 'rule', iconColor: 'cyan' },
+    { title: 'Compliance score', value: '87%', icon: 'verified', iconColor: 'success' },
+  ],
+  tabs: [
+    {
+      label: 'Violations',
+      filters: [{ key: 'severity', label: 'Severity', options: ['', 'critical', 'warning', 'info'] }],
+      columns: [
+        { key: 'rule', label: 'Rule' },
+        { key: 'resource', label: 'Resource' },
+        { key: 'severity', label: 'Severity', type: 'severity' },
+        { key: 'recommendation', label: 'Recommendation' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { rule: 'Missing tags', resource: 'i-0a2b3c4d', severity: 'warning', recommendation: 'Add env, owner, cost-center tags', status: 'warning' },
+        { rule: 'No backup', resource: 'web-staging-02', severity: 'critical', recommendation: 'Enable daily backup schedule', status: 'failed' },
+        { rule: 'Dangerous port open', resource: 'vps-bastion-01:22', severity: 'critical', recommendation: 'Restrict SSH to VPN CIDR', status: 'failed' },
+        { rule: 'Unencrypted disk', resource: 'vol-legacy-01', severity: 'critical', recommendation: 'Enable encryption at rest', status: 'failed' },
+        { rule: 'No owner', resource: 'gcp-temp-vm', severity: 'warning', recommendation: 'Assign resource owner', status: 'warning' },
+        { rule: 'Budget exceeded', resource: 'aws-prod-account', severity: 'warning', recommendation: 'Review Cost Optimizer', status: 'warning' },
+        { rule: 'Open security group', resource: 'sg-web-public', severity: 'warning', recommendation: 'Tighten ingress rules', status: 'warning' },
+        { rule: 'Secret expiring', resource: 'github-ci-token', severity: 'warning', recommendation: 'Rotate within 14 days', status: 'warning' },
+      ],
+      charts: [{ title: 'Violations by rule', kind: 'bar', data: bars(8) }],
+    },
+    {
+      label: 'Rules',
+      columns: [
+        { key: 'name', label: 'Rule' },
+        { key: 'scope', label: 'Scope' },
+        { key: 'violations', label: 'Violations' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { name: 'require-tags', scope: 'All cloud resources', violations: 4, status: 'running' },
+        { name: 'require-backup', scope: 'Production instances', violations: 2, status: 'running' },
+        { name: 'no-public-ssh', scope: 'VPS & instances', violations: 1, status: 'running' },
+      ],
+    },
+  ],
+}
+
+export const CAPACITY_PLANNER_CONFIG: PlatformModuleConfig = {
+  id: 'capacity-planner',
+  title: 'Capacity Planner',
+  description: 'CPU/RAM/disk utilization, traffic analysis, resize recommendations and growth predictions.',
+  icon: 'analytics',
+  headerActions: [
+    { label: 'Generate plan', icon: 'auto_graph', primary: true },
+    { label: 'Apply resize', icon: 'straighten' },
+    { label: 'Export', icon: 'download' },
+  ],
+  summaryCards: [
+    { title: 'Underutilized CPU', value: 7, icon: 'speed', iconColor: 'cyan' },
+    { title: 'Underutilized RAM', value: 5, icon: 'memory', iconColor: 'purple' },
+    { title: 'Disk near limit', value: 3, icon: 'storage', iconColor: 'warn' },
+    { title: 'Est. savings', value: '$1,240/mo', icon: 'savings', iconColor: 'success' },
+  ],
+  tabs: [
+    {
+      label: 'Recommendations',
+      columns: [
+        { key: 'resource', label: 'Resource' },
+        { key: 'cpu', label: 'CPU avg' },
+        { key: 'ram', label: 'RAM avg' },
+        { key: 'disk', label: 'Disk' },
+        { key: 'action', label: 'Recommendation' },
+        { key: 'savings', label: 'Savings/mo' },
+      ],
+      rows: [
+        { resource: 'web-prod-01', cpu: '8%', ram: '22%', disk: '48%', action: 'Downsize t3.large → t3.medium', savings: '$42' },
+        { resource: 'db-primary', cpu: '45%', ram: '78%', disk: '92%', action: 'Increase disk +100GB', savings: '—' },
+        { resource: 'analytics-vm', cpu: '12%', ram: '18%', disk: '35%', action: 'Reserved instance', savings: '$310' },
+      ],
+      charts: [
+        { title: 'CPU utilization', kind: 'bar', data: bars() },
+        { title: 'Growth forecast', kind: 'line', data: bars(6) },
+      ],
+    },
+    {
+      label: 'Traffic',
+      columns: [
+        { key: 'resource', label: 'Resource' },
+        { key: 'networkIn', label: 'In (Mbps)' },
+        { key: 'networkOut', label: 'Out (Mbps)' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { resource: 'alb-checkout', networkIn: 420, networkOut: 890, status: 'warning' },
+        { resource: 'web-prod-01', networkIn: 45, networkOut: 120, status: 'running' },
+      ],
+    },
+  ],
+}
+
+export const CHANGE_MANAGEMENT_CONFIG: PlatformModuleConfig = {
+  id: 'change-management',
+  title: 'Change Management',
+  description: 'Recent changes across audit, Terraform, Jenkins and SSH — who changed what and when.',
+  icon: 'change_circle',
+  headerActions: [
+    { label: 'Export changelog', icon: 'download', primary: true },
+    { label: 'Filter critical', icon: 'filter_alt' },
+    { label: 'Subscribe', icon: 'notifications' },
+  ],
+  summaryCards: [
+    { title: 'Changes (24h)', value: 47, icon: 'history', iconColor: 'cyan' },
+    { title: 'Terraform', value: 8, icon: 'account_tree', iconColor: 'purple' },
+    { title: 'Jenkins', value: 22, icon: 'build', iconColor: 'cyan' },
+    { title: 'Critical', value: 3, icon: 'priority_high', iconColor: 'warn' },
+  ],
+  tabs: [
+    {
+      label: 'Recent changes',
+      searchPlaceholder: 'Search change…',
+      filters: [
+        { key: 'source', label: 'Source', options: ['', 'audit', 'terraform', 'jenkins', 'ssh'] },
+        { key: 'severity', label: 'Severity', options: ['', 'critical', 'warning', 'info'] },
+      ],
+      columns: [
+        { key: 'user', label: 'User' },
+        { key: 'resource', label: 'Resource' },
+        { key: 'action', label: 'Action' },
+        { key: 'before', label: 'Before' },
+        { key: 'after', label: 'After' },
+        { key: 'source', label: 'Source' },
+        { key: 'severity', label: 'Severity', type: 'severity' },
+        { key: 'at', label: 'When', type: 'date' },
+      ],
+      rows: [
+        { user: 'terraform-sa', resource: 'aws-production', action: 'apply', before: 'v1.2', after: 'v1.3 (+3 resources)', source: 'terraform', severity: 'warning', at: ts(45) },
+        { user: 'jenkins-ci', resource: 'deploy-staging', action: 'deploy', before: 'v2.4.0', after: 'v2.4.1', source: 'jenkins', severity: 'info', at: ts(90) },
+        { user: 'ops@cloudops', resource: 'vps-bastion-01', action: 'ssh command', before: '—', after: 'systemctl restart nginx', source: 'ssh', severity: 'info', at: ts(120) },
+        { user: 'admin@cloudops', resource: 'db-primary-prod', action: 'stop instance', before: 'running', after: 'stopped', source: 'audit', severity: 'critical', at: ts(180) },
+      ],
+    },
+  ],
+}
+
+export const API_TOKENS_CONFIG: PlatformModuleConfig = {
+  id: 'api-tokens',
+  title: 'API Tokens & Webhooks',
+  description: 'Manage API tokens and webhooks for external integrations — create, revoke and monitor delivery logs.',
+  icon: 'webhook',
+  headerActions: [
+    { label: 'Create token', icon: 'add', primary: true },
+    { label: 'Add webhook', icon: 'link' },
+    { label: 'Test delivery', icon: 'send' },
+  ],
+  summaryCards: [
+    { title: 'Active tokens', value: 6, icon: 'token', iconColor: 'purple' },
+    { title: 'Webhooks', value: 4, icon: 'webhook', iconColor: 'cyan' },
+    { title: 'Deliveries (24h)', value: 128, icon: 'send', iconColor: 'success' },
+    { title: 'Failed', value: 2, icon: 'error', iconColor: 'warn' },
+  ],
+  tabs: [
+    {
+      label: 'API Tokens',
+      columns: [
+        { key: 'name', label: 'Token' },
+        { key: 'scope', label: 'Scope' },
+        { key: 'created', label: 'Created', type: 'date' },
+        { key: 'lastUsed', label: 'Last used', type: 'date' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { name: 'ci-pipeline-token', scope: 'read:instances, write:jenkins', created: ts(86400), lastUsed: ts(30), status: 'running' },
+        { name: 'monitoring-readonly', scope: 'read:metrics, read:alerts', created: ts(172800), lastUsed: ts(5), status: 'running' },
+        { name: 'legacy-integration', scope: 'full', created: ts(604800), lastUsed: ts(86400), status: 'warning' },
+      ],
+    },
+    {
+      label: 'Webhooks',
+      columns: [
+        { key: 'name', label: 'Webhook' },
+        { key: 'url', label: 'URL' },
+        { key: 'events', label: 'Events' },
+        { key: 'status', label: 'Status', type: 'status' },
+      ],
+      rows: [
+        { name: 'Slack alerts', url: 'https://hooks.slack.com/demo', events: 'alert.created, jenkins.build.failed', status: 'running' },
+        { name: 'Billing sync', url: 'https://api.finance.internal/webhook', events: 'billing.updated', status: 'running' },
+        { name: 'Terraform notify', url: 'https://ci.internal/tf-events', events: 'terraform.apply.finished', status: 'running' },
+      ],
+    },
+    {
+      label: 'Delivery logs',
+      columns: [
+        { key: 'event', label: 'Event' },
+        { key: 'webhook', label: 'Webhook' },
+        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'at', label: 'When', type: 'date' },
+      ],
+      rows: [
+        { event: 'instance.created', webhook: 'Slack alerts', status: 'success', at: ts(15) },
+        { event: 'jenkins.build.failed', webhook: 'Slack alerts', status: 'success', at: ts(45) },
+        { event: 'alert.created', webhook: 'Billing sync', status: 'failed', at: ts(90) },
+        { event: 'terraform.apply.finished', webhook: 'Terraform notify', status: 'success', at: ts(120) },
+      ],
+    },
+  ],
+}
+
 export const PLATFORM_MODULE_MAP: Record<string, PlatformModuleConfig> = {
   'command-center': COMMAND_CENTER_CONFIG,
   deployments: DEPLOYMENTS_CONFIG,
@@ -870,4 +1267,11 @@ export const PLATFORM_MODULE_MAP: Record<string, PlatformModuleConfig> = {
   storage: STORAGE_CONFIG,
   'access-control': ACCESS_CONTROL_CONFIG,
   users: USERS_CONFIG,
+  runbooks: RUNBOOKS_CONFIG,
+  scheduler: SCHEDULER_CONFIG,
+  'health-center': HEALTH_CENTER_CONFIG,
+  compliance: COMPLIANCE_CONFIG,
+  'capacity-planner': CAPACITY_PLANNER_CONFIG,
+  'change-management': CHANGE_MANAGEMENT_CONFIG,
+  'api-tokens': API_TOKENS_CONFIG,
 }

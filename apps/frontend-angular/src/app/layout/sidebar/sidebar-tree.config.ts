@@ -81,7 +81,10 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     tone: 'violet',
     branches: [
       mkBranch('dashboard', 'Dashboard', '/dashboard', 'space_dashboard', 'violet'),
-      mkBranch('command-center', 'Command Center', '/command-center', 'bolt', 'amber'),
+      mkBranch('command-center', 'Command Center', '/command-center', 'bolt', 'amber', 'command-center'),
+      mkBranch('resource-explorer', 'Resource Explorer', '/resource-explorer', 'travel_explore', 'cyan'),
+      mkBranch('topology-map', 'Topology Map', '/topology-map', 'account_tree', 'indigo'),
+      mkBranch('health-center', 'Health Center', '/health-center', 'favorite', 'green', 'health'),
     ],
   },
   {
@@ -108,6 +111,7 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
       mkBranch('network', 'Network', '/network', 'device_hub', 'blue', 'network'),
       mkBranch('storage', 'Storage', '/storage', 'storage', 'violet'),
       mkBranch('backups', 'Backups', '/backups', 'backup', 'green', 'backups'),
+      mkBranch('capacity-planner', 'Capacity Planner', '/capacity-planner', 'analytics', 'cyan', 'capacity'),
     ],
   },
   {
@@ -120,6 +124,8 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
       mkBranch('terraform', 'Terraform', '/terraform/workspaces', 'account_tree', 'violet'),
       mkBranch('deployments', 'Deployments', '/deployments', 'rocket_launch', 'cyan', 'deployments'),
       mkBranch('terminal', 'Terminal', '/terminal/active-sessions', 'terminal', 'slate'),
+      mkBranch('runbooks', 'Runbooks', '/runbooks', 'menu_book', 'green'),
+      mkBranch('scheduler', 'Scheduler', '/scheduler', 'schedule', 'blue', 'scheduler'),
       mkBranch('service-catalog', 'Service Catalog', '/service-catalog', 'category', 'violet'),
       mkBranch('approvals', 'Approvals', '/approvals', 'rule', 'amber', 'approvals'),
     ],
@@ -138,6 +144,7 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
       mkBranch('incidents', 'Incidents', '/incidents', 'crisis_alert', 'amber', 'incidents'),
       mkBranch('notifications', 'Notifications', '/notifications/all', 'notifications', 'blue', 'notifications'),
       mkBranch('reports', 'Reports', '/reports', 'assessment', 'violet'),
+      mkBranch('change-management', 'Change Management', '/change-management', 'change_circle', 'slate', 'changes'),
     ],
   },
   {
@@ -148,6 +155,7 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     branches: [
       mkBranch('security-center', 'Security Center', '/security-center', 'security', 'pink', 'security'),
       mkBranch('secrets-manager', 'Secrets Manager', '/secrets-manager', 'key', 'violet', 'secrets'),
+      mkBranch('compliance', 'Compliance / Policies', '/compliance', 'policy', 'amber', 'compliance'),
       mkBranch('access-control', 'Access Control', '/access-control', 'admin_panel_settings', 'indigo'),
       mkBranch('audit', 'Audit', '/audit/activity-logs', 'history', 'slate'),
     ],
@@ -160,8 +168,11 @@ export const SIDEBAR_TREE: SidebarGroup[] = [
     branches: [
       mkBranch('users', 'Users', '/admin/users', 'group', 'violet'),
       mkBranch('roles', 'Roles', '/admin/roles', 'badge', 'cyan'),
+      mkBranch('api-tokens', 'API Tokens', '/admin/api-tokens', 'token', 'violet', 'tokens'),
+      mkBranch('webhooks', 'Webhooks', '/admin/webhooks', 'webhook', 'cyan'),
       mkBranch('settings', 'Settings', '/settings/general', 'settings', 'slate'),
       mkBranch('demo-mode', 'Demo Mode', '/admin/demo-mode', 'science', 'amber'),
+      mkBranch('ai-assistant', 'AI Assistant', '/ai-assistant', 'smart_toy', 'violet', 'copilot'),
     ],
   },
 ]
@@ -194,10 +205,9 @@ export const flattenSidebarNav = (): FlatNavEntry[] => {
 
 export const DEFAULT_FAVORITES = [
   '/dashboard',
+  '/resource-explorer',
+  '/health-center',
   '/command-center',
-  '/cloud/aws/overview',
-  '/instances/all-instances',
-  '/deployments',
+  '/ai-assistant',
   '/alerts/active',
-  '/security-center',
 ]
