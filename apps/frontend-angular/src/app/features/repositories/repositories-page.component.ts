@@ -1,22 +1,11 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { ActivatedRoute } from '@angular/router'
-import { DatePipe, SlicePipe } from '@angular/common'
-import { FormControl, ReactiveFormsModule } from '@angular/forms'
-import { MatTableModule } from '@angular/material/table'
-import { MatFormFieldModule } from '@angular/material/form-field'
-import { MatInputModule } from '@angular/material/input'
-import { MatSelectModule } from '@angular/material/select'
-import { MatButtonModule } from '@angular/material/button'
-import { MatIconModule } from '@angular/material/icon'
-import { MatCardModule } from '@angular/material/card'
+import { FormControl } from '@angular/forms'
 import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 import { InventoryService } from '../../core/services/inventory.service'
 import {
   GithubService,
@@ -27,430 +16,220 @@ import {
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
-import { catchError, finalize, map, of, switchMap, type Observable } from 'rxjs'
+import { catchError, map, of, switchMap, type Observable } from 'rxjs'
 import { GithubAccountDialogComponent } from './components/github-account-dialog.component'
-import { GithubAccountCardComponent } from './components/github-account-card.component'
-import { GithubSyncStatusComponent } from './components/github-sync-status.component'
 import { buildGithubInventoryFallback } from './utils/github-inventory-fallback'
 import {
   buildClientGithubDemoState,
   CLIENT_DEMO_DEPLOYMENTS,
+  CLIENT_DEMO_GITHUB_PRS,
   CLIENT_DEMO_WEBHOOKS,
 } from './utils/github-demo-catalog'
+import {
+  buildGitlabDemoBootstrap,
+  CLIENT_DEMO_GITLAB_DEPLOYMENTS,
+  CLIENT_DEMO_GITLAB_WEBHOOKS,
+  type GitlabAccount,
+  type GitlabGroup,
+  type GitlabProject,
+} from './utils/gitlab-demo-catalog'
+import {
+  buildGlobalDemoBranches,
+  buildGlobalDemoCommits,
+  buildRepositoriesSectionMetrics,
+  type GlobalBranchRow,
+  type GlobalCommitRow,
+} from './utils/repositories-global-demo.util'
+import {
+  REPOSITORIES_SECTION_META,
+  type RepositoriesSectionId,
+} from './repositories-section.config'
 import type { GithubDemoConnectResult } from '../../core/services/github.service'
 import { DeployProjectDialogComponent } from './components/deploy-project-dialog.component'
 import { RepositoryDetailDrawerComponent } from './components/repository-detail-drawer.component'
+import { GitlabProjectDetailDrawerComponent } from './components/gitlab-project-detail-drawer.component'
 import { GithubLogsPanelComponent } from './components/github-logs-panel.component'
-
-const SECTION_TITLES: Record<string, { title: string; description: string }> = {
-  github: {
-    title: 'GitHub',
-    description: 'Vista demo con cuenta ficticia conectada y repositorios de ejemplo (sin GitHub real)',
-  },
-  gitlab: { title: 'GitLab', description: 'Integración GitLab (próximamente)' },
-  webhooks: { title: 'Webhooks', description: 'Webhooks de repositorios configurados' },
-  branches: { title: 'Ramas', description: 'Ramas del repositorio seleccionado' },
-  commits: { title: 'Commits', description: 'Historial de commits' },
-  'pull-requests': { title: 'Pull Requests', description: 'Pull requests abiertos y fusionados' },
-  deployments: { title: 'Despliegues', description: 'Despliegues desde repositorios a instancias, VPS, Docker o K8s' },
-}
+import { GithubSectionComponent } from './sections/github-section.component'
+import { GitlabSectionComponent } from './sections/gitlab-section.component'
+import { WebhooksGlobalSectionComponent } from './sections/webhooks-global-section.component'
+import { BranchesGlobalSectionComponent } from './sections/branches-global-section.component'
+import { CommitsGlobalSectionComponent } from './sections/commits-global-section.component'
+import { PullRequestsGithubSectionComponent } from './sections/pull-requests-github-section.component'
+import { DeploymentsGlobalSectionComponent } from './sections/deployments-global-section.component'
 
 @Component({
   selector: 'app-repositories-page',
   standalone: true,
   imports: [
-    DatePipe,
-    SlicePipe,
-    ReactiveFormsModule,
     PageHeaderComponent,
     SummaryCardComponent,
     LoadingStateComponent,
-    EmptyStateComponent,
     ErrorStateComponent,
-    StatusBadgeComponent,
-    NavIconComponent,
-    GithubSyncStatusComponent,
-    GithubAccountCardComponent,
     RepositoryDetailDrawerComponent,
+    GitlabProjectDetailDrawerComponent,
     GithubLogsPanelComponent,
-    MatTableModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
-    MatIconModule,
-    MatCardModule,
+    GithubSectionComponent,
+    GitlabSectionComponent,
+    WebhooksGlobalSectionComponent,
+    BranchesGlobalSectionComponent,
+    CommitsGlobalSectionComponent,
+    PullRequestsGithubSectionComponent,
+    DeploymentsGlobalSectionComponent,
   ],
   template: `
-    <div class="page-container">
+    <div class="page-container" [class]="'page-container--' + section()">
       <app-page-header
         [title]="headerMeta().title"
         [description]="headerMeta().description"
-        [actions]="headerActions()"
+        [actions]="headerMeta().headerActions"
         (actionClick)="handleHeader($event)"
       />
 
       @if (page.loading()) {
-        <app-loading-state message="Cargando repositorios…" />
+        <app-loading-state [message]="loadingMessage()" />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
         <div class="summary-grid app-section-panel stagger-children">
-          <app-summary-card title="Repositorios" [value]="n('repoCount')" icon="folder" variant="elevated" />
-          <app-summary-card title="Ramas" [value]="n('branchCount')" icon="account_tree" variant="elevated" />
-          <app-summary-card title="PR abiertos" [value]="n('openPullRequests')" icon="merge" variant="elevated" />
-          <app-summary-card title="Despliegues" [value]="n('deploymentCount')" icon="rocket_launch" variant="elevated" />
+          @for (card of headerMeta().summaryCards; track card.title) {
+            <app-summary-card
+              [title]="card.title"
+              [value]="metric(card.valueKey)"
+              [icon]="card.icon"
+              variant="elevated"
+            />
+          }
         </div>
 
-        @if (section() === 'github') {
-          @if (primaryAccount()) {
-            <app-github-account-card [account]="primaryAccount()" [demoMode]="demoMode()" />
-          }
-          <mat-card class="connect-card">
-            <div class="connect-card__head">
-              <app-nav-icon logo="github" size="lg" />
-              <div>
-                <strong>Cuenta demo conectada</strong>
-                <p>Vista previa: así se verá la sección cuando exista una cuenta GitHub sincronizada</p>
-              </div>
-            </div>
-            <app-github-sync-status
-              [status]="syncStatus()"
-              [lastSyncAt]="connection()?.lastSyncAt ?? primaryAccount()?.lastSyncAt ?? null"
-              [repoCount]="connection()?.repoCount ?? repos().length"
+        @switch (section()) {
+          @case ('github') {
+            <app-github-section
+              [repos]="repos()"
+              [account]="primaryAccount()"
+              [connection]="connection()"
+              [demoMode]="demoMode()"
+              [syncStatus]="syncStatus()"
+              [repoControl]="repoControl"
+              (addAccount)="openAddAccount()"
+              (connectDemo)="handleQuickConnect()"
+              (validate)="handleValidate()"
+              (sync)="handleSync()"
+              (viewActions)="runDemo('Ver GitHub Actions')"
+              (openDetail)="openGithubDrawer($event)"
+              (deploy)="openDeploy($event)"
+              (openExternal)="runDemo('Abrir en GitHub')"
             />
-            <p class="demo-badge">
-              <mat-icon>science</mat-icon>
-              Solo demo — {{ repos().length }} repositorios ficticios (no requiere cuenta oficial)
-            </p>
-            <div class="connect-card__actions">
-              <button mat-stroked-button type="button" (click)="handleSync()">
-                <mat-icon>sync</mat-icon> Actualizar vista demo
-              </button>
-              <button mat-stroked-button type="button" (click)="handleValidate()">
-                <mat-icon>verified</mat-icon> Simular validación
-              </button>
-              <button mat-stroked-button type="button" (click)="handleTryDeploy()" [disabled]="!repos().length">
-                <mat-icon>rocket_launch</mat-icon> Probar despliegue
-              </button>
-            </div>
-            @if (accounts().length > 1) {
-              <ul class="account-list">
-                @for (a of accounts(); track a.id) {
-                  <li>{{ a.label }} — {{ a.username }} ({{ a.status }})</li>
-                }
-              </ul>
-            }
-          </mat-card>
-
-          @if (repos().length || demoMode()) {
-            <div class="table-card">
-              <h3>Repositorios (demo)</h3>
-              <p class="table-hint">Lista ficticia de la organización <strong>cloudops-lab</strong></p>
-              <mat-form-field appearance="outline" class="repo-select">
-                <mat-label>Repositorio activo</mat-label>
-                <mat-select [formControl]="repoControl">
-                  @for (r of repos(); track r.id) {
-                    <mat-option [value]="r.id">{{ r.fullName }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <div class="data-table-wrap">
-                <table mat-table [dataSource]="repos()" class="premium-table table-row-hover">
-                  <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                    <td mat-cell *matCellDef="let row">
-                      <strong>{{ row.name }}</strong>
-                      <span class="repo-demo-tag">Demo</span>
-                    </td>
-                  </ng-container>
-                  <ng-container matColumnDef="description">
-                    <th mat-header-cell *matHeaderCellDef>Descripción</th>
-                    <td mat-cell *matCellDef="let row" class="desc-cell">{{ row.description }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="language">
-                    <th mat-header-cell *matHeaderCellDef>Lenguaje</th>
-                    <td mat-cell *matCellDef="let row">{{ row.language }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="branch">
-                    <th mat-header-cell *matHeaderCellDef>Rama por defecto</th>
-                    <td mat-cell *matCellDef="let row">{{ row.defaultBranch }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="visibility">
-                    <th mat-header-cell *matHeaderCellDef>Visibilidad</th>
-                    <td mat-cell *matCellDef="let row">{{ row.visibility }}</td>
-                  </ng-container>
-                  <ng-container matColumnDef="actions">
-                    <th mat-header-cell *matHeaderCellDef>Acciones</th>
-                    <td mat-cell *matCellDef="let row">
-                      <button mat-stroked-button type="button" (click)="openDrawer(row); $event.stopPropagation()">
-                        <mat-icon>info</mat-icon> Detalle
-                      </button>
-                      <button mat-stroked-button type="button" (click)="openDeploy(row); $event.stopPropagation()">
-                        <mat-icon>rocket_launch</mat-icon> Desplegar
-                      </button>
-                    </td>
-                  </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="repoCols"></tr>
-                  <tr
-                    mat-row
-                    *matRowDef="let row; columns: repoCols"
-                    class="clickable-row"
-                    (click)="openDrawer(row)"
-                  ></tr>
-                </table>
-              </div>
-            </div>
           }
-        }
-
-        @if (section() === 'gitlab') {
-          <app-empty-state
-            icon="code"
-            title="GitLab — próximamente"
-            message="La integración con GitLab estará disponible en una próxima versión. Usa GitHub para sincronizar y desplegar ahora."
-          />
-        }
-
-        @if (section() === 'webhooks') {
-          <div class="table-card">
-            <table mat-table [dataSource]="webhooks()" class="premium-table">
-              <ng-container matColumnDef="repo">
-                <th mat-header-cell *matHeaderCellDef>Repositorio</th>
-                <td mat-cell *matCellDef="let row">{{ row.repoFullName }}</td>
-              </ng-container>
-              <ng-container matColumnDef="event">
-                <th mat-header-cell *matHeaderCellDef>Evento</th>
-                <td mat-cell *matCellDef="let row">{{ row.event }}</td>
-              </ng-container>
-              <ng-container matColumnDef="url">
-                <th mat-header-cell *matHeaderCellDef>URL</th>
-                <td mat-cell *matCellDef="let row" class="mono">{{ row.url }}</td>
-              </ng-container>
-              <ng-container matColumnDef="active">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let row">
-                  <app-status-badge [value]="row.active ? 'RUNNING' : 'STOPPED'" />
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="webhookCols"></tr>
-              <tr mat-row *matRowDef="let row; columns: webhookCols"></tr>
-            </table>
-          </div>
-        }
-
-        @if (needsRepo() && !repos().length) {
-          <app-empty-state
-            icon="folder_open"
-            title="Sin repositorios"
-            message="Pulsa «Conectar demo» en la pestaña GitHub para cargar repositorios ficticios."
-          />
-        } @else if (needsRepo() && !selectedRepoId()) {
-          <app-empty-state
-            icon="folder_open"
-            title="Selecciona un repositorio"
-            message="Elige un repositorio en la pestaña GitHub o en el selector superior."
-          />
-        } @else if (section() === 'branches') {
-          <div class="table-card">
-            <table mat-table [dataSource]="branches()" class="premium-table">
-              <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef>Rama</th>
-                <td mat-cell *matCellDef="let row"><strong>{{ row.name }}</strong></td>
-              </ng-container>
-              <ng-container matColumnDef="protected">
-                <th mat-header-cell *matHeaderCellDef>Protegida</th>
-                <td mat-cell *matCellDef="let row">{{ row.protected ? 'Sí' : 'No' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="commit">
-                <th mat-header-cell *matHeaderCellDef>Último commit</th>
-                <td mat-cell *matCellDef="let row">{{ row.lastCommitMessage }}</td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="branchCols"></tr>
-              <tr mat-row *matRowDef="let row; columns: branchCols"></tr>
-            </table>
-          </div>
-        } @else if (section() === 'commits') {
-          <div class="table-card">
-            <table mat-table [dataSource]="commits()" class="premium-table">
-              <ng-container matColumnDef="sha">
-                <th mat-header-cell *matHeaderCellDef>SHA</th>
-                <td mat-cell *matCellDef="let row" class="mono">{{ row.sha | slice:0:12 }}</td>
-              </ng-container>
-              <ng-container matColumnDef="message">
-                <th mat-header-cell *matHeaderCellDef>Mensaje</th>
-                <td mat-cell *matCellDef="let row">{{ row.message }}</td>
-              </ng-container>
-              <ng-container matColumnDef="author">
-                <th mat-header-cell *matHeaderCellDef>Autor</th>
-                <td mat-cell *matCellDef="let row">{{ row.author }}</td>
-              </ng-container>
-              <ng-container matColumnDef="branch">
-                <th mat-header-cell *matHeaderCellDef>Rama</th>
-                <td mat-cell *matCellDef="let row">{{ row.branch }}</td>
-              </ng-container>
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                <td mat-cell *matCellDef="let row">{{ row.date | date: 'short' }}</td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="commitCols"></tr>
-              <tr mat-row *matRowDef="let row; columns: commitCols"></tr>
-            </table>
-          </div>
-        } @else if (section() === 'pull-requests') {
-          <div class="table-card">
-            <table mat-table [dataSource]="pullRequests()" class="premium-table">
-              <ng-container matColumnDef="number">
-                <th mat-header-cell *matHeaderCellDef>#</th>
-                <td mat-cell *matCellDef="let row">{{ row.number }}</td>
-              </ng-container>
-              <ng-container matColumnDef="title">
-                <th mat-header-cell *matHeaderCellDef>Título</th>
-                <td mat-cell *matCellDef="let row">{{ row.title }}</td>
-              </ng-container>
-              <ng-container matColumnDef="state">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let row"><app-status-badge [value]="prStatus(row.state)" /></td>
-              </ng-container>
-              <ng-container matColumnDef="author">
-                <th mat-header-cell *matHeaderCellDef>Autor</th>
-                <td mat-cell *matCellDef="let row">{{ row.author }}</td>
-              </ng-container>
-              <ng-container matColumnDef="branches">
-                <th mat-header-cell *matHeaderCellDef>Ramas</th>
-                <td mat-cell *matCellDef="let row">{{ row.head }} → {{ row.base }}</td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="prCols"></tr>
-              <tr mat-row *matRowDef="let row; columns: prCols"></tr>
-            </table>
-          </div>
-        } @else if (section() === 'deployments') {
-          <div class="table-card">
-            <table mat-table [dataSource]="deployments()" class="premium-table">
-              <ng-container matColumnDef="repo">
-                <th mat-header-cell *matHeaderCellDef>Repositorio</th>
-                <td mat-cell *matCellDef="let row">{{ row.repoFullName }}</td>
-              </ng-container>
-              <ng-container matColumnDef="branch">
-                <th mat-header-cell *matHeaderCellDef>Rama</th>
-                <td mat-cell *matCellDef="let row">{{ row.branch }}</td>
-              </ng-container>
-              <ng-container matColumnDef="target">
-                <th mat-header-cell *matHeaderCellDef>Destino</th>
-                <td mat-cell *matCellDef="let row">{{ row.targetName }} ({{ row.targetType }})</td>
-              </ng-container>
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let row"><app-status-badge [value]="deployStatus(row.status)" /></td>
-              </ng-container>
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                <td mat-cell *matCellDef="let row">{{ row.createdAt | date: 'short' }}</td>
-              </ng-container>
-              <ng-container matColumnDef="logs">
-                <th mat-header-cell *matHeaderCellDef>Registros</th>
-                <td mat-cell *matCellDef="let row">
-                  <button mat-button type="button" (click)="viewLogs(row)">Ver logs</button>
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="deployCols"></tr>
-              <tr mat-row *matRowDef="let row; columns: deployCols"></tr>
-            </table>
-            <app-github-logs-panel
-              [open]="logsOpen()"
-              [logs]="logsText()"
-              [title]="logsTitle()"
-              (close)="closeLogs()"
+          @case ('gitlab') {
+            <app-gitlab-section
+              [projects]="gitlabProjects()"
+              [groups]="gitlabGroups()"
+              [account]="gitlabAccount()"
+              (addAccount)="runDemo('Añadir cuenta GitLab')"
+              (connectDemo)="connectGitlabDemo()"
+              (validate)="runDemo('Validar GitLab')"
+              (sync)="runDemo('Sincronizar proyectos GitLab')"
+              (openDetail)="openGitlabDrawer($event)"
+              (deploy)="openGitlabDeploy($event)"
+              (openExternal)="runDemo('Abrir en GitLab')"
+              (viewMrs)="runDemo('Ver merge requests')"
+              (viewPipelines)="runDemo('Ver pipelines')"
             />
-          </div>
+          }
+          @case ('webhooks') {
+            <app-webhooks-global-section
+              [allWebhooks]="allWebhooks()"
+              (create)="runDemo('Crear webhook')"
+              (test)="runDemo('Probar webhook')"
+              (viewPayload)="runDemo('Ver payload')"
+              (toggle)="runDemo('Desactivar webhook demo')"
+              (retry)="runDemo('Reintentar evento')"
+            />
+          }
+          @case ('branches') {
+            <app-branches-global-section
+              [branches]="globalBranches()"
+              (sync)="runDemo('Sincronizar ramas')"
+              (compare)="runDemo('Comparar ramas')"
+              (viewCommits)="runDemo('Ver commits de rama')"
+              (deployBranch)="runDemo('Desplegar rama')"
+            />
+          }
+          @case ('commits') {
+            <app-commits-global-section
+              [commits]="globalCommits()"
+              (viewDetail)="runDemo('Ver detalle commit')"
+              (copySha)="runDemo('SHA copiado')"
+              (deploy)="runDemo('Desplegar commit')"
+              (openSource)="runDemo('Abrir origen')"
+            />
+          }
+          @case ('pull-requests') {
+            <app-pull-requests-github-section
+              [pullRequests]="githubPullRequests()"
+              (viewPr)="runDemo('Ver Pull Request')"
+              (viewCommits)="runDemo('Ver commits del PR')"
+              (viewChecks)="runDemo('Ver checks')"
+              (deployPreview)="runDemo('Desplegar preview')"
+              (openGithub)="runDemo('Abrir en GitHub')"
+            />
+          }
+          @case ('deployments') {
+            <app-deployments-global-section
+              [deployments]="allDeployments()"
+              (newDeploy)="handleTryDeploy()"
+              (viewLogs)="viewLogs($event)"
+              (viewTarget)="runDemo('Ver destino')"
+              (viewCommit)="runDemo('Ver commit')"
+              (viewPipeline)="runDemo('Ver pipeline')"
+              (retry)="runDemo('Reintentar despliegue')"
+              (rollback)="runDemo('Rollback demo')"
+            />
+          }
         }
       }
     </div>
 
     <app-repository-detail-drawer
-      [open]="drawerOpen()"
+      [open]="githubDrawerOpen()"
       [repo]="drawerRepo()"
       [branches]="branches()"
       [commits]="commits()"
-      [pullRequests]="pullRequests()"
+      [pullRequests]="githubPullRequests()"
       [webhooks]="drawerWebhooks()"
-      [deployments]="deployments()"
+      [deployments]="allDeployments()"
       [lastSyncAt]="connection()?.lastSyncAt ?? primaryAccount()?.lastSyncAt ?? null"
       [demoMode]="demoMode()"
-      (close)="closeDrawer()"
+      (close)="closeGithubDrawer()"
       (sync)="handleRepoSync($event)"
       (deploy)="openDeploy($event)"
       (viewDeploymentLogs)="viewLogs($event)"
     />
+
+    <app-gitlab-project-detail-drawer
+      [open]="gitlabDrawerOpen()"
+      [project]="drawerProject()"
+      [webhooks]="drawerGitlabWebhooks()"
+      (close)="closeGitlabDrawer()"
+      (sync)="runDemo('Proyecto GitLab sincronizado')"
+      (deploy)="openGitlabDeploy($event)"
+    />
+
+    <app-github-logs-panel
+      [open]="logsOpen()"
+      [logs]="logsText()"
+      [title]="logsTitle()"
+      (close)="closeLogs()"
+    />
   `,
   styles: `
-    .connect-card {
-      padding: 1.25rem 1.35rem;
-      margin-bottom: 1.25rem;
-      border-radius: var(--app-radius-lg);
-    }
-    .connect-card__head {
-      display: flex;
-      gap: 1rem;
-      align-items: flex-start;
-      margin-bottom: 0.75rem;
-      p { margin: 0.35rem 0 0; font-size: 0.85rem; color: var(--app-text-muted); }
-    }
-    .connect-card__actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.85rem;
-      button { display: inline-flex; align-items: center; gap: 0.35rem; }
-    }
-    .account-list {
-      margin: 0.75rem 0 0;
-      padding-left: 1.1rem;
-      font-size: 0.8rem;
-      color: var(--app-text-muted);
-    }
-    .table-card {
-      padding: 1.15rem 1.25rem;
-      border-radius: var(--app-radius-lg);
-      background: var(--app-card);
-      box-shadow: var(--app-shadow-sm);
-      margin-bottom: 1.25rem;
-      h3 { margin: 0 0 1rem; font-size: 1rem; }
-    }
-    .repo-select { width: min(100%, 420px); margin-bottom: 1rem; }
-    .mono { font-family: ui-monospace, monospace; font-size: 0.78rem; }
-    .clickable-row { cursor: pointer; }
-    .demo-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      margin: 0.65rem 0 0;
-      font-size: 0.8rem;
-      color: var(--app-primary, #1565c0);
-      font-weight: 500;
-      mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
-    }
-    .table-hint {
-      margin: -0.5rem 0 1rem;
-      font-size: 0.82rem;
-      color: var(--app-text-muted);
-    }
-    .repo-demo-tag {
-      margin-left: 0.45rem;
-      padding: 0.1rem 0.4rem;
-      border-radius: 4px;
-      font-size: 0.65rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      background: color-mix(in srgb, var(--app-primary, #1565c0) 12%, transparent);
-      color: var(--app-primary, #1565c0);
-      vertical-align: middle;
-    }
-    .desc-cell {
-      max-width: 220px;
-      font-size: 0.82rem;
-      color: var(--app-text-muted);
-    }
+    .page-container--github { --page-accent: #24292f; }
+    .page-container--gitlab { --page-accent: #fc6d26; }
+    .page-container--webhooks { --page-accent: #6366f1; }
+    .page-container--branches { --page-accent: #0ea5e9; }
+    .page-container--commits { --page-accent: #8b5cf6; }
+    .page-container--pull-requests { --page-accent: #24292f; }
+    .page-container--deployments { --page-accent: #22c55e; }
   `,
 })
 export class RepositoriesPageComponent implements OnInit {
@@ -465,15 +244,30 @@ export class RepositoriesPageComponent implements OnInit {
   readonly connection = signal<GithubConnection | null>(null)
   readonly accounts = signal<GithubAccount[]>([])
   readonly repos = signal<GithubRepo[]>([])
-  readonly selectedRepoId = signal<string | null>(null)
   readonly branches = signal<Record<string, unknown>[]>([])
   readonly commits = signal<Record<string, unknown>[]>([])
-  readonly pullRequests = signal<Record<string, unknown>[]>([])
-  readonly webhooks = signal<Record<string, unknown>[]>([])
-  readonly deployments = signal<Record<string, unknown>[]>([])
-  readonly drawerOpen = signal(false)
+  readonly githubPullRequests = signal<Record<string, unknown>[]>(CLIENT_DEMO_GITHUB_PRS)
+  readonly allWebhooks = signal<Record<string, unknown>[]>([
+    ...CLIENT_DEMO_WEBHOOKS,
+    ...CLIENT_DEMO_GITLAB_WEBHOOKS,
+  ])
+  readonly allDeployments = signal<Record<string, unknown>[]>([
+    ...CLIENT_DEMO_DEPLOYMENTS,
+    ...CLIENT_DEMO_GITLAB_DEPLOYMENTS,
+  ])
+  readonly globalBranches = signal<GlobalBranchRow[]>(buildGlobalDemoBranches())
+  readonly globalCommits = signal<GlobalCommitRow[]>(buildGlobalDemoCommits())
+
+  readonly gitlabAccount = signal<GitlabAccount | null>(buildGitlabDemoBootstrap().account)
+  readonly gitlabProjects = signal<GitlabProject[]>(buildGitlabDemoBootstrap().projects)
+  readonly gitlabGroups = signal<GitlabGroup[]>(buildGitlabDemoBootstrap().groups)
+
+  readonly githubDrawerOpen = signal(false)
+  readonly gitlabDrawerOpen = signal(false)
   readonly drawerRepo = signal<GithubRepo | null>(null)
+  readonly drawerProject = signal<GitlabProject | null>(null)
   readonly drawerWebhooks = signal<Record<string, unknown>[]>([])
+  readonly drawerGitlabWebhooks = signal<Record<string, unknown>[]>([])
   readonly logsOpen = signal(false)
   readonly logsText = signal('')
   readonly logsTitle = signal('')
@@ -481,16 +275,20 @@ export class RepositoriesPageComponent implements OnInit {
 
   readonly repoControl = new FormControl<string>('', { nonNullable: true })
 
-  readonly repoCols = ['name', 'description', 'language', 'branch', 'visibility', 'actions']
-  readonly webhookCols = ['repo', 'event', 'url', 'active']
-  readonly branchCols = ['name', 'protected', 'commit']
-  readonly commitCols = ['sha', 'message', 'author', 'branch', 'date']
-  readonly prCols = ['number', 'title', 'state', 'author', 'branches']
-  readonly deployCols = ['repo', 'branch', 'target', 'status', 'date', 'logs']
+  readonly section = computed(
+    () => (this.route.snapshot.paramMap.get('section') ?? 'github') as RepositoriesSectionId,
+  )
 
-  readonly section = computed(() => this.route.snapshot.paramMap.get('section') ?? 'github')
+  readonly headerMeta = computed(() => REPOSITORIES_SECTION_META[this.section()])
 
-  readonly headerMeta = computed(() => SECTION_TITLES[this.section()] ?? SECTION_TITLES['github'])
+  readonly sectionMetrics = computed(() =>
+    buildRepositoriesSectionMetrics({
+      githubRepos: this.repos().length,
+      githubWebhooks: CLIENT_DEMO_WEBHOOKS.length,
+      gitlabWebhooks: CLIENT_DEMO_GITLAB_WEBHOOKS.length,
+      deployments: this.allDeployments(),
+    }),
+  )
 
   readonly primaryAccount = computed(() => {
     const connected = this.accounts().find((a) => a.status === 'connected')
@@ -506,8 +304,18 @@ export class RepositoriesPageComponent implements OnInit {
     return 'pending'
   })
 
-  readonly needsRepo = (): boolean =>
-    ['branches', 'commits', 'pull-requests'].includes(this.section())
+  readonly loadingMessage = computed(() => {
+    const m: Record<RepositoriesSectionId, string> = {
+      github: 'Cargando GitHub…',
+      gitlab: 'Cargando GitLab…',
+      webhooks: 'Cargando webhooks…',
+      branches: 'Cargando ramas…',
+      commits: 'Cargando commits…',
+      'pull-requests': 'Cargando Pull Requests…',
+      deployments: 'Cargando despliegues…',
+    }
+    return m[this.section()] ?? 'Cargando…'
+  })
 
   ngOnInit(): void {
     this.applyClientDemoCatalog()
@@ -515,23 +323,20 @@ export class RepositoriesPageComponent implements OnInit {
     this.reloadAuxiliaryTables()
     this.refreshDemoFromApi()
     this.repoControl.valueChanges.subscribe((id) => {
-      if (id) {
-        this.selectRepo(id)
-        this.loadRepoDetails(id)
-      }
-    })
-    this.route.paramMap.subscribe(() => {
-      const repoId = this.repoControl.value || this.repos()[0]?.id
-      if (repoId && this.needsRepo()) this.loadRepoDetails(repoId)
+      if (id) this.loadRepoDetails(id)
     })
   }
 
-  /** Carga instantánea en cliente — no espera al API */
+  metric = (key: string): number => {
+    const fromMetrics = this.sectionMetrics()[key]
+    if (fromMetrics !== undefined) return fromMetrics
+    return invNum(this.data(), key)
+  }
+
   applyClientDemoCatalog = (): void => {
     this.applyDemoBootstrap(buildClientGithubDemoState())
   }
 
-  /** Refresco opcional en segundo plano si el backend está disponible */
   refreshDemoFromApi = (): void => {
     this.github
       .connectDemo()
@@ -546,33 +351,42 @@ export class RepositoriesPageComponent implements OnInit {
     this.repos.set(state.repos)
     if (state.repos.length) {
       this.repoControl.setValue(state.repos[0].id)
-      this.selectedRepoId.set(state.repos[0].id)
       this.loadRepoDetails(state.repos[0].id)
     }
     this.data.set({
       connected: true,
       username: state.account.username,
       demoMode: true,
-      repoCount: state.synced,
-      branchCount: state.synced * 4,
-      commitCount: state.synced * 4,
-      openPullRequests: state.synced * 2,
-      webhookCount: CLIENT_DEMO_WEBHOOKS.length,
-      deploymentCount: CLIENT_DEMO_DEPLOYMENTS.length,
+      ...this.sectionMetrics(),
       repoItems: state.repos,
       lastSyncAt: state.connection.lastSyncAt,
     })
   }
 
+  connectGitlabDemo = (): void => {
+    const boot = buildGitlabDemoBootstrap()
+    this.gitlabAccount.set(boot.account)
+    this.gitlabProjects.set(boot.projects)
+    this.gitlabGroups.set(boot.groups)
+    this.runDemo('Demo GitLab conectada', 'Proyectos y grupos cargados')
+  }
+
   reloadAuxiliaryTables = (): void => {
     this.github
       .webhooks()
-      .pipe(catchError(() => of({ items: CLIENT_DEMO_WEBHOOKS })))
-      .subscribe((w) => this.webhooks.set(w.items.length ? w.items : CLIENT_DEMO_WEBHOOKS))
+      .pipe(catchError(() => of({ items: [] as Record<string, unknown>[] })))
+      .subscribe((w) => {
+        const gh = w.items.length ? w.items : CLIENT_DEMO_WEBHOOKS
+        this.allWebhooks.set([...gh, ...CLIENT_DEMO_GITLAB_WEBHOOKS])
+      })
     this.github
       .deployments()
-      .pipe(catchError(() => of({ items: CLIENT_DEMO_DEPLOYMENTS })))
-      .subscribe((d) => this.deployments.set(d.items.length ? d.items : CLIENT_DEMO_DEPLOYMENTS))
+      .pipe(catchError(() => of({ items: [] as Record<string, unknown>[] })))
+      .subscribe((d) => {
+        const gh = d.items.length ? d.items : CLIENT_DEMO_DEPLOYMENTS
+        this.allDeployments.set([...gh, ...CLIENT_DEMO_GITLAB_DEPLOYMENTS])
+      })
+    this.githubPullRequests.set(CLIENT_DEMO_GITHUB_PRS)
   }
 
   handleTryDeploy = (): void => {
@@ -580,15 +394,13 @@ export class RepositoriesPageComponent implements OnInit {
     if (repo) this.openDeploy(repo)
   }
 
-  n = (key: string): number => invNum(this.data(), key)
-
   load = (): void => {
     this.page.run(this.inventory.github(), {
       onSuccess: (d) => this.mergeInventory(d),
       fallback: () => {
         const base = buildGithubInventoryFallback()
         base['repoItems'] = this.repos().length ? this.repos() : base['repoItems']
-        return base
+        return { ...base, ...this.sectionMetrics() }
       },
       errorMessage: 'No se pudo cargar el inventario de repositorios',
     })
@@ -597,59 +409,13 @@ export class RepositoriesPageComponent implements OnInit {
   mergeInventory = (d: Record<string, unknown>): void => {
     const items = (d['repoItems'] as GithubRepo[]) ?? []
     if (items.length) this.repos.set(items)
-    this.data.set({ ...d, repoItems: this.repos() })
+    this.data.set({ ...d, ...this.sectionMetrics(), repoItems: this.repos() })
     this.demoMode.set(!!d['demoMode'] || this.demoMode())
     const first = this.repos()[0]
     if (first && !this.repoControl.value) {
       this.repoControl.setValue(first.id)
       this.loadRepoDetails(first.id)
     }
-  }
-
-  refreshAccounts = (): void => {
-    this.github
-      .accounts()
-      .pipe(catchError(() => of({ items: [] as GithubAccount[] })))
-      .subscribe((r) => this.accounts.set(r.items))
-  }
-
-  loadConnection = (): void => {
-    this.github
-      .connection()
-      .pipe(catchError(() => of({ connected: false, username: null, repoCount: 0 })))
-      .subscribe((c) => {
-        this.connection.set(c)
-        if ((c as GithubConnection & { demoMode?: boolean }).demoMode) this.demoMode.set(true)
-        if (c.connected || c.repoCount > 0) this.refreshRepos()
-        else this.loadDemoRepos()
-      })
-  }
-
-  refreshRepos = (): void => {
-    this.github.repositories().subscribe((r) => {
-      this.repos.set(r.items)
-      this.demoMode.set(!!(r as { demoMode?: boolean }).demoMode || r.items.length > 0)
-      if (r.items.length && !this.repoControl.value) {
-        this.repoControl.setValue(r.items[0].id)
-        this.loadRepoDetails(r.items[0].id)
-      }
-    })
-  }
-
-  loadDemoRepos = (): void => {
-    this.github
-      .repositories()
-      .pipe(catchError(() => this.github.demoRepos()))
-      .subscribe((r) => {
-        if (r.items.length) {
-          this.repos.set(r.items)
-          this.demoMode.set(true)
-          if (!this.repoControl.value) {
-            this.repoControl.setValue(r.items[0].id)
-            this.loadRepoDetails(r.items[0].id)
-          }
-        }
-      })
   }
 
   openAddAccount = (): void => {
@@ -665,9 +431,7 @@ export class RepositoriesPageComponent implements OnInit {
         )
         .subscribe({
           next: () => {
-            this.demoActions.simulate('Cuenta añadida', 500, 'Validada y sincronizada').subscribe()
-            this.refreshAccounts()
-            this.loadConnection()
+            this.runDemo('Cuenta añadida', 'Validada y sincronizada')
             this.handleSync()
           },
         })
@@ -676,7 +440,7 @@ export class RepositoriesPageComponent implements OnInit {
 
   handleQuickConnect = (): void => {
     this.applyClientDemoCatalog()
-    this.demoActions.simulate('Vista demo', 400, '12 repositorios ficticios cargados').subscribe()
+    this.runDemo('Vista demo GitHub', 'Repositorios ficticios cargados')
     this.refreshDemoFromApi()
   }
 
@@ -687,29 +451,8 @@ export class RepositoriesPageComponent implements OnInit {
       .validateAccount(acc.id)
       .pipe(catchError(() => of({ valid: true, message: 'Conexión demo validada' })))
       .subscribe({
-        next: (r) => this.demoActions.simulate('Validación', 400, r.message ?? 'OK').subscribe(),
+        next: (r) => this.runDemo('Validación GitHub', r.message ?? 'OK'),
       })
-  }
-
-  handleDisconnect = (): void => {
-    const acc = this.primaryAccount()
-    if (!acc) {
-      this.github.disconnect().subscribe(() => this.resetConnection())
-      return
-    }
-    this.github.deleteAccount(acc.id).subscribe({
-      next: () => {
-        this.resetConnection()
-        this.demoActions.simulate('Cuenta eliminada', 300).subscribe()
-      },
-    })
-  }
-
-  resetConnection = (): void => {
-    this.connection.set({ connected: false, username: null, repoCount: 0 })
-    this.repos.set([])
-    this.accounts.set([])
-    this.refreshAccounts()
   }
 
   handleSync = (): void => {
@@ -739,7 +482,7 @@ export class RepositoriesPageComponent implements OnInit {
           )
           this.load()
           this.reloadAuxiliaryTables()
-          this.demoActions.simulate('Sincronización', 600, `${res.synced} repositorios`).subscribe()
+          this.runDemo('Sincronización GitHub', `${res.synced} repositorios`)
         },
       })
   }
@@ -748,19 +491,13 @@ export class RepositoriesPageComponent implements OnInit {
     this.github.syncRepository(repoId).subscribe({
       next: () => {
         this.loadRepoDetails(repoId)
-        this.demoActions.simulate('Repositorio sincronizado', 400).subscribe()
+        this.runDemo('Repositorio sincronizado')
       },
     })
   }
 
-  selectRepo = (id: string): void => {
-    this.selectedRepoId.set(id)
-    this.repoControl.setValue(id, { emitEvent: false })
-  }
-
   loadRepoDetails = (repoId: string): void => {
-    const repo =
-      this.drawerRepo() ?? this.repos().find((r) => r.id === repoId) ?? null
+    const repo = this.drawerRepo() ?? this.repos().find((r) => r.id === repoId) ?? null
     this.github
       .branches(repoId)
       .pipe(catchError(() => of({ items: [] })))
@@ -769,10 +506,6 @@ export class RepositoriesPageComponent implements OnInit {
       .commits(repoId)
       .pipe(catchError(() => of({ items: [] })))
       .subscribe((c) => this.commits.set(c.items))
-    this.github
-      .pullRequests(repoId)
-      .pipe(catchError(() => of({ items: [] })))
-      .subscribe((p) => this.pullRequests.set(p.items))
     this.github
       .repoWebhooks(repoId)
       .pipe(
@@ -787,17 +520,31 @@ export class RepositoriesPageComponent implements OnInit {
       .subscribe((items) => this.drawerWebhooks.set(items))
   }
 
-  openDrawer = (repo: GithubRepo): void => {
-    this.selectRepo(repo.id)
+  openGithubDrawer = (repo: GithubRepo): void => {
+    this.repoControl.setValue(repo.id, { emitEvent: false })
     this.loadRepoDetails(repo.id)
     this.drawerRepo.set(repo)
-    this.drawerOpen.set(true)
+    this.githubDrawerOpen.set(true)
   }
 
-  closeDrawer = (): void => {
-    this.drawerOpen.set(false)
+  closeGithubDrawer = (): void => {
+    this.githubDrawerOpen.set(false)
     this.drawerRepo.set(null)
     this.drawerWebhooks.set([])
+  }
+
+  openGitlabDrawer = (project: GitlabProject): void => {
+    this.drawerProject.set(project)
+    this.drawerGitlabWebhooks.set(
+      CLIENT_DEMO_GITLAB_WEBHOOKS.filter((w) => w['projectPath'] === project.fullPath),
+    )
+    this.gitlabDrawerOpen.set(true)
+  }
+
+  closeGitlabDrawer = (): void => {
+    this.gitlabDrawerOpen.set(false)
+    this.drawerProject.set(null)
+    this.drawerGitlabWebhooks.set([])
   }
 
   openDeploy = (repo: GithubRepo): void => {
@@ -809,8 +556,8 @@ export class RepositoriesPageComponent implements OnInit {
       if (!result) return
       this.github.deployRepository(repo.id, result).subscribe({
         next: (res) => {
-          this.demoActions.simulate('Despliegue', 800, res.message).subscribe()
-          this.github.deployments().subscribe((d) => this.deployments.set(d.items))
+          this.runDemo('Despliegue desde GitHub', res.message)
+          this.reloadAuxiliaryTables()
           if (res.deployment?.['id']) {
             this.viewLogs({ id: res.deployment['id'], repoFullName: repo.fullName })
           }
@@ -819,9 +566,20 @@ export class RepositoriesPageComponent implements OnInit {
     })
   }
 
+  openGitlabDeploy = (project: GitlabProject): void => {
+    const ref = this.dialog.open(DeployProjectDialogComponent, {
+      width: '420px',
+      data: { repoName: project.fullPath, defaultBranch: project.defaultBranch },
+    })
+    ref.afterClosed().subscribe((result) => {
+      if (!result) return
+      this.runDemo('Despliegue desde GitLab', `Proyecto ${project.name} → ${result.targetType}`)
+    })
+  }
+
   viewLogs = (row: Record<string, unknown>): void => {
     const id = String(row['id'] ?? '')
-    this.logsTitle.set(String(row['repoFullName'] ?? ''))
+    this.logsTitle.set(String(row['repoFullName'] ?? row['projectPath'] ?? ''))
     if (row['logs']) {
       this.logsText.set(String(row['logs']))
       this.logsOpen.set(true)
@@ -833,7 +591,7 @@ export class RepositoriesPageComponent implements OnInit {
         this.logsOpen.set(true)
       },
       error: () => {
-        this.logsText.set('No hay registros para este despliegue.')
+        this.logsText.set('Registros demo del despliegue.\n[OK] Health check\n[OK] Rollout')
         this.logsOpen.set(true)
       },
     })
@@ -841,33 +599,29 @@ export class RepositoriesPageComponent implements OnInit {
 
   closeLogs = (): void => this.logsOpen.set(false)
 
-  headerActions = (): { label: string; icon?: string; primary?: boolean }[] => {
-    if (this.section() === 'github') {
-      return [
-        { label: 'Actualizar demo', icon: 'sync', primary: true },
-        { label: 'Desplegar', icon: 'rocket_launch' },
-      ]
-    }
-    return [{ label: 'Actualizar', icon: 'refresh' }]
-  }
-
   handleHeader = (label: string): void => {
-    if (label === 'Actualizar demo' || label === 'Sincronizar') this.handleSync()
-    else if (label === 'Desplegar') {
-      const repo = this.repos().find((r) => r.id === this.selectedRepoId()) ?? this.repos()[0]
-      if (repo) this.openDeploy(repo)
-    } else this.load()
+    if (label.includes('Sincronizar') || label.includes('Actualizar') || label === 'Conectar demo GitLab') {
+      if (this.section() === 'gitlab') this.connectGitlabDemo()
+      else this.handleSync()
+      return
+    }
+    if (label.includes('Añadir cuenta')) {
+      if (this.section() === 'github') this.openAddAccount()
+      else this.runDemo(label)
+      return
+    }
+    if (label === 'Desplegar' || label === 'Nuevo despliegue' || label === 'Desplegar commit') {
+      this.handleTryDeploy()
+      return
+    }
+    if (label === 'Crear webhook') {
+      this.runDemo('Crear webhook')
+      return
+    }
+    this.runDemo(label)
   }
 
-  prStatus = (state: string): string => {
-    if (state === 'open') return 'RUNNING'
-    if (state === 'merged') return 'SUCCESS'
-    return 'STOPPED'
-  }
-
-  deployStatus = (status: string): string => {
-    if (status === 'success') return 'SUCCESS'
-    if (status === 'running') return 'RUNNING'
-    return 'ERROR'
+  runDemo = (label: string, msg?: string): void => {
+    this.demoActions.simulate(label, 450, msg ?? `${label} (demo)`).subscribe()
   }
 }

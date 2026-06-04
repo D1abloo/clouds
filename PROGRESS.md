@@ -2,7 +2,43 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Módulo Repositorios + GitHub Fase 36 (completado)
+**Fase actual:** Módulo Repositorios diferenciado por sección (completado)
+
+---
+
+## Módulo Repositorios — secciones diferenciadas ✅
+
+**Estado:** Completada (2026-06-02)
+
+Cada ítem del sidebar **Repositorios** tiene interfaz, métricas, pestañas, datos demo y acciones propias. Ya no se reutiliza el mismo panel genérico en todas las rutas.
+
+| Sección | Propósito | UI distintiva | Terminología / datos |
+|--------|-----------|---------------|----------------------|
+| **GitHub** | Cuentas, repos, Actions, despliegue | Acento oscuro GitHub, widgets Actions/Issues/OAuth, tabla de repositorios | Repositorios, Pull Requests, GitHub Actions, stars |
+| **GitLab** | Proyectos, grupos, pipelines | Acento naranja/morado, pestañas Proyectos/Grupos/MR/Pipelines/Runners/Environments/Releases | Proyectos, Merge Requests, Pipelines, Runners |
+| **Webhooks** | Panel global multi-proveedor | Pestañas Resumen, GitHub, GitLab, Payloads, Reintentos, Errores, Configuración | Webhooks GH + GL + despliegue, payloads demo |
+| **Ramas** | Ramas GH + GL unificadas | Tabla con proveedor, CI y deploy por rama; filtros Todas/Protegidas/Stale | Repo o proyecto, rama protegida, CI por rama |
+| **Commits** | Historial cross-provider | Timeline de commits con diff +/- y revisión relacionada | SHA, autor, CI, PR o MR vinculado |
+| **Pull Requests** | Solo GitHub | Cards de revisión/checks/conflictos/draft; pestañas Abiertos/Drafts/Fusionados… | Pull Request (nunca Merge Request) |
+| **Despliegues** | Centro de despliegue | Pipeline resumen + lista por origen (GH, GL, Jenkins, Docker, K8s) | Origen, destino, logs, rollback demo |
+
+**Drawers por proveedor**
+
+- `repository-detail-drawer` — GitHub: Pull Requests, GitHub Actions, stars, webhooks GitHub.
+- `gitlab-project-detail-drawer` — GitLab: Merge Requests, Pipelines, Runners, Groups, Environments, Releases.
+
+**Datos demo separados**
+
+- GitHub: `github-demo-catalog.ts` — 6 repos (`cloudops-api`, `cloudops-frontend`, `docker-nginx-app`, `k8s-demo-app`, `terraform-modules`, `monitoring-stack`), Actions, PRs, issues.
+- GitLab: `gitlab-demo-catalog.ts` — 5 proyectos, grupos, pipelines, MRs, runners, environments, releases.
+- Global: `repositories-global-demo.util.ts` — ramas y commits agregados; webhooks/deployments mezclados en página.
+
+**Archivos clave**
+
+- Shell: `repositories-page.component.ts` + `repositories-section.config.ts`
+- Secciones: `sections/github-section`, `gitlab-section`, `webhooks-global-section`, `branches-global-section`, `commits-global-section`, `pull-requests-github-section`, `deployments-global-section`
+
+**Rutas:** sin cambios (`/repositories/:section`). Sidebar intacto.
 
 ---
 

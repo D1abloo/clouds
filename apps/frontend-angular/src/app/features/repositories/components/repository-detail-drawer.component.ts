@@ -248,9 +248,9 @@ import {
             </div>
           </mat-tab>
 
-          <mat-tab label="CI/CD">
+          <mat-tab label="GitHub Actions">
             <div class="drawer-panel">
-              <p class="panel-lead">Pipelines y workflows asociados (vista demo)</p>
+              <p class="panel-lead">Workflows y GitHub Actions (vista demo)</p>
               <ul class="mini-list">
                 @for (row of overview.cicd; track row.name) {
                   <li>
