@@ -1,24 +1,31 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core'
-import { NAV_LOGO_ASSET, type NavLogoKey } from '../../theme/nav-logo.types'
+import { ChangeDetectionStrategy, Component, input, computed } from '@angular/core'
+import { BRAND_LOGO_SVG } from '../../theme/brand-logo-svg.data'
+import type { NavLogoKey } from '../../theme/nav-logo.types'
 
 @Component({
   selector: 'app-brand-logo',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <img
-      class="brand-logo"
-      [class]="sizeClass()"
-      [src]="src()"
-      [alt]="logo()"
-      loading="lazy"
-      decoding="async"
-    />
+    @if (def(); as svg) {
+      <svg
+        class="brand-logo"
+        [class]="sizeClass()"
+        [attr.viewBox]="svg.viewBox"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        [attr.aria-label]="logo()"
+        focusable="false"
+      >
+        @for (p of svg.paths; track p.d) {
+          <path [attr.d]="p.d" [attr.fill]="p.fill" />
+        }
+      </svg>
+    }
   `,
   styles: `
     .brand-logo {
       display: block;
-      object-fit: contain;
       flex-shrink: 0;
     }
     .brand-logo--sm { width: 16px; height: 16px; }
@@ -30,7 +37,7 @@ export class BrandLogoComponent {
   readonly logo = input.required<NavLogoKey>()
   readonly size = input<'sm' | 'md' | 'lg'>('md')
 
-  src = (): string => NAV_LOGO_ASSET[this.logo()]
+  readonly def = computed(() => BRAND_LOGO_SVG[this.logo()])
 
   sizeClass = (): string => `brand-logo brand-logo--${this.size()}`
 }
