@@ -13,8 +13,8 @@ import {
 
 const errors = []
 
-if (DEMO_GITHUB_REPOS.length < 8) {
-  errors.push(`Se esperaban 8 repos, hay ${DEMO_GITHUB_REPOS.length}`)
+if (DEMO_GITHUB_REPOS.length < 12) {
+  errors.push(`Se esperaban 12 repos demo, hay ${DEMO_GITHUB_REPOS.length}`)
 }
 
 for (const repo of DEMO_GITHUB_REPOS) {

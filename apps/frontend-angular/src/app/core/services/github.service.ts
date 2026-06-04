@@ -52,6 +52,7 @@ export interface GithubRepo {
   updatedAt: string
   htmlUrl?: string
   accountId?: string
+  isDemo?: boolean
 }
 
 @Injectable({ providedIn: 'root' })

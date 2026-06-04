@@ -399,7 +399,7 @@ export class SidebarComponent {
       copilot: 1,
       capacity: 7,
       instances: 26,
-      'github-repos': 8,
+      'github-repos': 12,
       'github-webhooks': 4,
       'github-deployments': 4,
     }

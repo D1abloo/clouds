@@ -59,6 +59,7 @@ export const mapRepo = (r: GithubRepository) => ({
   visibility: r.visibility,
   htmlUrl: r.htmlUrl,
   updatedAt: r.lastSyncAt?.toISOString() ?? r.createdAt.toISOString(),
+  isDemo: r.accountId === DEMO_GITHUB_ACCOUNT_ID || r.id.startsWith('gh-repo-'),
 })
 
 export const mapBranch = (b: GithubBranch) => ({
