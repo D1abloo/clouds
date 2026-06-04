@@ -2,7 +2,32 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Dashboard grid compacto + UI español Fase 34 (completado)
+**Fase actual:** Iconos/logos distintivos por módulo Fase 35 (completado)
+
+---
+
+## Fase 35 — Iconos y logos representativos (sidebar, headers, paneles) ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Alcance:** Solo presentación. UI visible en español; código en inglés.
+
+### Assets y componentes
+
+- `src/assets/logos/` — SVG AWS, GCP, Azure, Docker, Kubernetes, Jenkins, Terraform, PostgreSQL, GitHub, Redis, Prometheus, Grafana
+- `app-brand-logo` + `app-nav-icon` — icono Material o logo de marca
+- `nav-logo.types.ts` + `nav-visual.config.ts` — identidad por ruta
+
+### Navegación
+
+- Cada ítem del sidebar con icono único o logo oficial (clouds, Docker, K8s, Jenkins, Terraform)
+- Ramas AWS/GCP/Azure con logo SVG en lugar de texto
+- Tabs del panel principal y cabeceras de página con la misma identidad visual
+
+### Dashboard
+
+- Métricas Docker/K8s/Jenkins/Terraform con logos en el grid
+- Paneles cloud y plataforma con logos en cabecera
 
 ---
 

@@ -1,6 +1,8 @@
 import { Component, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
+import { NavIconComponent } from '../nav-icon/nav-icon.component'
+import type { NavLogoKey } from '../../theme/nav-logo.types'
 
 export type MetricStatTone =
   | 'primary'
@@ -22,12 +24,13 @@ export interface MetricStatItem {
   trendDown?: boolean
   badge?: string
   delay?: number
+  logo?: NavLogoKey
 }
 
 @Component({
   selector: 'app-metric-stats-grid',
   standalone: true,
-  imports: [MatIconModule, MatTooltipModule],
+  imports: [MatIconModule, MatTooltipModule, NavIconComponent],
   template: `
     <div class="metric-stats-grid stagger-children" role="list">
       @for (item of items(); track item.label; let i = $index) {
@@ -39,7 +42,11 @@ export interface MetricStatItem {
         >
           <div class="metric-stat__top">
             <span class="metric-stat__icon" [class]="iconTone(item.tone)">
-              <mat-icon>{{ item.icon }}</mat-icon>
+              @if (item.logo) {
+                <app-nav-icon [logo]="item.logo" size="sm" />
+              } @else {
+                <mat-icon>{{ item.icon }}</mat-icon>
+              }
             </span>
             @if (item.badge) {
               <span class="metric-stat__badge">{{ item.badge }}</span>

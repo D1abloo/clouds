@@ -2,13 +2,15 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { RouterLink, RouterLinkActive } from '@angular/router'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
+import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 import { SidebarService } from './sidebar.service'
 
 @Component({
   selector: 'app-sidebar-nav-leaf',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule, NavIconComponent],
   template: `
     <a
       class="nav-leaf"
@@ -17,8 +19,10 @@ import { SidebarService } from './sidebar.service'
       [matTooltip]="collapsed() ? label() : ''"
       matTooltipPosition="right"
     >
-      @if (icon()) {
-        <mat-icon class="nav-leaf__icon">{{ icon() }}</mat-icon>
+      @if (icon() || logo()) {
+        <span class="nav-leaf__icon-wrap">
+          <app-nav-icon [icon]="icon()" [logo]="logo()" size="sm" />
+        </span>
       }
       @if (!collapsed()) {
         <span class="nav-leaf__label">{{ label() }}</span>
@@ -62,11 +66,14 @@ import { SidebarService } from './sidebar.service'
       color: var(--sidebar-primary);
       box-shadow: inset 3px 0 0 var(--sidebar-primary), 0 2px 12px color-mix(in srgb, var(--sidebar-primary) 15%, transparent);
     }
-    .nav-leaf__icon {
-      font-size: 0.95rem !important;
-      width: 0.95rem !important;
-      height: 0.95rem !important;
-      opacity: 0.85;
+    .nav-leaf__icon-wrap {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      opacity: 0.92;
     }
     .nav-leaf__label {
       flex: 1;
@@ -108,6 +115,7 @@ export class SidebarNavLeafComponent {
   readonly label = input.required<string>()
   readonly route = input.required<string>()
   readonly icon = input<string | undefined>()
+  readonly logo = input<NavLogoKey | undefined>()
   readonly collapsed = input(false)
   readonly badge = input<number | null>(null)
 

@@ -3,6 +3,7 @@ import { Router, NavigationEnd, RouterLink, RouterLinkActive } from '@angular/ro
 import { toSignal } from '@angular/core/rxjs-interop'
 import { filter, map, startWith } from 'rxjs'
 import { MatIconModule } from '@angular/material/icon'
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 import {
   resolveAreaFromPath,
   resolveCloudProviderFromPath,
@@ -15,7 +16,7 @@ import {
   selector: 'app-module-area-tabs',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, MatIconModule],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, NavIconComponent],
   template: `
     @if (area(); as a) {
       <nav class="module-area-tabs" [attr.aria-label]="a.label + ' sections'">
@@ -37,8 +38,8 @@ import {
               [routerLinkActiveOptions]="{ paths: 'subset', queryParams: 'ignored', fragment: 'ignored', matrixParams: 'ignored' }"
               [attr.aria-label]="tab.label"
             >
-              @if (tab.icon) {
-                <mat-icon>{{ tab.icon }}</mat-icon>
+              @if (tab.icon || tab.logo) {
+                <app-nav-icon [icon]="tab.icon" [logo]="tab.logo" size="sm" />
               }
               <span>{{ tab.label }}</span>
               @if (badge(tab.badgeKey); as n) {

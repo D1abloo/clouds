@@ -3,15 +3,25 @@ import { RouterLink } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
+import { NavIconComponent } from '../../../shared/components/nav-icon/nav-icon.component'
+import type { NavLogoKey } from '../../../shared/theme/nav-logo.types'
+
+const PROVIDER_LOGO: Record<string, NavLogoKey> = {
+  aws: 'aws',
+  gcp: 'gcp',
+  azure: 'azure',
+}
 
 @Component({
   selector: 'app-provider-summary-panel',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatTooltipModule, NavIconComponent],
   template: `
     <article class="provider-panel animate-fade-in" [class]="'provider-panel--' + tone">
       <header class="provider-panel__head">
-        <div class="provider-panel__icon"><mat-icon>{{ icon }}</mat-icon></div>
+        <div class="provider-panel__icon">
+          <app-nav-icon [icon]="icon" [logo]="panelLogo()" size="md" />
+        </div>
         <div class="provider-panel__titles">
           <h4>{{ title }}</h4>
           <p>{{ subtitle }}</p>
@@ -128,4 +138,6 @@ export class ProviderSummaryPanelComponent {
   @Input() route = '/dashboard'
   @Input() metrics: { label: string; value: string | number }[] = []
   @Input() extraLines: string[] = []
+
+  panelLogo = (): NavLogoKey | undefined => PROVIDER_LOGO[this.tone]
 }

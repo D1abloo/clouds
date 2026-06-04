@@ -1,4 +1,6 @@
-/** Visual identity per route/module — icons & category tones (presentation only). */
+/** Visual identity per route/module — icons, logos & category tones (presentation only). */
+import type { NavLogoKey } from './nav-logo.types'
+
 export type NavVisualTone =
   | 'violet'
   | 'cyan'
@@ -16,44 +18,58 @@ export type NavVisualTone =
   | 'terraform'
 
 export interface NavVisualMeta {
-  icon: string
+  icon?: string
+  logo?: NavLogoKey
   tone: NavVisualTone
   label?: string
 }
 
 const entries: { match: (p: string) => boolean; meta: NavVisualMeta }[] = [
-  { match: (p) => p === '/dashboard', meta: { icon: 'space_dashboard', tone: 'violet', label: 'Dashboard' } },
-  { match: (p) => p.startsWith('/cloud/aws'), meta: { icon: 'cloud', tone: 'aws', label: 'AWS' } },
-  { match: (p) => p.startsWith('/cloud/gcp'), meta: { icon: 'cloud_circle', tone: 'gcp', label: 'GCP' } },
-  { match: (p) => p.startsWith('/cloud/azure'), meta: { icon: 'cloud_queue', tone: 'azure', label: 'Azure' } },
-  { match: (p) => p.startsWith('/vps'), meta: { icon: 'computer', tone: 'blue', label: 'VPS' } },
-  { match: (p) => p.startsWith('/instances'), meta: { icon: 'dynamic_feed', tone: 'blue', label: 'Instances' } },
-  { match: (p) => p.startsWith('/docker'), meta: { icon: 'view_in_ar', tone: 'docker', label: 'Docker' } },
-  { match: (p) => p.startsWith('/kubernetes'), meta: { icon: 'hub', tone: 'k8s', label: 'Kubernetes' } },
-  { match: (p) => p.startsWith('/jenkins'), meta: { icon: 'precision_manufacturing', tone: 'jenkins', label: 'Jenkins' } },
-  { match: (p) => p.startsWith('/terraform'), meta: { icon: 'account_tree', tone: 'terraform', label: 'Terraform' } },
+  { match: (p) => p === '/dashboard', meta: { icon: 'space_dashboard', tone: 'violet', label: 'Tablero' } },
+  { match: (p) => p.startsWith('/command-center'), meta: { icon: 'terminal', tone: 'amber', label: 'Centro de mando' } },
+  { match: (p) => p.startsWith('/resource-explorer'), meta: { icon: 'manage_search', tone: 'violet', label: 'Explorador de recursos' } },
+  { match: (p) => p.startsWith('/topology-map'), meta: { icon: 'lan', tone: 'violet', label: 'Mapa de topología' } },
+  { match: (p) => p.startsWith('/health-center'), meta: { icon: 'monitor_heart', tone: 'green', label: 'Centro de salud' } },
+  { match: (p) => p.startsWith('/cloud/aws'), meta: { logo: 'aws', tone: 'aws', label: 'AWS' } },
+  { match: (p) => p.startsWith('/cloud/gcp'), meta: { logo: 'gcp', tone: 'gcp', label: 'GCP' } },
+  { match: (p) => p.startsWith('/cloud/azure'), meta: { logo: 'azure', tone: 'azure', label: 'Azure' } },
+  { match: (p) => p.startsWith('/vps'), meta: { icon: 'storage', tone: 'blue', label: 'VPS' } },
+  { match: (p) => p.startsWith('/instances'), meta: { icon: 'layers', tone: 'blue', label: 'Instancias' } },
+  { match: (p) => p.startsWith('/docker'), meta: { logo: 'docker', tone: 'docker', label: 'Docker' } },
+  { match: (p) => p.startsWith('/kubernetes'), meta: { logo: 'kubernetes', tone: 'k8s', label: 'Kubernetes' } },
+  { match: (p) => p.startsWith('/network'), meta: { icon: 'device_hub', tone: 'blue', label: 'Red' } },
+  { match: (p) => p.startsWith('/storage'), meta: { icon: 'database', tone: 'blue', label: 'Almacenamiento' } },
+  { match: (p) => p.startsWith('/backups'), meta: { icon: 'archive', tone: 'blue', label: 'Copias de seguridad' } },
+  { match: (p) => p.startsWith('/capacity-planner'), meta: { icon: 'trending_up', tone: 'blue', label: 'Planificador de capacidad' } },
+  { match: (p) => p.startsWith('/jenkins'), meta: { logo: 'jenkins', tone: 'jenkins', label: 'Jenkins' } },
+  { match: (p) => p.startsWith('/terraform'), meta: { logo: 'terraform', tone: 'terraform', label: 'Terraform' } },
+  { match: (p) => p.startsWith('/deployments'), meta: { icon: 'rocket_launch', tone: 'amber', label: 'Despliegues' } },
   { match: (p) => p.startsWith('/terminal'), meta: { icon: 'terminal', tone: 'slate', label: 'Terminal' } },
-  { match: (p) => p.startsWith('/metrics'), meta: { icon: 'monitoring', tone: 'green', label: 'Metrics' } },
-  { match: (p) => p.startsWith('/logs'), meta: { icon: 'article', tone: 'green', label: 'Logs' } },
-  { match: (p) => p.startsWith('/billing'), meta: { icon: 'payments', tone: 'green', label: 'Billing' } },
-  { match: (p) => p.startsWith('/alerts'), meta: { icon: 'notifications_active', tone: 'amber', label: 'Alerts' } },
-  { match: (p) => p.startsWith('/notifications'), meta: { icon: 'notifications', tone: 'cyan', label: 'Notifications' } },
-  { match: (p) => p.startsWith('/reports'), meta: { icon: 'assessment', tone: 'green', label: 'Reports' } },
-  { match: (p) => p.startsWith('/security-center'), meta: { icon: 'security', tone: 'pink', label: 'Security Center' } },
-  { match: (p) => p.startsWith('/secrets-manager'), meta: { icon: 'key', tone: 'pink', label: 'Secrets Manager' } },
-  { match: (p) => p.startsWith('/compliance'), meta: { icon: 'policy', tone: 'pink', label: 'Compliance' } },
-  { match: (p) => p.startsWith('/access-control'), meta: { icon: 'admin_panel_settings', tone: 'pink', label: 'Access Control' } },
-  { match: (p) => p.startsWith('/audit'), meta: { icon: 'history', tone: 'slate', label: 'Audit' } },
-  { match: (p) => p.startsWith('/admin/users'), meta: { icon: 'group', tone: 'violet', label: 'Users' } },
-  { match: (p) => p.startsWith('/admin/roles'), meta: { icon: 'badge', tone: 'violet', label: 'Roles' } },
-  { match: (p) => p.startsWith('/admin/api-tokens'), meta: { icon: 'token', tone: 'violet', label: 'API Tokens' } },
+  { match: (p) => p.startsWith('/runbooks'), meta: { icon: 'auto_stories', tone: 'amber', label: 'Runbooks' } },
+  { match: (p) => p.startsWith('/scheduler'), meta: { icon: 'event_repeat', tone: 'amber', label: 'Programador' } },
+  { match: (p) => p.startsWith('/service-catalog'), meta: { icon: 'apps', tone: 'amber', label: 'Catálogo de servicios' } },
+  { match: (p) => p.startsWith('/approvals'), meta: { icon: 'task_alt', tone: 'amber', label: 'Aprobaciones' } },
+  { match: (p) => p.startsWith('/metrics'), meta: { icon: 'show_chart', tone: 'green', label: 'Métricas' } },
+  { match: (p) => p.startsWith('/logs'), meta: { icon: 'receipt_long', tone: 'green', label: 'Logs' } },
+  { match: (p) => p.startsWith('/billing'), meta: { icon: 'account_balance_wallet', tone: 'green', label: 'Facturación' } },
+  { match: (p) => p.startsWith('/cost-optimizer'), meta: { icon: 'trending_down', tone: 'green', label: 'Optimizador de costes' } },
+  { match: (p) => p.startsWith('/alerts'), meta: { icon: 'warning_amber', tone: 'amber', label: 'Alertas' } },
+  { match: (p) => p.startsWith('/incidents'), meta: { icon: 'local_fire_department', tone: 'amber', label: 'Incidentes' } },
+  { match: (p) => p.startsWith('/notifications'), meta: { icon: 'notifications', tone: 'cyan', label: 'Notificaciones' } },
+  { match: (p) => p.startsWith('/reports'), meta: { icon: 'summarize', tone: 'green', label: 'Informes' } },
+  { match: (p) => p.startsWith('/change-management'), meta: { icon: 'published_with_changes', tone: 'green', label: 'Gestión de cambios' } },
+  { match: (p) => p.startsWith('/security-center'), meta: { icon: 'shield', tone: 'pink', label: 'Centro de seguridad' } },
+  { match: (p) => p.startsWith('/secrets-manager'), meta: { icon: 'vpn_key', tone: 'pink', label: 'Gestor de secretos' } },
+  { match: (p) => p.startsWith('/compliance'), meta: { icon: 'fact_check', tone: 'pink', label: 'Cumplimiento' } },
+  { match: (p) => p.startsWith('/access-control'), meta: { icon: 'lock_person', tone: 'pink', label: 'Control de acceso' } },
+  { match: (p) => p.startsWith('/audit'), meta: { icon: 'manage_search', tone: 'slate', label: 'Auditoría' } },
+  { match: (p) => p.startsWith('/admin/users'), meta: { icon: 'groups', tone: 'violet', label: 'Usuarios' } },
+  { match: (p) => p.startsWith('/admin/roles'), meta: { icon: 'manage_accounts', tone: 'violet', label: 'Roles' } },
+  { match: (p) => p.startsWith('/admin/api-tokens'), meta: { icon: 'vpn_key', tone: 'violet', label: 'Tokens API' } },
   { match: (p) => p.startsWith('/admin/webhooks'), meta: { icon: 'webhook', tone: 'violet', label: 'Webhooks' } },
-  { match: (p) => p.startsWith('/admin/demo-mode'), meta: { icon: 'science', tone: 'violet', label: 'Demo Mode' } },
-  { match: (p) => p.startsWith('/settings'), meta: { icon: 'tune', tone: 'slate', label: 'Settings' } },
-  { match: (p) => p.startsWith('/ai-assistant'), meta: { icon: 'smart_toy', tone: 'violet', label: 'AI Assistant' } },
-  { match: (p) => p.startsWith('/command-center'), meta: { icon: 'bolt', tone: 'amber', label: 'Command Center' } },
-  { match: (p) => p.startsWith('/health-center'), meta: { icon: 'favorite', tone: 'green', label: 'Health Center' } },
-  { match: (p) => p.startsWith('/cost-optimizer'), meta: { icon: 'savings', tone: 'green', label: 'Cost Optimizer' } },
+  { match: (p) => p.startsWith('/admin/demo-mode'), meta: { icon: 'science', tone: 'violet', label: 'Modo demo' } },
+  { match: (p) => p.startsWith('/settings'), meta: { icon: 'settings', tone: 'slate', label: 'Configuración' } },
+  { match: (p) => p.startsWith('/ai-assistant'), meta: { icon: 'auto_awesome', tone: 'violet', label: 'Asistente IA' } },
 ]
 
 export const resolvePageVisual = (path: string): NavVisualMeta => {

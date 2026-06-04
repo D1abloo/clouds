@@ -3,15 +3,26 @@ import { RouterLink } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
+import { NavIconComponent } from '../../../shared/components/nav-icon/nav-icon.component'
+import type { NavLogoKey } from '../../../shared/theme/nav-logo.types'
+
+const PLATFORM_LOGO: Record<string, NavLogoKey> = {
+  docker: 'docker',
+  k8s: 'kubernetes',
+  jenkins: 'jenkins',
+  terraform: 'terraform',
+}
 
 @Component({
   selector: 'app-platform-detail-panel',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [RouterLink, MatButtonModule, MatIconModule, MatTooltipModule, NavIconComponent],
   template: `
     <article class="platform-panel animate-fade-in" [class]="'platform-panel--' + tone">
       <header>
-        <mat-icon>{{ icon }}</mat-icon>
+        <span class="platform-panel__icon-wrap">
+          <app-nav-icon [icon]="icon" [logo]="panelLogo()" size="md" />
+        </span>
         <div>
           <h4>{{ title }}</h4>
           <p>{{ subtitle }}</p>
@@ -113,4 +124,6 @@ export class PlatformDetailPanelComponent {
   @Input() route = '/dashboard'
   @Input() metrics: { label: string; value: string | number }[] = []
   @Input() details: string[] = []
+
+  panelLogo = (): NavLogoKey | undefined => PLATFORM_LOGO[this.tone]
 }

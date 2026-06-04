@@ -1,5 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, input, computed } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
+import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
+import { sidebarBrandToLogo } from '../../shared/theme/nav-logo.types'
 import { SidebarService } from './sidebar.service'
 import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
 import type { SidebarNavBranch } from '../../core/routing/area-nav.config'
@@ -8,7 +11,7 @@ import type { SidebarNavBranch } from '../../core/routing/area-nav.config'
   selector: 'app-sidebar-nav-branch',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, SidebarNavLeafComponent],
+  imports: [MatIconModule, NavIconComponent, BrandLogoComponent, SidebarNavLeafComponent],
   template: `
     <div class="nav-branch">
       <button
@@ -18,8 +21,10 @@ import type { SidebarNavBranch } from '../../core/routing/area-nav.config'
         (click)="handleToggle()"
         [attr.aria-expanded]="open()"
       >
-        @if (branch().brand) {
-          <span class="nav-branch__brand" [class]="'nav-branch__brand--' + branch().brand">{{ brandText() }}</span>
+        @if (branchLogo()) {
+          <span class="nav-branch__logo-wrap" [class]="'nav-branch__logo-wrap--' + branch().brand">
+            <app-brand-logo [logo]="branchLogo()!" size="md" />
+          </span>
         } @else if (branch().icon) {
           <span class="nav-branch__icon-wrap" [class]="toneClass()">
             <mat-icon>{{ branch().icon }}</mat-icon>
@@ -40,6 +45,7 @@ import type { SidebarNavBranch } from '../../core/routing/area-nav.config'
               [label]="leaf.label"
               [route]="leaf.route"
               [icon]="leaf.icon"
+              [logo]="leaf.logo"
               [collapsed]="collapsed()"
               [badge]="leafBadge(leaf.badgeKey)"
             />
@@ -72,21 +78,19 @@ import type { SidebarNavBranch } from '../../core/routing/area-nav.config'
       background: color-mix(in srgb, var(--sidebar-primary) 10%, transparent);
       color: var(--sidebar-text);
     }
-    .nav-branch__brand {
+    .nav-branch__logo-wrap {
       width: 30px;
       height: 30px;
       border-radius: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.6rem;
-      font-weight: 800;
       flex-shrink: 0;
-      border: none;
+      padding: 4px;
     }
-    .nav-branch__brand--aws { color: #ff9900; background: color-mix(in srgb, #ff9900 22%, transparent); }
-    .nav-branch__brand--gcp { color: #4285f4; background: color-mix(in srgb, #4285f4 22%, transparent); }
-    .nav-branch__brand--azure { color: #0078d4; background: color-mix(in srgb, #0078d4 22%, transparent); }
+    .nav-branch__logo-wrap--aws { background: color-mix(in srgb, #ff9900 22%, transparent); }
+    .nav-branch__logo-wrap--gcp { background: color-mix(in srgb, #4285f4 22%, transparent); }
+    .nav-branch__logo-wrap--azure { background: color-mix(in srgb, #0078d4 22%, transparent); }
     .nav-branch__icon-wrap {
       width: 30px;
       height: 30px;
@@ -165,12 +169,7 @@ export class SidebarNavBranchComponent {
     return `tone-${t} nav-branch__icon-wrap`
   }
 
-  brandText = (): string => {
-    const b = this.branch().brand
-    if (b === 'aws') return 'AWS'
-    if (b === 'gcp') return 'GCP'
-    return 'Az'
-  }
+  branchLogo = () => sidebarBrandToLogo(this.branch().brand)
 
   branchBadge = (): number | null => this.badgeResolver()(this.branch().badgeKey)
 

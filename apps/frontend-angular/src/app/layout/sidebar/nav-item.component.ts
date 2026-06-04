@@ -2,13 +2,15 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core'
 import { RouterLink, RouterLinkActive } from '@angular/router'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
+import { sidebarBrandToLogo } from '../../shared/theme/nav-logo.types'
 import type { NavIconTone } from './sidebar-nav.config'
 
 @Component({
   selector: 'app-nav-item',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule, NavIconComponent],
   template: `
     <a
       class="nav-item"
@@ -18,13 +20,13 @@ import type { NavIconTone } from './sidebar-nav.config'
       [matTooltip]="collapsed() ? label() : ''"
       matTooltipPosition="right"
     >
-      @if (brand()) {
-        <span class="nav-brand" [class]="'nav-brand--' + brand()">{{ brandLabel() }}</span>
-      } @else {
-        <span class="nav-icon-wrap" [class]="iconWrapClass()">
-          <mat-icon class="nav-icon">{{ icon() }}</mat-icon>
-        </span>
-      }
+      <span class="nav-icon-wrap" [class]="iconWrapClass()">
+        @if (brandLogo()) {
+          <app-nav-icon [logo]="brandLogo()!" size="md" />
+        } @else {
+          <app-nav-icon [icon]="icon()" size="md" />
+        }
+      </span>
 
       @if (!collapsed()) {
         <span class="nav-label">{{ label() }}</span>
@@ -196,10 +198,5 @@ export class NavItemComponent {
     return t ? `tone-${t}` : ''
   }
 
-  brandLabel = (): string => {
-    const b = this.brand()
-    if (b === 'aws') return 'AWS'
-    if (b === 'gcp') return 'GCP'
-    return 'Az'
-  }
+  brandLogo = () => sidebarBrandToLogo(this.brand() ?? undefined)
 }

@@ -5,7 +5,9 @@ import { filter, map, startWith } from 'rxjs'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { RealtimeStatusBadgeComponent } from '../realtime-status-badge/realtime-status-badge.component'
+import { NavIconComponent } from '../nav-icon/nav-icon.component'
 import { resolvePageVisual, type NavVisualTone } from '../../theme/nav-visual.config'
+import type { NavLogoKey } from '../../theme/nav-logo.types'
 
 export interface PageHeaderAction {
   label: string
@@ -17,18 +19,18 @@ export interface PageHeaderAction {
 @Component({
   selector: 'app-page-header',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RealtimeStatusBadgeComponent],
+  imports: [MatButtonModule, MatIconModule, RealtimeStatusBadgeComponent, NavIconComponent],
   template: `
     <header class="page-header-premium surface-elevated animate-fade-in">
       <div class="page-header-premium__main">
         <div class="page-header-premium__icon" [class]="'tone-' + visualTone()">
-          <mat-icon>{{ displayIcon() }}</mat-icon>
+          <app-nav-icon [icon]="displayIcon()" [logo]="displayLogo()" size="lg" />
         </div>
         <div>
           <div class="page-header-premium__title-row">
             <h1>{{ title }}</h1>
             @if (demoMode) {
-              <app-realtime-status-badge mode="demo" label="Demo data" icon="science" />
+              <app-realtime-status-badge mode="demo" label="Datos demo" icon="science" />
             }
           </div>
           @if (description) {
@@ -87,6 +89,8 @@ export interface PageHeaderAction {
       flex-shrink: 0;
       box-shadow: 0 8px 22px color-mix(in srgb, var(--app-accent) 18%, transparent);
       mat-icon { font-size: 1.55rem; width: 1.55rem; height: 1.55rem; }
+      app-nav-icon { font-size: 1.55rem; }
+      app-brand-logo img { width: 28px; height: 28px; }
     }
     .page-header-premium__title-row {
       display: flex;
@@ -145,4 +149,6 @@ export class PageHeaderComponent {
   visualTone = computed((): NavVisualTone => (this.tone || this.routeVisual().tone) as NavVisualTone)
 
   displayIcon = computed(() => this.icon || this.routeVisual().icon)
+
+  displayLogo = computed((): NavLogoKey | undefined => this.routeVisual().logo)
 }

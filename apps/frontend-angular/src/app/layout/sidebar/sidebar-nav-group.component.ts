@@ -60,6 +60,7 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
                 [label]="tab.label"
                 [route]="tab.route"
                 [icon]="tab.icon"
+                [logo]="tab.logo"
                 [collapsed]="false"
                 [badge]="badgeResolver()(tab.badgeKey)"
               />
