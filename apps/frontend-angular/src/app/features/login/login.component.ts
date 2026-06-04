@@ -47,7 +47,17 @@ import { environment } from '../../../environments/environment'
     </div>
   `,
   styles: [`
-    .login-page { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #0f172a, #1e3a5f); }
+    :host {
+      display: block;
+      height: 100dvh;
+      overflow-y: auto;
+    }
+    .login-page {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #0f172a, #1e3a5f);
+    }
     .login-card { width: 100%; max-width: 440px; padding: 8px; }
     .full-width { width: 100%; margin-bottom: 8px; }
     .error { color: #ef4444; font-size: 0.875rem; margin-bottom: 0.5rem; }

@@ -11,7 +11,7 @@
 | Módulo | Clic en cabecera | Contenido al expandir |
 |--------|------------------|------------------------|
 | Overview | Abre/cierra | Dashboard, Command Center, Resource Explorer… |
-| Clouds | Abre/cierra | AWS, GCP, Azure |
+| Clouds | Abre/cierra | AWS / GCP / Azure (cada uno desplegable → Overview, EC2/Compute/VMs, Network, Billing, Metrics) |
 | Infrastructure | Abre/cierra | Instances, VPS, Docker, K8s… |
 | Automation | Abre/cierra | Jenkins, Terraform, Terminal… |
 | Observability | Abre/cierra | Metrics, Logs, Billing, Alerts… |

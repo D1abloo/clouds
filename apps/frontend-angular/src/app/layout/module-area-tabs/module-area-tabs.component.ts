@@ -3,7 +3,13 @@ import { Router, NavigationEnd, RouterLink, RouterLinkActive } from '@angular/ro
 import { toSignal } from '@angular/core/rxjs-interop'
 import { filter, map, startWith } from 'rxjs'
 import { MatIconModule } from '@angular/material/icon'
-import { resolveAreaFromPath, type SidebarMainModule } from '../../core/routing/area-nav.config'
+import {
+  resolveAreaFromPath,
+  resolveCloudProviderFromPath,
+  cloudSectionTabs,
+  type SidebarMainModule,
+  type AreaNavTab,
+} from '../../core/routing/area-nav.config'
 
 @Component({
   selector: 'app-module-area-tabs',
@@ -23,7 +29,7 @@ import { resolveAreaFromPath, type SidebarMainModule } from '../../core/routing/
           </div>
         </div>
         <div class="module-area-tabs__scroll">
-          @for (tab of a.tabs; track tab.id) {
+          @for (tab of sectionTabs(); track tab.id) {
             <a
               class="module-area-tab"
               [routerLink]="tab.route"
@@ -46,7 +52,7 @@ import { resolveAreaFromPath, type SidebarMainModule } from '../../core/routing/
   `,
   styles: `
     .module-area-tabs {
-      margin: -0.25rem 0 1.25rem;
+      margin: 0 0 1.25rem;
       padding: 1rem 1.15rem 0.85rem;
       border-radius: var(--app-radius-lg);
       background: var(--app-card);
@@ -159,6 +165,17 @@ export class ModuleAreaTabsComponent {
   readonly area = computed((): SidebarMainModule | null => {
     const path = this.url().split('?')[0]
     return resolveAreaFromPath(path)
+  })
+
+  readonly sectionTabs = computed((): AreaNavTab[] => {
+    const a = this.area()
+    if (!a) return []
+    const path = this.url().split('?')[0]
+    if (a.id === 'clouds') {
+      const provider = resolveCloudProviderFromPath(path)
+      if (provider) return cloudSectionTabs(provider)
+    }
+    return a.tabs
   })
 
   /** Injected from parent via optional callback — set in main layout */

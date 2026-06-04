@@ -1,5 +1,13 @@
-import { Component, inject, OnInit } from '@angular/core'
-import { RouterOutlet } from '@angular/router'
+import {
+  Component,
+  inject,
+  OnInit,
+  OnDestroy,
+  ElementRef,
+  viewChild,
+} from '@angular/core'
+import { Router, RouterOutlet, NavigationEnd } from '@angular/router'
+import { filter, Subscription } from 'rxjs'
 import { SidebarComponent } from '../sidebar/sidebar.component'
 import { TopbarComponent } from '../topbar/topbar.component'
 import { DemoBannerComponent } from '../../shared/components/demo-banner/demo-banner.component'
@@ -12,7 +20,7 @@ import { SidebarService } from '../sidebar/sidebar.service'
   standalone: true,
   imports: [RouterOutlet, SidebarComponent, TopbarComponent, DemoBannerComponent, ModuleAreaTabsComponent],
   template: `
-    <div class="app-shell layout-root">
+    <div class="layout-root">
       <app-sidebar />
 
       @if (!sidebarSvc.collapsed() && isMobile()) {
@@ -21,10 +29,12 @@ import { SidebarService } from '../sidebar/sidebar.service'
 
       <div class="layout-main">
         <app-topbar />
-        <div class="layout-content animate-fade-in">
+        <div class="layout-main-scroll" #mainScroll>
           <app-demo-banner />
           <app-module-area-tabs />
-          <router-outlet />
+          <main class="layout-page">
+            <router-outlet />
+          </main>
         </div>
       </div>
     </div>
@@ -32,21 +42,34 @@ import { SidebarService } from '../sidebar/sidebar.service'
   styles: `
     .layout-root {
       display: flex;
-      min-height: 100vh;
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+      background: var(--app-surface);
     }
     .layout-main {
       flex: 1;
       min-width: 0;
+      min-height: 0;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
       background: var(--app-surface);
     }
-    .layout-content {
+    .layout-main-scroll {
       flex: 1;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       padding: 1.25rem 1.5rem 2rem;
-      max-width: min(100%, 1680px);
+      scroll-behavior: auto;
+    }
+    .layout-page {
       width: 100%;
+      max-width: min(100%, 1680px);
       margin: 0 auto;
+      min-height: auto;
     }
     .sidebar-backdrop {
       position: fixed;
@@ -56,17 +79,29 @@ import { SidebarService } from '../sidebar/sidebar.service'
       backdrop-filter: blur(3px);
     }
     @media (max-width: 960px) {
-      .layout-content { padding: 1rem; }
+      .layout-main-scroll { padding: 1rem; }
     }
   `,
 })
-export class MainLayoutComponent implements OnInit {
+export class MainLayoutComponent implements OnInit, OnDestroy {
   private readonly realtime = inject(RealtimeService)
+  private readonly router = inject(Router)
   readonly sidebarSvc = inject(SidebarService)
+
+  private readonly mainScrollRef = viewChild<ElementRef<HTMLElement>>('mainScroll')
+  private navSub?: Subscription
 
   ngOnInit(): void {
     this.realtime.connect()
     if (this.isMobile()) this.sidebarSvc.setCollapsed(true)
+
+    this.navSub = this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd))
+      .subscribe(() => this.resetMainScroll())
+  }
+
+  ngOnDestroy(): void {
+    this.navSub?.unsubscribe()
   }
 
   closeMobileSidebar(): void {
@@ -75,5 +110,16 @@ export class MainLayoutComponent implements OnInit {
 
   isMobile(): boolean {
     return typeof window !== 'undefined' && window.innerWidth <= 960
+  }
+
+  private resetMainScroll = (): void => {
+    const el = this.mainScrollRef()?.nativeElement
+    if (el) {
+      el.scrollTop = 0
+      el.scrollLeft = 0
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0)
+    }
   }
 }

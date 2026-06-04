@@ -8,6 +8,20 @@ export interface AreaNavTab {
   badgeKey?: string
 }
 
+export type SidebarBrand = 'aws' | 'gcp' | 'azure'
+
+/** Second-level sidebar dropdown (e.g. AWS → EC2, Network). Used only where needed (Clouds). */
+export interface SidebarNavBranch {
+  id: string
+  label: string
+  brand?: SidebarBrand
+  icon?: string
+  tone?: NavIconTone
+  badgeKey?: string
+  defaultRoute?: string
+  children: AreaNavTab[]
+}
+
 export interface SidebarMainModule {
   id: string
   label: string
@@ -17,7 +31,60 @@ export interface SidebarMainModule {
   route: string
   description: string
   tabs: AreaNavTab[]
+  /** Optional nested dropdowns under this module (Cloud providers only) */
+  branches?: SidebarNavBranch[]
   match: (path: string) => boolean
+}
+
+const cloudProviderBranch = (
+  provider: 'aws' | 'gcp' | 'azure',
+  label: string,
+  brand: SidebarBrand,
+): SidebarNavBranch => {
+  const base = `/cloud/${provider}`
+  const instancesLabel = provider === 'gcp' ? 'Compute' : provider === 'azure' ? 'VMs' : 'EC2'
+  const accountsLabel =
+    provider === 'gcp' ? 'Projects' : provider === 'azure' ? 'Subscriptions' : 'Accounts'
+  return {
+    id: provider,
+    label,
+    brand,
+    defaultRoute: `${base}/overview`,
+    children: [
+      { id: `${provider}-overview`, label: 'Overview', route: `${base}/overview`, icon: 'dashboard' },
+      {
+        id: `${provider}-accounts`,
+        label: accountsLabel,
+        route: `${base}/accounts`,
+        icon: 'account_balance',
+      },
+      {
+        id: `${provider}-instances`,
+        label: instancesLabel,
+        route: `${base}/instances`,
+        icon: 'dns',
+      },
+      { id: `${provider}-network`, label: 'Network', route: `${base}/network`, icon: 'hub' },
+      { id: `${provider}-billing`, label: 'Billing', route: `${base}/billing`, icon: 'payments' },
+      { id: `${provider}-metrics`, label: 'Metrics', route: `${base}/metrics`, icon: 'monitoring' },
+    ],
+  }
+}
+
+export const CLOUD_SIDEBAR_BRANCHES: SidebarNavBranch[] = [
+  cloudProviderBranch('aws', 'AWS', 'aws'),
+  cloudProviderBranch('gcp', 'GCP', 'gcp'),
+  cloudProviderBranch('azure', 'Azure', 'azure'),
+]
+
+export const resolveCloudProviderFromPath = (path: string): 'aws' | 'gcp' | 'azure' | null => {
+  const m = path.match(/^\/cloud\/(aws|gcp|azure)(?:\/|$)/)
+  return m ? (m[1] as 'aws' | 'gcp' | 'azure') : null
+}
+
+export const cloudSectionTabs = (provider: string): AreaNavTab[] => {
+  const branch = CLOUD_SIDEBAR_BRANCHES.find((b) => b.id === provider)
+  return branch?.children ?? []
 }
 
 const prefix =
@@ -60,6 +127,7 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
       { id: 'gcp', label: 'GCP', route: '/cloud/gcp/overview', icon: 'cloud_circle' },
       { id: 'azure', label: 'Azure', route: '/cloud/azure/overview', icon: 'cloud_queue' },
     ],
+    branches: CLOUD_SIDEBAR_BRANCHES,
     match: prefix('/cloud', '/accounts'),
   },
   {
@@ -198,11 +266,21 @@ export const resolveAreaFromPath = (path: string): SidebarMainModule | null => {
 }
 
 export const flattenAreaNavForSearch = (): { label: string; route: string; group: string; icon?: string }[] =>
-  SIDEBAR_MAIN_MODULES.flatMap((m) =>
-    m.tabs.map((t) => ({
+  SIDEBAR_MAIN_MODULES.flatMap((m) => {
+    if (m.branches?.length) {
+      return m.branches.flatMap((b) =>
+        b.children.map((t) => ({
+          label: `${m.label} › ${b.label} › ${t.label}`,
+          route: t.route,
+          group: m.label,
+          icon: t.icon,
+        })),
+      )
+    }
+    return m.tabs.map((t) => ({
       label: `${m.label} › ${t.label}`,
       route: t.route,
       group: m.label,
       icon: t.icon,
-    })),
-  )
+    }))
+  })

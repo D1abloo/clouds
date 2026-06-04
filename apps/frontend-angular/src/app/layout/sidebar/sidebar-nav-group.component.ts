@@ -4,13 +4,14 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
 import { SidebarService } from './sidebar.service'
 import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
+import { SidebarNavBranchComponent } from './sidebar-nav-branch.component'
 import type { SidebarMainModule } from '../../core/routing/area-nav.config'
 
 @Component({
   selector: 'app-sidebar-nav-group',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, MatTooltipModule, RouterLink, SidebarNavLeafComponent],
+  imports: [MatIconModule, MatTooltipModule, RouterLink, SidebarNavLeafComponent, SidebarNavBranchComponent],
   template: `
     <div class="nav-group">
       @if (collapsed()) {
@@ -44,14 +45,25 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
       </div>
       @if (open()) {
         <div class="nav-group__body">
-          @for (tab of visibleTabs(); track tab.id) {
-            <app-sidebar-nav-leaf
-              [label]="tab.label"
-              [route]="tab.route"
-              [icon]="tab.icon"
-              [collapsed]="false"
-              [badge]="badgeResolver()(tab.badgeKey)"
-            />
+          @if (hasBranches()) {
+            @for (branch of visibleBranches(); track branch.id) {
+              <app-sidebar-nav-branch
+                [branch]="branch"
+                [collapsed]="collapsed()"
+                [groupTone]="module().tone"
+                [badgeResolver]="badgeResolver()"
+              />
+            }
+          } @else {
+            @for (tab of visibleTabs(); track tab.id) {
+              <app-sidebar-nav-leaf
+                [label]="tab.label"
+                [route]="tab.route"
+                [icon]="tab.icon"
+                [collapsed]="false"
+                [badge]="badgeResolver()(tab.badgeKey)"
+              />
+            }
           }
         </div>
       }
@@ -145,6 +157,24 @@ export class SidebarNavGroupComponent {
   readonly badgeResolver = input.required<(key?: string) => number | null>()
 
   readonly open = computed(() => this.sidebar.isExpanded(this.module().id))
+
+  readonly hasBranches = computed(() => (this.module().branches?.length ?? 0) > 0)
+
+  readonly visibleBranches = computed(() => {
+    const q = this.sidebar.searchQuery()
+    const branches = this.module().branches ?? []
+    if (!q) return branches
+    return branches.filter(
+      (b) =>
+        b.label.toLowerCase().includes(q) ||
+        this.module().label.toLowerCase().includes(q) ||
+        b.children.some(
+          (c) =>
+            c.label.toLowerCase().includes(q) ||
+            c.route.toLowerCase().includes(q),
+        ),
+    )
+  })
 
   readonly visibleTabs = computed(() => {
     const q = this.sidebar.searchQuery()

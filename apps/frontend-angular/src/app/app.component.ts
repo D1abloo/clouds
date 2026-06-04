@@ -6,7 +6,7 @@ import { ThemeService } from './core/services/theme.service'
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet],
-  template: `<div class="app-shell"><router-outlet /></div>`,
+  template: `<div class="app-root"><router-outlet /></div>`,
 })
 export class AppComponent implements OnInit {
   private readonly theme = inject(ThemeService)

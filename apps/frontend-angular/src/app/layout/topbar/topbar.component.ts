@@ -127,8 +127,7 @@ import { CommandPaletteComponent } from './command-palette.component'
       min-height: 48px;
       background: var(--app-topbar);
       box-shadow: var(--app-shadow-xs);
-      position: sticky;
-      top: 0;
+      flex-shrink: 0;
       z-index: 90;
       backdrop-filter: blur(8px);
     }

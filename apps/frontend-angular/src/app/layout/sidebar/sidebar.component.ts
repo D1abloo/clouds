@@ -144,9 +144,11 @@ import { AuthStore } from '../../core/stores/auth.store'
       z-index: 100;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      height: 100dvh;
+      max-height: 100dvh;
       width: 240px;
       flex-shrink: 0;
+      overflow: hidden;
       background: var(--sidebar-bg);
       box-shadow: 4px 0 32px rgba(0, 0, 0, 0.22);
       border: none;
@@ -312,6 +314,8 @@ export class SidebarComponent {
       const path = this.url().split('?')[0]
       const area = resolveAreaFromPath(path)
       if (area) this.sidebarSvc.setExpanded(area.id, true)
+      const cloudProvider = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
+      if (cloudProvider) this.sidebarSvc.setExpanded(cloudProvider, true)
     })
   }
 
@@ -320,15 +324,25 @@ export class SidebarComponent {
   readonly visibleModules = computed(() => {
     const q = this.sidebarSvc.searchQuery()
     if (!q) return this.mainModules
-    return this.mainModules.filter(
-      (m) =>
-        m.label.toLowerCase().includes(q) ||
-        m.tabs.some(
-          (t) =>
-            t.label.toLowerCase().includes(q) ||
-            t.route.toLowerCase().includes(q),
-        ),
-    )
+    return this.mainModules.filter((m) => {
+      if (m.label.toLowerCase().includes(q)) return true
+      if (m.branches?.length) {
+        return m.branches.some(
+          (b) =>
+            b.label.toLowerCase().includes(q) ||
+            b.children.some(
+              (c) =>
+                c.label.toLowerCase().includes(q) ||
+                c.route.toLowerCase().includes(q),
+            ),
+        )
+      }
+      return m.tabs.some(
+        (t) =>
+          t.label.toLowerCase().includes(q) ||
+          t.route.toLowerCase().includes(q),
+      )
+    })
   })
 
   readonly searchHits = computed(() => {
