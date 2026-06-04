@@ -17,11 +17,12 @@ import { MatTooltipModule } from '@angular/material/tooltip'
           <p>{{ subtitle }}</p>
         </div>
       </header>
-      <div class="platform-panel__grid">
+      <div class="platform-panel__metrics">
         @for (m of metrics; track m.label) {
-          <div [matTooltip]="m.label">
-            <strong>{{ m.value }}</strong>
-            <span>{{ m.label }}</span>
+          <div class="metric-row metric-row--compact" [matTooltip]="m.label + ': ' + m.value">
+            <span class="metric-row__icon tone-primary"><mat-icon>insights</mat-icon></span>
+            <span class="metric-row__label">{{ m.label }}</span>
+            <span class="metric-row__value">{{ m.value }}</span>
           </div>
         }
       </div>
@@ -63,19 +64,24 @@ import { MatTooltipModule } from '@angular/material/tooltip'
     .platform-panel--k8s mat-icon { color: #8b5cf6; }
     .platform-panel--jenkins mat-icon { color: #f97316; }
     .platform-panel--terraform mat-icon { color: #6366f1; }
-    .platform-panel__grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-      gap: 0.55rem;
-      div {
-        padding: 0.55rem;
-        border-radius: var(--app-radius-md);
-        background: color-mix(in srgb, var(--app-text) 3%, var(--app-surface));
-        text-align: center;
-        strong { display: block; font-size: 1rem; font-weight: 700; }
-        span { display: block; font-size: 0.65rem; color: var(--app-text-muted); margin-top: 0.1rem; line-height: 1.25; }
-      }
+    .platform-panel__metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
     }
+    .metric-row--compact {
+      grid-template-columns: 32px 1fr auto;
+      gap: 0.65rem 1rem;
+      padding: 0.55rem 0;
+      margin-inline: 0;
+      &:hover { margin-inline: 0; padding-inline: 0; background: transparent; }
+    }
+    .metric-row--compact .metric-row__icon {
+      width: 28px;
+      height: 28px;
+      mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
+    }
+    .metric-row--compact .metric-row__value { font-size: 1.05rem; }
     ul {
       list-style: none;
       margin: 0;

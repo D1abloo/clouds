@@ -6,7 +6,6 @@ import { AlertsTableComponent } from './components/alerts-table.component'
 import { ActivityTimelineComponent } from './components/activity-timeline.component'
 import { NotificationsPanelComponent, NotificationRow } from './components/notifications-panel.component'
 import { ChartCardComponent } from '../../shared/ui/chart-card.component'
-import { SkeletonCardComponent } from '../../shared/ui/skeleton-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { InstanceOverviewTableComponent } from './components/instance-overview-table.component'
@@ -36,7 +35,6 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
     ActivityTimelineComponent,
     NotificationsPanelComponent,
     ChartCardComponent,
-    SkeletonCardComponent,
     LoadingStateComponent,
     ErrorStateComponent,
     InstanceOverviewTableComponent,
@@ -59,9 +57,13 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
 
       @if (page.loading()) {
         <div class="dashboard-skeleton">
-          <div class="stats-grid">
-            @for (i of [1,2,3,4,5,6,7,8,9,10,11,12]; track i) {
-              <app-skeleton-card />
+          <div class="summary-grid dashboard-skeleton__metrics">
+            @for (i of [1,2,3,4,5,6,7,8]; track i) {
+              <div class="metric-row metric-row--skeleton">
+                <span class="metric-row__icon skeleton-shimmer"></span>
+                <span class="metric-row__main skeleton-shimmer" style="height: 14px; width: 55%"></span>
+                <span class="metric-row__value skeleton-shimmer" style="height: 20px; width: 48px"></span>
+              </div>
             }
           </div>
           <app-loading-state message="Loading dashboard metrics…" />
@@ -70,7 +72,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
         <app-error-state [message]="page.error()!" (retry)="loadData()" />
       } @else {
         <app-dashboard-section title="Infrastructure summary" subtitle="Real-time overview across all platforms" icon="insights">
-          <div class="stats-grid">
+          <div class="summary-grid">
             <app-stat-card title="Total instances" [value]="n('totalInstances')" icon="dns" [updated]="syncShort()" [delay]="0" />
             <app-stat-card title="Running" [value]="n('runningInstances')" icon="play_circle" tone="success" [subtitle]="stoppedLabel()" [delay]="30" />
             <app-stat-card title="Stopped" [value]="n('stoppedInstances')" icon="stop_circle" tone="default" [delay]="60" />
@@ -249,10 +251,31 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
   `,
   styles: `
     .dashboard-page { width: 100%; min-width: 0; }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
+    .dashboard-skeleton__metrics .metric-row--skeleton {
+      pointer-events: none;
+      border-bottom-color: color-mix(in srgb, var(--app-text-muted) 8%, transparent);
+    }
+    .dashboard-skeleton__metrics .skeleton-shimmer {
+      border-radius: 8px;
+      min-height: 12px;
+      display: block;
+      background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--app-text-muted) 8%, transparent) 25%,
+        color-mix(in srgb, var(--app-text-muted) 14%, transparent) 50%,
+        color-mix(in srgb, var(--app-text-muted) 8%, transparent) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .dashboard-skeleton__metrics .metric-row__icon.skeleton-shimmer {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
     }
     .charts-grid {
       display: grid;
@@ -271,9 +294,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
       gap: 1.15rem;
       margin-bottom: 2rem;
     }
-    .dashboard-skeleton .stats-grid { margin-bottom: 1.25rem; }
     @media (max-width: 768px) {
-      .stats-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
       .panels-grid { grid-template-columns: 1fr; }
     }
   `,

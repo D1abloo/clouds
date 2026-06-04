@@ -22,7 +22,11 @@ import { MatButtonModule } from '@angular/material/button'
         <p>{{ summary }}</p>
         <div class="platform-card__metrics">
           @for (m of metrics; track m.label) {
-            <span><strong>{{ m.value }}</strong>{{ m.label }}</span>
+            <div class="metric-row metric-row--compact">
+              <span class="metric-row__icon tone-primary"><mat-icon>insights</mat-icon></span>
+              <span class="metric-row__label">{{ m.label }}</span>
+              <span class="metric-row__value">{{ m.value }}</span>
+            </div>
           }
         </div>
       </div>
@@ -69,20 +73,24 @@ import { MatButtonModule } from '@angular/material/button'
     p { margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--app-text-muted); line-height: 1.45; }
     .platform-card__metrics {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.65rem 1rem;
+      flex-direction: column;
+      gap: 0;
       margin-top: 0.35rem;
-      span {
-        font-size: 0.72rem;
-        color: var(--app-text-muted);
-        strong {
-          display: block;
-          font-size: 1rem;
-          color: var(--app-text);
-          font-weight: 700;
-        }
-      }
+      padding-top: 0.25rem;
+      border-top: 1px solid color-mix(in srgb, var(--app-text-muted) 10%, transparent);
     }
+    .metric-row--compact {
+      grid-template-columns: 28px 1fr auto;
+      padding: 0.45rem 0;
+      margin-inline: 0;
+      &:hover { margin-inline: 0; padding-inline: 0; background: transparent; }
+    }
+    .metric-row--compact .metric-row__icon {
+      width: 26px;
+      height: 26px;
+      mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
+    }
+    .metric-row--compact .metric-row__value { font-size: 1rem; }
     .platform-card__action {
       display: inline-flex;
       align-items: center;

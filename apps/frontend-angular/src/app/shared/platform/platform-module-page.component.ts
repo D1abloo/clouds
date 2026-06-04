@@ -76,7 +76,6 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
               [icon]="card.icon"
               [trend]="card.trend"
               [iconColor]="card.iconColor ?? 'primary'"
-              variant="elevated"
             />
           }
         </div>

@@ -19,9 +19,10 @@ import { MatTooltipModule } from '@angular/material/tooltip'
       </header>
       <div class="provider-panel__metrics">
         @for (m of metrics; track m.label) {
-          <div class="metric" [matTooltip]="m.label + ': ' + m.value">
-            <span class="metric__value">{{ m.value }}</span>
-            <span class="metric__label">{{ m.label }}</span>
+          <div class="metric-row metric-row--compact" [matTooltip]="m.label + ': ' + m.value">
+            <span class="metric-row__icon tone-primary"><mat-icon>insights</mat-icon></span>
+            <span class="metric-row__label">{{ m.label }}</span>
+            <span class="metric-row__value">{{ m.value }}</span>
           </div>
         }
       </div>
@@ -76,24 +77,25 @@ import { MatTooltipModule } from '@angular/material/tooltip'
       p { margin: 0.25rem 0 0; font-size: 0.78rem; color: var(--app-text-muted); line-height: 1.45; }
     }
     .provider-panel__metrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-      gap: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding-top: 0.15rem;
     }
-    .metric {
-      text-align: center;
-      padding: 0.5rem 0.35rem;
-      border-radius: var(--app-radius-md);
-      background: color-mix(in srgb, var(--app-text) 3%, var(--app-surface));
+    .metric-row--compact {
+      grid-template-columns: 32px 1fr auto;
+      gap: 0.65rem 1rem;
+      padding: 0.55rem 0;
+      margin-inline: 0;
+      &:hover { margin-inline: 0; padding-inline: 0; background: transparent; }
     }
-    .metric__value { display: block; font-size: 1.1rem; font-weight: 700; line-height: 1.2; }
-    .metric__label {
-      display: block;
-      margin-top: 0.15rem;
-      font-size: 0.68rem;
-      color: var(--app-text-muted);
-      line-height: 1.25;
-      word-wrap: break-word;
+    .metric-row--compact .metric-row__icon {
+      width: 28px;
+      height: 28px;
+      mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
+    }
+    .metric-row--compact .metric-row__value {
+      font-size: 1.05rem;
     }
     .provider-panel__list {
       list-style: none;
