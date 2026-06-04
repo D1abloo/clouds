@@ -1,4 +1,6 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
+import { ActivatedRoute } from '@angular/router'
+import { bindSectionTabs } from '../../core/routing/section-tab.util'
 import { DatePipe } from '@angular/common'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatTabsModule } from '@angular/material/tabs'
@@ -100,7 +102,12 @@ export class JenkinsLaunchDialogComponent {
         </div>
 
         <div class="table-card">
-        <mat-tab-group class="soft-tabs" animationDuration="280ms">
+        <mat-tab-group
+          class="soft-tabs"
+          animationDuration="280ms"
+          [selectedIndex]="tabIndex()"
+          (selectedIndexChange)="tabIndex.set($event)"
+        >
           <mat-tab label="Jobs">
             <div class="tab-panel">
               <mat-form-field appearance="outline">
@@ -174,8 +181,11 @@ export class JenkinsPageComponent implements OnInit {
   private readonly inventory = inject(InventoryService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
+  private readonly route = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef)
 
   readonly page = createPageLoader(true)
+  readonly tabIndex = signal(0)
   readonly data = signal<Record<string, unknown> | null>(null)
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly jobCols = ['name', 'server', 'status', 'lastRun', 'duration', 'actions']
@@ -194,6 +204,7 @@ export class JenkinsPageComponent implements OnInit {
   })
 
   ngOnInit(): void {
+    bindSectionTabs(this.route, this.destroyRef, this.tabIndex, 'jenkins')
     this.load()
   }
 

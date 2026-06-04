@@ -45,7 +45,7 @@ npm run prisma:migrate
 npm run prisma:seed
 npm run seed:demo     # dataset completo (cuentas, instancias, métricas, etc.)
 npm run dev:backend   # http://localhost:3000
-npm run dev:frontend  # http://localhost:4200
+npm run dev:frontend  # http://localhost:4200 — reiniciar tras cambios UI (ver docs/verificacion-ui-terraform-launch.md)
 ```
 
 ## Modo demo

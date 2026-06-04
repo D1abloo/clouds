@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, RouterLink } from '@angular/router'
+import { providerFromSlug, sectionToTabIndex } from '../../core/routing/section-tab.util'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatTabsModule } from '@angular/material/tabs'
 import { MatTableModule } from '@angular/material/table'
@@ -11,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatMenuModule } from '@angular/material/menu'
 import { MatDialog } from '@angular/material/dialog'
-import { debounceTime, startWith, forkJoin, map } from 'rxjs'
+import { debounceTime, startWith, forkJoin, map, catchError, of, combineLatest } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
@@ -28,7 +29,7 @@ import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.component'
 import { LaunchInstanceDialogComponent } from './launch-instance-dialog.component'
-import { CloudProvider } from '../../core/models/api.models'
+import { CloudProvider, Instance } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
 
@@ -80,7 +81,22 @@ type InstanceRow = Record<string, unknown>
         </div>
 
         <div class="table-card">
-        <mat-tab-group class="soft-tabs" animationDuration="280ms" (selectedIndexChange)="tabIndex.set($event)">
+        <mat-tab-group
+          class="soft-tabs"
+          animationDuration="280ms"
+          [selectedIndex]="tabIndex()"
+          (selectedIndexChange)="tabIndex.set($event)"
+        >
+          <mat-tab label="Overview">
+            <div class="hub-tab-panel">
+              <div class="hub-quick-actions">
+                <button type="button" class="hub-action-chip" (click)="handleHeaderAction('Sync')">Sync</button>
+                <button type="button" class="hub-action-chip" (click)="handleHeaderAction('Launch')">Launch</button>
+                <button type="button" class="hub-action-chip" (click)="handleHeaderAction('Add account')">Add account</button>
+              </div>
+              <p>{{ providerLabel }} control plane — accounts, compute, networking and cost in one place.</p>
+            </div>
+          </mat-tab>
           <mat-tab label="Accounts">
             <div class="tab-panel">
               <div class="filter-row table-toolbar">
@@ -209,6 +225,28 @@ type InstanceRow = Record<string, unknown>
             </div>
           </mat-tab>
 
+          <mat-tab label="VPC / Network">
+            <div class="tab-panel hub-tab-panel">
+              <p>VPCs, subnets and route tables (demo).</p>
+              <table mat-table [dataSource]="networkRows()" class="premium-table table-row-hover">
+                <ng-container matColumnDef="name"><th mat-header-cell *matHeaderCellDef>Name</th><td mat-cell *matCellDef="let r">{{ r.name }}</td></ng-container>
+                <ng-container matColumnDef="cidr"><th mat-header-cell *matHeaderCellDef>CIDR</th><td mat-cell *matCellDef="let r">{{ r.cidr }}</td></ng-container>
+                <tr mat-header-row *matHeaderRowDef="['name','cidr']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['name','cidr']"></tr>
+              </table>
+            </div>
+          </mat-tab>
+          <mat-tab label="Security Groups">
+            <div class="tab-panel hub-tab-panel">
+              <p>Inbound rules summary (demo).</p>
+              <table mat-table [dataSource]="sgRows()" class="premium-table table-row-hover">
+                <ng-container matColumnDef="name"><th mat-header-cell *matHeaderCellDef>Group</th><td mat-cell *matCellDef="let r">{{ r.name }}</td></ng-container>
+                <ng-container matColumnDef="rules"><th mat-header-cell *matHeaderCellDef>Rules</th><td mat-cell *matCellDef="let r">{{ r.rules }}</td></ng-container>
+                <tr mat-header-row *matHeaderRowDef="['name','rules']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['name','rules']"></tr>
+              </table>
+            </div>
+          </mat-tab>
           <mat-tab label="Regions">
             <div class="tab-panel">
               <table mat-table [dataSource]="regions()" class="premium-table table-row-hover">
@@ -276,6 +314,12 @@ type InstanceRow = Record<string, unknown>
             </div>
           </mat-tab>
 
+          <mat-tab label="Metrics">
+            <div class="tab-panel hub-tab-panel"><p>CPU/RAM/latency dashboards for {{ providerLabel }} (demo).</p></div>
+          </mat-tab>
+          <mat-tab label="Alerts">
+            <div class="tab-panel hub-tab-panel"><p>{{ n('alerts') }} open alerts linked to {{ providerLabel }} resources.</p></div>
+          </mat-tab>
           <mat-tab label="Billing">
             <div class="tab-panel">
               <p>Estimated monthly: <strong>{{ formatCost(n('monthlyCost')) }}</strong></p>
@@ -373,6 +417,16 @@ export class CloudProviderHubComponent implements OnInit {
     })
   })
 
+  networkRows = (): { name: string; cidr: string }[] => [
+    { name: 'vpc-main', cidr: '10.0.0.0/16' },
+    { name: 'vpc-dmz', cidr: '10.1.0.0/16' },
+  ]
+
+  sgRows = (): { name: string; rules: string }[] => [
+    { name: 'sg-web', rules: '80, 443 from 0.0.0.0/0' },
+    { name: 'sg-db', rules: '5432 from sg-app' },
+  ]
+
   ngOnInit(): void {
     this.realtime.connect()
     this.realtime.on('inventory.updated', () => this.load())
@@ -380,17 +434,26 @@ export class CloudProviderHubComponent implements OnInit {
       const payload = p as { status?: string; instances?: number }
       if (payload.status === 'completed') this.toast.success(`Sync done — ${payload.instances ?? 0} instances`)
     })
-    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
-      this.provider = (data['provider'] as CloudProvider) ?? 'AWS'
-      this.title = (data['title'] as string) ?? this.provider
-      this.providerLabel = this.provider === 'AZURE' ? 'Azure' : this.provider
-      this.accountLabel =
-        this.provider === 'GCP' ? 'GCP projects' : this.provider === 'AZURE' ? 'Subscriptions' : 'AWS accounts'
-      this.securityTabLabel =
-        this.provider === 'GCP' ? 'Firewalls' : this.provider === 'AZURE' ? 'NSG' : 'Security Groups'
-      this.load()
-      this.loadAccounts()
-    })
+    combineLatest([this.route.paramMap, this.route.data])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([params, data]) => {
+        const slug = params.get('provider')
+        this.provider = slug ? providerFromSlug(slug) : ((data['provider'] as CloudProvider) ?? 'AWS')
+        const section = params.get('section')
+        if (section) {
+          this.tabIndex.set(sectionToTabIndex('cloud', section))
+        }
+        this.title =
+          (data['title'] as string) ??
+          (this.provider === 'AZURE' ? 'Azure' : this.provider === 'GCP' ? 'GCP' : 'AWS')
+        this.providerLabel = this.provider === 'AZURE' ? 'Azure' : this.provider
+        this.accountLabel =
+          this.provider === 'GCP' ? 'GCP projects' : this.provider === 'AZURE' ? 'Subscriptions' : 'AWS accounts'
+        this.securityTabLabel =
+          this.provider === 'GCP' ? 'Firewalls' : this.provider === 'AZURE' ? 'NSG' : 'Security Groups'
+        this.load()
+        this.loadAccounts()
+      })
   }
 
   loadAccounts = (): void => {
@@ -414,11 +477,13 @@ export class CloudProviderHubComponent implements OnInit {
     this.page.run(
       forkJoin({
         summary: this.inventory.provider(provider),
-        instances: this.instancesService.list(
-          provider === 'AWS' || provider === 'GCP' || provider === 'AZURE'
-            ? { provider }
-            : undefined,
-        ),
+        instances: this.instancesService
+          .list(
+            provider === 'AWS' || provider === 'GCP' || provider === 'AZURE'
+              ? { provider }
+              : undefined,
+          )
+          .pipe(catchError(() => of([] as Instance[]))),
       }).pipe(
         map(({ summary, instances }) => {
           const list = (summary['instanceList'] as InstanceRow[]) ?? []

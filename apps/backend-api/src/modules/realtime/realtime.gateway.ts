@@ -32,6 +32,14 @@ export class RealtimeGateway {
     this.server?.emit('terraform.updated', { runId, ...data as object })
   }
 
+  emitTerraformProgress(runId: string, step: string, percent: number, log: string) {
+    this.server?.emit('terraform.run.progress', { runId, step, percent, log })
+  }
+
+  emitTerraformLog(runId: string, line: string) {
+    this.server?.emit('terraform.run.log', { runId, line, message: line })
+  }
+
   emitDashboardUpdate(data: unknown) {
     this.server?.emit('dashboard.updated', data)
   }

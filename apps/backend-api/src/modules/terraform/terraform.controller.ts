@@ -15,6 +15,12 @@ import {
 export class TerraformController {
   constructor(private service: TerraformService) {}
 
+  @Post('preview')
+  @ApiOperation({ summary: 'Generate Terraform HCL and plan preview from launch config' })
+  preview(@Body() dto: LaunchInstanceTerraformEstimateDto) {
+    return this.service.previewLaunch(dto)
+  }
+
   @Post('launch-instance/estimate')
   @ApiOperation({ summary: 'Estimate cost for Terraform instance launch' })
   launchEstimate(@Body() dto: LaunchInstanceTerraformEstimateDto) {
@@ -40,6 +46,11 @@ export class TerraformController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.service.createRun(body, user.sub)
+  }
+
+  @Post('runs/:id/init')
+  init(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.service.init(id, user.sub)
   }
 
   @Post('runs/:id/plan')

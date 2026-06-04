@@ -17,6 +17,11 @@ Cada módulo contiene `main.tf` de ejemplo para aprovisionar una VM de prueba.
 2. Crear un run Terraform desde `/terraform`
 3. El backend ejecuta `init`, `plan`, `apply` o `destroy` en workspace aislado (fase posterior)
 
+### Ver cambios en el navegador
+
+**Debes reiniciar el servidor frontend** (o reconstruir Docker) para ver actualizaciones de UI.  
+Checklist completo: **[verificacion-ui-terraform-launch.md](./verificacion-ui-terraform-launch.md)**
+
 ## Desarrollo local
 
 ```bash

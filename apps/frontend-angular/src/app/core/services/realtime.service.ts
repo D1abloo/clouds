@@ -9,6 +9,13 @@ export type RealtimeEvent =
   | 'dashboard.updated'
   | 'metrics.updated'
   | 'discovery.updated'
+  | 'billing.updated'
+  | 'jenkins.build'
+  | 'alert.created'
+  | 'vps.updated'
+  | 'terraform.updated'
+  | 'terraform.run.progress'
+  | 'terraform.run.log'
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeService implements OnDestroy {
@@ -29,6 +36,13 @@ export class RealtimeService implements OnDestroy {
       'dashboard.updated',
       'metrics.updated',
       'discovery.updated',
+      'billing.updated',
+      'jenkins.build',
+      'alert.created',
+      'vps.updated',
+      'terraform.updated',
+      'terraform.run.progress',
+      'terraform.run.log',
     ]
     events.forEach((ev) => {
       this.socket?.on(ev, (payload: unknown) => this.lastEvent.set({ type: ev, payload }))

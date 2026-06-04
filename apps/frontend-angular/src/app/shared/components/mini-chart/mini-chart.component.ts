@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core'
+import { chartColor } from '../../theme/chart-palette'
 
 export type ChartKind = 'bar' | 'donut' | 'line'
 
@@ -225,8 +226,8 @@ export type ChartKind = 'bar' | 'donut' | 'line'
       height: 8px;
       border-radius: 50%;
       display: inline-block;
-      &--cpu { background: #3b82f6; }
-      &--ram { background: #10b981; }
+      &--cpu { background: #6366f1; }
+      &--ram { background: #22d3ee; }
     }
     .line-chart {
       width: 100%;
@@ -258,9 +259,7 @@ export class MiniChartComponent {
   @Input() secondaryData: { label: string; value: number; color?: string }[] = []
   @Input() animated = false
 
-  private readonly colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#0ea5e9']
-
-  barColor = (i: number): string => this.colors[i % this.colors.length]
+  barColor = (i: number): string => chartColor(i)
 
   barHeight = (value: number): number => {
     const max = Math.max(...this.data.map((d) => d.value), 1)
@@ -275,7 +274,7 @@ export class MiniChartComponent {
     return this.data.map((d, i) => {
       const pct = (d.value / total) * 100
       const dash = `${pct} ${100 - pct}`
-      const seg = { label: d.label, color: d.color ?? this.colors[i % this.colors.length], dash, offset }
+      const seg = { label: d.label, color: d.color ?? chartColor(i), dash, offset }
       offset -= pct
       return seg
     })

@@ -1,4 +1,6 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
+import { ActivatedRoute } from '@angular/router'
+import { bindSectionTabs } from '../../core/routing/section-tab.util'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatTabsModule } from '@angular/material/tabs'
 import { MatTableModule } from '@angular/material/table'
@@ -88,7 +90,12 @@ type PodRow = Record<string, unknown>
         </div>
 
         <app-panel-card title="Workloads" subtitle="Pods, deployments and cluster resources" icon="hub">
-        <mat-tab-group class="soft-tabs" animationDuration="280ms">
+        <mat-tab-group
+          class="soft-tabs"
+          animationDuration="280ms"
+          [selectedIndex]="tabIndex()"
+          (selectedIndexChange)="tabIndex.set($event)"
+        >
           <mat-tab label="Pods">
             <div class="tab-panel">
               <mat-form-field appearance="outline">
@@ -168,8 +175,11 @@ export class KubernetesPageComponent implements OnInit {
   private readonly demoActions = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly route = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef)
 
   readonly page = createPageLoader(true)
+  readonly tabIndex = signal(0)
   readonly data = signal<Record<string, unknown> | null>(null)
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly podCols = ['name', 'namespace', 'status', 'node', 'restarts', 'cpu', 'ram', 'actions']
@@ -193,6 +203,7 @@ export class KubernetesPageComponent implements OnInit {
   })
 
   ngOnInit(): void {
+    bindSectionTabs(this.route, this.destroyRef, this.tabIndex, 'kubernetes')
     this.realtime.connect()
     this.realtime.on('discovery.updated', () => this.load())
     this.load()

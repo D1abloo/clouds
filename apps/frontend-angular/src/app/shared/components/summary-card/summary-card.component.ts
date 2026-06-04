@@ -61,8 +61,12 @@ import { MatTooltipModule } from '@angular/material/tooltip'
       justify-content: center;
       background: color-mix(in srgb, var(--app-accent) 12%, transparent);
       mat-icon { font-size: 1.3rem; width: 1.3rem; height: 1.3rem; color: var(--app-accent); }
-      &.tone-warn { background: color-mix(in srgb, var(--app-danger) 14%, transparent); mat-icon { color: var(--app-danger); } }
-      &.tone-accent { background: color-mix(in srgb, var(--app-info) 14%, transparent); mat-icon { color: var(--app-info); } }
+      &.tone-warn { background: color-mix(in srgb, #ef4444 18%, transparent); mat-icon { color: #ef4444; } }
+      &.tone-accent { background: color-mix(in srgb, #38bdf8 18%, transparent); mat-icon { color: #38bdf8; } }
+      &.tone-success { background: color-mix(in srgb, #22c55e 18%, transparent); mat-icon { color: #22c55e; } }
+      &.tone-info { background: color-mix(in srgb, #0ea5e9 18%, transparent); mat-icon { color: #0ea5e9; } }
+      &.tone-purple { background: color-mix(in srgb, #a855f7 18%, transparent); mat-icon { color: #a855f7; } }
+      &.tone-cyan { background: color-mix(in srgb, #22d3ee 18%, transparent); mat-icon { color: #22d3ee; } }
     }
     .summary-card__trend {
       font-size: 0.68rem;
@@ -104,7 +108,7 @@ export class SummaryCardComponent {
   @Input() subtitle?: string
   @Input() trend?: string
   @Input() icon = 'insights'
-  @Input() iconColor: 'primary' | 'accent' | 'warn' | undefined = 'primary'
+  @Input() iconColor: 'primary' | 'accent' | 'warn' | 'success' | 'info' | 'purple' | 'cyan' | undefined = 'primary'
   @Input() variant: 'default' | 'elevated' = 'default'
 
   valueTooltip = (): string => String(this.value)

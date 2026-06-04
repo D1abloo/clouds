@@ -1,3 +1,4 @@
+import { CloudProvider } from '../../../core/models/api.models'
 import { DashboardData, DashboardInstanceRow } from '../dashboard.models'
 
 const mkInstance = (
@@ -112,5 +113,26 @@ export const buildDemoDashboard = (): DashboardData => {
     jenkins: { servers: 1, jobs: 12, running: 2, success: 48, failed: 4 },
     terraform: { workspaces: 4, runs: 18, plans: 6, applies: 4, errors: 1, templates: 6 },
     billing: { total: 4820 },
+  }
+}
+
+export const buildDemoProviderSummary = (provider: CloudProvider): Record<string, unknown> => {
+  const dash = buildDemoDashboard()
+  const providerKey = provider === 'AZURE' ? 'AZURE' : provider
+  const meta = (dash.providers?.[providerKey as keyof typeof dash.providers] ?? {}) as Record<string, unknown>
+  const instanceList = (dash.instanceList ?? []).filter((i) => i.provider === providerKey)
+  const regions = [...new Set(instanceList.map((i) => i.region).filter(Boolean))]
+
+  return {
+    accounts: meta['accounts'] ?? 1,
+    instances: instanceList.length,
+    regions: regions.length,
+    monthlyCost: meta['monthlyCost'] ?? 1200,
+    alerts: meta['alerts'] ?? 2,
+    instanceList,
+    regionList: regions.map((code) => ({ code, name: String(code), enabled: true })),
+    accountList: [{ id: `demo-${providerKey.toLowerCase()}`, name: `${providerKey} Demo`, accountId: 'demo-001', status: 'active' }],
+    syncStatus: 'Synced',
+    lastSyncAt: new Date().toISOString(),
   }
 }

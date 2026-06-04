@@ -1,172 +1,293 @@
-import { Component, inject, output, Input, signal, OnInit } from '@angular/core'
-import { FormControl, ReactiveFormsModule } from '@angular/forms'
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  computed,
+  HostListener,
+} from '@angular/core'
+import { Router, NavigationEnd, RouterLink } from '@angular/router'
+import { filter } from 'rxjs/operators'
+import { Subscription } from 'rxjs'
 import { MatIconModule } from '@angular/material/icon'
 import { MatButtonModule } from '@angular/material/button'
 import { MatMenuModule } from '@angular/material/menu'
-import { MatBadgeModule } from '@angular/material/badge'
-import { MatFormFieldModule } from '@angular/material/form-field'
-import { MatInputModule } from '@angular/material/input'
-import { MatSelectModule } from '@angular/material/select'
-import { RouterLink } from '@angular/router'
+import { MatTooltipModule } from '@angular/material/tooltip'
 import { AuthService } from '../../core/services/auth.service'
 import { ThemeService } from '../../core/services/theme.service'
 import { DemoService } from '../../core/services/demo.service'
 import { RealtimeService } from '../../core/services/realtime.service'
+import { AlertsStore } from '../../core/stores/alerts.store'
+import { CommandPaletteComponent } from './command-palette.component'
+
+const ROUTE_LABELS: Record<string, string> = {
+  dashboard: 'Dashboard',
+  'accounts/aws': 'AWS',
+  'accounts/gcp': 'GCP',
+  'accounts/azure': 'Azure',
+  'cloud/aws': 'AWS',
+  'cloud/gcp': 'GCP',
+  'cloud/azure': 'Azure',
+  vps: 'VPS / Bare Metal',
+  instances: 'Instances',
+  terminal: 'SSH Terminal',
+  ssh: 'SSH Terminal',
+  docker: 'Docker',
+  kubernetes: 'Kubernetes',
+  jenkins: 'Jenkins',
+  terraform: 'Terraform',
+  billing: 'Billing',
+  alerts: 'Alerts',
+  notifications: 'Notifications',
+  audit: 'Audit Log',
+  settings: 'Settings',
+}
 
 @Component({
   selector: 'app-topbar',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    ReactiveFormsModule,
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
-    MatBadgeModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
+    MatTooltipModule,
     RouterLink,
+    CommandPaletteComponent,
   ],
   template: `
-    <header class="topbar">
-      <button mat-icon-button type="button" aria-label="Toggle navigation" (click)="menuToggle.emit()">
-        <mat-icon>menu</mat-icon>
-      </button>
+    <!-- Command Palette overlay -->
+    @if (paletteOpen()) {
+      <app-command-palette (closeRequest)="paletteOpen.set(false)" />
+    }
 
-      <mat-form-field appearance="outline" class="topbar-search">
-        <mat-icon matPrefix>search</mat-icon>
-        <input matInput placeholder="Search resources, instances, jobs…" [formControl]="searchControl" />
-      </mat-form-field>
+    <header class="sticky top-0 z-[90] flex h-topbar min-h-topbar items-center gap-2 border-b border-[color:var(--sidebar-border)] bg-[color:var(--app-topbar)] px-4 backdrop-blur-md">
+      <div class="flex items-center gap-1 text-[0.82rem]">
+        <span class="font-medium text-[color:var(--sidebar-text-muted)]">CloudOps</span>
+        @if (pageLabel()) {
+          <mat-icon class="!h-4 !w-4 !text-[0.95rem] text-[color:var(--sidebar-text-faint)]">chevron_right</mat-icon>
+          <span class="font-semibold text-[color:var(--sidebar-text)]">{{ pageLabel() }}</span>
+        }
+      </div>
 
+      <span class="flex-1"></span>
+
+      <!-- Status pills (compact) -->
       <div class="topbar-pills">
-        <mat-form-field appearance="outline" class="topbar-select">
-          <mat-select [formControl]="projectControl">
-            <mat-option value="default">Default project</mat-option>
-            <mat-option value="production">Production</mat-option>
-            <mat-option value="staging">Staging</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <span class="mode-pill" [class.mode-pill--demo]="demo.demoMode()" [class.mode-pill--live]="!demo.demoMode()">
-          <span class="mode-pill__dot"></span>
-          {{ demo.demoMode() ? 'Demo mode' : 'Real mode' }}
+        <span class="mode-pill" [class.mode-pill--demo]="demo.demoMode()">
+          <span class="mode-dot"></span>
+          {{ demo.demoMode() ? 'Demo' : 'Live' }}
         </span>
-
-        <span class="ws-pill" [class.ws-pill--on]="realtime.connected()">
+        <span
+          class="ws-pill"
+          [class.ws-pill--on]="realtime.connected()"
+          [matTooltip]="realtime.connected() ? 'WebSocket connected' : 'WebSocket offline'"
+        >
           <mat-icon>{{ realtime.connected() ? 'wifi' : 'wifi_off' }}</mat-icon>
-          {{ realtime.connected() ? 'Live' : 'Offline' }}
         </span>
       </div>
 
-      <span class="topbar-spacer"></span>
-
-      <button mat-icon-button type="button" aria-label="Refresh" (click)="refreshClick.emit()">
-        <mat-icon>refresh</mat-icon>
+      <!-- Right icon buttons -->
+      <button
+        mat-icon-button
+        type="button"
+        class="topbar-btn"
+        aria-label="Search (Ctrl+K)"
+        matTooltip="Search (Ctrl+K)"
+        (click)="paletteOpen.set(true)"
+      >
+        <mat-icon>search</mat-icon>
       </button>
 
       <button
         mat-icon-button
         type="button"
-        [attr.aria-label]="theme.mode() === 'dark' ? 'Light theme' : 'Dark theme'"
-        (click)="handleThemeToggle()"
+        class="topbar-btn topbar-btn--notif"
+        [class.topbar-btn--notif-active]="alertsStore.activeAlerts() > 0"
+        aria-label="Notifications"
+        matTooltip="Alerts"
+        routerLink="/alerts"
+      >
+        <mat-icon>notifications</mat-icon>
+        @if (alertsStore.activeAlerts() > 0) {
+          <span class="notif-dot"></span>
+        }
+      </button>
+
+      <button
+        mat-icon-button
+        type="button"
+        class="topbar-btn"
+        aria-label="Toggle theme"
+        [matTooltip]="theme.mode() === 'dark' ? 'Light mode' : 'Dark mode'"
+        (click)="theme.toggle()"
       >
         <mat-icon>{{ theme.mode() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>
 
-      <a
+      <button
         mat-icon-button
-        routerLink="/notifications"
-        aria-label="Notifications"
-        [matBadge]="notificationCount"
-        [matBadgeHidden]="!notificationCount"
-        matBadgeColor="warn"
-        matBadgeSize="small"
+        type="button"
+        class="topbar-btn"
+        aria-label="Help"
+        matTooltip="Documentation"
       >
-        <mat-icon>notifications</mat-icon>
-      </a>
-
-      <button mat-button type="button" class="user-btn" [matMenuTriggerFor]="userMenu" aria-label="User menu">
-        <span class="user-avatar">{{ userInitials() }}</span>
-        <span class="user-email">{{ auth.user()?.email }}</span>
-        <mat-icon>expand_more</mat-icon>
+        <mat-icon>help_outline</mat-icon>
       </button>
-
-      <mat-menu #userMenu="matMenu">
-        <button mat-menu-item type="button" routerLink="/settings">
-          <mat-icon>settings</mat-icon> Settings
-        </button>
-        <button mat-menu-item type="button" routerLink="/audit">
-          <mat-icon>history</mat-icon> Audit log
-        </button>
-        <button mat-menu-item type="button" (click)="handleLogout()">
-          <mat-icon>logout</mat-icon> Sign out
-        </button>
-      </mat-menu>
     </header>
   `,
   styles: `
     .topbar {
-      display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.5rem 1rem; min-height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0 1rem;
+      height: 48px;
+      min-height: 48px;
       background: var(--app-topbar);
-      box-shadow: var(--app-shadow-sm);
-      position: sticky; top: 0; z-index: 90;
+      border-bottom: 0.5px solid var(--sidebar-border);
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      backdrop-filter: blur(8px);
     }
+
     .topbar-spacer { flex: 1; }
-    .topbar-search {
-      min-width: 200px; max-width: 340px; flex: 1;
-      ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; }
+
+    .topbar-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.82rem;
     }
-    .topbar-select { width: 150px; ::ng-deep .mat-mdc-form-field-subscript-wrapper { display: none; } }
-    .topbar-pills { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-    .mode-pill, .ws-pill {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      padding: 0.3rem 0.65rem; border-radius: 999px;
-      font-size: 0.72rem; font-weight: 600;
-      background: var(--app-elevated); box-shadow: var(--app-shadow-xs);
+
+    .breadcrumb-root {
+      color: var(--sidebar-text-muted);
+      font-weight: 500;
     }
-    .mode-pill__dot { width: 7px; height: 7px; border-radius: 50%; }
-    .mode-pill--demo .mode-pill__dot { background: #3b82f6; }
-    .mode-pill--live .mode-pill__dot { background: #22c55e; }
-    .ws-pill mat-icon { font-size: 14px; width: 14px; height: 14px; }
-    .ws-pill--on { color: #16a34a; }
-    .user-btn { display: inline-flex; align-items: center; gap: 0.35rem; max-width: 220px; }
-    .user-avatar {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--app-accent), var(--app-accent-dark));
-      color: #fff; font-size: 0.75rem; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
+
+    .breadcrumb-sep {
+      font-size: 0.95rem;
+      width: 0.95rem;
+      height: 0.95rem;
+      color: var(--sidebar-text-faint);
     }
-    .user-email { display: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
-    @media (min-width: 900px) { .user-email { display: inline; max-width: 140px; } }
-    @media (max-width: 768px) {
-      .topbar-search, .topbar-pills { display: none; }
+
+    .breadcrumb-leaf {
+      color: var(--sidebar-text);
+      font-weight: 600;
+    }
+
+    .topbar-pills {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      background: var(--sidebar-item-hover);
+      color: var(--sidebar-text-muted);
+    }
+
+    .mode-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--sidebar-text-faint);
+    }
+
+    .mode-pill--demo .mode-dot { background: #60a5fa; }
+
+    .ws-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem;
+      border-radius: 6px;
+      color: var(--sidebar-text-faint);
+
+      mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
+
+      &.ws-pill--on { color: #4caf50; }
+    }
+
+    .topbar-btn {
+      width: 34px !important;
+      height: 34px !important;
+      line-height: 34px !important;
+      position: relative;
+
+      mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; color: var(--sidebar-text-muted); }
+
+      &:hover mat-icon { color: var(--sidebar-text); }
+    }
+
+    .topbar-btn--notif { position: relative; }
+
+    .notif-dot {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f44336;
+      border: 1.5px solid var(--app-topbar);
+    }
+
+    @media (max-width: 640px) {
+      .topbar-pills { display: none; }
     }
   `,
 })
-export class TopbarComponent implements OnInit {
-  @Input() notificationCount = 0
-  readonly menuToggle = output<void>()
-  readonly refreshClick = output<void>()
-
+export class TopbarComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService)
   readonly theme = inject(ThemeService)
   readonly demo = inject(DemoService)
   readonly realtime = inject(RealtimeService)
+  readonly alertsStore = inject(AlertsStore)
+  private readonly router = inject(Router)
 
-  readonly searchControl = new FormControl('', { nonNullable: true })
-  readonly projectControl = new FormControl('default', { nonNullable: true })
+  readonly paletteOpen = signal(false)
+  readonly pageLabel = signal<string>('')
+
+  private routerSub?: Subscription
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(e: KeyboardEvent): void {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault()
+      this.paletteOpen.update((v) => !v)
+    }
+    if (e.key === 'Escape' && this.paletteOpen()) {
+      this.paletteOpen.set(false)
+    }
+  }
 
   ngOnInit(): void {
     this.realtime.connect()
     this.demo.refreshStatus()
+    this.updateBreadcrumb(this.router.url)
+    this.routerSub = this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd))
+      .subscribe((e) => this.updateBreadcrumb((e as NavigationEnd).urlAfterRedirects))
   }
 
-  userInitials = (): string => {
-    const email = this.auth.user()?.email ?? 'U'
-    return email.slice(0, 2).toUpperCase()
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe()
   }
 
-  handleThemeToggle = (): void => this.theme.toggle()
-  handleLogout = (): void => this.auth.logout()
+  private updateBreadcrumb(url: string): void {
+    const path = url.replace(/^\//, '').split('?')[0]
+    const label = ROUTE_LABELS[path] ?? ROUTE_LABELS[path.split('/')[0]] ?? ''
+    this.pageLabel.set(label)
+  }
 }

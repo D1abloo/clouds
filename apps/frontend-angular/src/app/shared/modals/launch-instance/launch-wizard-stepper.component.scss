@@ -1,0 +1,77 @@
+.launch-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 1rem 1.25rem;
+  background: #13151f;
+}
+
+.launch-stepper__item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.launch-stepper__circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border: none;
+}
+
+.launch-stepper__check {
+  font-size: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.launch-stepper__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.launch-stepper__line {
+  flex: 1;
+  min-width: 24px;
+  height: 1px;
+  margin: 0 0.5rem;
+  background: #1c1e30;
+  border: none;
+}
+
+.launch-stepper__line--done {
+  background: #34d399;
+}
+
+.launch-stepper__item--done .launch-stepper__circle {
+  background: #0d3322;
+  color: #34d399;
+}
+
+.launch-stepper__item--done .launch-stepper__label {
+  color: #34d399;
+}
+
+.launch-stepper__item--active .launch-stepper__circle {
+  background: #281a50;
+  color: #a78bfa;
+}
+
+.launch-stepper__item--active .launch-stepper__label {
+  color: #a78bfa;
+}
+
+.launch-stepper__item--pending .launch-stepper__circle {
+  background: #1c1e30;
+  color: #444760;
+}
+
+.launch-stepper__item--pending .launch-stepper__label {
+  color: #444760;
+}

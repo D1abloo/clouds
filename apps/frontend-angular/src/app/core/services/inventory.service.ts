@@ -4,7 +4,7 @@ import { ApiClientService } from './api-client.service'
 import { CloudProvider } from '../models/api.models'
 import { DockerService } from './docker.service'
 import { KubernetesService } from './kubernetes.service'
-import { buildDemoDashboard } from '../../features/dashboard/utils/dashboard-demo.util'
+import { buildDemoDashboard, buildDemoProviderSummary } from '../../features/dashboard/utils/dashboard-demo.util'
 import { DashboardData } from '../../features/dashboard/dashboard.models'
 
 @Injectable({ providedIn: 'root' })
@@ -44,7 +44,7 @@ export class InventoryService {
   provider = (p: CloudProvider): Observable<Record<string, unknown>> =>
     this.api
       .get<Record<string, unknown>>(`inventory/provider/${p}`)
-      .pipe(catchError((): Observable<Record<string, unknown>> => of({ accounts: 0, instanceList: [] })))
+      .pipe(catchError((): Observable<Record<string, unknown>> => of(buildDemoProviderSummary(p))))
 
   private mergeDashboard = (data: DashboardData): DashboardData => {
     const demo = buildDemoDashboard()

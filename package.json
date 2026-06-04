@@ -13,6 +13,7 @@
     "test": "npm run test --workspaces --if-present",
     "dev:backend": "npm run start:dev -w apps/backend-api",
     "dev:frontend": "bash scripts/dev-frontend.sh",
+    "verify:frontend-ui": "bash scripts/verify-frontend-ui.sh",
     "dev:workers": "npm run start:dev -w apps/workers",
     "prisma:generate": "npm run prisma:generate -w apps/backend-api",
     "prisma:migrate": "npm run prisma:migrate -w apps/backend-api",

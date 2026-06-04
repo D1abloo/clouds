@@ -1,29 +1,26 @@
-import { Component, inject, signal, OnInit } from '@angular/core'
+import { Component, inject, OnInit } from '@angular/core'
 import { RouterOutlet } from '@angular/router'
 import { SidebarComponent } from '../sidebar/sidebar.component'
 import { TopbarComponent } from '../topbar/topbar.component'
-import { BreadcrumbsComponent } from '../breadcrumbs/breadcrumbs.component'
 import { DemoBannerComponent } from '../../shared/components/demo-banner/demo-banner.component'
 import { RealtimeService } from '../../core/services/realtime.service'
+import { SidebarService } from '../sidebar/sidebar.service'
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent, BreadcrumbsComponent, DemoBannerComponent],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent, DemoBannerComponent],
   template: `
     <div class="app-shell layout-root">
-      <app-sidebar [collapsed]="sidebarCollapsed()" (navigate)="closeMobileSidebar()" />
-      @if (!sidebarCollapsed() && isMobile()) {
-        <div class="sidebar-backdrop" (click)="sidebarCollapsed.set(true)" role="presentation"></div>
+      <app-sidebar />
+
+      @if (!sidebarSvc.collapsed() && isMobile()) {
+        <div class="sidebar-backdrop" (click)="sidebarSvc.setCollapsed(true)" role="presentation"></div>
       }
+
       <div class="layout-main">
-        <app-topbar
-          [notificationCount]="3"
-          (menuToggle)="toggleSidebar()"
-          (refreshClick)="handleGlobalRefresh()"
-        />
+        <app-topbar />
         <div class="layout-content animate-fade-in">
-          <app-breadcrumbs />
           <app-demo-banner />
           <router-outlet />
         </div>
@@ -52,9 +49,9 @@ import { RealtimeService } from '../../core/services/realtime.service'
     .sidebar-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.45);
+      background: rgba(15, 23, 42, 0.55);
       z-index: 99;
-      backdrop-filter: blur(2px);
+      backdrop-filter: blur(3px);
     }
     @media (max-width: 960px) {
       .layout-content { padding: 1rem; }
@@ -63,24 +60,18 @@ import { RealtimeService } from '../../core/services/realtime.service'
 })
 export class MainLayoutComponent implements OnInit {
   private readonly realtime = inject(RealtimeService)
-
-  readonly sidebarCollapsed = signal(typeof window !== 'undefined' && window.innerWidth <= 960)
+  readonly sidebarSvc = inject(SidebarService)
 
   ngOnInit(): void {
     this.realtime.connect()
+    if (this.isMobile()) this.sidebarSvc.setCollapsed(true)
   }
 
-  toggleSidebar = (): void => {
-    this.sidebarCollapsed.update((v) => !v)
+  closeMobileSidebar(): void {
+    if (this.isMobile()) this.sidebarSvc.setCollapsed(true)
   }
 
-  closeMobileSidebar = (): void => {
-    if (this.isMobile()) this.sidebarCollapsed.set(true)
-  }
-
-  isMobile = (): boolean => typeof window !== 'undefined' && window.innerWidth <= 960
-
-  handleGlobalRefresh = (): void => {
-    window.dispatchEvent(new CustomEvent('cloudops:refresh'))
+  isMobile(): boolean {
+    return typeof window !== 'undefined' && window.innerWidth <= 960
   }
 }

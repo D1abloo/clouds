@@ -1,0 +1,98 @@
+<div class="tf-page">
+  <div class="tf-status-bar">
+    @for (ps of providerStatuses(); track ps.provider) {
+      <span class="tf-status-item">
+        <span class="tf-status-dot" [class.tf-status-dot--ok]="ps.connected" [class.tf-status-dot--err]="!ps.connected"></span>
+        <span>{{ ps.provider }}</span>
+        @if (ps.connected) {
+          <span class="tf-status-meta">{{ ps.count }} account{{ ps.count === 1 ? '' : 's' }}</span>
+        } @else if (ps.provider !== 'ANSIBLE') {
+          <a routerLink="/accounts/aws" class="tf-connect-link">Connect →</a>
+        }
+      </span>
+    }
+  </div>
+
+  <div class="tf-layout">
+    <aside class="tf-sidebar">
+      <section class="tf-sidebar__section">
+        <h3>Workspaces</h3>
+        @for (ws of runStore.workspaces(); track ws.id) {
+          <button
+            type="button"
+            class="tf-ws-item"
+            [class.tf-ws-item--active]="runStore.activeWorkspaceId() === ws.id"
+            (click)="selectWorkspace(ws.id)"
+          >
+            <span class="tf-ws-item__icon">{{ ws.provider === 'AWS' ? 'A' : ws.provider === 'GCP' ? 'G' : 'Z' }}</span>
+            <span class="tf-ws-item__name">{{ ws.name }}</span>
+            <span class="tf-ws-item__dot" [class.tf-ws-item__dot--planned]="ws.status === 'planned'"></span>
+          </button>
+        }
+      </section>
+
+      <section class="tf-sidebar__section">
+        <h3>Templates</h3>
+        @for (t of builtinTemplates; track t.id) {
+          <button type="button" class="tf-template-item" (click)="loadTemplate(t.hcl)">{{ t.label }}</button>
+        }
+      </section>
+
+      <section class="tf-sidebar__section">
+        <h3>Recent runs</h3>
+        @for (r of recentRuns(); track r.id) {
+          <div class="tf-run-item">
+            <span>{{ r.workspaceName }}</span>
+            <span class="tf-run-item__meta">{{ r.status }}</span>
+          </div>
+        }
+      </section>
+
+      <button type="button" class="tf-launch-btn" (click)="openLaunch()">Launch instance</button>
+    </aside>
+
+    <main class="tf-main">
+      <div class="tf-toolbar">
+        <span class="tf-toolbar__title">{{ workspaceName() }}</span>
+        <div class="tf-toolbar__actions">
+          <button type="button" class="tf-action-btn" [disabled]="actionsDisabled()" (click)="runInit()">
+            <mat-icon>refresh</mat-icon> terraform init
+          </button>
+          <button type="button" class="tf-action-btn" [disabled]="actionsDisabled()" (click)="runPlan()">
+            <mat-icon>visibility</mat-icon> terraform plan
+          </button>
+          <button type="button" class="tf-action-btn" [disabled]="actionsDisabled() || !hasPlan()" (click)="runApply()">
+            <mat-icon>play_arrow</mat-icon> terraform apply
+          </button>
+          <button type="button" class="tf-action-btn tf-action-btn--danger" [disabled]="actionsDisabled()" (click)="toggleDestroy()">
+            <mat-icon>delete</mat-icon> terraform destroy
+          </button>
+        </div>
+      </div>
+
+      @if (showDestroyConfirm()) {
+        <div class="tf-destroy-bar">
+          <label>Type DESTROY to confirm</label>
+          <input class="tf-destroy-input" [value]="destroyConfirm()" (input)="destroyConfirm.set($any($event.target).value)" />
+          <button type="button" class="tf-action-btn" [disabled]="destroyConfirm() !== 'DESTROY'" (click)="runDestroy()">Confirm destroy</button>
+        </div>
+      }
+
+      <div class="tf-editor-pane" [style.height]="'calc(100vh - 44px - 44px - ' + terminalHeight() + 'px)'">
+        <app-terraform-editor [value]="editorHcl()" (valueChange)="onEditorChange($event)" />
+      </div>
+
+      <div class="tf-terminal-resize" (mousedown)="startResize($event)"></div>
+      <div class="tf-terminal" [style.height.px]="terminalHeight()">
+        <div class="tf-terminal__scroll" #termScroll>
+          @for (line of terminalLines(); track $index) {
+            <div class="tf-line" [class]="lineClass(line)" [style.animation]="'lineIn 120ms ease'">{{ line }}</div>
+          }
+          @if (terminalLines().length === 0) {
+            <div class="tf-prompt">cloudops-terraform $<span class="tf-cursor"></span></div>
+          }
+        </div>
+      </div>
+    </main>
+  </div>
+</div>

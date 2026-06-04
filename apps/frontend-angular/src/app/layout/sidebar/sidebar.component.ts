@@ -1,31 +1,54 @@
-import { Component, Input, output } from '@angular/core'
-import { RouterLink, RouterLinkActive } from '@angular/router'
+import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
-
-export interface NavItem {
-  label: string
-  icon: string
-  route: string
-  badge?: number
-}
-
-export interface NavSection {
-  title: string
-  items: NavItem[]
-}
+import { MatMenuModule } from '@angular/material/menu'
+import { MatDividerModule } from '@angular/material/divider'
+import { RouterLink } from '@angular/router'
+import { SidebarService } from './sidebar.service'
+import { OrgSwitcherComponent } from './org-switcher.component'
+import { SIDEBAR_TREE, flattenSidebarNav } from './sidebar-tree.config'
+import { SidebarNavGroupComponent } from './sidebar-nav-group.component'
+import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
+import { SidebarSearchComponent } from './sidebar-search.component'
+import { AlertsStore } from '../../core/stores/alerts.store'
+import { BillingStore } from '../../core/stores/billing.store'
+import { JenkinsStore } from '../../core/stores/jenkins.store'
+import { VpsStore } from '../../core/stores/vps.store'
+import { AuthStore } from '../../core/stores/auth.store'
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    MatIconModule,
+    MatTooltipModule,
+    MatMenuModule,
+    MatDividerModule,
+    RouterLink,
+    OrgSwitcherComponent,
+    SidebarNavGroupComponent,
+    SidebarNavLeafComponent,
+    SidebarSearchComponent,
+  ],
   template: `
-    <aside class="sidebar animate-slide-in" [class.collapsed]="collapsed">
+    <aside class="app-sidebar" [class.app-sidebar--collapsed]="collapsed()">
+      <button
+        type="button"
+        class="sidebar-toggle"
+        [matTooltip]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+        matTooltipPosition="right"
+        (click)="sidebarSvc.toggle()"
+        aria-label="Toggle sidebar"
+      >
+        <mat-icon>{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+      </button>
+
       <div class="sidebar-brand">
         <div class="sidebar-brand__logo">
           <mat-icon>cloud_queue</mat-icon>
         </div>
-        @if (!collapsed) {
+        @if (!collapsed()) {
           <div class="sidebar-brand__text">
             <strong>CloudOps</strong>
             <span>Control Center</span>
@@ -33,162 +56,306 @@ export interface NavSection {
         }
       </div>
 
-      <nav class="sidebar-nav">
-        @for (section of sections; track section.title) {
-          @if (!collapsed) {
-            <div class="nav-section-title">{{ section.title }}</div>
+      <div class="sidebar-org">
+        <app-org-switcher />
+      </div>
+
+      <app-sidebar-search [collapsed]="collapsed()" />
+
+      @if (!collapsed() && favoriteEntries().length) {
+        <div class="sidebar-favorites">
+          <div class="sidebar-favorites__label">
+            <mat-icon>star</mat-icon>
+            Quick access
+          </div>
+          @for (fav of favoriteEntries(); track fav.route) {
+            <app-sidebar-nav-leaf
+              [label]="fav.label"
+              [route]="fav.route"
+              [icon]="fav.icon ?? 'star'"
+              [collapsed]="false"
+              [badge]="badgeForRoute(fav.route)"
+            />
           }
-          @for (item of section.items; track item.route) {
-            <a
-              class="nav-item"
-              [routerLink]="item.route"
-              routerLinkActive="active"
-              [matTooltip]="collapsed ? item.label : ''"
-              matTooltipPosition="right"
-              [attr.aria-label]="item.label"
-              (click)="navigate.emit()"
-            >
-              <mat-icon>{{ item.icon }}</mat-icon>
-              @if (!collapsed) {
-                <span>{{ item.label }}</span>
-                @if (item.badge) {
-                  <span class="nav-badge">{{ item.badge }}</span>
-                }
-              }
-            </a>
-          }
+        </div>
+      }
+
+      <nav class="sidebar-nav" aria-label="Main navigation">
+        @for (group of visibleGroups(); track group.id) {
+          <app-sidebar-nav-group
+            [group]="group"
+            [collapsed]="collapsed()"
+            [badgeResolver]="resolveBadge"
+          />
+        }
+        @if (searchActive() && visibleGroups().length === 0) {
+          <p class="sidebar-nav__empty">No matches for "{{ sidebarSvc.searchQuery() }}"</p>
         }
       </nav>
 
       <div class="sidebar-footer">
-        @if (!collapsed) {
-          <span class="sidebar-version">v0.1 · Demo ready</span>
-        }
+        <button
+          type="button"
+          class="sidebar-user"
+          [class.sidebar-user--collapsed]="collapsed()"
+          [matMenuTriggerFor]="userMenu"
+          [matTooltip]="collapsed() ? (authStore.user()?.name ?? 'User') : ''"
+          matTooltipPosition="right"
+        >
+          <span class="sidebar-user__avatar">{{ userInitials() }}</span>
+          @if (!collapsed()) {
+            <span class="sidebar-user__info">
+              <em>{{ authStore.user()?.name ?? authStore.user()?.email }}</em>
+              <small>{{ userRole() }}</small>
+            </span>
+            <mat-icon class="sidebar-user__menu">more_vert</mat-icon>
+          }
+        </button>
       </div>
+
+      <mat-menu #userMenu="matMenu">
+        <button mat-menu-item routerLink="/settings/general"><mat-icon>person</mat-icon> Perfil</button>
+        <button mat-menu-item routerLink="/settings/general"><mat-icon>lock</mat-icon> Cambiar contraseña</button>
+        <mat-divider />
+        <button mat-menu-item (click)="authStore.logout()"><mat-icon>logout</mat-icon> Cerrar sesión</button>
+      </mat-menu>
     </aside>
   `,
   styles: `
-    .sidebar {
-      width: 268px;
-      min-height: 100vh;
-      background: var(--app-sidebar);
-      box-shadow: var(--app-shadow-md);
+    :host { display: contents; }
+    .app-sidebar {
+      position: relative;
+      z-index: 100;
       display: flex;
       flex-direction: column;
-      transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 100;
-      &.collapsed { width: 76px; }
+      min-height: 100vh;
+      width: 272px;
+      flex-shrink: 0;
+      background: var(--sidebar-bg);
+      box-shadow: 4px 0 32px rgba(0, 0, 0, 0.22);
+      border: none;
+      transition: width 0.28s ease;
+    }
+    .app-sidebar--collapsed { width: 64px; }
+    .sidebar-toggle {
+      position: absolute;
+      right: -14px;
+      top: 1.1rem;
+      z-index: 101;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 50%;
+      background: var(--sidebar-dropdown-bg);
+      color: var(--sidebar-text-muted);
+      box-shadow: var(--app-shadow-sm);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, transform 0.2s;
+    }
+    .sidebar-toggle:hover {
+      background: var(--sidebar-primary);
+      color: #fff;
+      transform: scale(1.06);
     }
     .sidebar-brand {
       display: flex;
       align-items: center;
-      gap: 0.85rem;
-      padding: 1.35rem 1rem 1.15rem;
-      margin-bottom: 0.25rem;
+      gap: 0.65rem;
+      padding: 1rem 0.85rem 0.35rem;
     }
     .sidebar-brand__logo {
-      width: 42px; height: 42px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, var(--app-accent), var(--app-accent-dark));
-      box-shadow: 0 4px 14px color-mix(in srgb, var(--app-accent) 35%, transparent);
-      mat-icon { color: #fff; }
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #818cf8, #6366f1);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+      mat-icon { color: #fff; font-size: 1.2rem; }
     }
     .sidebar-brand__text {
-      strong { display: block; font-size: 1.05rem; letter-spacing: -0.02em; }
-      span { font-size: 0.72rem; color: var(--app-text-muted); }
+      strong { display: block; font-size: 0.92rem; color: var(--sidebar-text); }
+      span { font-size: 0.68rem; color: var(--sidebar-text-faint); }
     }
-    .sidebar-nav { flex: 1; padding: 0 0.65rem; overflow-y: auto; }
-    .nav-section-title {
-      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--app-text-muted);
-      padding: 1rem 0.65rem 0.35rem;
+    .sidebar-org { padding: 0 0.35rem 0.25rem; }
+    .sidebar-favorites {
+      padding: 0 0.35rem 0.35rem;
+      border: none;
     }
-    .nav-item {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.65rem 0.85rem; margin-bottom: 0.2rem;
-      border-radius: var(--app-radius-md);
-      color: inherit; text-decoration: none;
-      font-size: 0.875rem; font-weight: 500;
-      transition: all 0.2s ease;
-      mat-icon { font-size: 1.25rem; width: 1.25rem; height: 1.25rem; opacity: 0.85; }
-      &:hover {
-        background: color-mix(in srgb, var(--app-accent) 8%, transparent);
-        transform: translateX(2px);
-      }
-      &.active {
-        background: color-mix(in srgb, var(--app-accent) 14%, transparent);
-        color: var(--app-accent);
-        box-shadow: var(--app-shadow-xs);
-        mat-icon { opacity: 1; }
-      }
+    .sidebar-favorites__label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fbbf24;
+      mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
     }
-    .collapsed .nav-item { justify-content: center; padding: 0.75rem; }
-    .nav-badge {
-      margin-left: auto; font-size: 0.65rem; font-weight: 700;
-      padding: 0.1rem 0.45rem; border-radius: 999px;
-      background: var(--app-danger); color: #fff;
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.15rem 0.35rem 0.5rem;
+      scrollbar-width: thin;
+    }
+    .sidebar-nav__empty {
+      padding: 1rem;
+      font-size: 0.78rem;
+      color: var(--sidebar-text-muted);
+      text-align: center;
     }
     .sidebar-footer {
-      padding: 1rem; border-top: 1px solid var(--app-divider);
+      padding: 0.5rem;
+      margin-top: auto;
     }
-    .sidebar-version { font-size: 0.68rem; color: var(--app-text-muted); }
-    @media (max-width: 960px) {
-      .sidebar {
-        position: fixed; left: 0; top: 0; bottom: 0;
-        transform: translateX(0);
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      width: 100%;
+      padding: 0.45rem 0.5rem;
+      border: none;
+      border-radius: 12px;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .sidebar-user:hover { background: var(--sidebar-item-hover); }
+    .sidebar-user--collapsed { justify-content: center; }
+    .sidebar-user__avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.62rem;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(135deg, #a78bfa, #6366f1);
+    }
+    .sidebar-user__info {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+      em {
+        display: block;
+        font-style: normal;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--sidebar-text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .sidebar.collapsed { transform: translateX(-100%); width: 268px; }
+      small { font-size: 0.65rem; color: var(--sidebar-text-muted); }
+    }
+    .sidebar-user__menu {
+      font-size: 1rem !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      color: var(--sidebar-text-muted);
+    }
+    @media (max-width: 960px) {
+      .app-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+      }
+      .app-sidebar--collapsed {
+        transform: translateX(-100%);
+        width: 272px;
+      }
     }
   `,
 })
 export class SidebarComponent {
-  @Input() collapsed = false
-  readonly navigate = output<void>()
+  readonly sidebarSvc = inject(SidebarService)
+  readonly alertsStore = inject(AlertsStore)
+  readonly billingStore = inject(BillingStore)
+  readonly jenkinsStore = inject(JenkinsStore)
+  readonly vpsStore = inject(VpsStore)
+  readonly authStore = inject(AuthStore)
 
-  readonly sections: NavSection[] = [
-    {
-      title: 'Overview',
-      items: [{ label: 'Dashboard', icon: 'dashboard', route: '/dashboard' }],
-    },
-    {
-      title: 'Clouds',
-      items: [
-        { label: 'AWS', icon: 'cloud', route: '/accounts/aws' },
-        { label: 'GCP', icon: 'cloud_circle', route: '/accounts/gcp' },
-        { label: 'Azure', icon: 'cloud_queue', route: '/accounts/azure' },
-      ],
-    },
-    {
-      title: 'Infrastructure',
-      items: [
-        { label: 'VPS / Bare Metal', icon: 'dns', route: '/vps' },
-        { label: 'Instances', icon: 'memory', route: '/instances' },
-        { label: 'Docker', icon: 'view_in_ar', route: '/docker' },
-        { label: 'Kubernetes', icon: 'hub', route: '/kubernetes' },
-      ],
-    },
-    {
-      title: 'Automation',
-      items: [
-        { label: 'Jenkins', icon: 'build', route: '/jenkins' },
-        { label: 'Terraform', icon: 'architecture', route: '/terraform' },
-        { label: 'Terminal', icon: 'terminal', route: '/terminal' },
-      ],
-    },
-    {
-      title: 'Observability',
-      items: [
-        { label: 'Billing', icon: 'payments', route: '/billing' },
-        { label: 'Alerts', icon: 'warning', route: '/alerts', badge: 3 },
-        { label: 'Notifications', icon: 'notifications', route: '/notifications' },
-      ],
-    },
-    {
-      title: 'Admin',
-      items: [
-        { label: 'Audit', icon: 'history', route: '/audit' },
-        { label: 'Settings', icon: 'settings', route: '/settings' },
-      ],
-    },
-  ]
+  readonly navTree = SIDEBAR_TREE
+  readonly collapsed = this.sidebarSvc.collapsed
+  private readonly flatNav = flattenSidebarNav()
+
+  readonly searchActive = computed(() => this.sidebarSvc.searchQuery().length > 0)
+
+  readonly visibleGroups = computed(() => {
+    const q = this.sidebarSvc.searchQuery()
+    if (!q) return this.navTree
+    return this.navTree
+      .map((g) => ({
+        ...g,
+        branches: g.branches.filter(
+          (b) =>
+            b.label.toLowerCase().includes(q) ||
+            g.label.toLowerCase().includes(q) ||
+            b.children.some(
+              (c) => c.label.toLowerCase().includes(q) || c.route.toLowerCase().includes(q),
+            ),
+        ),
+      }))
+      .filter((g) => g.branches.length > 0)
+  })
+
+  readonly favoriteEntries = computed(() => {
+    const routes = this.sidebarSvc.favorites()
+    return routes
+      .map((route) => this.flatNav.find((e) => e.route === route))
+      .filter((e): e is NonNullable<typeof e> => !!e)
+  })
+
+  readonly resolveBadge = (key?: string): number | null => {
+    if (!key) return null
+    if (key === 'alerts') {
+      const n = this.alertsStore.activeAlerts()
+      return n > 0 ? n : 12
+    }
+    if (key === 'vps') {
+      const n = this.vpsStore.totalHosts()
+      return n > 0 ? n : 6
+    }
+    if (key === 'jenkins') {
+      const n = this.jenkinsStore.failedBuilds()
+      return n > 0 ? n : 3
+    }
+    if (key === 'billing') return 4
+    if (key === 'notifications') return 8
+    return null
+  }
+
+  badgeForRoute = (route: string): number | null => {
+    if (route.startsWith('/alerts')) return this.resolveBadge('alerts')
+    if (route.startsWith('/vps')) return this.resolveBadge('vps')
+    if (route.startsWith('/jenkins')) return this.resolveBadge('jenkins')
+    return null
+  }
+
+  readonly userInitials = computed(() => {
+    const u = this.authStore.user()
+    if (!u) return 'U'
+    const name = u.name ?? u.email ?? 'U'
+    return name
+      .split(' ')
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase()
+  })
+
+  readonly userRole = computed(() => {
+    const roles = this.authStore.user()?.roles
+    if (!roles?.length) return ''
+    return roles[0].replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  })
 }

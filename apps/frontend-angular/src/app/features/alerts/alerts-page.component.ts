@@ -1,4 +1,6 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
+import { ActivatedRoute } from '@angular/router'
+import { bindSectionTabs } from '../../core/routing/section-tab.util'
 import { DatePipe } from '@angular/common'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatTabsModule } from '@angular/material/tabs'
@@ -95,7 +97,12 @@ export class AlertRuleDialogComponent {
       </div>
 
       <div class="table-card">
-      <mat-tab-group class="soft-tabs" animationDuration="280ms">
+      <mat-tab-group
+        class="soft-tabs"
+        animationDuration="280ms"
+        [selectedIndex]="tabIndex()"
+        (selectedIndexChange)="tabIndex.set($event)"
+      >
         <mat-tab label="Active">
           <div class="tab-panel">
             <div class="filter-row">
@@ -171,7 +178,10 @@ export class AlertsPageComponent implements OnInit {
   private readonly toast = inject(ToastService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
+  private readonly route = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef)
 
+  readonly tabIndex = signal(0)
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly severityControl = new FormControl('', { nonNullable: true })
   readonly page = createPageLoader(true)
@@ -207,6 +217,11 @@ export class AlertsPageComponent implements OnInit {
   })
 
   ngOnInit(): void {
+    bindSectionTabs(this.route, this.destroyRef, this.tabIndex, 'alerts')
+    const section = this.route.snapshot.paramMap.get('section')
+    if (section === 'critical') this.severityControl.setValue('critical')
+    if (section === 'warning') this.severityControl.setValue('warning')
+    if (section === 'info') this.severityControl.setValue('info')
     this.load()
   }
 

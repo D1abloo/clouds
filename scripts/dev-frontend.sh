@@ -16,4 +16,22 @@ elif command -v lsof >/dev/null 2>&1; then
 fi
 
 cd "${ROOT}"
-exec npm run start -w apps/frontend-angular
+echo "Starting frontend on http://localhost:${PORT} (Ctrl+C to stop)"
+echo "After changes: hard refresh with Ctrl+Shift+R"
+echo ""
+
+npm run start -w apps/frontend-angular &
+SERVE_PID=$!
+
+for _ in $(seq 1 60); do
+  if curl -sf "http://localhost:${PORT}/" >/dev/null 2>&1; then
+    sleep 2
+    if [[ -x "${ROOT}/scripts/verify-frontend-ui.sh" ]]; then
+      bash "${ROOT}/scripts/verify-frontend-ui.sh" || true
+    fi
+    break
+  fi
+  sleep 1
+done
+
+wait "${SERVE_PID}"

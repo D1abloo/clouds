@@ -37,9 +37,24 @@ export class TerraformRunnerService {
     return run
   }
 
+  async init(runId: string, userId?: string) {
+    const run = await this.getRun(runId)
+    this.realtime.emitTerraformLog(runId, 'terraform init')
+    this.realtime.emitTerraformProgress(runId, 'Initializing', 15, 'Initializing provider plugins…')
+    await this.prisma.terraformRunLog.create({
+      data: { runId, level: 'info', message: 'terraform init completed' },
+    })
+    await this.audit.create({ userId, action: 'terraform.init', resource: 'terraform_run', resourceId: runId })
+    return { runId, status: run.status, message: 'init complete' }
+  }
+
   async plan(runId: string, userId?: string) {
     const run = await this.getRun(runId)
+    this.realtime.emitTerraformProgress(runId, 'Plan', 45, 'terraform plan -out=tfplan')
+    this.realtime.emitTerraformLog(runId, 'Refreshing state…')
     const planOutput = this.generateMockPlan(run.workspace.provider)
+    this.realtime.emitTerraformLog(runId, planOutput)
+    this.realtime.emitTerraformProgress(runId, 'Plan', 70, 'Plan complete')
 
     const updated = await this.prisma.terraformRun.update({
       where: { id: runId },
@@ -64,6 +79,9 @@ export class TerraformRunnerService {
       throw new BadRequestException('Run must be in PLANNED status before apply')
     }
 
+    this.realtime.emitTerraformProgress(runId, 'Apply', 85, 'terraform apply -auto-approve')
+    this.realtime.emitTerraformLog(runId, '+ aws_instance.web will be created')
+
     const updated = await this.prisma.terraformRun.update({
       where: { id: runId },
       data: { status: TerraformStatus.APPLIED },
@@ -74,6 +92,7 @@ export class TerraformRunnerService {
     })
 
     await this.audit.create({ userId, action: 'terraform.apply', resource: 'terraform_run', resourceId: runId })
+    this.realtime.emitTerraformProgress(runId, 'Done', 100, 'Apply complete')
     this.realtime.emitTerraformUpdate(runId, { status: 'APPLIED' })
 
     return updated
@@ -110,9 +129,14 @@ export class TerraformRunnerService {
 
 @Injectable()
 export class TerraformService {
-  constructor(private runner: TerraformRunnerService, private prisma: PrismaService) {}
+  constructor(
+    private runner: TerraformRunnerService,
+    private prisma: PrismaService,
+    private realtime: RealtimeGateway,
+  ) {}
 
   createRun = (dto: TerraformPlanRequest, userId?: string) => this.runner.createRun(dto, userId)
+  init = (runId: string, userId?: string) => this.runner.init(runId, userId)
   plan = (runId: string, userId?: string) => this.runner.plan(runId, userId)
   apply = (runId: string, userId?: string, confirmed?: boolean) => this.runner.apply(runId, userId, confirmed)
   destroy = (runId: string, userId?: string, confirmed?: boolean, reinforced?: boolean) =>
@@ -125,6 +149,32 @@ export class TerraformService {
 
   async listTemplates() {
     return this.prisma.instanceTemplate.findMany()
+  }
+
+  async previewLaunch(dto: {
+    provider: CloudProvider
+    region: string
+    instanceType: string
+    name?: string
+    config?: Record<string, unknown>
+  }) {
+    const name = dto.name ?? `tf-${dto.provider.toLowerCase()}-vm`
+    const hcl = this.generateHcl(dto.provider, { ...dto.config, region: dto.region, instanceType: dto.instanceType, name })
+    const plan = `# Terraform Plan — ${dto.provider}\n\n+ compute_instance.${name}\n  instance_type = "${dto.instanceType}"\n  region        = "${dto.region}"\n\nPlan: 1 to add, 0 to change, 0 to destroy.`
+    return { hcl, plan }
+  }
+
+  private generateHcl(provider: CloudProvider, cfg: Record<string, unknown>): string {
+    const region = String(cfg['region'] ?? 'us-east-1')
+    const instanceType = String(cfg['instanceType'] ?? 't3.medium')
+    const name = String(cfg['name'] ?? 'web-prod-01')
+    if (provider === 'GCP') {
+      return `module "app_instance" {\n  source       = "../../modules/gcp/compute-instance"\n  name         = "${name}"\n  zone         = "${region}"\n  machine_type = "${instanceType}"\n}\n`
+    }
+    if (provider === 'AZURE') {
+      return `module "vm_instance" {\n  source   = "../../modules/azure/virtual-machine"\n  name     = "${name}"\n  location = "${region}"\n  vm_size  = "${instanceType}"\n}\n`
+    }
+    return `module "web_instance" {\n  source        = "../../modules/aws/instance"\n  name          = "${name}"\n  region        = "${region}"\n  instance_type = "${instanceType}"\n}\n`
   }
 
   async estimateLaunchInstance(dto: {
@@ -183,7 +233,13 @@ export class TerraformService {
   }
 
   async applyLaunchInstance(runId: string, userId?: string, confirmed = false) {
+    this.realtime.emitTerraformProgress(runId, 'Initializing', 10, 'Starting launch pipeline…')
+    this.realtime.emitTerraformProgress(runId, 'Terraform init', 25, 'terraform init')
+    this.realtime.emitTerraformProgress(runId, 'Plan', 50, 'terraform plan')
+    this.realtime.emitTerraformProgress(runId, 'Apply', 80, 'terraform apply')
     const applied = await this.runner.apply(runId, userId, confirmed)
+    this.realtime.emitTerraformProgress(runId, 'Syncing', 95, 'Syncing inventory…')
+    this.realtime.emitTerraformProgress(runId, 'Done', 100, 'Launch complete')
     return {
       runId: applied.id,
       status: applied.status,

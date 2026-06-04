@@ -28,9 +28,14 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/monaco-editor/min",
+                "output": "/assets/monaco/min"
               }
             ],
-            "styles": ["src/styles.scss"],
+            "styles": ["src/tailwind.css", "src/styles.scss"],
             "scripts": []
           },
           "configurations": {
@@ -87,9 +92,14 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "**/*",
+                "input": "node_modules/monaco-editor/min",
+                "output": "/assets/monaco/min"
               }
             ],
-            "styles": ["src/styles.scss"],
+            "styles": ["src/tailwind.css", "src/styles.scss"],
             "scripts": []
           }
         }

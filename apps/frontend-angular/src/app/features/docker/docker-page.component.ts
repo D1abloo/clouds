@@ -1,4 +1,6 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
+import { ActivatedRoute } from '@angular/router'
+import { bindSectionTabs } from '../../core/routing/section-tab.util'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatTabsModule } from '@angular/material/tabs'
 import { MatTableModule } from '@angular/material/table'
@@ -88,7 +90,12 @@ type ContainerRow = Record<string, unknown>
         </div>
 
         <app-panel-card title="Containers" subtitle="All registered Docker containers" icon="view_in_ar">
-          <mat-tab-group class="soft-tabs" animationDuration="280ms">
+          <mat-tab-group
+            class="soft-tabs"
+            animationDuration="280ms"
+            [selectedIndex]="tabIndex()"
+            (selectedIndexChange)="tabIndex.set($event)"
+          >
           <mat-tab label="Containers">
             <div class="tab-panel">
               <div class="filter-row">
@@ -177,8 +184,11 @@ export class DockerPageComponent implements OnInit {
   private readonly demoActions = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly route = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef)
 
   readonly page = createPageLoader(true)
+  readonly tabIndex = signal(0)
   readonly data = signal<Record<string, unknown> | null>(null)
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly cols = ['name', 'image', 'host', 'status', 'ports', 'cpu', 'ram', 'actions']
@@ -200,6 +210,7 @@ export class DockerPageComponent implements OnInit {
   })
 
   ngOnInit(): void {
+    bindSectionTabs(this.route, this.destroyRef, this.tabIndex, 'docker')
     this.realtime.connect()
     this.realtime.on('discovery.updated', () => this.load())
     this.load()

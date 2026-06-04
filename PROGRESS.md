@@ -1,8 +1,103 @@
 # CloudOps Control Center — Progress Tracker
 
 Plan maestro: `prompts_cursor_por_fases.md`  
-Última ejecución: 2026-06-02  
-**Fase actual:** Design system global borderless (Fase 24 — completado)
+Última ejecución: 2026-06-04  
+**Fase actual:** Sidebar SaaS con árbol de navegación (Fase 26 — completado)
+
+---
+
+## Fase 26 — Sidebar profesional con submenús y rutas reales ✅
+
+**Estado:** Completada (2026-06-04)
+
+**Objetivo:** Convertir el sidebar en navegación tipo plataforma SaaS cloud/devops con secciones desplegables, búsqueda, favoritos, badges, colores vivos y rutas reales para cada opción.
+
+### Sidebar
+
+| Elemento | Detalle |
+|----------|---------|
+| **Árbol** | `sidebar-tree.config.ts` — Overview, Clouds (AWS/GCP/Azure × 13 subsecciones), Infrastructure, Automation, Observability, Admin |
+| **Componentes** | `sidebar-nav-group`, `sidebar-nav-branch`, `sidebar-nav-leaf`, `sidebar-search` |
+| **Colapsable** | Grupos y ramas con estado en `localStorage` |
+| **Búsqueda** | Filtra grupos, ramas e ítems en tiempo real |
+| **Favoritos** | Quick access con estrella por ítem + rutas por defecto |
+| **Badges** | Demo/contadores: alerts, VPS, Jenkins, billing, notifications |
+| **Visual** | Sin bordes duros, hover animado, active con barra lateral, logos AWS/GCP/Azure |
+
+### Rutas y paneles
+
+| Área | Implementación |
+|------|----------------|
+| **Cloud** | `/cloud/:provider/:section` → `cloud-provider-hub` con tab por sección |
+| **VPS, Instances, Metrics, Terraform** | `section-hub` genérico (cards, tabla, gráficos demo) |
+| **Docker, K8s, Jenkins, Alerts** | Páginas existentes + `:section` → tab inicial |
+| **Terraform** | `/terraform/workspaces` editor; `/terraform/launch-instance` abre modal |
+| **Redirects** | Rutas legacy (`/accounts/aws`, `/vps`, …) → nuevas rutas |
+
+### Archivos clave
+
+- `layout/sidebar/sidebar-tree.config.ts`, `sidebar.component.ts`, `sidebar.service.ts`
+- `layout/sidebar/sidebar-nav-*.component.ts`, `sidebar-search.component.ts`
+- `core/routing/navigation.routes.ts`, `section-tab.util.ts`
+- `features/section-hub/section-hub.component.ts`
+- `app.routes.ts` (integración `NAVIGATION_ROUTES`)
+
+### Ver cambios
+
+`npm run dev:frontend` → http://localhost:4200 + Ctrl+Shift+R  
+Login demo: `admin@cloudops.local` / `Admin123!`
+
+---
+
+## Fase 25 — UI viva, sidebar con iconos y módulos profundos ✅
+
+**Estado:** Completada (2026-06-04)
+
+**Objetivo:** Panel más moderno, visual y profesional — colores vivos, sin bordes duros, sidebar con iconos/logos, más sub-opciones por módulo, gráficos y tablas mejorados.
+
+### Cambios visuales globales
+
+| Área | Cambio |
+|------|--------|
+| **Paleta dark** | Fondos `#080b14` / `#151a28`, acentos `#818cf8`, éxito `#34d399`, info `#38bdf8`, purple/cyan para métricas |
+| **Bordes** | `--app-border: transparent`; form fields sin outline duro; elevación con `--app-shadow-*` |
+| **Tabs** | `.soft-tabs` con fondo elevado, indicador acento, labels en negrita |
+| **Hub panels** | `.hub-tab-panel`, `.hub-quick-actions`, `.hub-action-chip` para acciones rápidas |
+| **Gráficos** | `shared/theme/chart-palette.ts` — paleta viva (#6366f1, #22d3ee, #a855f7, #f97316, #22c55e…) en `mini-chart` |
+| **Badges** | `status-badge` con glow sutil en running/error |
+| **Stat cards** | Tonos `success`, `info`, `purple`, `cyan` en iconos |
+
+### Sidebar
+
+| Elemento | Detalle |
+|----------|---------|
+| **Estructura** | `sidebar-nav.config.ts` — Overview, Clouds, Infrastructure, Automation, Observability, Admin |
+| **Iconos** | Pills de color por tono (`violet`, `blue`, `green`, `orange`…) |
+| **Logos cloud** | AWS / GCP / Azure como badges de marca en nav |
+| **Animación** | Hover `translateX`, active con sombra violeta, toggle sin borde lateral |
+| **Badges** | Alerts, VPS, Jenkins, Billing en rutas correspondientes |
+
+### Secciones internas ampliadas
+
+| Módulo | Tabs / contenido añadido |
+|--------|--------------------------|
+| **AWS/GCP/Azure hub** | Overview, VPC/Network, Security Groups, Metrics, Alerts (+ existentes) |
+| **Instances** | Overview (chart donut), All, By Provider/Status/Region, Metrics, Cost, Alerts, Audit |
+| **VPS, Docker, K8s, Jenkins, Settings, Alerts** | Ya tenían tabs; estilos unificados Fase 25 |
+| **Terraform** | Editor Monaco + workspaces (fase anterior) |
+
+### Archivos clave
+
+- `layout/sidebar/sidebar-nav.config.ts`, `sidebar.component.ts`, `nav-item.component.ts`
+- `shared/theme/chart-palette.ts`
+- `styles.scss` (tokens Fase 25)
+- `features/cloud-accounts/cloud-provider-hub.component.ts`
+- `features/instances/instances-list.component.ts`
+
+### Ver cambios en navegador
+
+**Reiniciar obligatorio:** `npm run dev:frontend` → http://localhost:4200 + Ctrl+Shift+R  
+Guía: [docs/verificacion-ui-terraform-launch.md](docs/verificacion-ui-terraform-launch.md)
 
 ---
 
