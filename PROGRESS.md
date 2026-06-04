@@ -2,11 +2,49 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-04  
-**Fase actual:** Sidebar SaaS con árbol de navegación (Fase 26 — completado)
+**Fase actual:** Módulos de plataforma + sidebar ampliado (Fase 27 — completado)
 
 ---
 
-## Fase 26 — Sidebar profesional con submenús y rutas reales ✅
+## Fase 27 — Módulos de plataforma y sidebar ampliado ✅
+
+**Estado:** Completada (2026-06-04)
+
+**Objetivo:** Ampliar el sidebar con nuevas secciones (Security, Command Center, Deployments, etc.) y crear 12+ paneles completos con datos demo.
+
+### Nuevos módulos
+
+| Módulo | Ruta | Capacidades |
+|--------|------|-------------|
+| Command Center | `/command-center` | Acciones rápidas, cola, pendientes |
+| Deployments | `/deployments` | Releases, versiones, rollback, logs |
+| Backups | `/backups` | Snapshots, schedules, alertas |
+| Security Center | `/security-center` | Riesgos, puertos, recomendaciones |
+| Secrets Manager | `/secrets-manager` | SSH, tokens, Vault, rotación |
+| Logs | `/logs` | Logs centralizados multi-fuente |
+| Incidents | `/incidents` | Incidencias, timeline, severidad |
+| Network | `/network` | VPC, firewalls, load balancers |
+| Storage | `/storage` | Volúmenes, object storage |
+| Cost Optimizer | `/cost-optimizer` | Ahorro, forecast, recomendaciones |
+| Reports | `/reports` | Informes demo exportables |
+| Service Catalog | `/service-catalog` | Plantillas reutilizables |
+| Approvals | `/approvals` | Aprobar/rechazar acciones sensibles |
+| Access Control | `/access-control` | IAM, roles, políticas |
+| Users (Admin) | `/admin/users` | Gestión de usuarios |
+
+### Sidebar reorganizado
+
+Overview · Clouds · Infrastructure · Automation · Observability · **Security** · Admin
+
+### Shell reutilizable
+
+- `PlatformModulePageComponent` — header, cards, tabs, filtros, tabla, charts, loading/empty/error
+- `platform-modules.demo.ts` — datasets demo
+- Documentación: [docs/sidebar-modules.md](docs/sidebar-modules.md)
+
+---
+
+## Fase 26 — Sidebar SaaS con árbol de navegación y rutas reales ✅
 
 **Estado:** Completada (2026-06-04)
 

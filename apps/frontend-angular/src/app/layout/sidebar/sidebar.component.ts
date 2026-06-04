@@ -317,27 +317,34 @@ export class SidebarComponent {
 
   readonly resolveBadge = (key?: string): number | null => {
     if (!key) return null
-    if (key === 'alerts') {
-      const n = this.alertsStore.activeAlerts()
-      return n > 0 ? n : 12
+    const demo: Record<string, number> = {
+      alerts: this.alertsStore.activeAlerts() || 12,
+      vps: this.vpsStore.totalHosts() || 6,
+      jenkins: this.jenkinsStore.failedBuilds() || 3,
+      billing: 4,
+      notifications: 8,
+      approvals: 4,
+      incidents: 3,
+      logs: 84,
+      backups: 2,
+      security: 9,
+      secrets: 5,
+      deployments: 6,
+      'command-center': 5,
+      cost: 15,
+      network: 8,
     }
-    if (key === 'vps') {
-      const n = this.vpsStore.totalHosts()
-      return n > 0 ? n : 6
-    }
-    if (key === 'jenkins') {
-      const n = this.jenkinsStore.failedBuilds()
-      return n > 0 ? n : 3
-    }
-    if (key === 'billing') return 4
-    if (key === 'notifications') return 8
-    return null
+    const n = demo[key]
+    return n && n > 0 ? n : null
   }
 
   badgeForRoute = (route: string): number | null => {
     if (route.startsWith('/alerts')) return this.resolveBadge('alerts')
     if (route.startsWith('/vps')) return this.resolveBadge('vps')
     if (route.startsWith('/jenkins')) return this.resolveBadge('jenkins')
+    if (route.startsWith('/approvals')) return this.resolveBadge('approvals')
+    if (route.startsWith('/incidents')) return this.resolveBadge('incidents')
+    if (route.startsWith('/command-center')) return this.resolveBadge('command-center')
     return null
   }
 

@@ -6,7 +6,37 @@ const hub = (module: string, parentTitle: string, breadcrumb?: string) => ({
   data: { module, parentTitle, breadcrumb: breadcrumb ?? parentTitle },
 })
 
+const platform = (exportName: string, breadcrumb: string) => ({
+  loadComponent: () =>
+    import('../../features/platform-modules/platform-modules.component').then(
+      (m) => m[exportName as keyof typeof m] as typeof m.CommandCenterComponent,
+    ),
+  data: { breadcrumb },
+})
+
 export const NAVIGATION_ROUTES: Routes = [
+  { path: 'command-center', ...platform('CommandCenterComponent', 'Command Center') },
+  { path: 'deployments', ...platform('DeploymentsComponent', 'Deployments') },
+  { path: 'backups', ...platform('BackupsComponent', 'Backups') },
+  { path: 'security-center', ...platform('SecurityCenterComponent', 'Security Center') },
+  { path: 'secrets-manager', ...platform('SecretsManagerComponent', 'Secrets Manager') },
+  { path: 'logs', ...platform('LogsCenterComponent', 'Logs') },
+  { path: 'incidents', ...platform('IncidentsComponent', 'Incidents') },
+  { path: 'network', ...platform('NetworkComponent', 'Network') },
+  { path: 'storage', ...platform('StorageComponent', 'Storage') },
+  { path: 'cost-optimizer', ...platform('CostOptimizerComponent', 'Cost Optimizer') },
+  { path: 'reports', ...platform('ReportsComponent', 'Reports') },
+  { path: 'service-catalog', ...platform('ServiceCatalogComponent', 'Service Catalog') },
+  { path: 'approvals', ...platform('ApprovalsComponent', 'Approvals') },
+  { path: 'access-control', ...platform('AccessControlComponent', 'Access Control') },
+  { path: 'admin/users', ...platform('UsersAdminComponent', 'Users') },
+  { path: 'admin/roles', ...hub('roles', 'Roles', 'Roles') },
+  {
+    path: 'admin/demo-mode',
+    loadComponent: () =>
+      import('../../features/settings/settings-page.component').then((m) => m.SettingsPageComponent),
+    data: { breadcrumb: 'Demo Mode', module: 'settings' },
+  },
   {
     path: 'cloud/:provider/:section',
     loadComponent: () =>
@@ -140,4 +170,5 @@ export const NAVIGATION_ROUTES: Routes = [
   { path: 'audit', redirectTo: 'audit/activity-logs', pathMatch: 'full' },
   { path: 'settings', redirectTo: 'settings/general', pathMatch: 'full' },
   { path: 'ssh', redirectTo: 'terminal/active-sessions', pathMatch: 'full' },
+  { path: 'admin', redirectTo: 'admin/users', pathMatch: 'full' },
 ]

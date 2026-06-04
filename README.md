@@ -12,6 +12,11 @@ Plataforma unificada para gestionar **AWS**, **GCP**, **Azure**, VPS externas, D
 - Integración Jenkins (jobs, builds, logs)
 - Terraform plan/apply/destroy con confirmación
 - Dashboard en tiempo real con alertas y notificaciones
+- **Command Center** — acciones rápidas multi-plataforma
+- **Deployments, Backups, Network, Storage** — infraestructura ampliada
+- **Security Center, Secrets Manager, Access Control** — postura de seguridad
+- **Logs, Incidents, Cost Optimizer, Reports** — observabilidad avanzada
+- **Service Catalog y Approvals** — catálogo y flujos de aprobación
 - Facturación cloud estimada por proveedor y cuenta
 - RBAC, auditoría y gestión segura de secretos (Vault refs)
 
@@ -98,6 +103,7 @@ npm run seed:demo      # Base seed + dataset demo completo
 | [Jenkins](docs/jenkins.md) | Integración CI/CD |
 | [SSH](docs/ssh.md) | Terminal web |
 | [Billing](docs/billing.md) | Facturación cloud |
+| [Sidebar modules](docs/sidebar-modules.md) | Navegación lateral y módulos Fase 27 |
 | [Despliegue local](docs/despliegue-local.md) | Docker Compose |
 | [Kubernetes](docs/despliegue-kubernetes.md) | Manifests K8s |
 | [Runbook](docs/runbook.md) | Operaciones |
