@@ -1,6 +1,9 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { DashboardHeaderComponent } from './components/dashboard-header.component'
-import { StatCardComponent } from './components/stat-card.component'
+import {
+  MetricStatsGridComponent,
+  type MetricStatItem,
+} from '../../shared/components/metric-stats-grid/metric-stats-grid.component'
 import { DashboardSectionComponent } from './components/dashboard-section.component'
 import { AlertsTableComponent } from './components/alerts-table.component'
 import { ActivityTimelineComponent } from './components/activity-timeline.component'
@@ -29,7 +32,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
   standalone: true,
   imports: [
     DashboardHeaderComponent,
-    StatCardComponent,
+    MetricStatsGridComponent,
     DashboardSectionComponent,
     AlertsTableComponent,
     ActivityTimelineComponent,
@@ -57,66 +60,58 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
 
       @if (page.loading()) {
         <div class="dashboard-skeleton">
-          <div class="summary-grid dashboard-skeleton__metrics">
-            @for (i of [1,2,3,4,5,6,7,8]; track i) {
-              <div class="metric-row metric-row--skeleton">
-                <span class="metric-row__icon skeleton-shimmer"></span>
-                <span class="metric-row__main skeleton-shimmer" style="height: 14px; width: 55%"></span>
-                <span class="metric-row__value skeleton-shimmer" style="height: 20px; width: 48px"></span>
-              </div>
-            }
+          <div class="app-section-panel">
+            <div class="metric-stats-grid dashboard-skeleton__grid">
+              @for (i of [1,2,3,4,5,6,7,8,9,10,11,12]; track i) {
+                <div class="metric-stat metric-stat--skeleton">
+                  <span class="skeleton-shimmer metric-stat__icon-sk"></span>
+                  <span class="skeleton-shimmer" style="height:10px;width:70%"></span>
+                  <span class="skeleton-shimmer" style="height:22px;width:45%"></span>
+                  <span class="skeleton-shimmer" style="height:8px;width:55%"></span>
+                </div>
+              }
+            </div>
           </div>
-          <app-loading-state message="Loading dashboard metrics…" />
+          <app-loading-state message="Cargando métricas del tablero…" />
         </div>
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="loadData()" />
       } @else {
-        <app-dashboard-section title="Infrastructure summary" subtitle="Real-time overview across all platforms" icon="insights">
-          <div class="summary-grid app-section-panel stagger-children">
-            <app-stat-card title="Total instances" [value]="n('totalInstances')" icon="dns" [updated]="syncShort()" [delay]="0" />
-            <app-stat-card title="Running" [value]="n('runningInstances')" icon="play_circle" tone="success" [subtitle]="stoppedLabel()" [delay]="30" />
-            <app-stat-card title="Stopped" [value]="n('stoppedInstances')" icon="stop_circle" tone="default" [delay]="60" />
-            <app-stat-card title="Warning" [value]="n('warningInstances')" icon="warning_amber" tone="warning" [delay]="90" />
-            <app-stat-card title="Error" [value]="n('errorInstances')" icon="error_outline" tone="danger" [delay]="120" />
-            <app-stat-card title="VPS active" [value]="n('vpsConnected')" [subtitle]="vpsDiscLabel()" icon="storage" [delay]="150" />
-            <app-stat-card title="Docker hosts" [value]="dockerN('hosts')" icon="view_in_ar" tone="info" [delay]="180" />
-            <app-stat-card title="K8s clusters" [value]="k8sN('clusters')" icon="hub" [delay]="210" />
-            <app-stat-card title="Jenkins builds" [value]="jenkinsN('running')" [subtitle]="jenkinsSub()" icon="build" tone="warning" [delay]="240" />
-            <app-stat-card title="Terraform runs" [value]="tfN('runs')" [subtitle]="tfSub()" icon="architecture" [delay]="270" />
-            <app-stat-card title="Monthly spend" [value]="formatSpend(n('monthlySpend'))" icon="payments" tone="info" trend="−4%" [trendDown]="true" [delay]="300" />
-            <app-stat-card title="Open alerts" [value]="n('alertsOpen')" icon="notifications_active" tone="danger" badge="Active" [delay]="330" />
+        <app-dashboard-section title="Resumen de infraestructura" subtitle="Vista en tiempo real de todas las plataformas" icon="insights">
+          <div class="app-section-panel">
+            <app-metric-stats-grid [items]="infraMetrics()" />
           </div>
         </app-dashboard-section>
 
-        <app-dashboard-section title="Analytics" [subtitle]="'Charts and trends · ' + timeRange()" icon="analytics">
+        <app-dashboard-section [title]="'Analítica'" [subtitle]="'Gráficos y tendencias · ' + timeRangeLabel()" icon="analytics">
           <div class="charts-grid charts-grid--wide">
-            <app-chart-card title="Instances by provider" subtitle="Distribution across cloud providers" kind="bar" [data]="providerChart()" [delay]="0" />
-            <app-chart-card title="Instances by status" subtitle="Operational health breakdown" kind="donut" [data]="statusChart()" [delay]="40" />
-            <app-chart-card title="CPU avg by provider" subtitle="Average CPU utilization %" kind="bar" [data]="cpuByProviderChart()" [delay]="80" />
-            <app-chart-card title="RAM avg by provider" subtitle="Average memory utilization %" kind="bar" [data]="ramByProviderChart()" [delay]="120" />
-            <app-chart-card title="Cost by provider" subtitle="Estimated monthly spend" kind="bar" [data]="costChart()" [delay]="160" />
-            <app-chart-card title="Cost by account" subtitle="Top billing accounts" kind="bar" [data]="costByAccountChart()" [delay]="200" />
-            <app-chart-card title="Alerts by severity" subtitle="Open incidents breakdown" kind="donut" [data]="alertsSeverityChart()" [delay]="240" />
-            <app-chart-card title="CPU / RAM trend" [subtitle]="'Cluster avg · ' + timeRange()" kind="line" [data]="cpuTrend()" [secondaryData]="ramTrend()" [delay]="280" />
-            <app-chart-card title="Docker containers" subtitle="Running vs stopped" kind="donut" [data]="dockerStatusChart()" [delay]="320" />
-            <app-chart-card title="Kubernetes pods" subtitle="Pod health overview" kind="donut" [data]="k8sStatusChart()" [delay]="360" />
-            <app-chart-card title="Jenkins builds" subtitle="Build outcomes" kind="bar" [data]="jenkinsChart()" [delay]="400" />
-            <app-chart-card title="Terraform runs" subtitle="IaC execution status" kind="bar" [data]="terraformChart()" [delay]="440" />
+            <app-chart-card title="Instancias por proveedor" subtitle="Distribución entre clouds" chartIcon="bar_chart" kind="bar" [data]="providerChart()" [delay]="0" />
+            <app-chart-card title="Instancias por estado" subtitle="Salud operativa" chartIcon="donut_large" kind="donut" [data]="statusChart()" [delay]="40" />
+            <app-chart-card title="CPU media por proveedor" subtitle="Utilización CPU %" chartIcon="speed" kind="bar" [data]="cpuByProviderChart()" [delay]="80" />
+            <app-chart-card title="RAM media por proveedor" subtitle="Utilización memoria %" chartIcon="memory" kind="bar" [data]="ramByProviderChart()" [delay]="120" />
+            <app-chart-card title="Coste por proveedor" subtitle="Gasto mensual estimado" chartIcon="payments" accent="green" kind="bar" [data]="costChart()" [delay]="160" />
+            <app-chart-card title="Coste por cuenta" subtitle="Principales cuentas de facturación" chartIcon="account_balance" kind="bar" [data]="costByAccountChart()" [delay]="200" />
+            <app-chart-card title="Alertas por severidad" subtitle="Incidentes abiertos" chartIcon="warning" accent="amber" kind="donut" [data]="alertsSeverityChart()" [delay]="240" />
+            <app-chart-card title="Tendencia CPU / RAM" [subtitle]="'Media del clúster · ' + timeRangeLabel()" chartIcon="show_chart" kind="line" [data]="cpuTrend()" [secondaryData]="ramTrend()" [delay]="280" />
+            <app-chart-card title="Contenedores Docker" subtitle="En ejecución vs detenidos" chartIcon="view_in_ar" accent="cyan" kind="donut" [data]="dockerStatusChart()" [delay]="320" />
+            <app-chart-card title="Pods Kubernetes" subtitle="Estado de los pods" chartIcon="hub" accent="cyan" kind="donut" [data]="k8sStatusChart()" [delay]="360" />
+            <app-chart-card title="Builds Jenkins" subtitle="Resultado de builds" chartIcon="build" accent="amber" kind="bar" [data]="jenkinsChart()" [delay]="400" />
+            <app-chart-card title="Ejecuciones Terraform" subtitle="Estado de IaC" chartIcon="account_tree" accent="violet" kind="bar" [data]="terraformChart()" [delay]="440" />
           </div>
         </app-dashboard-section>
 
-        <app-dashboard-section title="Instance Overview" subtitle="Complete inventory with filters, sorting and actions" icon="dns">
+        <app-dashboard-section title="Vista de instancias" subtitle="Inventario completo con filtros, ordenación y acciones" icon="dns">
           <app-instance-overview-table
             [rows]="instanceList()"
             (select)="openDrawer($event)"
           />
         </app-dashboard-section>
 
-        <app-dashboard-section title="Cloud providers" subtitle="AWS, GCP, Azure and VPS fleet summary" icon="cloud">
+        <app-dashboard-section title="Proveedores cloud" subtitle="Resumen AWS, GCP, Azure y flota VPS" icon="cloud">
           <div class="provider-grid">
             <app-provider-summary-panel
               title="AWS"
-              subtitle="EC2 instances, accounts and regions"
+              subtitle="Instancias EC2, cuentas y regiones"
               icon="cloud"
               tone="aws"
               route="/cloud/aws/overview"
@@ -125,7 +120,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
             />
             <app-provider-summary-panel
               title="GCP"
-              subtitle="Compute Engine projects and zones"
+              subtitle="Proyectos y zonas de Compute Engine"
               icon="cloud_circle"
               tone="gcp"
               route="/cloud/gcp/overview"
@@ -134,7 +129,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
             />
             <app-provider-summary-panel
               title="Azure"
-              subtitle="Virtual machines and subscriptions"
+              subtitle="Máquinas virtuales y suscripciones"
               icon="cloud_queue"
               tone="azure"
               route="/cloud/azure/overview"
@@ -143,7 +138,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
             />
             <app-provider-summary-panel
               title="VPS / Bare Metal"
-              subtitle="SSH-managed hosts and edge servers"
+              subtitle="Hosts gestionados por SSH y edge"
               icon="dns"
               tone="vps"
               route="/vps"
@@ -153,7 +148,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
           </div>
         </app-dashboard-section>
 
-        <app-dashboard-section title="Platform stacks" subtitle="Docker, Kubernetes, Jenkins and Terraform" icon="hub">
+        <app-dashboard-section title="Stacks de plataforma" subtitle="Docker, Kubernetes, Jenkins y Terraform" icon="hub">
           <div class="platform-grid">
             <app-platform-detail-panel
               title="Docker"
@@ -194,11 +189,11 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
           </div>
         </app-dashboard-section>
 
-        <app-dashboard-section title="Global health" subtitle="Platform-wide health score and critical services" icon="favorite">
+        <app-dashboard-section title="Salud global" subtitle="Puntuación global, SLA y servicios críticos" icon="favorite">
           <div class="health-grid">
             <app-platform-summary-card
-              title="Health Center"
-              summary="Global score, SLA and service checks"
+              title="Centro de salud"
+              summary="Puntuación global, SLA y comprobaciones"
               icon="favorite"
               tone="default"
               route="/health-center"
@@ -206,8 +201,8 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
               [delay]="0"
             />
             <app-platform-summary-card
-              title="Command Center"
-              summary="Operational queue and quick actions"
+              title="Centro de mando"
+              summary="Cola operativa y acciones rápidas"
               icon="bolt"
               tone="jenkins"
               route="/command-center"
@@ -215,8 +210,8 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
               [delay]="40"
             />
             <app-platform-summary-card
-              title="Billing"
-              summary="Spend, forecast and variance"
+              title="Facturación"
+              summary="Gasto, previsión y variación"
               icon="payments"
               tone="terraform"
               route="/billing/overview"
@@ -224,8 +219,8 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
               [delay]="80"
             />
             <app-platform-summary-card
-              title="Alerts"
-              summary="Open incidents and severity breakdown"
+              title="Alertas"
+              summary="Incidentes abiertos y severidad"
               icon="notifications_active"
               tone="docker"
               route="/alerts/active"
@@ -251,11 +246,18 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
   `,
   styles: `
     .dashboard-page { width: 100%; min-width: 0; }
-    .dashboard-skeleton__metrics .metric-row--skeleton {
+    .dashboard-skeleton__grid .metric-stat--skeleton {
       pointer-events: none;
-      border-bottom-color: color-mix(in srgb, var(--app-text-muted) 8%, transparent);
+      min-height: 108px;
     }
-    .dashboard-skeleton__metrics .skeleton-shimmer {
+    .metric-stat__icon-sk {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: block;
+    }
+    .dashboard-skeleton__grid .skeleton-shimmer,
+    .dashboard-skeleton .skeleton-shimmer {
       border-radius: 8px;
       min-height: 12px;
       display: block;
@@ -271,11 +273,6 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
     @keyframes shimmer {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
-    }
-    .dashboard-skeleton__metrics .metric-row__icon.skeleton-shimmer {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
     }
     .charts-grid {
       display: grid;
@@ -328,8 +325,73 @@ export class DashboardComponent implements OnInit {
 
   instanceList = (): DashboardInstanceRow[] => this.data()?.instanceList ?? []
 
-  lastSyncLabel = (): string => this.lastSyncAt().toLocaleTimeString()
-  syncShort = (): string => `Updated ${this.lastSyncAt().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  lastSyncLabel = (): string =>
+    this.lastSyncAt().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+  syncShort = (): string =>
+    `Actualizado ${this.lastSyncAt().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
+
+  timeRangeLabel = (): string => {
+    const map: Record<TimeRange, string> = { '1h': '1 h', '24h': '24 h', '7d': '7 días', '30d': '30 días' }
+    return map[this.timeRange()]
+  }
+
+  readonly infraMetrics = computed((): MetricStatItem[] => {
+    this.data()
+    const stopped = this.n('stoppedInstances')
+    const failed = this.jenkinsN('failed')
+    return [
+      { label: 'Instancias totales', value: this.n('totalInstances'), icon: 'dns', subtitle: this.syncShort(), tone: 'primary' },
+      {
+        label: 'En ejecución',
+        value: this.n('runningInstances'),
+        icon: 'play_circle',
+        tone: 'success',
+        subtitle: stopped === 1 ? '1 detenida' : `${stopped} detenidas`,
+      },
+      { label: 'Detenidas', value: stopped, icon: 'stop_circle', tone: 'default' },
+      { label: 'Advertencias', value: this.n('warningInstances'), icon: 'warning_amber', tone: 'warning' },
+      { label: 'Errores', value: this.n('errorInstances'), icon: 'error_outline', tone: 'danger' },
+      {
+        label: 'VPS activas',
+        value: this.n('vpsConnected'),
+        icon: 'computer',
+        tone: 'info',
+        subtitle: `${this.n('vpsDisconnected')} desconectadas`,
+      },
+      { label: 'Hosts Docker', value: this.dockerN('hosts'), icon: 'view_in_ar', tone: 'cyan' },
+      { label: 'Clústeres Kubernetes', value: this.k8sN('clusters'), icon: 'hub', tone: 'info' },
+      {
+        label: 'Builds Jenkins',
+        value: this.jenkinsN('running'),
+        icon: 'build',
+        tone: 'warning',
+        subtitle: failed === 1 ? '1 fallido' : `${failed} fallidos`,
+      },
+      {
+        label: 'Ejecuciones Terraform',
+        value: this.tfN('runs'),
+        icon: 'account_tree',
+        tone: 'purple',
+        subtitle: `${this.tfN('errors')} errores`,
+      },
+      {
+        label: 'Coste mensual',
+        value: this.formatSpend(this.n('monthlySpend')),
+        icon: 'payments',
+        tone: 'success',
+        trend: '−4%',
+        trendDown: true,
+      },
+      {
+        label: 'Alertas abiertas',
+        value: this.n('alertsOpen'),
+        icon: 'notifications_active',
+        tone: 'danger',
+        badge: 'Activas',
+      },
+    ]
+  })
 
   loadData = (): void => {
     this.page.run(this.inventory.dashboard(), {
@@ -337,7 +399,7 @@ export class DashboardComponent implements OnInit {
         this.data.set(d)
         this.lastSyncAt.set(new Date())
       },
-      errorMessage: 'Could not load dashboard',
+      errorMessage: 'No se pudo cargar el tablero',
       fallback: buildDemoDashboard,
     })
   }
@@ -368,13 +430,22 @@ export class DashboardComponent implements OnInit {
   openDrawer = (row: DashboardInstanceRow): void => { this.selectedInstance.set(row); this.drawerOpen.set(true) }
   closeDrawer = (): void => { this.drawerOpen.set(false) }
 
-  stoppedLabel = (): string => `${this.n('stoppedInstances')} stopped`
-  vpsDiscLabel = (): string => `${this.n('vpsDisconnected')} disconnected`
-  jenkinsSub = (): string => `${this.jenkinsN('failed')} failed`
-  tfSub = (): string => `${this.tfN('errors')} errors`
-
   providerChart = computed(() => this.mapChart(this.data()?.byProvider, { AWS: '#f59e0b', GCP: '#3b82f6', AZURE: '#8b5cf6', VPS: '#10b981' }))
-  statusChart = computed(() => this.mapChart(this.data()?.byStatus, { running: '#10b981', stopped: '#64748b', warning: '#f59e0b', error: '#ef4444', pending: '#0ea5e9' }))
+  statusChart = computed(() =>
+    this.mapChart(this.data()?.byStatus, {
+      running: '#10b981',
+      stopped: '#64748b',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      pending: '#0ea5e9',
+    }, {
+      running: 'En ejecución',
+      stopped: 'Detenidas',
+      warning: 'Advertencias',
+      error: 'Errores',
+      pending: 'Pendientes',
+    }),
+  )
   cpuByProviderChart = computed(() => this.mapChart(this.data()?.cpuByProvider))
   ramByProviderChart = computed(() => this.mapChart(this.data()?.ramByProvider))
   costChart = computed(() => {
@@ -383,7 +454,13 @@ export class DashboardComponent implements OnInit {
     return Object.entries(by).map(([label, value]) => ({ label, value: Math.round(Number(value) * 120 + 200), color: colors[label] }))
   })
   costByAccountChart = computed(() => (this.data()?.costByAccount ?? []).map((c) => ({ label: c.label, value: c.value })))
-  alertsSeverityChart = computed(() => this.mapChart(this.data()?.alertsBySeverity, { CRITICAL: '#ef4444', WARNING: '#f59e0b', INFO: '#3b82f6' }))
+  alertsSeverityChart = computed(() =>
+    this.mapChart(
+      this.data()?.alertsBySeverity,
+      { CRITICAL: '#ef4444', WARNING: '#f59e0b', INFO: '#3b82f6' },
+      { CRITICAL: 'Críticas', WARNING: 'Advertencias', INFO: 'Info' },
+    ),
+  )
 
   cpuTrend = (): { label: string; value: number }[] => {
     const m = this.rangeMult()
@@ -395,26 +472,26 @@ export class DashboardComponent implements OnInit {
   }
 
   dockerStatusChart = (): { label: string; value: number; color?: string }[] => [
-    { label: 'Running', value: this.dockerN('running'), color: '#10b981' },
-    { label: 'Stopped', value: this.dockerN('stopped'), color: '#64748b' },
+    { label: 'En ejecución', value: this.dockerN('running'), color: '#10b981' },
+    { label: 'Detenidos', value: this.dockerN('stopped'), color: '#64748b' },
   ]
   k8sStatusChart = (): { label: string; value: number; color?: string }[] => {
     const pods = this.k8sN('pods')
     const err = this.k8sN('errors')
     return [
-      { label: 'Healthy', value: Math.max(pods - err, 0), color: '#10b981' },
-      { label: 'Errors', value: err, color: '#ef4444' },
+      { label: 'Saludables', value: Math.max(pods - err, 0), color: '#10b981' },
+      { label: 'Errores', value: err, color: '#ef4444' },
     ]
   }
   jenkinsChart = (): { label: string; value: number; color?: string }[] => [
-    { label: 'Running', value: this.jenkinsN('running'), color: '#3b82f6' },
-    { label: 'Success', value: this.jenkinsN('success'), color: '#10b981' },
-    { label: 'Failed', value: this.jenkinsN('failed'), color: '#ef4444' },
+    { label: 'En curso', value: this.jenkinsN('running'), color: '#3b82f6' },
+    { label: 'Correctos', value: this.jenkinsN('success'), color: '#10b981' },
+    { label: 'Fallidos', value: this.jenkinsN('failed'), color: '#ef4444' },
   ]
   terraformChart = (): { label: string; value: number; color?: string }[] => [
-    { label: 'Plans', value: this.tfN('plans'), color: '#3b82f6' },
+    { label: 'Planes', value: this.tfN('plans'), color: '#3b82f6' },
     { label: 'Applies', value: this.tfN('applies'), color: '#10b981' },
-    { label: 'Errors', value: this.tfN('errors'), color: '#ef4444' },
+    { label: 'Errores', value: this.tfN('errors'), color: '#ef4444' },
   ]
 
   prov = (key: string): Record<string, unknown> => (this.data()?.providers?.[key] as Record<string, unknown>) ?? {}
@@ -422,69 +499,84 @@ export class DashboardComponent implements OnInit {
   provNum = (key: string, field: string): number => Number(this.prov(key)[field] ?? 0)
 
   awsMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Accounts', value: this.provNum('AWS', 'accounts') },
-    { label: 'Instances', value: this.provNum('AWS', 'instances') },
-    { label: 'Regions', value: this.provNum('AWS', 'regions') },
-    { label: 'Cost/mo', value: this.formatSpend(this.provNum('AWS', 'monthlyCost')) },
-    { label: 'Alerts', value: this.provNum('AWS', 'alerts') },
+    { label: 'Cuentas', value: this.provNum('AWS', 'accounts') },
+    { label: 'Instancias', value: this.provNum('AWS', 'instances') },
+    { label: 'Regiones', value: this.provNum('AWS', 'regions') },
+    { label: 'Coste/mes', value: this.formatSpend(this.provNum('AWS', 'monthlyCost')) },
+    { label: 'Alertas', value: this.provNum('AWS', 'alerts') },
   ]
   gcpMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Projects', value: this.provNum('GCP', 'accounts') },
-    { label: 'Instances', value: this.provNum('GCP', 'instances') },
-    { label: 'Zones', value: this.provNum('GCP', 'regions') },
-    { label: 'Cost/mo', value: this.formatSpend(this.provNum('GCP', 'monthlyCost')) },
-    { label: 'Alerts', value: this.provNum('GCP', 'alerts') },
+    { label: 'Proyectos', value: this.provNum('GCP', 'accounts') },
+    { label: 'Instancias', value: this.provNum('GCP', 'instances') },
+    { label: 'Zonas', value: this.provNum('GCP', 'regions') },
+    { label: 'Coste/mes', value: this.formatSpend(this.provNum('GCP', 'monthlyCost')) },
+    { label: 'Alertas', value: this.provNum('GCP', 'alerts') },
   ]
   azureMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Subscriptions', value: this.provNum('AZURE', 'accounts') },
+    { label: 'Suscripciones', value: this.provNum('AZURE', 'accounts') },
     { label: 'VMs', value: this.provNum('AZURE', 'instances') },
-    { label: 'Regions', value: this.provNum('AZURE', 'regions') },
-    { label: 'Cost/mo', value: this.formatSpend(this.provNum('AZURE', 'monthlyCost')) },
-    { label: 'Alerts', value: this.provNum('AZURE', 'alerts') },
+    { label: 'Regiones', value: this.provNum('AZURE', 'regions') },
+    { label: 'Coste/mes', value: this.formatSpend(this.provNum('AZURE', 'monthlyCost')) },
+    { label: 'Alertas', value: this.provNum('AZURE', 'alerts') },
   ]
   vpsMetrics = (): { label: string; value: string | number }[] => [
     { label: 'Total', value: this.provNum('VPS', 'instances') || this.n('vpsHosts') },
-    { label: 'Connected', value: this.provNum('VPS', 'connected') || this.n('vpsConnected') },
+    { label: 'Conectados', value: this.provNum('VPS', 'connected') || this.n('vpsConnected') },
     { label: 'Docker', value: this.provNum('VPS', 'dockerDetected') },
     { label: 'K8s', value: this.provNum('VPS', 'k8sDetected') },
-    { label: 'Alerts', value: this.provNum('VPS', 'alerts') },
+    { label: 'Alertas', value: this.provNum('VPS', 'alerts') },
   ]
 
-  awsLines = (): string[] => [`Last sync: ${this.syncShort()}`, 'Latest: aws-prod-app-1']
-  gcpLines = (): string[] => [`Last sync: ${this.syncShort()}`, 'Latest: gcp-analytics-1']
-  azureLines = (): string[] => [`Last sync: ${this.syncShort()}`, 'Latest: azure-db-1']
-  vpsLines = (): string[] => [`${this.n('vpsDisconnected')} hosts disconnected`, 'SSH monitoring active']
+  awsLines = (): string[] => [`Última sync: ${this.syncShort()}`, 'Última: aws-prod-app-1']
+  gcpLines = (): string[] => [`Última sync: ${this.syncShort()}`, 'Última: gcp-analytics-1']
+  azureLines = (): string[] => [`Última sync: ${this.syncShort()}`, 'Última: azure-db-1']
+  vpsLines = (): string[] => [`${this.n('vpsDisconnected')} hosts desconectados`, 'Monitorización SSH activa']
 
-  dockerLabel = (): string => `${this.dockerN('hosts')} hosts · ${this.dockerN('running')}/${this.dockerN('containers')} running`
-  k8sLabel = (): string => `${this.k8sN('clusters')} clusters · ${this.k8sN('pods')} pods · ${this.k8sN('errors')} errors`
-  jenkinsLabel = (): string => `${this.jenkinsN('jobs')} jobs · ${this.jenkinsN('running')} running · ${this.jenkinsN('failed')} failed`
-  tfLabel = (): string => `${this.tfN('runs')} runs · ${this.tfN('errors')} errors · ${this.tfN('workspaces')} workspaces`
+  dockerLabel = (): string =>
+    `${this.dockerN('hosts')} hosts · ${this.dockerN('running')}/${this.dockerN('containers')} en ejecución`
+  k8sLabel = (): string =>
+    `${this.k8sN('clusters')} clústeres · ${this.k8sN('pods')} pods · ${this.k8sN('errors')} errores`
+  jenkinsLabel = (): string =>
+    `${this.jenkinsN('jobs')} jobs · ${this.jenkinsN('running')} en curso · ${this.jenkinsN('failed')} fallidos`
+  tfLabel = (): string =>
+    `${this.tfN('runs')} ejecuciones · ${this.tfN('errors')} errores · ${this.tfN('workspaces')} workspaces`
 
   dockerPanelMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Hosts', value: this.dockerN('hosts') }, { label: 'Running', value: this.dockerN('running') },
-    { label: 'Stopped', value: this.dockerN('stopped') }, { label: 'Images', value: this.dockerN('images') },
-    { label: 'Volumes', value: this.dockerN('volumes') }, { label: 'Networks', value: this.dockerN('networks') },
+    { label: 'Hosts', value: this.dockerN('hosts') },
+    { label: 'En ejecución', value: this.dockerN('running') },
+    { label: 'Detenidos', value: this.dockerN('stopped') },
+    { label: 'Imágenes', value: this.dockerN('images') },
+    { label: 'Volúmenes', value: this.dockerN('volumes') },
+    { label: 'Redes', value: this.dockerN('networks') },
   ]
   k8sPanelMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Clusters', value: this.k8sN('clusters') }, { label: 'Nodes', value: this.k8sN('nodes') },
-    { label: 'Namespaces', value: this.k8sN('namespaces') }, { label: 'Pods', value: this.k8sN('pods') },
-    { label: 'Deployments', value: this.k8sN('deployments') }, { label: 'Services', value: this.k8sN('services') },
+    { label: 'Clústeres', value: this.k8sN('clusters') },
+    { label: 'Nodos', value: this.k8sN('nodes') },
+    { label: 'Namespaces', value: this.k8sN('namespaces') },
+    { label: 'Pods', value: this.k8sN('pods') },
+    { label: 'Deployments', value: this.k8sN('deployments') },
+    { label: 'Servicios', value: this.k8sN('services') },
   ]
   jenkinsPanelMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Servers', value: this.jenkinsN('servers') }, { label: 'Jobs', value: this.jenkinsN('jobs') },
-    { label: 'Running', value: this.jenkinsN('running') }, { label: 'Success', value: this.jenkinsN('success') },
-    { label: 'Failed', value: this.jenkinsN('failed') },
+    { label: 'Servidores', value: this.jenkinsN('servers') },
+    { label: 'Jobs', value: this.jenkinsN('jobs') },
+    { label: 'En curso', value: this.jenkinsN('running') },
+    { label: 'Correctos', value: this.jenkinsN('success') },
+    { label: 'Fallidos', value: this.jenkinsN('failed') },
   ]
   tfPanelMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Workspaces', value: this.tfN('workspaces') }, { label: 'Runs', value: this.tfN('runs') },
-    { label: 'Plans', value: this.tfN('plans') }, { label: 'Applies', value: this.tfN('applies') },
-    { label: 'Templates', value: this.tfN('templates') }, { label: 'Errors', value: this.tfN('errors') },
+    { label: 'Workspaces', value: this.tfN('workspaces') },
+    { label: 'Ejecuciones', value: this.tfN('runs') },
+    { label: 'Planes', value: this.tfN('plans') },
+    { label: 'Applies', value: this.tfN('applies') },
+    { label: 'Plantillas', value: this.tfN('templates') },
+    { label: 'Errores', value: this.tfN('errors') },
   ]
 
-  dockerDetails = (): string[] => ['nginx — running', 'api — running', 'redis — running']
-  k8sDetails = (): string[] => ['default/app-0 — Running', 'kube-system/coredns — Running']
-  jenkinsDetails = (): string[] => ['terraform-apply #4 — FAILURE', 'deploy-prod #12 — SUCCESS']
-  tfDetails = (): string[] => ['demo-aws-ec2 — APPLIED', 'demo-gcp-vm — PLANNED']
+  dockerDetails = (): string[] => ['nginx — en ejecución', 'api — en ejecución', 'redis — en ejecución']
+  k8sDetails = (): string[] => ['default/app-0 — En ejecución', 'kube-system/coredns — En ejecución']
+  jenkinsDetails = (): string[] => ['terraform-apply #4 — FALLO', 'deploy-prod #12 — ÉXITO']
+  tfDetails = (): string[] => ['demo-aws-ec2 — APLICADO', 'demo-gcp-vm — PLANIFICADO']
 
   recentAlerts = (): Record<string, unknown>[] => (this.data()?.recentAlerts as Record<string, unknown>[]) ?? []
   recentActivity = (): Record<string, unknown>[] => (this.data()?.recentActivity as Record<string, unknown>[]) ?? []
@@ -495,37 +587,45 @@ export class DashboardComponent implements OnInit {
     }))
 
   healthMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Score', value: '94%' },
-    { label: 'Services', value: 18 },
-    { label: 'Degraded', value: 2 },
-    { label: 'SLA', value: '99.2%' },
+    { label: 'Puntuación', value: '94%' },
+    { label: 'Servicios', value: 18 },
+    { label: 'Degradados', value: 2 },
+    { label: 'SLA', value: '99,2%' },
   ]
   commandMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Queue', value: 3 },
-    { label: 'Pending', value: 5 },
-    { label: 'Running', value: 2 },
-    { label: 'Done', value: 48 },
+    { label: 'Cola', value: 3 },
+    { label: 'Pendientes', value: 5 },
+    { label: 'En curso', value: 2 },
+    { label: 'Completadas', value: 48 },
   ]
   billingMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Monthly', value: this.formatSpend(this.n('monthlySpend')) },
-    { label: 'Forecast', value: this.formatSpend(Math.round(this.n('monthlySpend') * 1.06)) },
-    { label: 'Variance', value: '−4%' },
-    { label: 'Providers', value: 4 },
+    { label: 'Mensual', value: this.formatSpend(this.n('monthlySpend')) },
+    { label: 'Previsión', value: this.formatSpend(Math.round(this.n('monthlySpend') * 1.06)) },
+    { label: 'Variación', value: '−4%' },
+    { label: 'Proveedores', value: 4 },
   ]
   alertsMetrics = (): { label: string; value: string | number }[] => [
-    { label: 'Open', value: this.n('alertsOpen') },
-    { label: 'Critical', value: 3 },
-    { label: 'Warning', value: 4 },
+    { label: 'Abiertas', value: this.n('alertsOpen') },
+    { label: 'Críticas', value: 3 },
+    { label: 'Advertencias', value: 4 },
     { label: 'Info', value: 2 },
   ]
 
   formatSpend = (value?: number): string => {
     if (value === undefined || value === null) return '$0'
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
   }
 
   private rangeMult = (): number => ({ '1h': 0.85, '24h': 1, '7d': 1.08, '30d': 1.15 })[this.timeRange()] ?? 1
 
-  private mapChart = (src?: Record<string, number>, colors?: Record<string, string>) =>
-    Object.entries(src ?? {}).map(([label, value]) => ({ label, value: Number(value), color: colors?.[label] }))
+  private mapChart = (
+    src?: Record<string, number>,
+    colors?: Record<string, string>,
+    labels?: Record<string, string>,
+  ) =>
+    Object.entries(src ?? {}).map(([key, value]) => ({
+      label: labels?.[key] ?? key,
+      value: Number(value),
+      color: colors?.[key],
+    }))
 }

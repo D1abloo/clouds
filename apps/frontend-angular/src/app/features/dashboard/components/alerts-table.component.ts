@@ -23,30 +23,30 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
     <div class="alerts-panel">
       <header class="alerts-panel__head">
         <div>
-          <h3><mat-icon>warning_amber</mat-icon> Recent alerts</h3>
-          <p>Active incidents requiring attention</p>
+          <h3><mat-icon>warning_amber</mat-icon> Alertas recientes</h3>
+          <p>Incidentes activos que requieren atención</p>
         </div>
         <a mat-stroked-button routerLink="/alerts" class="alerts-panel__link">
-          View all
+          Ver todas
           <mat-icon>arrow_forward</mat-icon>
         </a>
       </header>
 
       @if (loading) {
-        <app-loading-state message="Loading alerts…" />
+        <app-loading-state message="Cargando alertas…" />
       } @else if (!rows.length) {
-        <app-empty-state icon="check_circle" title="All clear" message="No active alerts right now" />
+        <app-empty-state icon="check_circle" title="Todo correcto" message="No hay alertas activas en este momento" />
       } @else {
         <div class="alerts-panel__scroll">
           <table mat-table [dataSource]="rows" class="premium-table alerts-table">
             <ng-container matColumnDef="title">
-              <th mat-header-cell *matHeaderCellDef>Alert</th>
+              <th mat-header-cell *matHeaderCellDef>Alerta</th>
               <td mat-cell *matCellDef="let row">
                 <span class="alerts-table__title">{{ row.title ?? row.message }}</span>
               </td>
             </ng-container>
             <ng-container matColumnDef="severity">
-              <th mat-header-cell *matHeaderCellDef>Severity</th>
+              <th mat-header-cell *matHeaderCellDef>Severidad</th>
               <td mat-cell *matCellDef="let row">
                 <span class="severity-pill" [class]="severityClass(row.severity)">
                   {{ row.severity ?? '—' }}
@@ -54,7 +54,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
               </td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let row">
                 <app-status-badge [value]="row.status ?? 'open'" />
               </td>

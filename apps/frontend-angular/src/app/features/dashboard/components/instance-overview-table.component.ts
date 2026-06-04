@@ -39,21 +39,21 @@ type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
     <div class="instance-overview">
       <header class="instance-overview__head">
         <div>
-          <h3><mat-icon>dns</mat-icon> Instance Overview</h3>
-          <p>{{ filtered().length }} instances across AWS, GCP, Azure and VPS</p>
+          <h3><mat-icon>dns</mat-icon> Vista de instancias</h3>
+          <p>{{ filtered().length }} instancias en AWS, GCP, Azure y VPS</p>
         </div>
       </header>
 
       <div class="instance-overview__filters">
         <mat-form-field appearance="outline" class="filter-search">
-          <mat-label>Search instances</mat-label>
+          <mat-label>Buscar instancias</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input matInput [formControl]="searchControl" placeholder="Name, IP, account…" />
+          <input matInput [formControl]="searchControl" placeholder="Nombre, IP, cuenta…" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Provider</mat-label>
+          <mat-label>Proveedor</mat-label>
           <mat-select [formControl]="providerControl">
-            <mat-option value="">All providers</mat-option>
+            <mat-option value="">Todos los proveedores</mat-option>
             <mat-option value="AWS">AWS</mat-option>
             <mat-option value="GCP">GCP</mat-option>
             <mat-option value="AZURE">Azure</mat-option>
@@ -61,44 +61,44 @@ type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Status</mat-label>
+          <mat-label>Estado</mat-label>
           <mat-select [formControl]="statusControl">
-            <mat-option value="">All statuses</mat-option>
-            <mat-option value="RUNNING">Running</mat-option>
-            <mat-option value="STOPPED">Stopped</mat-option>
-            <mat-option value="WARNING">Warning</mat-option>
+            <mat-option value="">Todos los estados</mat-option>
+            <mat-option value="RUNNING">En ejecución</mat-option>
+            <mat-option value="STOPPED">Detenida</mat-option>
+            <mat-option value="WARNING">Advertencia</mat-option>
             <mat-option value="ERROR">Error</mat-option>
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Region</mat-label>
+          <mat-label>Región</mat-label>
           <mat-select [formControl]="regionControl">
-            <mat-option value="">All regions</mat-option>
+            <mat-option value="">Todas las regiones</mat-option>
             @for (r of regions(); track r) {
               <mat-option [value]="r">{{ r }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Environment</mat-label>
+          <mat-label>Entorno</mat-label>
           <mat-select [formControl]="envControl">
-            <mat-option value="">All environments</mat-option>
-            <mat-option value="production">Production</mat-option>
+            <mat-option value="">Todos los entornos</mat-option>
+            <mat-option value="production">Producción</mat-option>
             <mat-option value="staging">Staging</mat-option>
-            <mat-option value="development">Development</mat-option>
+            <mat-option value="development">Desarrollo</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
 
       @if (!rows.length) {
-        <app-empty-state icon="cloud_off" title="No instances" message="Load demo data or connect a cloud account" />
+        <app-empty-state icon="cloud_off" title="Sin instancias" message="Carga datos demo o conecta una cuenta cloud" />
       } @else if (!filtered().length) {
-        <app-empty-state icon="filter_alt_off" title="No matches" message="Try adjusting your filters" />
+        <app-empty-state icon="filter_alt_off" title="Sin coincidencias" message="Prueba a ajustar los filtros" />
       } @else {
         <div class="instance-overview__scroll">
           <table mat-table [dataSource]="paged()" class="premium-table instance-table">
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
               <td mat-cell *matCellDef="let row">
                 <button type="button" class="name-link" [matTooltip]="row.name" (click)="select.emit(row)">
                   {{ row.name }}
@@ -107,23 +107,23 @@ type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
               </td>
             </ng-container>
             <ng-container matColumnDef="provider">
-              <th mat-header-cell *matHeaderCellDef>Provider</th>
+              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
               <td mat-cell *matCellDef="let row"><span class="provider-pill">{{ row.provider }}</span></td>
             </ng-container>
             <ng-container matColumnDef="account">
-              <th mat-header-cell *matHeaderCellDef>Account</th>
+              <th mat-header-cell *matHeaderCellDef>Cuenta</th>
               <td mat-cell *matCellDef="let row" [matTooltip]="row.accountName">{{ row.accountName }}</td>
             </ng-container>
             <ng-container matColumnDef="region">
-              <th mat-header-cell *matHeaderCellDef>Region</th>
+              <th mat-header-cell *matHeaderCellDef>Región</th>
               <td mat-cell *matCellDef="let row">{{ row.region }}</td>
             </ng-container>
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let row"><app-status-badge [value]="row.status" /></td>
             </ng-container>
             <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef>Type</th>
+              <th mat-header-cell *matHeaderCellDef>Tipo</th>
               <td mat-cell *matCellDef="let row" [matTooltip]="row.instanceType">{{ row.instanceType }}</td>
             </ng-container>
             <ng-container matColumnDef="os">
@@ -131,11 +131,11 @@ type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
               <td mat-cell *matCellDef="let row" [matTooltip]="row.os">{{ row.os }}</td>
             </ng-container>
             <ng-container matColumnDef="publicIp">
-              <th mat-header-cell *matHeaderCellDef>Public IP</th>
+              <th mat-header-cell *matHeaderCellDef>IP pública</th>
               <td mat-cell *matCellDef="let row" class="mono">{{ row.publicIp }}</td>
             </ng-container>
             <ng-container matColumnDef="privateIp">
-              <th mat-header-cell *matHeaderCellDef>Private IP</th>
+              <th mat-header-cell *matHeaderCellDef>IP privada</th>
               <td mat-cell *matCellDef="let row" class="mono">{{ row.privateIp }}</td>
             </ng-container>
             <ng-container matColumnDef="cpu">
@@ -147,29 +147,29 @@ type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
               <td mat-cell *matCellDef="let row">{{ row.ramGb != null ? row.ramGb + ' GB' : '—' }}</td>
             </ng-container>
             <ng-container matColumnDef="disk">
-              <th mat-header-cell *matHeaderCellDef>Disk</th>
+              <th mat-header-cell *matHeaderCellDef>Disco</th>
               <td mat-cell *matCellDef="let row">{{ row.diskGb != null ? row.diskGb + ' GB' : '—' }}</td>
             </ng-container>
             <ng-container matColumnDef="cost">
-              <th mat-header-cell *matHeaderCellDef>Cost/mo</th>
+              <th mat-header-cell *matHeaderCellDef>Coste/mes</th>
               <td mat-cell *matCellDef="let row">{{ formatCost(row.monthlyCost) }}</td>
             </ng-container>
             <ng-container matColumnDef="docker">
               <th mat-header-cell *matHeaderCellDef>Docker</th>
               <td mat-cell *matCellDef="let row">
-                @if (row.hasDocker) { <mat-icon class="ok-icon" matTooltip="Docker detected">check_circle</mat-icon> }
+                @if (row.hasDocker) { <mat-icon class="ok-icon" matTooltip="Docker detectado">check_circle</mat-icon> }
                 @else { <span class="muted">—</span> }
               </td>
             </ng-container>
             <ng-container matColumnDef="k8s">
               <th mat-header-cell *matHeaderCellDef>K8s</th>
               <td mat-cell *matCellDef="let row">
-                @if (row.hasKubernetes) { <mat-icon class="ok-icon" matTooltip="Kubernetes detected">check_circle</mat-icon> }
+                @if (row.hasKubernetes) { <mat-icon class="ok-icon" matTooltip="Kubernetes detectado">check_circle</mat-icon> }
                 @else { <span class="muted">—</span> }
               </td>
             </ng-container>
             <ng-container matColumnDef="alerts">
-              <th mat-header-cell *matHeaderCellDef>Alerts</th>
+              <th mat-header-cell *matHeaderCellDef>Alertas</th>
               <td mat-cell *matCellDef="let row">
                 @if (row.alertCount) {
                   <span class="alert-count">{{ row.alertCount }}</span>
@@ -177,26 +177,26 @@ type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
               </td>
             </ng-container>
             <ng-container matColumnDef="synced">
-              <th mat-header-cell *matHeaderCellDef>Last sync</th>
+              <th mat-header-cell *matHeaderCellDef>Última sync</th>
               <td mat-cell *matCellDef="let row">{{ formatDate(row.lastSyncedAt) }}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
               <td mat-cell *matCellDef="let row">
-                <button mat-icon-button type="button" [matMenuTriggerFor]="menu" aria-label="Instance actions">
+                <button mat-icon-button type="button" [matMenuTriggerFor]="menu" aria-label="Acciones de instancia">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #menu="matMenu">
-                  <button mat-menu-item type="button" (click)="select.emit(row)"><mat-icon>visibility</mat-icon> View detail</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Metrics', row.name)"><mat-icon>monitoring</mat-icon> View metrics</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Terminal', row.name)"><mat-icon>terminal</mat-icon> Open terminal</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Docker', row.name)"><mat-icon>view_in_ar</mat-icon> View Docker</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Kubernetes', row.name)"><mat-icon>hub</mat-icon> View Kubernetes</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Billing', row.name)"><mat-icon>payments</mat-icon> View billing</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Alerts', row.name)"><mat-icon>warning</mat-icon> View alerts</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Audit', row.name)"><mat-icon>history</mat-icon> View audit</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Restart', row.name)"><mat-icon>restart_alt</mat-icon> Restart demo</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Verify', row.name)"><mat-icon>verified</mat-icon> Verify demo</button>
+                  <button mat-menu-item type="button" (click)="select.emit(row)"><mat-icon>visibility</mat-icon> Ver detalle</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Metrics', row.name)"><mat-icon>monitoring</mat-icon> Ver métricas</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Terminal', row.name)"><mat-icon>terminal</mat-icon> Abrir terminal</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Docker', row.name)"><mat-icon>view_in_ar</mat-icon> Ver Docker</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Kubernetes', row.name)"><mat-icon>hub</mat-icon> Ver Kubernetes</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Billing', row.name)"><mat-icon>payments</mat-icon> Ver facturación</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Alerts', row.name)"><mat-icon>warning</mat-icon> Ver alertas</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Audit', row.name)"><mat-icon>history</mat-icon> Ver auditoría</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Restart', row.name)"><mat-icon>restart_alt</mat-icon> Reiniciar demo</button>
+                  <button mat-menu-item type="button" (click)="runDemo('Verify', row.name)"><mat-icon>verified</mat-icon> Verificar demo</button>
                 </mat-menu>
               </td>
             </ng-container>
@@ -210,7 +210,7 @@ type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
           [pageIndex]="pageIndex()"
           [pageSizeOptions]="[10, 25, 50]"
           (page)="handlePage($event)"
-          aria-label="Instance pagination"
+          aria-label="Paginación de instancias"
         />
       }
     </div>

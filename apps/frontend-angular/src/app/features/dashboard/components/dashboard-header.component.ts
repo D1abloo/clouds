@@ -23,23 +23,23 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
         </div>
         <div class="dash-header__copy">
           <div class="dash-header__title-row">
-            <h1>Dashboard</h1>
+            <h1>Tablero</h1>
             @if (demoMode) {
-              <app-realtime-status-badge mode="demo" label="Demo data" icon="science" />
+              <app-realtime-status-badge mode="demo" label="Datos demo" icon="science" />
             } @else {
-              <app-realtime-status-badge mode="live" label="Real data" icon="verified" />
+              <app-realtime-status-badge mode="live" label="Datos reales" icon="verified" />
             }
           </div>
-          <p>Global infrastructure overview — instances, costs, alerts and operations</p>
+          <p>Visión global de infraestructura — instancias, costes, alertas y operaciones</p>
           <div class="dash-header__meta">
             <span class="dash-header__sync">
               <mat-icon>schedule</mat-icon>
-              Last updated {{ lastSync }}
+              Última actualización {{ lastSync }}
             </span>
             @if (refreshing) {
               <span class="dash-header__refreshing">
                 <mat-spinner diameter="14" />
-                Updating metrics…
+                Actualizando métricas…
               </span>
             }
           </div>
@@ -57,11 +57,11 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
             (click)="refreshClick.emit()"
           >
             <mat-icon>refresh</mat-icon>
-            Refresh
+            Actualizar
           </button>
           <button mat-stroked-button type="button" (click)="exportClick.emit()">
             <mat-icon>download</mat-icon>
-            Export report
+            Exportar informe
           </button>
         </div>
       </div>

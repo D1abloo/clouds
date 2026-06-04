@@ -15,15 +15,15 @@ import { DemoService } from '../../../core/services/demo.service'
           <div class="demo-banner__icon"><mat-icon>science</mat-icon></div>
           <div class="demo-banner__text">
             <div class="demo-banner__title-row">
-              <strong>Demo Mode</strong>
-              <span class="demo-banner__pill">Simulated data</span>
+              <strong>Modo demo</strong>
+              <span class="demo-banner__pill">Datos simulados</span>
             </div>
-            <p>No real cloud resources connected — all metrics and actions are safe to explore</p>
+            <p>Sin recursos cloud reales conectados — todas las métricas y acciones son seguras para explorar</p>
             @if (demo.status(); as s) {
               <div class="demo-banner__stats">
-                <span><strong>{{ s.instances }}</strong> instances</span>
+                <span><strong>{{ s.instances }}</strong> instancias</span>
                 <span><strong>{{ s.vps }}</strong> VPS</span>
-                <span><strong>{{ s.alerts }}</strong> alerts</span>
+                <span><strong>{{ s.alerts }}</strong> alertas</span>
               </div>
             }
           </div>
@@ -34,11 +34,11 @@ import { DemoService } from '../../../core/services/demo.service'
           } @else {
             <button mat-flat-button color="primary" type="button" (click)="demo.loadDemo()">
               <mat-icon>cloud_download</mat-icon>
-              Load demo data
+              Cargar datos demo
             </button>
             <button mat-stroked-button type="button" (click)="demo.resetDemo()">
               <mat-icon>restart_alt</mat-icon>
-              Reset demo
+              Reiniciar demo
             </button>
           }
         </div>

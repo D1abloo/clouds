@@ -10,7 +10,7 @@ export interface AreaNavTab {
 
 export type SidebarBrand = 'aws' | 'gcp' | 'azure'
 
-/** Second-level sidebar dropdown (e.g. AWS → EC2, Network). Used only where needed (Clouds). */
+/** Segundo nivel desplegable (p. ej. AWS → EC2, Red). Solo en Nubes. */
 export interface SidebarNavBranch {
   id: string
   label: string
@@ -27,11 +27,9 @@ export interface SidebarMainModule {
   label: string
   icon: string
   tone: NavIconTone
-  /** Default landing route when clicking the module in the sidebar */
   route: string
   description: string
   tabs: AreaNavTab[]
-  /** Optional nested dropdowns under this module (Cloud providers only) */
   branches?: SidebarNavBranch[]
   match: (path: string) => boolean
 }
@@ -42,16 +40,17 @@ const cloudProviderBranch = (
   brand: SidebarBrand,
 ): SidebarNavBranch => {
   const base = `/cloud/${provider}`
-  const instancesLabel = provider === 'gcp' ? 'Compute' : provider === 'azure' ? 'VMs' : 'EC2'
+  const instancesLabel =
+    provider === 'gcp' ? 'Compute' : provider === 'azure' ? 'Máquinas virtuales' : 'EC2'
   const accountsLabel =
-    provider === 'gcp' ? 'Projects' : provider === 'azure' ? 'Subscriptions' : 'Accounts'
+    provider === 'gcp' ? 'Proyectos' : provider === 'azure' ? 'Suscripciones' : 'Cuentas'
   return {
     id: provider,
     label,
     brand,
     defaultRoute: `${base}/overview`,
     children: [
-      { id: `${provider}-overview`, label: 'Overview', route: `${base}/overview`, icon: 'dashboard' },
+      { id: `${provider}-overview`, label: 'Resumen', route: `${base}/overview`, icon: 'dashboard' },
       {
         id: `${provider}-accounts`,
         label: accountsLabel,
@@ -64,9 +63,9 @@ const cloudProviderBranch = (
         route: `${base}/instances`,
         icon: 'memory',
       },
-      { id: `${provider}-network`, label: 'Network', route: `${base}/network`, icon: 'hub' },
-      { id: `${provider}-billing`, label: 'Billing', route: `${base}/billing`, icon: 'payments' },
-      { id: `${provider}-metrics`, label: 'Metrics', route: `${base}/metrics`, icon: 'monitoring' },
+      { id: `${provider}-network`, label: 'Red', route: `${base}/network`, icon: 'hub' },
+      { id: `${provider}-billing`, label: 'Facturación', route: `${base}/billing`, icon: 'payments' },
+      { id: `${provider}-metrics`, label: 'Métricas', route: `${base}/metrics`, icon: 'monitoring' },
     ],
   }
 }
@@ -95,17 +94,17 @@ const prefix =
 export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
   {
     id: 'overview',
-    label: 'Overview',
+    label: 'Resumen',
     icon: 'space_dashboard',
     tone: 'violet',
     route: '/dashboard',
-    description: 'Dashboard, command center and global visibility',
+    description: 'Tablero, centro de mando y visibilidad global',
     tabs: [
-      { id: 'dashboard', label: 'Dashboard', route: '/dashboard', icon: 'space_dashboard' },
-      { id: 'command-center', label: 'Command Center', route: '/command-center', icon: 'bolt', badgeKey: 'command-center' },
-      { id: 'resource-explorer', label: 'Resource Explorer', route: '/resource-explorer', icon: 'travel_explore' },
-      { id: 'topology-map', label: 'Topology Map', route: '/topology-map', icon: 'account_tree' },
-      { id: 'health-center', label: 'Health Center', route: '/health-center', icon: 'favorite', badgeKey: 'health' },
+      { id: 'dashboard', label: 'Tablero', route: '/dashboard', icon: 'space_dashboard' },
+      { id: 'command-center', label: 'Centro de mando', route: '/command-center', icon: 'bolt', badgeKey: 'command-center' },
+      { id: 'resource-explorer', label: 'Explorador de recursos', route: '/resource-explorer', icon: 'travel_explore' },
+      { id: 'topology-map', label: 'Mapa de topología', route: '/topology-map', icon: 'account_tree' },
+      { id: 'health-center', label: 'Centro de salud', route: '/health-center', icon: 'favorite', badgeKey: 'health' },
     ],
     match: prefix(
       '/dashboard',
@@ -117,11 +116,11 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
   },
   {
     id: 'clouds',
-    label: 'Clouds',
+    label: 'Nubes',
     icon: 'cloud',
     tone: 'cyan',
     route: '/cloud/aws/overview',
-    description: 'AWS, GCP and Azure control planes',
+    description: 'Planos de control AWS, GCP y Azure',
     tabs: [
       { id: 'aws', label: 'AWS', route: '/cloud/aws/overview', icon: 'cloud' },
       { id: 'gcp', label: 'GCP', route: '/cloud/gcp/overview', icon: 'cloud_circle' },
@@ -132,20 +131,20 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
   },
   {
     id: 'infrastructure',
-    label: 'Infrastructure',
+    label: 'Infraestructura',
     icon: 'dns',
     tone: 'blue',
     route: '/instances/all-instances',
-    description: 'Instances, VPS, containers and platform resources',
+    description: 'Instancias, VPS, contenedores y recursos de plataforma',
     tabs: [
-      { id: 'instances', label: 'Instances', route: '/instances/all-instances', icon: 'dns', badgeKey: 'instances' },
-      { id: 'vps', label: 'VPS / Bare Metal', route: '/vps/overview', icon: 'computer', badgeKey: 'vps' },
+      { id: 'instances', label: 'Instancias', route: '/instances/all-instances', icon: 'dns', badgeKey: 'instances' },
+      { id: 'vps', label: 'VPS / Bare metal', route: '/vps/overview', icon: 'computer', badgeKey: 'vps' },
       { id: 'docker', label: 'Docker', route: '/docker/containers', icon: 'view_in_ar' },
       { id: 'kubernetes', label: 'Kubernetes', route: '/kubernetes/pods', icon: 'hub' },
-      { id: 'network', label: 'Network', route: '/network', icon: 'device_hub', badgeKey: 'network' },
-      { id: 'storage', label: 'Storage', route: '/storage', icon: 'storage' },
-      { id: 'backups', label: 'Backups', route: '/backups', icon: 'backup', badgeKey: 'backups' },
-      { id: 'capacity', label: 'Capacity Planner', route: '/capacity-planner', icon: 'analytics', badgeKey: 'capacity' },
+      { id: 'network', label: 'Red', route: '/network', icon: 'device_hub', badgeKey: 'network' },
+      { id: 'storage', label: 'Almacenamiento', route: '/storage', icon: 'storage' },
+      { id: 'backups', label: 'Copias de seguridad', route: '/backups', icon: 'backup', badgeKey: 'backups' },
+      { id: 'capacity', label: 'Planificador de capacidad', route: '/capacity-planner', icon: 'analytics', badgeKey: 'capacity' },
     ],
     match: prefix(
       '/instances',
@@ -160,20 +159,20 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
   },
   {
     id: 'automation',
-    label: 'Automation',
+    label: 'Automatización',
     icon: 'precision_manufacturing',
     tone: 'amber',
     route: '/jenkins/jobs',
-    description: 'CI/CD, Terraform, deployments and runbooks',
+    description: 'CI/CD, Terraform, despliegues y runbooks',
     tabs: [
       { id: 'jenkins', label: 'Jenkins', route: '/jenkins/jobs', icon: 'precision_manufacturing', badgeKey: 'jenkins' },
       { id: 'terraform', label: 'Terraform', route: '/terraform/workspaces', icon: 'account_tree' },
-      { id: 'deployments', label: 'Deployments', route: '/deployments', icon: 'rocket_launch', badgeKey: 'deployments' },
+      { id: 'deployments', label: 'Despliegues', route: '/deployments', icon: 'rocket_launch', badgeKey: 'deployments' },
       { id: 'terminal', label: 'Terminal', route: '/terminal/active-sessions', icon: 'terminal' },
       { id: 'runbooks', label: 'Runbooks', route: '/runbooks', icon: 'menu_book' },
-      { id: 'scheduler', label: 'Scheduler', route: '/scheduler', icon: 'schedule', badgeKey: 'scheduler' },
-      { id: 'catalog', label: 'Service Catalog', route: '/service-catalog', icon: 'category' },
-      { id: 'approvals', label: 'Approvals', route: '/approvals', icon: 'rule', badgeKey: 'approvals' },
+      { id: 'scheduler', label: 'Programador', route: '/scheduler', icon: 'schedule', badgeKey: 'scheduler' },
+      { id: 'catalog', label: 'Catálogo de servicios', route: '/service-catalog', icon: 'category' },
+      { id: 'approvals', label: 'Aprobaciones', route: '/approvals', icon: 'rule', badgeKey: 'approvals' },
     ],
     match: prefix(
       '/jenkins',
@@ -189,21 +188,21 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
   },
   {
     id: 'observability',
-    label: 'Observability',
+    label: 'Observabilidad',
     icon: 'monitoring',
     tone: 'green',
     route: '/metrics/overview',
-    description: 'Metrics, logs, billing, alerts and reports',
+    description: 'Métricas, logs, facturación, alertas e informes',
     tabs: [
-      { id: 'metrics', label: 'Metrics', route: '/metrics/overview', icon: 'monitoring' },
+      { id: 'metrics', label: 'Métricas', route: '/metrics/overview', icon: 'monitoring' },
       { id: 'logs', label: 'Logs', route: '/logs', icon: 'article', badgeKey: 'logs' },
-      { id: 'billing', label: 'Billing', route: '/billing/overview', icon: 'payments', badgeKey: 'billing' },
-      { id: 'cost', label: 'Cost Optimizer', route: '/cost-optimizer', icon: 'savings', badgeKey: 'cost' },
-      { id: 'alerts', label: 'Alerts', route: '/alerts/active', icon: 'notifications_active', badgeKey: 'alerts' },
-      { id: 'incidents', label: 'Incidents', route: '/incidents', icon: 'crisis_alert', badgeKey: 'incidents' },
-      { id: 'notifications', label: 'Notifications', route: '/notifications/all', icon: 'notifications', badgeKey: 'notifications' },
-      { id: 'reports', label: 'Reports', route: '/reports', icon: 'assessment' },
-      { id: 'changes', label: 'Change Management', route: '/change-management', icon: 'change_circle', badgeKey: 'changes' },
+      { id: 'billing', label: 'Facturación', route: '/billing/overview', icon: 'payments', badgeKey: 'billing' },
+      { id: 'cost', label: 'Optimizador de costes', route: '/cost-optimizer', icon: 'savings', badgeKey: 'cost' },
+      { id: 'alerts', label: 'Alertas', route: '/alerts/active', icon: 'notifications_active', badgeKey: 'alerts' },
+      { id: 'incidents', label: 'Incidentes', route: '/incidents', icon: 'crisis_alert', badgeKey: 'incidents' },
+      { id: 'notifications', label: 'Notificaciones', route: '/notifications/all', icon: 'notifications', badgeKey: 'notifications' },
+      { id: 'reports', label: 'Informes', route: '/reports', icon: 'assessment' },
+      { id: 'changes', label: 'Gestión de cambios', route: '/change-management', icon: 'change_circle', badgeKey: 'changes' },
     ],
     match: prefix(
       '/metrics',
@@ -219,17 +218,17 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
   },
   {
     id: 'security',
-    label: 'Security',
+    label: 'Seguridad',
     icon: 'security',
     tone: 'pink',
     route: '/security-center',
-    description: 'Posture, secrets, compliance and audit',
+    description: 'Postura, secretos, cumplimiento y auditoría',
     tabs: [
-      { id: 'security-center', label: 'Security Center', route: '/security-center', icon: 'security', badgeKey: 'security' },
-      { id: 'secrets', label: 'Secrets Manager', route: '/secrets-manager', icon: 'key', badgeKey: 'secrets' },
-      { id: 'compliance', label: 'Compliance / Policies', route: '/compliance', icon: 'policy', badgeKey: 'compliance' },
-      { id: 'access', label: 'Access Control', route: '/access-control', icon: 'admin_panel_settings' },
-      { id: 'audit', label: 'Audit', route: '/audit/activity-logs', icon: 'history' },
+      { id: 'security-center', label: 'Centro de seguridad', route: '/security-center', icon: 'security', badgeKey: 'security' },
+      { id: 'secrets', label: 'Gestor de secretos', route: '/secrets-manager', icon: 'key', badgeKey: 'secrets' },
+      { id: 'compliance', label: 'Cumplimiento / Políticas', route: '/compliance', icon: 'policy', badgeKey: 'compliance' },
+      { id: 'access', label: 'Control de acceso', route: '/access-control', icon: 'admin_panel_settings' },
+      { id: 'audit', label: 'Auditoría', route: '/audit/activity-logs', icon: 'history' },
     ],
     match: prefix(
       '/security-center',
@@ -241,19 +240,19 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
   },
   {
     id: 'admin',
-    label: 'Admin',
+    label: 'Administración',
     icon: 'settings',
     tone: 'slate',
     route: '/admin/users',
-    description: 'Users, roles, settings and integrations',
+    description: 'Usuarios, roles, ajustes e integraciones',
     tabs: [
-      { id: 'users', label: 'Users', route: '/admin/users', icon: 'group' },
+      { id: 'users', label: 'Usuarios', route: '/admin/users', icon: 'group' },
       { id: 'roles', label: 'Roles', route: '/admin/roles', icon: 'badge' },
-      { id: 'api-tokens', label: 'API Tokens', route: '/admin/api-tokens', icon: 'token', badgeKey: 'tokens' },
+      { id: 'api-tokens', label: 'Tokens API', route: '/admin/api-tokens', icon: 'token', badgeKey: 'tokens' },
       { id: 'webhooks', label: 'Webhooks', route: '/admin/webhooks', icon: 'webhook' },
-      { id: 'settings', label: 'Settings', route: '/settings/general', icon: 'settings' },
-      { id: 'demo-mode', label: 'Demo Mode', route: '/admin/demo-mode', icon: 'science' },
-      { id: 'ai-assistant', label: 'AI Assistant', route: '/ai-assistant', icon: 'smart_toy', badgeKey: 'copilot' },
+      { id: 'settings', label: 'Configuración', route: '/settings/general', icon: 'settings' },
+      { id: 'demo-mode', label: 'Modo demo', route: '/admin/demo-mode', icon: 'science' },
+      { id: 'ai-assistant', label: 'Asistente IA', route: '/ai-assistant', icon: 'smart_toy', badgeKey: 'copilot' },
     ],
     match: prefix('/admin', '/settings', '/ai-assistant'),
   },

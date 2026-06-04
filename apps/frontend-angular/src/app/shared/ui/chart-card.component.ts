@@ -31,8 +31,8 @@ import { MiniChartComponent } from '../components/mini-chart/mini-chart.componen
       } @else if (!hasData) {
         <div class="chart-card__empty">
           <mat-icon>insert_chart_outlined</mat-icon>
-          <span>No data yet</span>
-          <small>Demo metrics appear after sync</small>
+          <span>Sin datos aún</span>
+          <small>Las métricas demo aparecen tras sincronizar</small>
         </div>
       } @else {
         <div class="chart-card__chart">

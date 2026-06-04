@@ -21,19 +21,19 @@ export interface NotificationRow {
     <div class="notif-panel">
       <header class="notif-panel__head">
         <div>
-          <h3><mat-icon>notifications</mat-icon> Notifications</h3>
-          <p>Recent system and operational messages</p>
+          <h3><mat-icon>notifications</mat-icon> Notificaciones</h3>
+          <p>Mensajes recientes del sistema y operaciones</p>
         </div>
         <a mat-stroked-button routerLink="/notifications" class="notif-panel__link">
-          All notifications
+          Todas las notificaciones
           <mat-icon>arrow_forward</mat-icon>
         </a>
       </header>
 
       @if (loading) {
-        <app-loading-state message="Loading notifications…" />
+        <app-loading-state message="Cargando notificaciones…" />
       } @else if (!items.length) {
-        <app-empty-state icon="notifications_none" title="Inbox zero" message="No new notifications" />
+        <app-empty-state icon="notifications_none" title="Bandeja vacía" message="No hay notificaciones nuevas" />
       } @else {
         <ul class="notif-list">
           @for (n of items; track n.id) {

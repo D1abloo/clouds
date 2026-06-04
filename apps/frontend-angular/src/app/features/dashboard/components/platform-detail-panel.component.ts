@@ -34,7 +34,7 @@ import { MatTooltipModule } from '@angular/material/tooltip'
         </ul>
       }
       <a mat-stroked-button [routerLink]="route">
-        View details
+        Ver detalles
         <mat-icon>arrow_forward</mat-icon>
       </a>
     </article>

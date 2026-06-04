@@ -2,7 +2,32 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Pulido visual premium Fase 33 (completado)
+**Fase actual:** Dashboard grid compacto + UI español Fase 34 (completado)
+
+---
+
+## Fase 34 — Dashboard grid compacto + UI en español ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Alcance:** Solo diseño y textos visibles. Sin cambios de lógica, rutas ni datos demo.
+
+### Resumen de infraestructura
+
+- Nuevo `app-metric-stats-grid`: grid responsive 6→4→3→2 columnas
+- 12 métricas compactas con icono, etiqueta, valor, subtítulo, tendencia y badge
+- Sin lista vertical ni cards pesadas por KPI
+
+### UI en español (dashboard)
+
+- Cabecera del tablero, secciones, gráficos y leyendas de charts
+- Tabla de instancias, alertas, actividad y notificaciones
+- Paneles cloud/plataforma/salud y botones «Ver …»
+- Sidebar y `area-nav.config.ts` en español
+
+### GitHub
+
+- Commit local; `gh auth login` + `git remote add` para push
 
 ---
 

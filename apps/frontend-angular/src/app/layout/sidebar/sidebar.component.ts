@@ -41,7 +41,7 @@ import { AuthStore } from '../../core/stores/auth.store'
       <button
         type="button"
         class="sidebar-toggle"
-        [matTooltip]="collapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+        [matTooltip]="collapsed() ? 'Expandir barra lateral' : 'Contraer barra lateral'"
         matTooltipPosition="right"
         (click)="sidebarSvc.toggle()"
         aria-label="Toggle sidebar"
@@ -71,7 +71,7 @@ import { AuthStore } from '../../core/stores/auth.store'
         <div class="sidebar-favorites">
           <div class="sidebar-favorites__label">
             <mat-icon>star</mat-icon>
-            Quick access
+            Acceso rápido
           </div>
           @for (fav of favoriteEntries(); track fav.route) {
             <app-sidebar-nav-leaf
@@ -95,7 +95,7 @@ import { AuthStore } from '../../core/stores/auth.store'
             />
           }
           @if (searchHits().length === 0) {
-            <p class="sidebar-nav__empty">No matches for "{{ sidebarSvc.searchQuery() }}"</p>
+            <p class="sidebar-nav__empty">Sin resultados para «{{ sidebarSvc.searchQuery() }}»</p>
           }
         } @else {
           @for (mod of visibleModules(); track mod.id) {

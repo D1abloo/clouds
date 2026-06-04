@@ -31,7 +31,7 @@ import { MatButtonModule } from '@angular/material/button'
         </div>
       </div>
       <span class="platform-card__action">
-        View details
+        Ver detalles
         <mat-icon>arrow_forward</mat-icon>
       </span>
     </a>

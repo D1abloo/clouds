@@ -14,19 +14,19 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
     <div class="activity-panel">
       <header class="activity-panel__head">
         <div>
-          <h3><mat-icon>history</mat-icon> Recent activity</h3>
-          <p>Latest operations across your infrastructure</p>
+          <h3><mat-icon>history</mat-icon> Actividad reciente</h3>
+          <p>Últimas operaciones en tu infraestructura</p>
         </div>
         <a mat-stroked-button routerLink="/audit" class="activity-panel__link">
-          Audit log
+          Registro de auditoría
           <mat-icon>arrow_forward</mat-icon>
         </a>
       </header>
 
       @if (loading) {
-        <app-loading-state message="Loading activity…" />
+        <app-loading-state message="Cargando actividad…" />
       } @else if (!events.length) {
-        <app-empty-state icon="event_note" title="No activity" message="Events will appear here as actions occur" />
+        <app-empty-state icon="event_note" title="Sin actividad" message="Los eventos aparecerán aquí cuando se ejecuten acciones" />
       } @else {
         <ul class="timeline">
           @for (ev of events; track $index) {
