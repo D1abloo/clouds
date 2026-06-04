@@ -1,98 +1,198 @@
-<div class="tf-page">
-  <div class="tf-status-bar">
-    @for (ps of providerStatuses(); track ps.provider) {
-      <span class="tf-status-item">
-        <span class="tf-status-dot" [class.tf-status-dot--ok]="ps.connected" [class.tf-status-dot--err]="!ps.connected"></span>
-        <span>{{ ps.provider }}</span>
-        @if (ps.connected) {
-          <span class="tf-status-meta">{{ ps.count }} account{{ ps.count === 1 ? '' : 's' }}</span>
-        } @else if (ps.provider !== 'ANSIBLE') {
-          <a routerLink="/accounts/aws" class="tf-connect-link">Connect →</a>
-        }
-      </span>
-    }
-  </div>
+<div class="page-container tf-page tf-page--flat animate-fade-in">
+  <app-page-header
+    title="Terraform"
+    description="Infraestructura como código — workspaces, planes, applies y plantillas reutilizables"
+    logo="terraform"
+    [demoMode]="true"
+    [lastSync]="lastSyncLabel()"
+    [actions]="headerActions"
+    (actionClick)="handleHeader($event)"
+  />
 
-  <div class="tf-layout">
-    <aside class="tf-sidebar">
-      <section class="tf-sidebar__section">
-        <h3>Workspaces</h3>
-        @for (ws of runStore.workspaces(); track ws.id) {
-          <button
-            type="button"
-            class="tf-ws-item"
-            [class.tf-ws-item--active]="runStore.activeWorkspaceId() === ws.id"
-            (click)="selectWorkspace(ws.id)"
-          >
-            <span class="tf-ws-item__icon">{{ ws.provider === 'AWS' ? 'A' : ws.provider === 'GCP' ? 'G' : 'Z' }}</span>
-            <span class="tf-ws-item__name">{{ ws.name }}</span>
-            <span class="tf-ws-item__dot" [class.tf-ws-item__dot--planned]="ws.status === 'planned'"></span>
-          </button>
-        }
-      </section>
+  @if (loading()) {
+    <app-loading-state message="Cargando workspaces y ejecuciones…" />
+  } @else {
+    <app-terraform-overview
+      [summary]="summary()"
+      [providers]="providerChips()"
+      (reviewPlans)="focusInspector()"
+    />
 
-      <section class="tf-sidebar__section">
-        <h3>Templates</h3>
-        @for (t of builtinTemplates; track t.id) {
-          <button type="button" class="tf-template-item" (click)="loadTemplate(t.hcl)">{{ t.label }}</button>
-        }
-      </section>
+    <div class="tf-shell">
+      <aside class="tf-rail tf-panel" aria-label="Workspaces y plantillas">
+        <div class="tf-rail__head">
+          <h3>Workspaces</h3>
+          <span class="tf-rail__count">{{ filteredWorkspaces().length }}</span>
+        </div>
+        <mat-form-field appearance="fill" class="tf-rail__search">
+          <mat-label>Buscar workspace</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            [formControl]="wsSearch"
+            placeholder="Nombre o proveedor…"
+            aria-label="Filtrar workspaces de Terraform"
+          />
+        </mat-form-field>
 
-      <section class="tf-sidebar__section">
-        <h3>Recent runs</h3>
-        @for (r of recentRuns(); track r.id) {
-          <div class="tf-run-item">
-            <span>{{ r.workspaceName }}</span>
-            <span class="tf-run-item__meta">{{ r.status }}</span>
+        <ul class="tf-ws-list">
+          @for (ws of filteredWorkspaces(); track ws.id) {
+            <li>
+              <button
+                type="button"
+                class="tf-ws-card"
+                [class.tf-ws-card--active]="runStore.activeWorkspaceId() === ws.id"
+                (click)="selectWorkspace(ws.id)"
+                [attr.aria-pressed]="runStore.activeWorkspaceId() === ws.id"
+              >
+                <span class="tf-ws-card__badge" [attr.data-provider]="ws.provider">{{ providerLetter(ws.provider) }}</span>
+                <span class="tf-ws-card__body">
+                  <span class="tf-ws-card__name">{{ ws.name }}</span>
+                  <span class="tf-ws-card__meta">{{ ws.provider }} · {{ workspaceStatusLabel(ws.status) }}</span>
+                </span>
+                <span class="tf-ws-card__state" [class]="'tf-ws-card__state--' + ws.status"></span>
+              </button>
+            </li>
+          }
+        </ul>
+
+        <section class="tf-rail__block">
+          <h4>Plantillas</h4>
+          @for (t of builtinTemplates; track t.id) {
+            <button type="button" class="tf-tpl-btn" (click)="loadTemplate(t.hcl)">
+              <mat-icon>code</mat-icon>
+              <span>{{ t.label }}</span>
+            </button>
+          }
+        </section>
+
+        <section class="tf-rail__block">
+          <h4>Runs recientes</h4>
+          @if (runStore.recentRuns().length === 0) {
+            <p class="tf-rail__muted">Sin ejecuciones aún.</p>
+          } @else {
+            <ul class="tf-run-list">
+              @for (r of runStore.recentRuns(); track r.id) {
+                <li>
+                  <button type="button" class="tf-run-btn" (click)="openRunDetail(r)">
+                    <span class="tf-run-btn__ws">{{ r.workspaceName }}</span>
+                    <app-status-badge [value]="r.status" />
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <button mat-flat-button color="primary" type="button" class="tf-rail__launch" (click)="openLaunch()">
+          <mat-icon>rocket_launch</mat-icon>
+          Lanzar instancia
+        </button>
+      </aside>
+
+      <section class="tf-studio tf-panel" aria-label="Editor y terminal">
+        @if (!activeProviderConnected()) {
+          <div class="tf-studio__alert" role="alert">
+            <mat-icon>link_off</mat-icon>
+            <span>Conecta una cuenta {{ activeWorkspace()?.provider }} para ejecutar init/plan/apply.</span>
+            <a routerLink="/accounts/aws">Ir a cuentas</a>
           </div>
         }
+
+        <div class="tf-studio__toolbar">
+          <div class="tf-studio__title">
+            <mat-icon>terminal</mat-icon>
+            <span class="mono">{{ workspaceName() }}</span>
+            @if (busy()) {
+              <span class="tf-studio__busy" role="status">Ejecutando…</span>
+            }
+          </div>
+          <div class="tf-studio__actions">
+            <button mat-button type="button" class="tf-studio__cmd" [disabled]="actionsDisabled()" (click)="runInit()">
+              <mat-icon>refresh</mat-icon>
+              init
+            </button>
+            <button mat-button type="button" class="tf-studio__cmd" [disabled]="actionsDisabled()" (click)="runPlan()">
+              <mat-icon>visibility</mat-icon>
+              plan
+            </button>
+            <button mat-flat-button color="primary" type="button" [disabled]="actionsDisabled() || !hasPlan()" (click)="runApply()">
+              <mat-icon>play_arrow</mat-icon>
+              apply
+            </button>
+            <button mat-button type="button" class="tf-studio__destroy" [disabled]="actionsDisabled()" (click)="toggleDestroy()">
+              <mat-icon>delete</mat-icon>
+              destroy
+            </button>
+          </div>
+        </div>
+
+        @if (showDestroyConfirm()) {
+          <div class="tf-destroy-bar">
+            <mat-icon>warning</mat-icon>
+            <label for="tf-destroy-input">Escribe DESTROY para confirmar</label>
+            <input
+              id="tf-destroy-input"
+              class="tf-destroy-input mono"
+              [value]="destroyConfirm()"
+              (input)="destroyConfirm.set($any($event.target).value)"
+            />
+            <button mat-flat-button color="warn" type="button" [disabled]="destroyConfirm() !== 'DESTROY'" (click)="runDestroy()">
+              Confirmar
+            </button>
+          </div>
+        }
+
+        <div class="tf-editor-wrap" [style.height]="editorHeight()">
+          <app-terraform-editor [value]="editorHcl()" (valueChange)="onEditorChange($event)" />
+        </div>
+
+        <div class="tf-terminal-resize" (mousedown)="startResize($event)" aria-label="Redimensionar terminal" role="separator"></div>
+        <div class="tf-terminal" [style.height.px]="terminalHeight()">
+          <header class="tf-terminal__head">
+            <mat-icon>terminal</mat-icon>
+            <span>Salida terraform</span>
+            <button mat-button type="button" (click)="runStore.clearTerminal()">Limpiar</button>
+          </header>
+          <div class="tf-terminal__scroll">
+            @for (line of terminalLines(); track $index) {
+              <div class="tf-line" [class]="lineClass(line)">{{ line }}</div>
+            }
+            @if (terminalLines().length === 0) {
+              <div class="tf-prompt mono">cloudops-terraform $<span class="tf-cursor"></span></div>
+            }
+          </div>
+        </div>
       </section>
 
-      <button type="button" class="tf-launch-btn" (click)="openLaunch()">Launch instance</button>
-    </aside>
+      <aside class="tf-inspector tf-panel" aria-label="Plan y estado" #inspectorPane>
+        <app-terraform-plan-viewer
+          [planOutput]="planOutput() ?? ''"
+          [runId]="runStore.activeRunId() ?? ''"
+          [resources]="planResources()"
+        />
 
-    <main class="tf-main">
-      <div class="tf-toolbar">
-        <span class="tf-toolbar__title">{{ workspaceName() }}</span>
-        <div class="tf-toolbar__actions">
-          <button type="button" class="tf-action-btn" [disabled]="actionsDisabled()" (click)="runInit()">
-            <mat-icon>refresh</mat-icon> terraform init
-          </button>
-          <button type="button" class="tf-action-btn" [disabled]="actionsDisabled()" (click)="runPlan()">
-            <mat-icon>visibility</mat-icon> terraform plan
-          </button>
-          <button type="button" class="tf-action-btn" [disabled]="actionsDisabled() || !hasPlan()" (click)="runApply()">
-            <mat-icon>play_arrow</mat-icon> terraform apply
-          </button>
-          <button type="button" class="tf-action-btn tf-action-btn--danger" [disabled]="actionsDisabled()" (click)="toggleDestroy()">
-            <mat-icon>delete</mat-icon> terraform destroy
-          </button>
+        <div class="tf-state-card">
+          <header>
+            <mat-icon>storage</mat-icon>
+            <h4>State (vista rápida)</h4>
+          </header>
+          <pre class="mono tf-state-pre">{{ statePreview() }}</pre>
         </div>
-      </div>
 
-      @if (showDestroyConfirm()) {
-        <div class="tf-destroy-bar">
-          <label>Type DESTROY to confirm</label>
-          <input class="tf-destroy-input" [value]="destroyConfirm()" (input)="destroyConfirm.set($any($event.target).value)" />
-          <button type="button" class="tf-action-btn" [disabled]="destroyConfirm() !== 'DESTROY'" (click)="runDestroy()">Confirm destroy</button>
+        <div class="tf-pipeline-hint">
+          <mat-icon>info</mat-icon>
+          <p>Flujo recomendado: <strong>init</strong> → <strong>plan</strong> → revisar cambios → <strong>apply</strong> con ticket en producción.</p>
         </div>
-      }
+      </aside>
+    </div>
+  }
 
-      <div class="tf-editor-pane" [style.height]="'calc(100vh - 44px - 44px - ' + terminalHeight() + 'px)'">
-        <app-terraform-editor [value]="editorHcl()" (valueChange)="onEditorChange($event)" />
-      </div>
-
-      <div class="tf-terminal-resize" (mousedown)="startResize($event)"></div>
-      <div class="tf-terminal" [style.height.px]="terminalHeight()">
-        <div class="tf-terminal__scroll" #termScroll>
-          @for (line of terminalLines(); track $index) {
-            <div class="tf-line" [class]="lineClass(line)" [style.animation]="'lineIn 120ms ease'">{{ line }}</div>
-          }
-          @if (terminalLines().length === 0) {
-            <div class="tf-prompt">cloudops-terraform $<span class="tf-cursor"></span></div>
-          }
-        </div>
-      </div>
-    </main>
-  </div>
+  <app-run-detail-drawer
+    [open]="drawerOpen()"
+    [run]="selectedRun()"
+    [planOutput]="drawerPlan()"
+    [logs]="drawerLogs()"
+    (close)="closeDrawer()"
+  />
 </div>

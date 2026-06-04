@@ -43,19 +43,27 @@ import { TerraformPlanViewerComponent } from './terraform-plan-viewer.component'
   styles: `
     .drawer-backdrop {
       position: fixed; inset: 0; background: rgba(15,23,42,0.45);
-      z-index: 1100; backdrop-filter: blur(2px);
+      z-index: 1100;
+      border: none;
+      box-shadow: none;
+      filter: none;
+      backdrop-filter: none;
     }
     .run-drawer {
       position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 95vw);
       z-index: 1101; background: var(--app-card);
-      box-shadow: var(--app-shadow-lg);
+      border: none;
+      outline: none;
+      box-shadow: none;
+      filter: none;
       display: flex; flex-direction: column;
     }
     .run-drawer__header {
       display: flex; justify-content: space-between; align-items: flex-start;
       padding: 1.25rem 1.5rem;
-      box-shadow: var(--app-shadow-xs);
-      h3 { margin: 0 0 0.35rem; font-size: 1.1rem; }
+      border: none;
+      box-shadow: none;
+      h3 { margin: 0 0 0.35rem; font-size: 1.1rem; text-shadow: none; }
     }
     .run-drawer__body {
       flex: 1; overflow-y: auto; padding: 1.25rem;

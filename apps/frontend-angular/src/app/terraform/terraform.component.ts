@@ -6,39 +6,68 @@ import {
   signal,
   computed,
   DestroyRef,
+  ElementRef,
+  viewChild,
 } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
+import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { ActivatedRoute, RouterLink } from '@angular/router'
 import { MatDialog } from '@angular/material/dialog'
+import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import { concatMap, delay, EMPTY, from, map, of, switchMap, take, tap } from 'rxjs'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatInputModule } from '@angular/material/input'
+import { debounceTime, startWith, concatMap, delay, EMPTY, from, of, switchMap, take, tap, map } from 'rxjs'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { TerraformService } from '../core/services/terraform.service'
-import { TerraformRunStore, TerraformWorkspaceItem } from '../core/stores/terraform-run.store'
+import { TerraformRunStore, TerraformRunItem, TerraformWorkspaceItem } from '../core/stores/terraform-run.store'
 import { CloudAccountsStore } from '../core/stores/cloud-accounts.store'
 import { SettingsStore } from '../core/stores/settings.store'
 import { RealtimeService } from '../core/services/realtime.service'
 import { ToastService } from '../core/services/toast.service'
+import { DemoActionsService } from '../core/services/demo-actions.service'
 import { LaunchInstanceModalComponent } from '../shared/modals/launch-instance/launch-instance-modal.component'
 import { TerraformEditorComponent } from './terraform-editor/terraform-editor.component'
+import { TerraformOverviewComponent } from './terraform-overview.component'
 import {
   BUILTIN_TEMPLATES,
   HCL_TEMPLATE_AWS,
   HCL_TEMPLATE_AZURE,
   HCL_TEMPLATE_GCP,
 } from './terraform-hcl-templates'
+import {
+  defaultDemoWorkspaces,
+  demoRunsFromSummary,
+  mergeTerraformSummary,
+  TERRAFORM_DEMO_SUMMARY,
+  type TerraformPageSummary,
+} from './terraform.demo'
+import { PageHeaderComponent, type PageHeaderAction } from '../shared/components/page-header/page-header.component'
+import { LoadingStateComponent } from '../shared/components/loading-state/loading-state.component'
+import { StatusBadgeComponent } from '../shared/components/status-badge/status-badge.component'
+import { RunDetailDrawerComponent } from '../features/terraform/components/run-detail-drawer.component'
+import { TerraformPlanViewerComponent } from '../features/terraform/components/terraform-plan-viewer.component'
 import { CloudProvider } from '../core/models/api.models'
-
-interface ProviderStatus {
-  provider: 'AWS' | 'GCP' | 'AZURE' | 'ANSIBLE'
-  connected: boolean
-  count: number
-}
 
 @Component({
   selector: 'app-terraform',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, RouterLink, TerraformEditorComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatButtonModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+    PageHeaderComponent,
+    LoadingStateComponent,
+    StatusBadgeComponent,
+    TerraformEditorComponent,
+    TerraformOverviewComponent,
+    RunDetailDrawerComponent,
+    TerraformPlanViewerComponent,
+  ],
   templateUrl: './terraform.component.html',
   styleUrl: './terraform.component.scss',
 })
@@ -50,31 +79,63 @@ export class TerraformComponent implements OnInit {
   private readonly realtime = inject(RealtimeService)
   private readonly dialog = inject(MatDialog)
   private readonly toast = inject(ToastService)
+  private readonly demoActions = inject(DemoActionsService)
   private readonly destroyRef = inject(DestroyRef)
   private readonly route = inject(ActivatedRoute)
 
+  readonly inspectorRef = viewChild<ElementRef<HTMLElement>>('inspectorPane')
+
   readonly builtinTemplates = BUILTIN_TEMPLATES
+  readonly headerActions: PageHeaderAction[] = [
+    { label: 'Actualizar', icon: 'refresh' },
+    { label: 'Nuevo plan', icon: 'description' },
+    { label: 'Lanzar instancia', icon: 'rocket_launch', primary: true },
+  ]
+
   readonly terminalHeight = signal(200)
   readonly destroyConfirm = signal('')
   readonly showDestroyConfirm = signal(false)
   readonly busy = signal(false)
-  readonly typing = signal(false)
+  readonly loading = signal(true)
+  readonly summary = signal<TerraformPageSummary>(TERRAFORM_DEMO_SUMMARY)
+  readonly drawerOpen = signal(false)
+  readonly selectedRun = signal<Record<string, unknown> | null>(null)
+  readonly drawerPlan = signal('')
+  readonly drawerLogs = signal('')
+
+  readonly wsSearch = new FormControl('', { nonNullable: true })
+
+  private readonly wsSearchTerm = toSignal(
+    this.wsSearch.valueChanges.pipe(debounceTime(150), startWith('')),
+    { initialValue: '' },
+  )
 
   readonly editorHcl = computed(() => this.runStore.activeWorkspace()?.hcl ?? '')
-  readonly workspaceName = computed(() => this.runStore.activeWorkspace()?.name ?? 'No workspace')
+  readonly workspaceName = computed(() => this.runStore.activeWorkspace()?.name ?? 'Sin workspace')
   readonly hasPlan = this.runStore.hasPlan
+  readonly planOutput = this.runStore.planOutput
   readonly terminalLines = this.runStore.terminalLines
-  readonly recentRuns = this.runStore.recentRuns
+  readonly activeWorkspace = this.runStore.activeWorkspace
 
-  readonly providerStatuses = computed((): ProviderStatus[] => {
+  readonly providerChips = computed(() => {
     const counts = this.cloudStore.countByProvider()
     return [
       { provider: 'AWS', connected: counts.AWS > 0, count: counts.AWS },
       { provider: 'GCP', connected: counts.GCP > 0, count: counts.GCP },
-      { provider: 'AZURE', connected: counts.AZURE > 0, count: counts.AZURE },
-      { provider: 'ANSIBLE', connected: this.settingsStore.ansibleConnected(), count: 1 },
+      { provider: 'Azure', connected: counts.AZURE > 0, count: counts.AZURE },
+      { provider: 'Ansible', connected: this.settingsStore.ansibleConnected(), count: 1 },
     ]
   })
+
+  readonly filteredWorkspaces = computed(() => {
+    const term = (this.wsSearchTerm() ?? '').toLowerCase()
+    return this.runStore.workspaces().filter((ws) => {
+      if (!term) return true
+      return ws.name.toLowerCase().includes(term) || ws.provider.toLowerCase().includes(term)
+    })
+  })
+
+  readonly planResources = computed(() => parsePlanResources(this.planOutput() ?? ''))
 
   readonly activeProviderConnected = computed(() => {
     const ws = this.runStore.activeWorkspace()
@@ -85,6 +146,8 @@ export class TerraformComponent implements OnInit {
 
   readonly actionsDisabled = computed(() => !this.activeProviderConnected() || this.busy())
 
+  readonly editorHeight = computed(() => `calc(100vh - 320px - ${this.terminalHeight()}px)`)
+
   ngOnInit(): void {
     this.realtime.connect()
     this.cloudStore.load()
@@ -94,38 +157,88 @@ export class TerraformComponent implements OnInit {
     }
   }
 
+  lastSyncLabel = (): string => {
+    const d = this.summary().lastSyncedAt
+    return new Date(d).toLocaleString('es-ES')
+  }
+
   loadPage = (): void => {
+    this.loading.set(true)
     this.terraform.pageSummary().subscribe({
       next: (data) => {
-        const items = (data['items'] as Record<string, unknown>[]) ?? []
-        const workspaces: TerraformWorkspaceItem[] = items.length
-          ? items.map((w, i) => ({
-              id: String(w['id'] ?? `ws-${i}`),
-              name: String(w['name'] ?? w['workspaceName'] ?? `workspace-${i}`),
-              provider: (w['provider'] as CloudProvider) ?? 'AWS',
-              hcl: this.hclForProvider((w['provider'] as CloudProvider) ?? 'AWS'),
-              status: 'idle' as const,
-            }))
-          : this.defaultWorkspaces()
-        this.runStore.setWorkspaces(workspaces)
-        const runs = (items as Record<string, unknown>[]).slice(0, 5).map((r, i) => ({
-          id: String(r['id'] ?? `run-${i}`),
-          workspaceName: String(r['name'] ?? 'workspace'),
-          provider: 'AWS' as CloudProvider,
-          status: String(r['status'] ?? 'PLANNED'),
-          createdAt: new Date().toISOString(),
-        }))
-        if (runs.length) this.runStore.setRuns(runs)
+        const merged = mergeTerraformSummary(data)
+        this.summary.set(merged)
+        this.hydrateFromSummary(merged)
+        this.loading.set(false)
       },
-      error: () => this.runStore.setWorkspaces(this.defaultWorkspaces()),
+      error: () => {
+        this.summary.set(TERRAFORM_DEMO_SUMMARY)
+        this.hydrateFromSummary(TERRAFORM_DEMO_SUMMARY)
+        this.loading.set(false)
+      },
     })
   }
 
-  private defaultWorkspaces = (): TerraformWorkspaceItem[] => [
-    { id: 'ws-aws', name: 'aws-production', provider: 'AWS', hcl: HCL_TEMPLATE_AWS, status: 'idle' },
-    { id: 'ws-gcp', name: 'gcp-analytics', provider: 'GCP', hcl: HCL_TEMPLATE_GCP, status: 'idle' },
-    { id: 'ws-azure', name: 'azure-core', provider: 'AZURE', hcl: HCL_TEMPLATE_AZURE, status: 'idle' },
-  ]
+  private hydrateFromSummary = (merged: TerraformPageSummary): void => {
+    const items = merged.items
+    const wsRows = items.filter((w) => !w['createdAt'])
+    const workspaces: TerraformWorkspaceItem[] = wsRows.length
+      ? wsRows.map((w, i) => ({
+          id: String(w['id'] ?? `ws-${i}`),
+          name: String(w['name'] ?? w['workspaceName'] ?? `workspace-${i}`),
+          provider: (w['provider'] as CloudProvider) ?? 'AWS',
+          hcl: this.hclForProvider((w['provider'] as CloudProvider) ?? 'AWS'),
+          status: mapWorkspaceStatus(String(w['status'] ?? 'idle')),
+        }))
+      : defaultDemoWorkspaces()
+
+    this.runStore.setWorkspaces(dedupeWorkspaces(workspaces))
+
+    const runs = demoRunsFromSummary(items)
+    if (runs.length) this.runStore.setRuns(runs)
+  }
+
+  handleHeader = (label: string): void => {
+    if (label === 'Actualizar') {
+      this.loadPage()
+      return
+    }
+    if (label === 'Nuevo plan') {
+      this.demoActions.simulate('Terraform plan', 1400, 'Plan listo — 1 recurso por añadir').subscribe(() => {
+        const plan = 'Plan: 1 to add, 0 to change, 0 to destroy.\n  # aws_instance.web will be created'
+        this.runStore.setPlanOutput(plan)
+        this.runStore.appendTerminal(plan)
+        this.toast.success('Plan generado')
+      })
+      return
+    }
+    if (label === 'Lanzar instancia') {
+      this.openLaunch()
+    }
+  }
+
+  focusInspector = (): void => {
+    this.inspectorRef()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  providerLetter = (p: CloudProvider): string => {
+    if (p === 'AWS') return 'A'
+    if (p === 'GCP') return 'G'
+    if (p === 'AZURE') return 'Z'
+    return p.slice(0, 1)
+  }
+
+  workspaceStatusLabel = (status: TerraformWorkspaceItem['status']): string => {
+    const labels: Record<TerraformWorkspaceItem['status'], string> = {
+      idle: 'Inactivo',
+      planning: 'Planificando',
+      planned: 'Plan listo',
+      applying: 'Aplicando',
+      applied: 'Aplicado',
+      error: 'Error',
+    }
+    return labels[status] ?? status
+  }
 
   private hclForProvider = (p: CloudProvider): string => {
     if (p === 'GCP') return HCL_TEMPLATE_GCP
@@ -136,7 +249,7 @@ export class TerraformComponent implements OnInit {
   selectWorkspace = (id: string): void => {
     this.runStore.selectWorkspace(id)
     this.runStore.clearTerminal()
-    this.runStore.appendTerminal('cloudops-terraform $')
+    this.runStore.appendTerminal('cloudops-terraform $ terraform workspace select ' + this.workspaceName())
   }
 
   onEditorChange = (hcl: string): void => {
@@ -144,12 +257,11 @@ export class TerraformComponent implements OnInit {
   }
 
   loadTemplate = (hcl: string): void => {
-    this.typing.set(true)
     this.runStore.setEditorContent('')
     let acc = ''
     from(hcl.split(''))
       .pipe(
-        concatMap((ch) => of(ch).pipe(delay(8))),
+        concatMap((ch) => of(ch).pipe(delay(6))),
         take(hcl.length),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -158,17 +270,14 @@ export class TerraformComponent implements OnInit {
           acc += ch
           this.runStore.setEditorContent(acc)
         },
-        complete: () => {
-          this.runStore.setEditorContent(hcl)
-          this.typing.set(false)
-        },
+        complete: () => this.runStore.setEditorContent(hcl),
       })
   }
 
   openLaunch = (): void => {
     this.dialog
       .open(LaunchInstanceModalComponent, {
-        width: '860px',
+        width: '960px',
         maxWidth: '95vw',
         maxHeight: '95vh',
         panelClass: 'launch-instance-dialog-panel',
@@ -177,10 +286,35 @@ export class TerraformComponent implements OnInit {
       .afterClosed()
       .subscribe((v) => {
         if (v?.applied) {
-          this.toast.success('Instance provisioned')
+          this.toast.success('Instancia aprovisionada — sincronizando inventario')
           this.loadPage()
         }
       })
+  }
+
+  openRunDetail = (run: TerraformRunItem): void => {
+    this.selectedRun.set({
+      id: run.id,
+      workspaceName: run.workspaceName,
+      provider: run.provider,
+      status: run.status,
+      createdAt: run.createdAt,
+    })
+    this.drawerOpen.set(true)
+    this.drawerPlan.set(this.planOutput() ?? '')
+    this.drawerLogs.set('')
+    if (run.id) {
+      this.terraform.logs(run.id).subscribe({
+        next: (logs) => {
+          this.drawerLogs.set(typeof logs === 'string' ? logs : JSON.stringify(logs, null, 2))
+        },
+      })
+    }
+  }
+
+  closeDrawer = (): void => {
+    this.drawerOpen.set(false)
+    this.selectedRun.set(null)
   }
 
   runInit = (): void => {
@@ -194,7 +328,8 @@ export class TerraformComponent implements OnInit {
       .subscribe({
         next: () => {
           this.busy.set(false)
-          this.toast.success('terraform init complete')
+          this.runStore.appendTerminal('Terraform has been successfully initialized!')
+          this.toast.success('terraform init completado')
         },
         error: () => this.busy.set(false),
       })
@@ -203,6 +338,8 @@ export class TerraformComponent implements OnInit {
   runPlan = (): void => {
     this.busy.set(true)
     this.runStore.appendTerminal('> terraform plan')
+    const ws = this.runStore.activeWorkspace()
+    if (ws) this.runStore.selectWorkspace(ws.id)
     this.ensureRun$()
       .pipe(
         switchMap((runId) => (runId ? this.terraform.plan(runId) : EMPTY)),
@@ -210,10 +347,20 @@ export class TerraformComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          const plan = (res as { planOutput?: string })?.planOutput ?? 'Plan: 1 to add, 0 to change, 0 to destroy.'
+          const plan =
+            (res as { planOutput?: string })?.planOutput ??
+            'Plan: 1 to add, 0 to change, 0 to destroy.\n  # module.web_instance.aws_instance.this will be created'
           this.runStore.setPlanOutput(plan)
           this.runStore.appendTerminal(plan)
+          if (ws) {
+            this.runStore.setWorkspaces(
+              this.runStore.workspaces().map((w) =>
+                w.id === ws.id ? { ...w, status: 'planned' as const } : w,
+              ),
+            )
+          }
           this.busy.set(false)
+          this.toast.success('Plan generado — revisa el panel derecho')
         },
         error: () => this.busy.set(false),
       })
@@ -227,7 +374,8 @@ export class TerraformComponent implements OnInit {
     this.terraform.apply(runId, true).subscribe({
       next: () => {
         this.busy.set(false)
-        this.toast.success('terraform apply complete')
+        this.runStore.appendTerminal('Apply complete! Resources: 1 added, 0 changed, 0 destroyed.')
+        this.toast.success('terraform apply completado')
       },
       error: () => this.busy.set(false),
     })
@@ -245,10 +393,25 @@ export class TerraformComponent implements OnInit {
       next: () => {
         this.showDestroyConfirm.set(false)
         this.destroyConfirm.set('')
-        this.toast.success('Destroy submitted')
+        this.toast.success('Destroy enviado')
       },
     })
   }
+
+  statePreview = (): string =>
+    `{
+  "version": 4,
+  "terraform_version": "1.7.0",
+  "serial": 12,
+  "lineage": "demo-workspace",
+  "resources": [
+    {
+      "type": "aws_instance",
+      "name": "web",
+      "provider": "provider[\\"registry.terraform.io/hashicorp/aws\\"]"
+    }
+  ]
+}`
 
   private ensureRun$ = () => {
     const existing = this.runStore.activeRunId()
@@ -283,4 +446,39 @@ export class TerraformComponent implements OnInit {
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
   }
+}
+
+const mapWorkspaceStatus = (raw: string): TerraformWorkspaceItem['status'] => {
+  const s = raw.toUpperCase()
+  if (s.includes('PLAN')) return 'planned'
+  if (s.includes('APPL')) return 'applied'
+  if (s.includes('FAIL') || s.includes('ERR')) return 'error'
+  if (s.includes('RUN')) return 'applying'
+  return 'idle'
+}
+
+const dedupeWorkspaces = (list: TerraformWorkspaceItem[]): TerraformWorkspaceItem[] => {
+  const seen = new Set<string>()
+  return list.filter((w) => {
+    if (seen.has(w.name)) return false
+    seen.add(w.name)
+    return true
+  })
+}
+
+const parsePlanResources = (
+  plan: string,
+): { type: string; name: string; change: string }[] => {
+  if (!plan.trim()) return []
+  const rows: { type: string; name: string; change: string }[] = []
+  if (plan.includes('to add') || plan.includes('will be created')) {
+    rows.push({ type: 'aws_instance', name: 'web', change: 'create' })
+  }
+  if (plan.includes('to change') || plan.includes('will be modified')) {
+    rows.push({ type: 'aws_security_group', name: 'web_sg', change: 'update' })
+  }
+  if (plan.includes('to destroy') || plan.includes('will be destroyed')) {
+    rows.push({ type: 'aws_eip', name: 'legacy', change: 'delete' })
+  }
+  return rows
 }

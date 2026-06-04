@@ -7,14 +7,14 @@ import { MatButtonModule } from '@angular/material/button'
   standalone: true,
   imports: [MatIconModule, MatButtonModule],
   template: `
-    <div class="plan-viewer surface-elevated animate-fade-in">
+    <div class="plan-viewer animate-fade-in">
       <div class="plan-viewer__header">
         <div>
           <h4><mat-icon>description</mat-icon> Terraform plan</h4>
           @if (runId) { <span class="run-id">Run {{ runId }}</span> }
         </div>
         @if (planOutput) {
-          <button mat-stroked-button type="button" (click)="handleCopy()">
+          <button mat-button type="button" (click)="handleCopy()">
             <mat-icon>content_copy</mat-icon> Copy
           </button>
         }
@@ -37,6 +37,11 @@ import { MatButtonModule } from '@angular/material/button'
     .plan-viewer {
       border-radius: var(--app-radius-lg);
       overflow: hidden;
+      background: var(--app-card);
+      border: none;
+      outline: none;
+      box-shadow: none;
+      filter: none;
     }
     .plan-viewer__header {
       display: flex;
