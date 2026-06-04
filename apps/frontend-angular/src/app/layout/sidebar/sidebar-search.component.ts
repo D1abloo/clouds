@@ -14,7 +14,7 @@ import { SidebarService } from './sidebar.service'
         <mat-icon>search</mat-icon>
         <input
           type="search"
-          placeholder="Search navigation…"
+          placeholder="Search pages…"
           [ngModel]="sidebar.searchQuery()"
           (ngModelChange)="sidebar.setSearch($event)"
           aria-label="Search sidebar"

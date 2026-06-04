@@ -1,17 +1,21 @@
 import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core'
+import { Router, RouterLink, NavigationEnd } from '@angular/router'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { filter, map, startWith } from 'rxjs'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
 import { MatMenuModule } from '@angular/material/menu'
 import { MatDividerModule } from '@angular/material/divider'
-import { RouterLink } from '@angular/router'
 import { SidebarService } from './sidebar.service'
 import { OrgSwitcherComponent } from './org-switcher.component'
-import { SIDEBAR_TREE, flattenSidebarNav } from './sidebar-tree.config'
-import { SidebarNavGroupComponent } from './sidebar-nav-group.component'
+import {
+  SIDEBAR_MAIN_MODULES,
+  resolveAreaFromPath,
+  flattenAreaNavForSearch,
+} from './sidebar-tree.config'
 import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
 import { SidebarSearchComponent } from './sidebar-search.component'
 import { AlertsStore } from '../../core/stores/alerts.store'
-import { BillingStore } from '../../core/stores/billing.store'
 import { JenkinsStore } from '../../core/stores/jenkins.store'
 import { VpsStore } from '../../core/stores/vps.store'
 import { AuthStore } from '../../core/stores/auth.store'
@@ -27,7 +31,6 @@ import { AuthStore } from '../../core/stores/auth.store'
     MatDividerModule,
     RouterLink,
     OrgSwitcherComponent,
-    SidebarNavGroupComponent,
     SidebarNavLeafComponent,
     SidebarSearchComponent,
   ],
@@ -62,7 +65,7 @@ import { AuthStore } from '../../core/stores/auth.store'
 
       <app-sidebar-search [collapsed]="collapsed()" />
 
-      @if (!collapsed() && favoriteEntries().length) {
+      @if (!collapsed() && favoriteEntries().length && !searchActive()) {
         <div class="sidebar-favorites">
           <div class="sidebar-favorites__label">
             <mat-icon>star</mat-icon>
@@ -74,22 +77,42 @@ import { AuthStore } from '../../core/stores/auth.store'
               [route]="fav.route"
               [icon]="fav.icon ?? 'star'"
               [collapsed]="false"
-              [badge]="badgeForRoute(fav.route)"
             />
           }
         </div>
       }
 
       <nav class="sidebar-nav" aria-label="Main navigation">
-        @for (group of visibleGroups(); track group.id) {
-          <app-sidebar-nav-group
-            [group]="group"
-            [collapsed]="collapsed()"
-            [badgeResolver]="resolveBadge"
-          />
-        }
-        @if (searchActive() && visibleGroups().length === 0) {
-          <p class="sidebar-nav__empty">No matches for "{{ sidebarSvc.searchQuery() }}"</p>
+        @if (searchActive()) {
+          @for (hit of searchHits(); track hit.route) {
+            <app-sidebar-nav-leaf
+              [label]="hit.label"
+              [route]="hit.route"
+              [icon]="hit.icon ?? 'chevron_right'"
+              [collapsed]="false"
+            />
+          }
+          @if (searchHits().length === 0) {
+            <p class="sidebar-nav__empty">No matches for "{{ sidebarSvc.searchQuery() }}"</p>
+          }
+        } @else {
+          @for (mod of mainModules; track mod.id) {
+            <a
+              class="sidebar-module"
+              [class.sidebar-module--active]="isModuleActive(mod.id)"
+              [routerLink]="mod.route"
+              [matTooltip]="collapsed() ? mod.label : ''"
+              matTooltipPosition="right"
+            >
+              <span class="sidebar-module__icon" [class]="'tone-' + mod.tone">
+                <mat-icon>{{ mod.icon }}</mat-icon>
+              </span>
+              @if (!collapsed()) {
+                <span class="sidebar-module__label">{{ mod.label }}</span>
+                <mat-icon class="sidebar-module__arrow">chevron_right</mat-icon>
+              }
+            </a>
+          }
         }
       </nav>
 
@@ -129,7 +152,7 @@ import { AuthStore } from '../../core/stores/auth.store'
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      width: 272px;
+      width: 240px;
       flex-shrink: 0;
       background: var(--sidebar-bg);
       box-shadow: 4px 0 32px rgba(0, 0, 0, 0.22);
@@ -182,10 +205,7 @@ import { AuthStore } from '../../core/stores/auth.store'
       span { font-size: 0.68rem; color: var(--sidebar-text-faint); }
     }
     .sidebar-org { padding: 0 0.35rem 0.25rem; }
-    .sidebar-favorites {
-      padding: 0 0.35rem 0.35rem;
-      border: none;
-    }
+    .sidebar-favorites { padding: 0 0.35rem 0.35rem; }
     .sidebar-favorites__label {
       display: flex;
       align-items: center;
@@ -200,8 +220,8 @@ import { AuthStore } from '../../core/stores/auth.store'
     }
     .sidebar-nav {
       flex: 1;
+      padding: 0.25rem 0.4rem 0.5rem;
       overflow-y: auto;
-      padding: 0.15rem 0.35rem 0.5rem;
       scrollbar-width: thin;
     }
     .sidebar-nav__empty {
@@ -210,10 +230,58 @@ import { AuthStore } from '../../core/stores/auth.store'
       color: var(--sidebar-text-muted);
       text-align: center;
     }
-    .sidebar-footer {
-      padding: 0.5rem;
-      margin-top: auto;
+    .sidebar-module {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin: 0.2rem 0.15rem;
+      padding: 0.55rem 0.6rem;
+      border-radius: 12px;
+      text-decoration: none;
+      color: var(--sidebar-text-muted);
+      border: none;
+      transition: background 0.2s, color 0.2s, transform 0.18s;
+      &:hover {
+        background: var(--sidebar-item-hover);
+        color: var(--sidebar-text);
+        transform: translateX(3px);
+      }
     }
+    .sidebar-module--active {
+      background: linear-gradient(90deg, color-mix(in srgb, var(--sidebar-primary) 18%, transparent), var(--sidebar-item-active));
+      color: var(--sidebar-primary);
+      box-shadow: inset 3px 0 0 var(--sidebar-primary);
+    }
+    .sidebar-module__icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      mat-icon { font-size: 1.05rem; width: 1.05rem; height: 1.05rem; }
+    }
+    .tone-violet { background: color-mix(in srgb, #a78bfa 22%, transparent); mat-icon { color: #a78bfa; } }
+    .tone-cyan { background: color-mix(in srgb, #22d3ee 22%, transparent); mat-icon { color: #22d3ee; } }
+    .tone-blue { background: color-mix(in srgb, #38bdf8 22%, transparent); mat-icon { color: #38bdf8; } }
+    .tone-amber { background: color-mix(in srgb, #fbbf24 22%, transparent); mat-icon { color: #fbbf24; } }
+    .tone-green { background: color-mix(in srgb, #34d399 22%, transparent); mat-icon { color: #34d399; } }
+    .tone-pink { background: color-mix(in srgb, #f472b6 22%, transparent); mat-icon { color: #f472b6; } }
+    .tone-slate { background: color-mix(in srgb, #94a3b8 18%, transparent); mat-icon { color: #94a3b8; } }
+    .sidebar-module__label {
+      flex: 1;
+      font-size: 0.84rem;
+      font-weight: 700;
+      min-width: 0;
+    }
+    .sidebar-module__arrow {
+      font-size: 1rem !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      opacity: 0.45;
+    }
+    .sidebar-footer { padding: 0.5rem; margin-top: auto; }
     .sidebar-user {
       display: flex;
       align-items: center;
@@ -271,46 +339,45 @@ import { AuthStore } from '../../core/stores/auth.store'
       }
       .app-sidebar--collapsed {
         transform: translateX(-100%);
-        width: 272px;
+        width: 240px;
       }
     }
   `,
 })
 export class SidebarComponent {
+  private readonly router = inject(Router)
   readonly sidebarSvc = inject(SidebarService)
   readonly alertsStore = inject(AlertsStore)
-  readonly billingStore = inject(BillingStore)
   readonly jenkinsStore = inject(JenkinsStore)
   readonly vpsStore = inject(VpsStore)
   readonly authStore = inject(AuthStore)
 
-  readonly navTree = SIDEBAR_TREE
+  readonly mainModules = SIDEBAR_MAIN_MODULES
   readonly collapsed = this.sidebarSvc.collapsed
-  private readonly flatNav = flattenSidebarNav()
+  private readonly flatNav = flattenAreaNavForSearch()
+
+  readonly url = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      map((e) => (e as NavigationEnd).urlAfterRedirects),
+      startWith(this.router.url),
+    ),
+    { initialValue: this.router.url },
+  )
 
   readonly searchActive = computed(() => this.sidebarSvc.searchQuery().length > 0)
 
-  readonly visibleGroups = computed(() => {
+  readonly searchHits = computed(() => {
     const q = this.sidebarSvc.searchQuery()
-    if (!q) return this.navTree
-    return this.navTree
-      .map((g) => ({
-        ...g,
-        items: g.items.filter((item) => {
-          if (item.kind === 'link') {
-            return (
-              item.label.toLowerCase().includes(q) ||
-              item.route.toLowerCase().includes(q) ||
-              g.label.toLowerCase().includes(q)
-            )
-          }
-          return (
-            item.label.toLowerCase().includes(q) ||
-            g.label.toLowerCase().includes(q)
-          )
-        }),
-      }))
-      .filter((g) => g.items.length > 0)
+    if (!q) return []
+    return this.flatNav
+      .filter(
+        (e) =>
+          e.label.toLowerCase().includes(q) ||
+          e.route.toLowerCase().includes(q) ||
+          e.group.toLowerCase().includes(q),
+      )
+      .slice(0, 12)
   })
 
   readonly favoriteEntries = computed(() => {
@@ -320,44 +387,10 @@ export class SidebarComponent {
       .filter((e): e is NonNullable<typeof e> => !!e)
   })
 
-  readonly resolveBadge = (key?: string): number | null => {
-    if (!key) return null
-    const demo: Record<string, number> = {
-      alerts: this.alertsStore.activeAlerts() || 12,
-      vps: this.vpsStore.totalHosts() || 6,
-      jenkins: this.jenkinsStore.failedBuilds() || 3,
-      billing: 4,
-      notifications: 8,
-      approvals: 4,
-      incidents: 3,
-      logs: 84,
-      backups: 2,
-      security: 9,
-      secrets: 5,
-      deployments: 6,
-      'command-center': 5,
-      cost: 15,
-      network: 8,
-      health: 4,
-      compliance: 14,
-      scheduler: 12,
-      changes: 47,
-      tokens: 2,
-      copilot: 1,
-      capacity: 7,
-    }
-    const n = demo[key]
-    return n && n > 0 ? n : null
-  }
-
-  badgeForRoute = (route: string): number | null => {
-    if (route.startsWith('/alerts')) return this.resolveBadge('alerts')
-    if (route.startsWith('/vps')) return this.resolveBadge('vps')
-    if (route.startsWith('/jenkins')) return this.resolveBadge('jenkins')
-    if (route.startsWith('/approvals')) return this.resolveBadge('approvals')
-    if (route.startsWith('/incidents')) return this.resolveBadge('incidents')
-    if (route.startsWith('/command-center')) return this.resolveBadge('command-center')
-    return null
+  isModuleActive = (moduleId: string): boolean => {
+    const path = this.url().split('?')[0]
+    const area = resolveAreaFromPath(path)
+    return area?.id === moduleId
   }
 
   readonly userInitials = computed(() => {

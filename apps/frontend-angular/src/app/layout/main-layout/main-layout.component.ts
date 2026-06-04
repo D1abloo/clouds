@@ -3,13 +3,14 @@ import { RouterOutlet } from '@angular/router'
 import { SidebarComponent } from '../sidebar/sidebar.component'
 import { TopbarComponent } from '../topbar/topbar.component'
 import { DemoBannerComponent } from '../../shared/components/demo-banner/demo-banner.component'
+import { ModuleAreaTabsComponent } from '../module-area-tabs/module-area-tabs.component'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { SidebarService } from '../sidebar/sidebar.service'
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent, DemoBannerComponent],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent, DemoBannerComponent, ModuleAreaTabsComponent],
   template: `
     <div class="app-shell layout-root">
       <app-sidebar />
@@ -22,6 +23,7 @@ import { SidebarService } from '../sidebar/sidebar.service'
         <app-topbar />
         <div class="layout-content animate-fade-in">
           <app-demo-banner />
+          <app-module-area-tabs />
           <router-outlet />
         </div>
       </div>

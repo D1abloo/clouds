@@ -251,6 +251,13 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   readonly selectedIndex = signal(0)
 
   private readonly allItems: PaletteItem[] = [
+    { label: 'Overview', description: 'Dashboard and global visibility', icon: 'space_dashboard', action: () => this.router.navigate(['/dashboard']) },
+    { label: 'Clouds', description: 'AWS, GCP, Azure', icon: 'cloud', action: () => this.router.navigate(['/cloud/aws/overview']) },
+    { label: 'Infrastructure', description: 'Instances, VPS, Docker, K8s', icon: 'dns', action: () => this.router.navigate(['/instances/all-instances']) },
+    { label: 'Automation', description: 'Jenkins, Terraform, Terminal', icon: 'precision_manufacturing', action: () => this.router.navigate(['/jenkins/jobs']) },
+    { label: 'Observability', description: 'Metrics, logs, billing, alerts', icon: 'monitoring', action: () => this.router.navigate(['/metrics/overview']) },
+    { label: 'Security', description: 'Security center, secrets, audit', icon: 'security', action: () => this.router.navigate(['/security-center']) },
+    { label: 'Admin', description: 'Users, roles, settings', icon: 'settings', action: () => this.router.navigate(['/admin/users']) },
     { label: 'Dashboard', description: 'Overview of all resources', icon: 'dashboard', action: () => this.router.navigate(['/dashboard']) },
     { label: 'Command Center', description: 'Operational queue and quick actions', icon: 'bolt', action: () => this.router.navigate(['/command-center']) },
     { label: 'Resource Explorer', description: 'Search resources globally', icon: 'travel_explore', action: () => this.router.navigate(['/resource-explorer']) },

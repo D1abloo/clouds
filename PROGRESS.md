@@ -2,7 +2,28 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Sidebar simplificado Fase 31 (completado)
+**Fase actual:** Navegación principal en panel Fase 32 (completado)
+
+---
+
+## Fase 32 — Sidebar compacto + tabs en panel principal ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Regla:** El sidebar solo muestra 7 módulos principales. Las opciones internas viven en el panel principal (`app-module-area-tabs`), no en el sidebar.
+
+**Sidebar (sin scroll):**
+- Overview · Clouds · Infrastructure · Automation · Observability · Security · Admin
+
+**Panel principal:**
+- Barra de tabs/chips por área (Security Center, Secrets, Audit…)
+- Búsqueda del sidebar busca páginas internas (resultados en sidebar temporalmente)
+
+**Archivos:**
+- `core/routing/area-nav.config.ts`
+- `layout/module-area-tabs/module-area-tabs.component.ts`
+- `layout/sidebar/sidebar.component.ts` (flat modules)
+- Eliminado `sidebar-nav-group.component.ts`
 
 ---
 
