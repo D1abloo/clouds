@@ -71,7 +71,7 @@ type InstanceRow = Record<string, unknown>
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card [title]="accountLabel" [value]="n('accounts')" icon="account_balance" variant="elevated" />
           <app-summary-card title="Instances" [value]="n('instances')" icon="dns" variant="elevated" />
           <app-summary-card title="Active regions" [value]="n('regions')" icon="public" variant="elevated" />

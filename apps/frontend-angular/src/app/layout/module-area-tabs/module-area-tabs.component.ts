@@ -55,7 +55,7 @@ import {
       margin: 0 0 1.25rem;
       padding: 1rem 1.15rem 0.85rem;
       border-radius: var(--app-radius-lg);
-      background: var(--app-card);
+      background: linear-gradient(135deg, var(--app-card), color-mix(in srgb, var(--app-accent) 4%, var(--app-card)));
       box-shadow: var(--app-shadow-sm);
     }
     .module-area-tabs__head {
@@ -128,9 +128,10 @@ import {
       }
     }
     .module-area-tab--active {
-      background: color-mix(in srgb, var(--app-accent) 16%, var(--app-card));
+      background: linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 18%, var(--app-card)), color-mix(in srgb, var(--app-accent) 8%, var(--app-card)));
       color: var(--app-accent);
-      box-shadow: 0 2px 14px color-mix(in srgb, var(--app-accent) 22%, transparent);
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--app-accent) 24%, transparent);
+      transform: translateY(-1px);
     }
     .module-area-tab__badge {
       padding: 0.08rem 0.38rem;

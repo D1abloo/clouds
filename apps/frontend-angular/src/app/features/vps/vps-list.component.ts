@@ -125,7 +125,7 @@ export class VpsCommandDialogComponent {
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Total VPS" [value]="hosts().length" icon="dns" variant="elevated" />
           <app-summary-card title="Connected" [value]="connected()" icon="link" variant="elevated" />
           <app-summary-card title="Disconnected" [value]="disconnected()" icon="link_off" iconColor="warn" variant="elevated" />

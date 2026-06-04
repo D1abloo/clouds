@@ -54,7 +54,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
-      <div class="summary-grid page-section">
+      <div class="summary-grid app-section-panel stagger-children page-section">
         <app-summary-card title="Unread" [value]="unreadCount()" icon="mark_email_unread" variant="elevated" />
         <app-summary-card title="Total" [value]="items().length" icon="inbox" variant="elevated" />
         <app-summary-card title="Critical" [value]="criticalCount()" icon="error" iconColor="warn" variant="elevated" />

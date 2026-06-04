@@ -51,7 +51,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
-      <div class="summary-grid page-section">
+      <div class="summary-grid app-section-panel stagger-children page-section">
         <app-summary-card title="Events today" [value]="filtered().length" icon="history" variant="elevated" />
         <app-summary-card title="Actions" [value]="actionOptions().length" icon="bolt" variant="elevated" />
         <app-summary-card title="Users" [value]="3" icon="group" variant="elevated" />

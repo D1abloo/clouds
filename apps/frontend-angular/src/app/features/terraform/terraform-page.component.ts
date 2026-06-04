@@ -78,7 +78,7 @@ type RunRow = Record<string, unknown>
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid premium-grid">
+        <div class="summary-grid app-section-panel stagger-children premium-grid">
           <app-summary-card title="Workspaces" [value]="n('workspaces')" icon="folder" variant="elevated" trend="Active" />
           <app-summary-card title="Runs" [value]="n('runs')" icon="play_circle" variant="elevated" />
           <app-summary-card title="Plans" [value]="n('plans')" icon="description" variant="elevated" trend="Pending review" />

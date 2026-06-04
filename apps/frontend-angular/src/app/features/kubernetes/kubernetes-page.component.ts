@@ -73,7 +73,7 @@ type PodRow = Record<string, unknown>
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Clusters" [value]="n('clusters')" icon="hub" variant="elevated" />
           <app-summary-card title="Namespaces" [value]="n('namespaceCount')" icon="folder" variant="elevated" />
           <app-summary-card title="Pods" [value]="n('podCount')" icon="widgets" variant="elevated" />

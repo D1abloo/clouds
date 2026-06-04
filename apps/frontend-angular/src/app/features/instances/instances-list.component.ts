@@ -63,7 +63,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
-      <div class="summary-grid">
+      <div class="summary-grid app-section-panel stagger-children">
         <app-summary-card title="Total" [value]="instances().length" icon="dns" variant="elevated" iconColor="purple" />
         <app-summary-card title="Running" [value]="running()" icon="play_circle" variant="elevated" iconColor="success" />
         <app-summary-card title="Stopped" [value]="stopped()" icon="stop_circle" variant="elevated" iconColor="warn" />

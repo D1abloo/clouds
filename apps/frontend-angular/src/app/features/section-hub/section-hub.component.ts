@@ -40,7 +40,7 @@ interface DemoRow {
         (actionClick)="handleAction($event)"
       />
 
-      <div class="summary-grid">
+      <div class="summary-grid app-section-panel stagger-children">
         <app-summary-card title="Resources" [value]="demoStats().resources" icon="dns" variant="elevated" iconColor="purple" />
         <app-summary-card title="Healthy" [value]="demoStats().healthy" icon="check_circle" variant="elevated" iconColor="success" />
         <app-summary-card title="Warnings" [value]="demoStats().warnings" icon="warning" variant="elevated" iconColor="warn" />

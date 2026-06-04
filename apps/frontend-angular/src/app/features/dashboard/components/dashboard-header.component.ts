@@ -18,8 +18,8 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
   template: `
     <header class="dash-header animate-fade-in">
       <div class="dash-header__main">
-        <div class="dash-header__icon" aria-hidden="true">
-          <mat-icon>dashboard</mat-icon>
+        <div class="dash-header__icon tone-violet" aria-hidden="true">
+          <mat-icon>space_dashboard</mat-icon>
         </div>
         <div class="dash-header__copy">
           <div class="dash-header__title-row">
@@ -77,7 +77,7 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
       padding: 1.5rem 1.65rem;
       margin-bottom: 1.25rem;
       border-radius: var(--app-radius-xl);
-      background: var(--app-card);
+      background: linear-gradient(135deg, var(--app-card), color-mix(in srgb, var(--cat-overview) 6%, var(--app-card)));
       box-shadow: var(--app-shadow-md);
     }
     .dash-header__main {
@@ -93,9 +93,8 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 18%, transparent), color-mix(in srgb, var(--app-accent) 6%, transparent));
-      box-shadow: 0 6px 18px color-mix(in srgb, var(--app-accent) 22%, transparent);
-      mat-icon { color: var(--app-accent); font-size: 1.55rem; width: 1.55rem; height: 1.55rem; }
+      box-shadow: 0 8px 22px color-mix(in srgb, var(--cat-overview) 28%, transparent);
+      mat-icon { font-size: 1.55rem; width: 1.55rem; height: 1.55rem; }
     }
     .dash-header__title-row {
       display: flex;

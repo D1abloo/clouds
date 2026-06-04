@@ -48,7 +48,7 @@ import {
       @if (loading()) {
         <app-loading-state message="Building topology…" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Nodes" [value]="visibleNodes().length" icon="hub" variant="elevated" iconColor="purple" />
           <app-summary-card title="Connections" [value]="visibleEdges().length" icon="device_hub" variant="elevated" iconColor="cyan" />
           <app-summary-card title="Healthy" [value]="healthyCount()" icon="check_circle" variant="elevated" iconColor="success" />

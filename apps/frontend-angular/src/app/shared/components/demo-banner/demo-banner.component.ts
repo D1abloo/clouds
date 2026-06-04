@@ -57,10 +57,11 @@ import { DemoService } from '../../../core/services/demo.service'
       border-radius: var(--app-radius-lg);
       background: linear-gradient(
         135deg,
-        color-mix(in srgb, #3b82f6 8%, var(--app-card)),
+        color-mix(in srgb, #6366f1 10%, var(--app-card)),
+        color-mix(in srgb, #22d3ee 8%, var(--app-card)),
         color-mix(in srgb, #10b981 6%, var(--app-card))
       );
-      box-shadow: var(--app-shadow-sm);
+      box-shadow: var(--app-shadow-md);
     }
     .demo-banner__content {
       display: flex;

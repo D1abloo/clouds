@@ -2,7 +2,57 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Navegación principal en panel Fase 32 (completado)
+**Fase actual:** Pulido visual premium Fase 33 (completado)
+
+---
+
+## Fase 33 — Pulido visual SaaS premium (solo UI/UX) ✅
+
+**Estado:** Completada (2026-06-02)
+
+**Alcance:** Solo diseño, iconografía, colores y presentación. Sin cambios de lógica, rutas, botones ni datos demo.
+
+### Design system
+
+- `design-tokens.scss` — colores de estado vivos, marcas por módulo, categorías de navegación
+- `visual-system.scss` — paneles de sección, tonos de cabecera, tablas, modales, animaciones
+- `nav-visual.config.ts` — icono + tono por ruta (AWS, Users, Settings, Docker, etc.)
+- Métricas borderless: un panel `.summary-grid` / `.app-section-panel` con filas `.metric-row` (sin card por métrica)
+
+### Componentes mejorados
+
+| Componente | Mejora |
+|----------|--------|
+| `app-page-header` | Icono con tono por módulo, gradiente, badge demo |
+| `app-dashboard-header` | Cabecera violeta premium |
+| `app-demo-banner` | Gradiente elegante, stats visibles |
+| `app-chart-card` | Barra de acento, icono, empty state |
+| `app-summary-card` / `app-stat-card` | Filas inline sin recuadros |
+| `app-status-badge` | Tokens CSS de estado |
+| `app-module-area-tabs` | Chips con gradiente activo |
+| Sidebar grupos/hojas | Activo con barra lateral y glow |
+| Provider/platform panels | Métricas en filas compactas |
+
+### Paleta por categoría
+
+- Overview: violeta · Clouds: cian · Infrastructure: azul · Automation: ámbar
+- Observability: verde/teal · Security: rosa/morado · Admin: gris/violeta
+- Marcas: AWS, GCP, Azure, Docker, K8s, Jenkins, Terraform
+
+### Pantallas revisadas
+
+Dashboard, AWS/GCP/Azure hub, Instances, VPS, Docker, K8s, Jenkins, Terraform, Billing, Alerts, Notifications, Audit, Security/Admin (platform modules), section-hub, resource explorer, topology, AI assistant.
+
+### Problemas visuales corregidos
+
+- Métricas sin cajas individuales (panel único por sección)
+- Iconos coherentes Material Icons en sidebar y cabeceras
+- Textos con tooltips donde aplica; tablas con hover suave
+- Layout scroll del panel (Fase anterior) mantenido
+
+### GitHub
+
+- Commits locales listos; `gh auth login` requerido para push
 
 ---
 

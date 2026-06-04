@@ -34,12 +34,12 @@ import { ResourceStatus } from '../../../core/models/api.models'
       width: 8px;
       height: 8px;
     }
-    .status-badge--running { color: #22c55e; background: color-mix(in srgb, #22c55e 22%, transparent); box-shadow: 0 0 12px color-mix(in srgb, #22c55e 35%, transparent); }
-    .status-badge--stopped { color: #94a3b8; background: color-mix(in srgb, #94a3b8 18%, transparent); }
-    .status-badge--pending, .status-badge--planning, .status-badge--planned { color: #f59e0b; background: color-mix(in srgb, #f59e0b 22%, transparent); }
-    .status-badge--applied { color: #3b82f6; background: color-mix(in srgb, #3b82f6 22%, transparent); }
-    .status-badge--error, .status-badge--failed { color: #ef4444; background: color-mix(in srgb, #ef4444 22%, transparent); box-shadow: 0 0 10px color-mix(in srgb, #ef4444 30%, transparent); }
-    .status-badge--warning { color: #eab308; background: color-mix(in srgb, #eab308 22%, transparent); }
+    .status-badge--running { color: var(--status-running); background: color-mix(in srgb, var(--status-running) 22%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--status-running) 35%, transparent); }
+    .status-badge--stopped { color: var(--status-stopped); background: color-mix(in srgb, var(--status-stopped) 18%, transparent); }
+    .status-badge--pending, .status-badge--planning, .status-badge--planned { color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 22%, transparent); }
+    .status-badge--applied { color: var(--status-info); background: color-mix(in srgb, var(--status-info) 22%, transparent); }
+    .status-badge--error, .status-badge--failed { color: var(--status-error); background: color-mix(in srgb, var(--status-error) 22%, transparent); box-shadow: 0 0 10px color-mix(in srgb, var(--status-error) 30%, transparent); }
+    .status-badge--warning { color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 22%, transparent); }
     .status-badge--unknown { color: #64748b; }
   `,
 })

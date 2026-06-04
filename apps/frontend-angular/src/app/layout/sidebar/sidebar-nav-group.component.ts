@@ -94,8 +94,9 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
       transform: translateX(2px);
     }
     .nav-group__head--active {
-      background: color-mix(in srgb, var(--sidebar-primary) 12%, transparent);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--sidebar-primary) 20%, transparent), var(--sidebar-item-active));
       color: var(--sidebar-text);
+      box-shadow: inset 3px 0 0 var(--sidebar-primary), 0 2px 14px color-mix(in srgb, var(--sidebar-primary) 12%, transparent);
     }
     .nav-group__icon {
       width: 32px;

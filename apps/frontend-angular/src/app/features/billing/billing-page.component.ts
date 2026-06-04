@@ -56,7 +56,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Today" [value]="formatCost(summary()?.daily)" icon="today" variant="elevated" />
           <app-summary-card title="This week" [value]="formatCost(summary()?.weekly)" icon="date_range" variant="elevated" />
           <app-summary-card title="This month" [value]="formatCost(summary()?.totalMonthly)" icon="calendar_month" variant="elevated" />

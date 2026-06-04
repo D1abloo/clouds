@@ -1,6 +1,6 @@
 # Design System — CloudOps Control Center
 
-Guía visual para la fase de pulido (Fase 29). Objetivo: interfaz moderna, viva y **sin bordes duros**.
+Guía visual CloudOps (Fase 33). Objetivo: SaaS premium, colorido y **sin bordes duros** ni cards por métrica.
 
 ## Principios
 
@@ -27,8 +27,10 @@ Guía visual para la fase de pulido (Fase 29). Objetivo: interfaz moderna, viva 
 | Componente | Ubicación |
 |------------|-----------|
 | `PageHeaderComponent` | Header con icono, descripción y acciones |
-| `SummaryCardComponent` / `StatCardComponent` | KPIs con hover |
-| `ChartCardComponent` | Gráficos bar/line/donut con loading/empty |
+| `SummaryCardComponent` / `StatCardComponent` | Filas `.metric-row` dentro de `.summary-grid` (un panel, sin card por KPI) |
+| `MetricsPanelComponent` | Panel de métricas con lista integrada |
+| `ChartCardComponent` | Gráficos con barra de acento, icono y empty state |
+| `nav-visual.config.ts` | Icono + tono por ruta de módulo |
 | `LoadingStateComponent` | Spinner + mensaje |
 | `EmptyStateComponent` | Sin datos |
 | `ErrorStateComponent` | Error + retry |
@@ -37,7 +39,10 @@ Guía visual para la fase de pulido (Fase 29). Objetivo: interfaz moderna, viva 
 
 ## Clases utilitarias globales
 
-- `.page-container` — Padding y ancho máximo
+- `.page-container` — Contenedor de página sin padding duplicado
+- `.summary-grid` / `.app-section-panel` — Panel único de métricas
+- `.metric-row` — Fila icono + label + valor
+- `.stagger-children` — Entrada escalonada de filas
 - `.table-card` / `.premium-table` — Tablas sin bordes, hover por fila
 - `.soft-tabs` — Tabs con indicador redondeado
 - `.soft-panel` — Panel elevado sin borde

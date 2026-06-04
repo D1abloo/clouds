@@ -68,7 +68,7 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
       } @else if (error()) {
         <app-error-state [message]="error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           @for (card of config().summaryCards; track card.title) {
             <app-summary-card
               [title]="card.title"

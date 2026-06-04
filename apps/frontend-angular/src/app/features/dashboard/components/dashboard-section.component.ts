@@ -30,6 +30,10 @@ import { MatIconModule } from '@angular/material/icon'
     .dash-section {
       margin-bottom: 1.75rem;
     }
+    .dash-section__body > .summary-grid,
+    .dash-section__body > .app-section-panel {
+      margin-bottom: 0;
+    }
     .dash-section__body :where(.summary-grid) {
       margin-bottom: 0;
     }

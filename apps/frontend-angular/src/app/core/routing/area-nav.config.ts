@@ -62,7 +62,7 @@ const cloudProviderBranch = (
         id: `${provider}-instances`,
         label: instancesLabel,
         route: `${base}/instances`,
-        icon: 'dns',
+        icon: 'memory',
       },
       { id: `${provider}-network`, label: 'Network', route: `${base}/network`, icon: 'hub' },
       { id: `${provider}-billing`, label: 'Billing', route: `${base}/billing`, icon: 'payments' },

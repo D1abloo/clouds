@@ -43,7 +43,7 @@ import {
       @if (loading()) {
         <app-loading-state message="Initializing Copilot…" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Queries today" [value]="queryCount()" icon="chat" variant="elevated" iconColor="purple" />
           <app-summary-card title="Data sources" [value]="6" icon="database" variant="elevated" iconColor="cyan" />
           <app-summary-card title="Mode" value="Demo" icon="science" variant="elevated" iconColor="warn" />

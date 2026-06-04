@@ -72,7 +72,7 @@ import { PlatformSummaryCardComponent } from './components/platform-summary-card
         <app-error-state [message]="page.error()!" (retry)="loadData()" />
       } @else {
         <app-dashboard-section title="Infrastructure summary" subtitle="Real-time overview across all platforms" icon="insights">
-          <div class="summary-grid">
+          <div class="summary-grid app-section-panel stagger-children">
             <app-stat-card title="Total instances" [value]="n('totalInstances')" icon="dns" [updated]="syncShort()" [delay]="0" />
             <app-stat-card title="Running" [value]="n('runningInstances')" icon="play_circle" tone="success" [subtitle]="stoppedLabel()" [delay]="30" />
             <app-stat-card title="Stopped" [value]="n('stoppedInstances')" icon="stop_circle" tone="default" [delay]="60" />

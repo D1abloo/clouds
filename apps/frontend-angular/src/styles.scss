@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use 'design-tokens';
+@use 'visual-system';
 
 @include mat.core();
 
@@ -181,11 +182,12 @@ body.dark-theme {
 
 /* Single outer panel; metrics are inline rows (no per-metric cards) */
 .summary-grid,
-.metrics-panel {
+.metrics-panel,
+.app-section-panel {
   margin-bottom: 1.5rem;
   padding: 0.35rem 1.35rem 0.5rem;
   border-radius: var(--app-radius-lg);
-  background: var(--app-card);
+  background: linear-gradient(180deg, var(--app-card), color-mix(in srgb, var(--app-surface) 35%, var(--app-card)));
   box-shadow: var(--app-shadow-sm);
 }
 

@@ -93,7 +93,7 @@ export class JenkinsLaunchDialogComponent {
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Servers" [value]="n('serverCount')" icon="dns" variant="elevated" />
           <app-summary-card title="Jobs" [value]="n('jobCount')" icon="work" variant="elevated" />
           <app-summary-card title="Running builds" [value]="n('buildsRunning')" icon="hourglass_top" variant="elevated" />

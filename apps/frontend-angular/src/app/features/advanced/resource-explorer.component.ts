@@ -57,7 +57,7 @@ import {
       @if (loading()) {
         <app-loading-state message="Indexing resources…" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Total resources" [value]="resources.length" icon="dns" variant="elevated" iconColor="purple" />
           <app-summary-card title="Types" [value]="typeCount()" icon="category" variant="elevated" iconColor="cyan" />
           <app-summary-card title="Providers" [value]="6" icon="cloud" variant="elevated" iconColor="success" />

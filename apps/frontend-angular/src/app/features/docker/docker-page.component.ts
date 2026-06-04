@@ -73,7 +73,7 @@ type ContainerRow = Record<string, unknown>
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid">
+        <div class="summary-grid app-section-panel stagger-children">
           <app-summary-card title="Docker hosts" [value]="n('hosts')" icon="dns" variant="elevated" />
           <app-summary-card title="Running" [value]="n('running')" icon="play_circle" variant="elevated" trend="Healthy" />
           <app-summary-card title="Stopped" [value]="n('stopped')" icon="stop_circle" variant="elevated" />

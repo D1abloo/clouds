@@ -87,7 +87,7 @@ export class AlertRuleDialogComponent {
         (actionClick)="handleHeader($event)"
       />
 
-      <div class="summary-grid">
+      <div class="summary-grid app-section-panel stagger-children">
         <app-summary-card title="Critical" [value]="counts().critical" icon="error" iconColor="warn" variant="elevated" />
         <app-summary-card title="Warnings" [value]="counts().warning" icon="warning" variant="elevated" />
         <app-summary-card title="Info" [value]="counts().info" icon="info" variant="elevated" />
