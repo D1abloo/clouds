@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { CloudProvider } from '@prisma/client'
+import {
+  DEMO_DEPLOYMENTS,
+  DEMO_GITHUB_REPOS,
+  DEMO_WEBHOOKS,
+} from '../github/github-demo.data'
 
 @Injectable()
 export class InventoryService {
@@ -79,6 +84,21 @@ export class InventoryService {
       errors: runs.filter((r) => r.status === 'FAILED').length,
       items: runs,
       templates: await this.prisma.instanceTemplate.findMany(),
+    }
+  }
+
+  async githubSummary() {
+    return {
+      connected: false,
+      username: null,
+      repoCount: DEMO_GITHUB_REPOS.length,
+      branchCount: DEMO_GITHUB_REPOS.length * 3,
+      commitCount: DEMO_GITHUB_REPOS.length * 3,
+      openPullRequests: 4,
+      webhookCount: DEMO_WEBHOOKS.length,
+      deploymentCount: DEMO_DEPLOYMENTS.length,
+      repoItems: DEMO_GITHUB_REPOS,
+      lastSyncAt: null,
     }
   }
 

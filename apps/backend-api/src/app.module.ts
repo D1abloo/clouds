@@ -17,6 +17,7 @@ import { SshModule } from './modules/ssh/ssh.module'
 import { DockerDiscoveryModule } from './modules/docker-discovery/docker-discovery.module'
 import { KubernetesDiscoveryModule } from './modules/kubernetes-discovery/kubernetes-discovery.module'
 import { JenkinsModule } from './modules/jenkins/jenkins.module'
+import { GithubModule } from './modules/github/github.module'
 import { TerraformModule } from './modules/terraform/terraform.module'
 import { MetricsModule } from './modules/metrics/metrics.module'
 import { BillingModule } from './modules/billing/billing.module'
@@ -47,6 +48,7 @@ import { KubernetesApiModule } from './modules/kubernetes/kubernetes.module'
     DockerDiscoveryModule,
     KubernetesDiscoveryModule,
     JenkinsModule,
+    GithubModule,
     TerraformModule,
     MetricsModule,
     BillingModule,

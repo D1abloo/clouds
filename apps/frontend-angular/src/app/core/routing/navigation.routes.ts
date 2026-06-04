@@ -110,6 +110,15 @@ export const NAVIGATION_ROUTES: Routes = [
       ),
     data: { breadcrumb: 'Kubernetes', module: 'kubernetes' },
   },
+  {
+    path: 'repositories/:section',
+    loadComponent: () =>
+      import('../../features/repositories/repositories-page.component').then(
+        (m) => m.RepositoriesPageComponent,
+      ),
+    data: { breadcrumb: 'Repositorios', module: 'repositories' },
+  },
+  { path: 'repositories', redirectTo: 'repositories/github', pathMatch: 'full' },
   { path: 'jenkins/overview', redirectTo: 'jenkins/jobs', pathMatch: 'full' },
   { path: 'jenkins/servers', ...hub('jenkins', 'Jenkins', 'Servers') },
   { path: 'jenkins/pipelines', ...hub('jenkins', 'Jenkins', 'Pipelines') },

@@ -34,6 +34,11 @@ export class InventoryController {
     return this.service.jenkinsSummary()
   }
 
+  @Get('github')
+  github() {
+    return this.service.githubSummary()
+  }
+
   @Get('provider/:provider')
   provider(@Param('provider') provider: CloudProvider) {
     return this.service.providerSummary(provider)

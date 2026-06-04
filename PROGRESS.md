@@ -2,7 +2,29 @@
 
 Plan maestro: `prompts_cursor_por_fases.md`  
 Última ejecución: 2026-06-02  
-**Fase actual:** Iconos/logos distintivos por módulo Fase 35 (completado)
+**Fase actual:** Módulo Repositorios + GitHub Fase 36 (completado)
+
+---
+
+## Fase 36 — Repositorios + integración GitHub ✅
+
+**Estado:** Completada (2026-06-04)
+
+**Sidebar:** Nuevo grupo **Repositorios** — GitHub, GitLab (placeholder), Webhooks, Ramas, Commits, Pull Requests, Despliegues.
+
+**Backend:** `GithubModule` — connect, disconnect, sync, repos, branches, commits, PRs, webhooks, deploy; `GET inventory/github`; datos demo Simple Icons.
+
+**Frontend:** `RepositoriesPageComponent`, `GithubService`, rutas `/repositories/:section`, UI en español, flujo conectar → sincronizar → desplegar a instancia/VPS/Docker/K8s.
+
+---
+
+## Fase 35b — Fix logos rotos (SVG inline Simple Icons) ✅
+
+**Estado:** Completada (2026-06-04)
+
+- Causa: `<img src="/assets/logos/...">` devolvía 404 en dev → icono de imagen rota
+- Solución: SVG de **Simple Icons** embebidos en `brand-logo-svg.data.ts` (sin peticiones HTTP)
+- Assets actualizados en `src/assets/logos/` y copia en `public/assets/logos/`
 
 ---
 

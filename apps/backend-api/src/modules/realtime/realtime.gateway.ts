@@ -55,4 +55,12 @@ export class RealtimeGateway {
   emitAccountUpdate(accountId: string, data: unknown) {
     this.server?.emit('account.updated', { accountId, ...data as object })
   }
+
+  emitGithubSynced(data: unknown) {
+    this.server?.emit('github.synced', data)
+  }
+
+  emitGithubDeployment(data: unknown) {
+    this.server?.emit('github.deployment', data)
+  }
 }

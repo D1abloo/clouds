@@ -41,6 +41,16 @@ export class InventoryService {
       .get<Record<string, unknown>>('inventory/jenkins')
       .pipe(catchError((): Observable<Record<string, unknown>> => of({ jobCount: 0, jobItems: [] })))
 
+  github = (): Observable<Record<string, unknown>> =>
+    this.api
+      .get<Record<string, unknown>>('inventory/github')
+      .pipe(
+        catchError(
+          (): Observable<Record<string, unknown>> =>
+            of({ connected: false, repoCount: 0, repoItems: [] }),
+        ),
+      )
+
   provider = (p: CloudProvider): Observable<Record<string, unknown>> =>
     this.api
       .get<Record<string, unknown>>(`inventory/provider/${p}`)
