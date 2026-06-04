@@ -23,6 +23,7 @@ import {
   CAPACITY_PLANNER_CONFIG,
   CHANGE_MANAGEMENT_CONFIG,
   API_TOKENS_CONFIG,
+  ADMIN_WEBHOOKS_CONFIG,
 } from '../../shared/platform/platform-modules.demo'
 
 @Component({
@@ -265,4 +266,15 @@ export class ChangeManagementComponent {
 })
 export class ApiTokensComponent {
   readonly config = API_TOKENS_CONFIG
+}
+
+@Component({
+  selector: 'app-admin-webhooks',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlatformModulePageComponent],
+  template: `<app-platform-module-page [config]="config" />`,
+})
+export class AdminWebhooksComponent {
+  readonly config = ADMIN_WEBHOOKS_CONFIG
 }

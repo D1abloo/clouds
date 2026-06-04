@@ -1187,65 +1187,197 @@ export const CHANGE_MANAGEMENT_CONFIG: PlatformModuleConfig = {
   ],
 }
 
+/** Administración → Tokens API (solo tokens, sin webhooks) */
 export const API_TOKENS_CONFIG: PlatformModuleConfig = {
   id: 'api-tokens',
-  title: 'API Tokens & Webhooks',
-  description: 'Manage API tokens and webhooks for external integrations — create, revoke and monitor delivery logs.',
-  icon: 'webhook',
+  title: 'Tokens API',
+  description:
+    'Gestiona tokens de acceso a la API de CloudOps: creación, ámbitos (scopes), rotación, revocación y auditoría de uso.',
+  icon: 'vpn_key',
   headerActions: [
-    { label: 'Create token', icon: 'add', primary: true },
-    { label: 'Add webhook', icon: 'link' },
-    { label: 'Test delivery', icon: 'send' },
+    { label: 'Crear token', icon: 'add', primary: true },
+    { label: 'Rotar token', icon: 'autorenew' },
+    { label: 'Revocar', icon: 'block' },
+    { label: 'Exportar', icon: 'download' },
+  ],
+  quickActions: [
+    { label: 'Copiar token', icon: 'content_copy' },
+    { label: 'Ver scopes', icon: 'policy' },
+    { label: 'Auditoría', icon: 'history' },
   ],
   summaryCards: [
-    { title: 'Active tokens', value: 6, icon: 'token', iconColor: 'purple' },
-    { title: 'Webhooks', value: 4, icon: 'webhook', iconColor: 'cyan' },
-    { title: 'Deliveries (24h)', value: 128, icon: 'send', iconColor: 'success' },
-    { title: 'Failed', value: 2, icon: 'error', iconColor: 'warn' },
+    { title: 'Tokens activos', value: 6, icon: 'vpn_key', iconColor: 'purple' },
+    { title: 'Expiran pronto', value: 2, icon: 'schedule', iconColor: 'warn' },
+    { title: 'Usados hoy', value: 14, icon: 'bolt', iconColor: 'cyan' },
+    { title: 'Revocados', value: 3, icon: 'block', iconColor: 'primary' },
   ],
   tabs: [
     {
-      label: 'API Tokens',
+      label: 'Activos',
+      searchPlaceholder: 'Buscar token…',
+      filters: [{ key: 'scope', label: 'Ámbito', options: ['', 'lectura', 'escritura', 'completo'] }],
+      columns: [
+        { key: 'name', label: 'Nombre' },
+        { key: 'scope', label: 'Scopes' },
+        { key: 'owner', label: 'Propietario' },
+        { key: 'created', label: 'Creado', type: 'date' },
+        { key: 'lastUsed', label: 'Último uso', type: 'date' },
+        { key: 'status', label: 'Estado', type: 'status' },
+      ],
+      rows: [
+        { name: 'ci-pipeline-token', scope: 'read:instances, write:jenkins', owner: 'jenkins-ci', created: ts(86400), lastUsed: ts(30), status: 'running' },
+        { name: 'monitoring-readonly', scope: 'read:metrics, read:alerts', owner: 'ops@cloudops', created: ts(172800), lastUsed: ts(5), status: 'running' },
+        { name: 'terraform-automation', scope: 'write:terraform, read:inventory', owner: 'terraform-sa', created: ts(259200), lastUsed: ts(120), status: 'running' },
+        { name: 'mobile-app-sync', scope: 'read:dashboard', owner: 'dev@cloudops', created: ts(432000), lastUsed: ts(600), status: 'running' },
+      ],
+    },
+    {
+      label: 'Por expirar',
       columns: [
         { key: 'name', label: 'Token' },
-        { key: 'scope', label: 'Scope' },
-        { key: 'created', label: 'Created', type: 'date' },
-        { key: 'lastUsed', label: 'Last used', type: 'date' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'expires', label: 'Expira', type: 'date' },
+        { key: 'scope', label: 'Scopes' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
-        { name: 'ci-pipeline-token', scope: 'read:instances, write:jenkins', created: ts(86400), lastUsed: ts(30), status: 'running' },
-        { name: 'monitoring-readonly', scope: 'read:metrics, read:alerts', created: ts(172800), lastUsed: ts(5), status: 'running' },
-        { name: 'legacy-integration', scope: 'full', created: ts(604800), lastUsed: ts(86400), status: 'warning' },
+        { name: 'legacy-integration', scope: 'full', expires: ts(604800), status: 'warning' },
+        { name: 'partner-readonly', scope: 'read:*', expires: ts(1209600), status: 'warning' },
       ],
     },
+    {
+      label: 'Revocados',
+      columns: [
+        { key: 'name', label: 'Token' },
+        { key: 'revokedBy', label: 'Revocado por' },
+        { key: 'revokedAt', label: 'Fecha', type: 'date' },
+        { key: 'reason', label: 'Motivo' },
+      ],
+      rows: [
+        { name: 'old-ci-token', revokedBy: 'admin@cloudops', revokedAt: ts(86400), reason: 'Rotación programada' },
+        { name: 'temp-debug', revokedBy: 'ops@cloudops', revokedAt: ts(172800), reason: 'Acceso temporal finalizado' },
+        { name: 'leaked-token-2024', revokedBy: 'security-bot', revokedAt: ts(259200), reason: 'Posible filtración' },
+      ],
+    },
+    {
+      label: 'Auditoría de uso',
+      columns: [
+        { key: 'token', label: 'Token' },
+        { key: 'endpoint', label: 'Endpoint' },
+        { key: 'ip', label: 'IP origen' },
+        { key: 'at', label: 'Cuándo', type: 'date' },
+        { key: 'status', label: 'Resultado', type: 'status' },
+      ],
+      rows: [
+        { token: 'ci-pipeline-token', endpoint: 'POST /api/v1/jenkins/trigger', ip: '10.0.4.12', at: ts(8), status: 'success' },
+        { token: 'monitoring-readonly', endpoint: 'GET /api/v1/metrics/summary', ip: '10.0.2.5', at: ts(22), status: 'success' },
+        { token: 'legacy-integration', endpoint: 'GET /api/v1/instances', ip: '203.0.113.8', at: ts(55), status: 'failed' },
+      ],
+    },
+  ],
+}
+
+/** Administración → Webhooks de plataforma (independiente de Tokens API) */
+export const ADMIN_WEBHOOKS_CONFIG: PlatformModuleConfig = {
+  id: 'admin-webhooks',
+  title: 'Webhooks',
+  description:
+    'Configura webhooks salientes de CloudOps: eventos de alertas, despliegues, instancias y facturación. Prueba entregas, reintentos y revisa payloads.',
+  icon: 'webhook',
+  headerActions: [
+    { label: 'Crear webhook', icon: 'add', primary: true },
+    { label: 'Probar entrega', icon: 'send' },
+    { label: 'Reintentar fallidos', icon: 'replay' },
+    { label: 'Desactivar', icon: 'pause_circle' },
+  ],
+  quickActions: [
+    { label: 'Ver payload', icon: 'code' },
+    { label: 'Regenerar secreto', icon: 'key' },
+    { label: 'Historial 24h', icon: 'history' },
+  ],
+  summaryCards: [
+    { title: 'Webhooks activos', value: 4, icon: 'webhook', iconColor: 'cyan' },
+    { title: 'Entregas (24h)', value: 128, icon: 'send', iconColor: 'success' },
+    { title: 'Fallidas', value: 2, icon: 'error', iconColor: 'warn' },
+    { title: 'Pendientes reintento', value: 1, icon: 'schedule', iconColor: 'purple' },
+  ],
+  tabs: [
     {
       label: 'Webhooks',
+      searchPlaceholder: 'Buscar webhook…',
+      filters: [{ key: 'status', label: 'Estado', options: ['', 'activo', 'pausado', 'error'] }],
       columns: [
-        { key: 'name', label: 'Webhook' },
-        { key: 'url', label: 'URL' },
-        { key: 'events', label: 'Events' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'name', label: 'Nombre' },
+        { key: 'url', label: 'URL destino' },
+        { key: 'events', label: 'Eventos' },
+        { key: 'secret', label: 'Secreto' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
-        { name: 'Slack alerts', url: 'https://hooks.slack.com/demo', events: 'alert.created, jenkins.build.failed', status: 'running' },
-        { name: 'Billing sync', url: 'https://api.finance.internal/webhook', events: 'billing.updated', status: 'running' },
-        { name: 'Terraform notify', url: 'https://ci.internal/tf-events', events: 'terraform.apply.finished', status: 'running' },
+        { name: 'Alertas Slack', url: 'https://hooks.slack.com/services/demo', events: 'alert.created, alert.resolved', secret: 'whsec_••••a1b2', status: 'running' },
+        { name: 'Sync facturación', url: 'https://api.finance.internal/webhook', events: 'billing.updated', secret: 'whsec_••••c3d4', status: 'running' },
+        { name: 'Notificaciones Terraform', url: 'https://ci.internal/tf-events', events: 'terraform.apply.finished', secret: 'whsec_••••e5f6', status: 'running' },
+        { name: 'PagerDuty ops', url: 'https://events.pagerduty.com/demo', events: 'incident.opened', secret: 'whsec_••••g7h8', status: 'warning' },
       ],
     },
     {
-      label: 'Delivery logs',
+      label: 'Entregas',
+      filters: [{ key: 'result', label: 'Resultado', options: ['', 'éxito', 'fallo'] }],
       columns: [
-        { key: 'event', label: 'Event' },
+        { key: 'event', label: 'Evento' },
         { key: 'webhook', label: 'Webhook' },
-        { key: 'status', label: 'Status', type: 'status' },
-        { key: 'at', label: 'When', type: 'date' },
+        { key: 'status', label: 'Estado', type: 'status' },
+        { key: 'latency', label: 'Latencia' },
+        { key: 'at', label: 'Cuándo', type: 'date' },
       ],
       rows: [
-        { event: 'instance.created', webhook: 'Slack alerts', status: 'success', at: ts(15) },
-        { event: 'jenkins.build.failed', webhook: 'Slack alerts', status: 'success', at: ts(45) },
-        { event: 'alert.created', webhook: 'Billing sync', status: 'failed', at: ts(90) },
-        { event: 'terraform.apply.finished', webhook: 'Terraform notify', status: 'success', at: ts(120) },
+        { event: 'instance.created', webhook: 'Alertas Slack', status: 'success', latency: '142 ms', at: ts(15) },
+        { event: 'jenkins.build.failed', webhook: 'Alertas Slack', status: 'success', latency: '198 ms', at: ts(45) },
+        { event: 'deployment.finished', webhook: 'Notificaciones Terraform', status: 'success', latency: '89 ms', at: ts(72) },
+        { event: 'alert.created', webhook: 'Sync facturación', status: 'failed', latency: 'timeout', at: ts(90) },
+      ],
+    },
+    {
+      label: 'Fallos',
+      columns: [
+        { key: 'event', label: 'Evento' },
+        { key: 'webhook', label: 'Webhook' },
+        { key: 'error', label: 'Error' },
+        { key: 'attempts', label: 'Intentos' },
+        { key: 'at', label: 'Último intento', type: 'date' },
+      ],
+      rows: [
+        { event: 'alert.created', webhook: 'Sync facturación', error: 'HTTP 503 Service Unavailable', attempts: 3, at: ts(90) },
+        { event: 'billing.invoice.failed', webhook: 'PagerDuty ops', error: 'Connection refused', attempts: 2, at: ts(240) },
+      ],
+    },
+    {
+      label: 'Payloads',
+      columns: [
+        { key: 'event', label: 'Evento' },
+        { key: 'webhook', label: 'Webhook' },
+        { key: 'size', label: 'Tamaño' },
+        { key: 'preview', label: 'Vista previa' },
+        { key: 'at', label: 'Recibido', type: 'date' },
+      ],
+      rows: [
+        { event: 'instance.created', webhook: 'Alertas Slack', size: '2.1 KB', preview: '{"type":"instance.created","id":"i-0a2b"}', at: ts(15) },
+        { event: 'jenkins.build.failed', webhook: 'Alertas Slack', size: '3.4 KB', preview: '{"job":"deploy-api","status":"FAILED"}', at: ts(45) },
+        { event: 'alert.created', webhook: 'Sync facturación', size: '1.8 KB', preview: '{"severity":"critical","title":"CPU"}', at: ts(90) },
+      ],
+    },
+    {
+      label: 'Configuración',
+      columns: [
+        { key: 'setting', label: 'Parámetro' },
+        { key: 'value', label: 'Valor' },
+        { key: 'description', label: 'Descripción' },
+      ],
+      rows: [
+        { setting: 'Timeout entrega', value: '30 s', description: 'Tiempo máximo por petición HTTP' },
+        { setting: 'Reintentos', value: '3', description: 'Intentos antes de marcar como fallido' },
+        { setting: 'Backoff', value: 'exponencial', description: 'Espera entre reintentos' },
+        { setting: 'Firma HMAC', value: 'SHA-256', description: 'Cabecera X-CloudOps-Signature' },
+        { setting: 'IP permitidas', value: '10.0.0.0/8', description: 'Origen permitido para callbacks' },
       ],
     },
   ],
@@ -1274,4 +1406,5 @@ export const PLATFORM_MODULE_MAP: Record<string, PlatformModuleConfig> = {
   'capacity-planner': CAPACITY_PLANNER_CONFIG,
   'change-management': CHANGE_MANAGEMENT_CONFIG,
   'api-tokens': API_TOKENS_CONFIG,
+  'admin-webhooks': ADMIN_WEBHOOKS_CONFIG,
 }

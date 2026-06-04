@@ -82,7 +82,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   'audit/activity-logs': 'Activity Logs',
   'admin/users': 'Users',
   'admin/roles': 'Roles',
-  'admin/api-tokens': 'API Tokens',
+  'admin/api-tokens': 'Tokens API',
   'admin/webhooks': 'Webhooks',
   'admin/demo-mode': 'Demo Mode',
   settings: 'Settings',
