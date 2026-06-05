@@ -63,6 +63,7 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
                 [logo]="tab.logo"
                 [collapsed]="false"
                 [badge]="badgeResolver()(tab.badgeKey)"
+                [exactActive]="tab.route === '/dashboard'"
               />
             }
           }

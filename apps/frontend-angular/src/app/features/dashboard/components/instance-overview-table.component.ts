@@ -1,338 +1,540 @@
-import { Component, Input, output, signal, computed, inject } from '@angular/core'
+import { Component, Input, output, signal, computed, effect } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
-import { MatTableModule } from '@angular/material/table'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatSelectModule } from '@angular/material/select'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import { MatMenuModule } from '@angular/material/menu'
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator'
 import { MatTooltipModule } from '@angular/material/tooltip'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
+import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component'
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component'
+import { InstancePerformancePanelComponent } from './instance-performance-panel.component'
 import { DashboardInstanceRow } from '../dashboard.models'
-import { DemoActionsService } from '../../../core/services/demo-actions.service'
+import { instanceProviderLogo } from '../utils/dashboard-instance-detail.util'
+import type { NavLogoKey } from '../../../shared/theme/nav-logo.types'
 
-type SortKey = keyof DashboardInstanceRow | 'monthlyCost'
+type CloudFilterValue = '' | 'AWS' | 'GCP' | 'AZURE' | 'VPS'
+type ProviderTone = 'aws' | 'gcp' | 'azure' | 'vps' | 'default'
+
+interface CloudFilterOption {
+  value: CloudFilterValue
+  label: string
+  logo?: NavLogoKey
+}
 
 @Component({
   selector: 'app-instance-overview-table',
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    MatTableModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule,
     MatPaginatorModule,
     MatTooltipModule,
     StatusBadgeComponent,
+    BrandLogoComponent,
     EmptyStateComponent,
+    InstancePerformancePanelComponent,
   ],
   template: `
-    <div class="instance-overview">
-      <header class="instance-overview__head">
-        <div>
-          <h3><mat-icon>dns</mat-icon> Vista de instancias</h3>
-          <p>{{ filtered().length }} instancias en AWS, GCP, Azure y VPS</p>
-        </div>
-      </header>
-
-      <div class="instance-overview__filters">
-        <mat-form-field appearance="outline" class="filter-search">
-          <mat-label>Buscar instancias</mat-label>
-          <mat-icon matPrefix>search</mat-icon>
-          <input matInput [formControl]="searchControl" placeholder="Nombre, IP, cuenta…" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Proveedor</mat-label>
-          <mat-select [formControl]="providerControl">
-            <mat-option value="">Todos los proveedores</mat-option>
-            <mat-option value="AWS">AWS</mat-option>
-            <mat-option value="GCP">GCP</mat-option>
-            <mat-option value="AZURE">Azure</mat-option>
-            <mat-option value="VPS">VPS</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Estado</mat-label>
-          <mat-select [formControl]="statusControl">
-            <mat-option value="">Todos los estados</mat-option>
-            <mat-option value="RUNNING">En ejecución</mat-option>
-            <mat-option value="STOPPED">Detenida</mat-option>
-            <mat-option value="WARNING">Advertencia</mat-option>
-            <mat-option value="ERROR">Error</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Región</mat-label>
-          <mat-select [formControl]="regionControl">
-            <mat-option value="">Todas las regiones</mat-option>
-            @for (r of regions(); track r) {
-              <mat-option [value]="r">{{ r }}</mat-option>
+    <div class="instance-shell">
+      <div class="instance-toolbar">
+        <div class="instance-toolbar__row">
+          <div class="instance-toolbar__clouds" role="group" aria-label="Filtrar por cloud">
+            @for (opt of cloudOptions(); track opt.value) {
+              <button
+                type="button"
+                class="cloud-chip"
+                [class.cloud-chip--active]="selectedCloud() === opt.value"
+                (click)="handleCloudSelect(opt.value)"
+              >
+                @if (opt.logo) {
+                  <app-brand-logo [logo]="opt.logo" size="sm" />
+                } @else {
+                  <mat-icon>cloud_queue</mat-icon>
+                }
+                <span>{{ opt.label }}</span>
+                <em>{{ cloudCount(opt.value) }}</em>
+              </button>
             }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Entorno</mat-label>
-          <mat-select [formControl]="envControl">
-            <mat-option value="">Todos los entornos</mat-option>
-            <mat-option value="production">Producción</mat-option>
-            <mat-option value="staging">Staging</mat-option>
-            <mat-option value="development">Desarrollo</mat-option>
-          </mat-select>
-        </mat-form-field>
+          </div>
+          <div class="instance-toolbar__stats">
+            <span><strong>{{ filtered().length }}</strong> instancias</span>
+            <span><strong>{{ runningCount() }}</strong> activas</span>
+            @if (alertCount() > 0) {
+              <span class="instance-toolbar__stats-warn"><strong>{{ alertCount() }}</strong> con alertas</span>
+            }
+          </div>
+        </div>
+
+        <div class="instance-toolbar__filters">
+          <mat-form-field appearance="outline" class="filter-search">
+            <mat-label>Buscar</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [formControl]="searchControl" placeholder="Nombre, IP, cuenta…" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [formControl]="statusControl">
+              <mat-option value="">Todos</mat-option>
+              <mat-option value="RUNNING">En ejecución</mat-option>
+              <mat-option value="STOPPED">Detenida</mat-option>
+              <mat-option value="WARNING">Advertencia</mat-option>
+              <mat-option value="ERROR">Error</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Región</mat-label>
+            <mat-select [formControl]="regionControl">
+              <mat-option value="">Todas</mat-option>
+              @for (r of regions(); track r) {
+                <mat-option [value]="r">{{ r }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Entorno</mat-label>
+            <mat-select [formControl]="envControl">
+              <mat-option value="">Todos</mat-option>
+              <mat-option value="production">Producción</mat-option>
+              <mat-option value="staging">Staging</mat-option>
+              <mat-option value="development">Desarrollo</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
       </div>
 
       @if (!rows.length) {
         <app-empty-state icon="cloud_off" title="Sin instancias" message="Carga datos demo o conecta una cuenta cloud" />
       } @else if (!filtered().length) {
-        <app-empty-state icon="filter_alt_off" title="Sin coincidencias" message="Prueba a ajustar los filtros" />
+        <app-empty-state icon="filter_alt_off" title="Sin coincidencias" message="Prueba otro cloud o ajusta los filtros" />
       } @else {
-        <div class="instance-overview__scroll">
-          <table mat-table [dataSource]="paged()" class="premium-table instance-table">
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Nombre</th>
-              <td mat-cell *matCellDef="let row">
-                <button type="button" class="name-link" [matTooltip]="row.name" (click)="select.emit(row)">
-                  {{ row.name }}
+        <div class="instance-split">
+          <aside class="instance-list">
+            <header class="instance-list__head">
+              @if (selectedCloudLogo(); as logo) {
+                <app-brand-logo [logo]="logo" size="sm" />
+              } @else {
+                <mat-icon>cloud_queue</mat-icon>
+              }
+              <div>
+                <strong>{{ cloudLabel() }}</strong>
+                <span>{{ filtered().length }} en la flota</span>
+              </div>
+            </header>
+
+            <div class="instance-pickers">
+              @for (row of paged(); track row.id) {
+                <button
+                  type="button"
+                  class="instance-picker"
+                  [class]="'instance-picker instance-picker--' + providerTone(row.provider)"
+                  [class.instance-picker--active]="selectedInstance()?.id === row.id"
+                  [attr.aria-pressed]="selectedInstance()?.id === row.id"
+                  (click)="handleInstanceSelect(row)"
+                >
+                  <span class="instance-picker__accent" aria-hidden="true"></span>
+                  <div class="instance-picker__body">
+                    <div class="instance-picker__head">
+                      @if (providerLogo(row.provider); as logo) {
+                        <span class="instance-picker__logo">
+                          <app-brand-logo [logo]="logo" size="sm" />
+                        </span>
+                      }
+                      <div class="instance-picker__copy">
+                        <strong>{{ row.name }}</strong>
+                        <span>{{ row.instanceType }} · {{ row.region }}</span>
+                      </div>
+                      <app-status-badge [value]="row.status" />
+                    </div>
+                    <div class="instance-picker__meta">
+                      <span>{{ row.cpuCores }} vCPU · {{ row.ramGb }} GB</span>
+                      <span>{{ formatCost(row.monthlyCost) }}</span>
+                      @if (row.alertCount) {
+                        <span class="instance-picker__alert">{{ row.alertCount }} alertas</span>
+                      }
+                    </div>
+                  </div>
                 </button>
-                @if (row.isDemo) { <span class="demo-tag">DEMO</span> }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="provider">
-              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
-              <td mat-cell *matCellDef="let row"><span class="provider-pill">{{ row.provider }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="account">
-              <th mat-header-cell *matHeaderCellDef>Cuenta</th>
-              <td mat-cell *matCellDef="let row" [matTooltip]="row.accountName">{{ row.accountName }}</td>
-            </ng-container>
-            <ng-container matColumnDef="region">
-              <th mat-header-cell *matHeaderCellDef>Región</th>
-              <td mat-cell *matCellDef="let row">{{ row.region }}</td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
-              <td mat-cell *matCellDef="let row"><app-status-badge [value]="row.status" /></td>
-            </ng-container>
-            <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef>Tipo</th>
-              <td mat-cell *matCellDef="let row" [matTooltip]="row.instanceType">{{ row.instanceType }}</td>
-            </ng-container>
-            <ng-container matColumnDef="os">
-              <th mat-header-cell *matHeaderCellDef>OS</th>
-              <td mat-cell *matCellDef="let row" [matTooltip]="row.os">{{ row.os }}</td>
-            </ng-container>
-            <ng-container matColumnDef="publicIp">
-              <th mat-header-cell *matHeaderCellDef>IP pública</th>
-              <td mat-cell *matCellDef="let row" class="mono">{{ row.publicIp }}</td>
-            </ng-container>
-            <ng-container matColumnDef="privateIp">
-              <th mat-header-cell *matHeaderCellDef>IP privada</th>
-              <td mat-cell *matCellDef="let row" class="mono">{{ row.privateIp }}</td>
-            </ng-container>
-            <ng-container matColumnDef="cpu">
-              <th mat-header-cell *matHeaderCellDef>CPU</th>
-              <td mat-cell *matCellDef="let row">{{ row.cpuCores ?? '—' }}</td>
-            </ng-container>
-            <ng-container matColumnDef="ram">
-              <th mat-header-cell *matHeaderCellDef>RAM</th>
-              <td mat-cell *matCellDef="let row">{{ row.ramGb != null ? row.ramGb + ' GB' : '—' }}</td>
-            </ng-container>
-            <ng-container matColumnDef="disk">
-              <th mat-header-cell *matHeaderCellDef>Disco</th>
-              <td mat-cell *matCellDef="let row">{{ row.diskGb != null ? row.diskGb + ' GB' : '—' }}</td>
-            </ng-container>
-            <ng-container matColumnDef="cost">
-              <th mat-header-cell *matHeaderCellDef>Coste/mes</th>
-              <td mat-cell *matCellDef="let row">{{ formatCost(row.monthlyCost) }}</td>
-            </ng-container>
-            <ng-container matColumnDef="docker">
-              <th mat-header-cell *matHeaderCellDef>Docker</th>
-              <td mat-cell *matCellDef="let row">
-                @if (row.hasDocker) { <mat-icon class="ok-icon" matTooltip="Docker detectado">check_circle</mat-icon> }
-                @else { <span class="muted">—</span> }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="k8s">
-              <th mat-header-cell *matHeaderCellDef>K8s</th>
-              <td mat-cell *matCellDef="let row">
-                @if (row.hasKubernetes) { <mat-icon class="ok-icon" matTooltip="Kubernetes detectado">check_circle</mat-icon> }
-                @else { <span class="muted">—</span> }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="alerts">
-              <th mat-header-cell *matHeaderCellDef>Alertas</th>
-              <td mat-cell *matCellDef="let row">
-                @if (row.alertCount) {
-                  <span class="alert-count">{{ row.alertCount }}</span>
-                } @else { <span class="muted">0</span> }
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="synced">
-              <th mat-header-cell *matHeaderCellDef>Última sync</th>
-              <td mat-cell *matCellDef="let row">{{ formatDate(row.lastSyncedAt) }}</td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>Acciones</th>
-              <td mat-cell *matCellDef="let row">
-                <button mat-icon-button type="button" [matMenuTriggerFor]="menu" aria-label="Acciones de instancia">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item type="button" (click)="select.emit(row)"><mat-icon>visibility</mat-icon> Ver detalle</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Metrics', row.name)"><mat-icon>monitoring</mat-icon> Ver métricas</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Terminal', row.name)"><mat-icon>terminal</mat-icon> Abrir terminal</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Docker', row.name)"><mat-icon>view_in_ar</mat-icon> Ver Docker</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Kubernetes', row.name)"><mat-icon>hub</mat-icon> Ver Kubernetes</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Billing', row.name)"><mat-icon>payments</mat-icon> Ver facturación</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Alerts', row.name)"><mat-icon>warning</mat-icon> Ver alertas</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Audit', row.name)"><mat-icon>history</mat-icon> Ver auditoría</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Restart', row.name)"><mat-icon>restart_alt</mat-icon> Reiniciar demo</button>
-                  <button mat-menu-item type="button" (click)="runDemo('Verify', row.name)"><mat-icon>verified</mat-icon> Verificar demo</button>
-                </mat-menu>
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="cols; sticky: true"></tr>
-            <tr mat-row *matRowDef="let row; columns: cols" class="table-row-hover"></tr>
-          </table>
+              }
+            </div>
+
+            <mat-paginator
+              class="instance-list__pager"
+              [length]="filtered().length"
+              [pageSize]="pageSize()"
+              [pageIndex]="pageIndex()"
+              [pageSizeOptions]="[8, 16, 32]"
+              (page)="handlePage($event)"
+              aria-label="Paginación de instancias"
+            />
+          </aside>
+
+          <div class="instance-detail">
+            @if (selectedInstance(); as inst) {
+              <app-instance-performance-panel
+                [instance]="inst"
+                (openFull)="handleOpenFullDetail()"
+              />
+            } @else {
+              <div class="instance-detail__empty">
+                @if (selectedCloudLogo(); as logo) {
+                  <app-brand-logo [logo]="logo" size="lg" />
+                } @else {
+                  <mat-icon>insights</mat-icon>
+                }
+                <strong>Selecciona una instancia</strong>
+                <p>Consulta CPU, RAM, disco y alertas de cualquier host de {{ cloudLabel() }}.</p>
+              </div>
+            }
+          </div>
         </div>
-        <mat-paginator
-          [length]="filtered().length"
-          [pageSize]="pageSize()"
-          [pageIndex]="pageIndex()"
-          [pageSizeOptions]="[10, 25, 50]"
-          (page)="handlePage($event)"
-          aria-label="Paginación de instancias"
-        />
       }
     </div>
   `,
   styles: `
-    .instance-overview {
-      padding: 1.35rem 1.5rem;
-      border-radius: var(--app-radius-lg);
-      background: var(--app-card);
-      box-shadow: var(--app-shadow-sm);
+    .instance-shell {
+      padding: 0.9rem 1rem 1rem;
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--app-surface) 38%, var(--app-card));
     }
-    .instance-overview__head {
-      margin-bottom: 1rem;
-      h3 {
-        display: flex; align-items: center; gap: 0.45rem;
-        margin: 0; font-size: 1.05rem; font-weight: 700;
-        mat-icon { color: var(--app-accent); }
-      }
-      p { margin: 0.25rem 0 0; font-size: 0.82rem; color: var(--app-text-muted); }
+    .instance-toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 0.9rem;
     }
-    .instance-overview__filters {
+    .instance-toolbar__row {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-      mat-form-field { min-width: 160px; flex: 1; }
-      .filter-search { min-width: 220px; flex: 2; }
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
     }
-    .instance-overview__scroll {
-      overflow-x: auto;
-      overflow-y: visible;
-      margin: 0 -0.5rem;
-      padding: 0 0.5rem 0.5rem;
+    .instance-toolbar__clouds {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
     }
-    .instance-table {
-      min-width: 1400px;
-      th, td {
-        white-space: nowrap;
-        padding: 0.75rem 0.85rem !important;
-        font-size: 0.8125rem;
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .cloud-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border: none;
+      padding: 0.38rem 0.65rem;
+      border-radius: 999px;
+      cursor: pointer;
+      background: color-mix(in srgb, var(--app-surface) 55%, var(--app-card));
+      color: var(--app-text-muted);
+      font-size: 0.68rem;
+      font-weight: 650;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+      em {
+        font-style: normal;
+        font-size: 0.58rem;
+        font-weight: 700;
+        padding: 0.06rem 0.38rem;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--app-text) 6%, transparent);
+        font-variant-numeric: tabular-nums;
+      }
+      mat-icon {
+        font-size: 0.95rem;
+        width: 0.95rem;
+        height: 0.95rem;
+        opacity: 0.75;
+      }
+      &:hover {
+        background: color-mix(in srgb, var(--app-accent) 8%, var(--app-card));
+        transform: translateY(-1px);
       }
     }
-    .name-link {
-      border: none;
-      background: none;
+    .cloud-chip--active {
+      background: color-mix(in srgb, var(--app-accent) 14%, var(--app-card));
       color: var(--app-accent);
-      font-weight: 600;
-      cursor: pointer;
-      padding: 0;
-      font-size: inherit;
+      em { background: color-mix(in srgb, var(--app-accent) 18%, transparent); }
+    }
+    .instance-toolbar__stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem 0.85rem;
+      font-size: 0.66rem;
+      color: var(--app-text-muted);
+      strong {
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: var(--app-text);
+        margin-right: 0.18rem;
+      }
+    }
+    .instance-toolbar__stats-warn strong { color: #d97706; }
+    .instance-toolbar__filters {
+      display: grid;
+      grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(120px, 1fr));
+      gap: 0.55rem;
+      mat-form-field { width: 100%; margin: 0; }
+    }
+    .instance-split {
+      display: grid;
+      grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+      gap: 0.85rem;
+      align-items: start;
+    }
+    .instance-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      padding: 0.7rem;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+    }
+    .instance-list__head {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.15rem 0.2rem 0.45rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--app-text) 6%, transparent);
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        color: var(--app-text-muted);
+      }
+      strong {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+      span {
+        display: block;
+        font-size: 0.62rem;
+        color: var(--app-text-muted);
+      }
+    }
+    .instance-pickers {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .instance-picker {
+      position: relative;
+      width: 100%;
       text-align: left;
-      max-width: 180px;
+      border: none;
+      padding: 0;
+      border-radius: 12px;
+      cursor: pointer;
+      background: color-mix(in srgb, var(--app-surface) 32%, var(--app-card));
+      color: inherit;
       overflow: hidden;
-      text-overflow: ellipsis;
-      display: inline-block;
-      vertical-align: middle;
+      transition: background 0.18s ease, transform 0.18s ease;
+      &:hover {
+        background: color-mix(in srgb, var(--app-surface) 18%, var(--app-card));
+        transform: translateY(-1px);
+      }
     }
-    .demo-tag {
-      margin-left: 0.35rem;
-      font-size: 0.6rem;
-      font-weight: 700;
-      padding: 0.1rem 0.35rem;
-      border-radius: 4px;
-      background: color-mix(in srgb, var(--app-accent) 12%, transparent);
-      color: var(--app-accent);
-      vertical-align: middle;
+    .instance-picker__accent {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
     }
-    .provider-pill {
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 0.15rem 0.5rem;
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--app-accent) 10%, transparent);
+    .instance-picker--aws .instance-picker__accent { background: linear-gradient(180deg, #ff9900, #ffb84d); }
+    .instance-picker--gcp .instance-picker__accent { background: linear-gradient(180deg, #4285f4, #669df6); }
+    .instance-picker--azure .instance-picker__accent { background: linear-gradient(180deg, #0078d4, #50a3e5); }
+    .instance-picker--vps .instance-picker__accent { background: linear-gradient(180deg, #64748b, #94a3b8); }
+    .instance-picker--default .instance-picker__accent { background: var(--app-accent); }
+    .instance-picker--active {
+      background: color-mix(in srgb, var(--app-accent) 10%, var(--app-card));
+      outline: 1px solid color-mix(in srgb, var(--app-accent) 28%, transparent);
+      outline-offset: -1px;
     }
-    .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
-    .ok-icon { color: var(--app-success); font-size: 18px; width: 18px; height: 18px; }
-    .alert-count {
-      font-size: 0.72rem;
-      font-weight: 700;
-      padding: 0.15rem 0.45rem;
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--app-danger) 12%, transparent);
+    .instance-picker__body {
+      padding: 0.68rem 0.75rem 0.68rem 0.85rem;
+    }
+    .instance-picker__head {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.45rem;
+    }
+    .instance-picker__logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: color-mix(in srgb, var(--app-surface) 40%, var(--app-card));
+    }
+    .instance-picker__copy {
+      flex: 1;
+      min-width: 0;
+      strong {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      span {
+        display: block;
+        margin-top: 0.1rem;
+        font-size: 0.62rem;
+        color: var(--app-text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    .instance-picker__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.6rem;
+      margin-top: 0.42rem;
+      padding-left: 2.35rem;
+      font-size: 0.62rem;
+      color: var(--app-text-muted);
+    }
+    .instance-picker__alert {
       color: var(--app-danger);
+      font-weight: 700;
     }
-    .muted { color: var(--app-text-muted); font-size: 0.78rem; }
+    .instance-list__pager {
+      margin-top: 0.15rem;
+      background: transparent;
+    }
+    .instance-detail {
+      min-height: 320px;
+      padding: 0.7rem;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+    }
+    .instance-detail__empty {
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem 1.5rem;
+      color: var(--app-text-muted);
+      mat-icon {
+        font-size: 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        opacity: 0.35;
+        margin-bottom: 0.65rem;
+      }
+      strong {
+        font-size: 0.9rem;
+        color: var(--app-text);
+        margin-bottom: 0.35rem;
+      }
+      p {
+        margin: 0;
+        font-size: 0.74rem;
+        line-height: 1.5;
+        max-width: 300px;
+      }
+    }
+    @media (max-width: 1100px) {
+      .instance-toolbar__filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 960px) {
+      .instance-split { grid-template-columns: 1fr; }
+      .instance-toolbar__filters { grid-template-columns: 1fr; }
+    }
   `,
 })
 export class InstanceOverviewTableComponent {
-  private readonly demoActions = inject(DemoActionsService)
-
   @Input({ required: true }) rows: DashboardInstanceRow[] = []
   readonly select = output<DashboardInstanceRow>()
 
-  readonly cols = [
-    'name', 'provider', 'account', 'region', 'status', 'type', 'os',
-    'publicIp', 'privateIp', 'cpu', 'ram', 'disk', 'cost', 'docker', 'k8s', 'alerts', 'synced', 'actions',
+  readonly selectedCloud = signal<CloudFilterValue>('AWS')
+  readonly selectedInstance = signal<DashboardInstanceRow | null>(null)
+
+  readonly cloudFilterDefs: CloudFilterOption[] = [
+    { value: '', label: 'Todos' },
+    { value: 'AWS', label: 'AWS', logo: 'aws' },
+    { value: 'GCP', label: 'GCP', logo: 'gcp' },
+    { value: 'AZURE', label: 'Azure', logo: 'azure' },
+    { value: 'VPS', label: 'VPS' },
   ]
 
   readonly searchControl = new FormControl('', { nonNullable: true })
-  readonly providerControl = new FormControl('', { nonNullable: true })
   readonly statusControl = new FormControl('', { nonNullable: true })
   readonly regionControl = new FormControl('', { nonNullable: true })
   readonly envControl = new FormControl('', { nonNullable: true })
 
   readonly pageIndex = signal(0)
-  readonly pageSize = signal(10)
+  readonly pageSize = signal(8)
 
   private readonly search = toSignal(this.searchControl.valueChanges.pipe(startWith(''), debounceTime(200)), { initialValue: '' })
-  private readonly provider = toSignal(this.providerControl.valueChanges.pipe(startWith('')), { initialValue: '' })
   private readonly status = toSignal(this.statusControl.valueChanges.pipe(startWith('')), { initialValue: '' })
   private readonly region = toSignal(this.regionControl.valueChanges.pipe(startWith('')), { initialValue: '' })
   private readonly env = toSignal(this.envControl.valueChanges.pipe(startWith('')), { initialValue: '' })
 
-  regions = computed(() => [...new Set(this.rows.map((r) => r.region).filter(Boolean))] as string[])
+  constructor() {
+    effect(() => {
+      const list = this.filtered()
+      const selected = this.selectedInstance()
+      if (selected && !list.some((row) => row.id === selected.id)) {
+        this.selectedInstance.set(null)
+      }
+    })
+  }
+
+  cloudOptions = (): CloudFilterOption[] => this.cloudFilterDefs
+
+  cloudCount = (value: CloudFilterValue): number =>
+    this.filteredByCloud(value).length
+
+  cloudLabel = (): string => {
+    const opt = this.cloudFilterDefs.find((item) => item.value === this.selectedCloud())
+    return opt?.label ?? 'Cloud'
+  }
+
+  selectedCloudLogo = (): NavLogoKey | undefined => {
+    const opt = this.cloudFilterDefs.find((item) => item.value === this.selectedCloud())
+    return opt?.logo
+  }
+
+  runningCount = computed(() =>
+    this.filtered().filter((row) => row.status === 'RUNNING').length,
+  )
+
+  alertCount = computed(() =>
+    this.filtered().reduce((sum, row) => sum + (row.alertCount ?? 0), 0),
+  )
+
+  regions = computed(() => {
+    const cloud = this.selectedCloud()
+    const base = cloud ? this.rows.filter((r) => r.provider === cloud) : this.rows
+    return [...new Set(base.map((r) => r.region).filter(Boolean))] as string[]
+  })
+
+  filteredByCloud = (cloud: CloudFilterValue): DashboardInstanceRow[] => {
+    if (!cloud) return this.rows
+    return this.rows.filter((row) => row.provider === cloud)
+  }
 
   filtered = computed(() => {
+    const cloud = this.selectedCloud()
     const q = this.search().toLowerCase()
-    return this.rows.filter((r) => {
-      if (this.provider() && r.provider !== this.provider()) return false
+    return this.filteredByCloud(cloud).filter((r) => {
       if (this.status() && r.status !== this.status()) return false
       if (this.region() && r.region !== this.region()) return false
       if (this.env() && String(r.environment).toLowerCase() !== this.env()) return false
@@ -347,22 +549,39 @@ export class InstanceOverviewTableComponent {
     return this.filtered().slice(start, start + this.pageSize())
   })
 
-  handlePage = (ev: PageEvent): void => {
-    this.pageIndex.set(ev.pageIndex)
-    this.pageSize.set(ev.pageSize)
+  handleCloudSelect = (value: CloudFilterValue): void => {
+    this.selectedCloud.set(value)
+    this.selectedInstance.set(null)
+    this.pageIndex.set(0)
+    this.regionControl.setValue('')
   }
 
-  formatCost = (v: number | null | undefined): string => {
-    if (v == null) return '—'
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v)
+  handleInstanceSelect = (row: DashboardInstanceRow): void => {
+    this.selectedInstance.set(row)
   }
 
-  formatDate = (v: string | Date | undefined): string => {
-    if (!v) return '—'
-    return new Date(v).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  handleOpenFullDetail = (): void => {
+    const inst = this.selectedInstance()
+    if (inst) this.select.emit(inst)
   }
 
-  runDemo = (action: string, name: string): void => {
-    this.demoActions.simulate(`${action} — ${name}`, 400).subscribe()
+  handlePage = (event: PageEvent): void => {
+    this.pageIndex.set(event.pageIndex)
+    this.pageSize.set(event.pageSize)
+  }
+
+  providerLogo = (provider?: string) => instanceProviderLogo(provider)
+
+  providerTone = (provider?: string): ProviderTone => {
+    if (provider === 'AWS') return 'aws'
+    if (provider === 'GCP') return 'gcp'
+    if (provider === 'AZURE') return 'azure'
+    if (provider === 'VPS') return 'vps'
+    return 'default'
+  }
+
+  formatCost = (value?: number | null): string => {
+    if (value == null) return '—'
+    return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}/mes`
   }
 }

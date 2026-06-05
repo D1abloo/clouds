@@ -1,4 +1,5 @@
 import { Component, Input, output } from '@angular/core'
+import { RouterLink } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
@@ -9,6 +10,7 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
   selector: 'app-dashboard-header',
   standalone: true,
   imports: [
+    RouterLink,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -17,53 +19,50 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
   ],
   template: `
     <header class="dash-header animate-fade-in">
-      <div class="dash-header__main">
-        <div class="dash-header__icon tone-violet" aria-hidden="true">
+      <div class="dash-header__brand">
+        <div class="dash-header__icon" aria-hidden="true">
           <mat-icon>space_dashboard</mat-icon>
         </div>
         <div class="dash-header__copy">
           <div class="dash-header__title-row">
             <h1>Tablero</h1>
             @if (demoMode) {
-              <app-realtime-status-badge mode="demo" label="Datos demo" icon="science" />
+              <app-realtime-status-badge mode="demo" label="Demo" icon="science" />
             } @else {
-              <app-realtime-status-badge mode="live" label="Datos reales" icon="verified" />
+              <app-realtime-status-badge mode="live" label="Live" icon="verified" />
             }
           </div>
-          <p>Visión global de infraestructura — instancias, costes, alertas y operaciones</p>
-          <div class="dash-header__meta">
-            <span class="dash-header__sync">
-              <mat-icon>schedule</mat-icon>
-              Última actualización {{ lastSync }}
-            </span>
-            @if (refreshing) {
-              <span class="dash-header__refreshing">
-                <mat-spinner diameter="14" />
-                Actualizando métricas…
-              </span>
-            }
-          </div>
+          <p>Centro de mando · actualizado {{ lastSync }}</p>
         </div>
       </div>
 
-      <div class="dash-header__controls">
+      <div class="dash-header__toolbar">
         <app-time-range-selector [value]="timeRange" (rangeChange)="rangeChange.emit($event)" />
-        <div class="dash-header__actions">
-          <button
-            mat-flat-button
-            color="primary"
-            type="button"
-            [disabled]="refreshing"
-            (click)="refreshClick.emit()"
-          >
-            <mat-icon>refresh</mat-icon>
-            Actualizar
-          </button>
-          <button mat-stroked-button type="button" (click)="exportClick.emit()">
-            <mat-icon>download</mat-icon>
-            Exportar informe
-          </button>
-        </div>
+        @if (refreshing) {
+          <span class="dash-header__refreshing">
+            <mat-spinner diameter="14" />
+            Sincronizando…
+          </span>
+        }
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          [disabled]="refreshing"
+          (click)="refreshClick.emit()"
+          aria-label="Actualizar tablero"
+        >
+          <mat-icon>refresh</mat-icon>
+          Actualizar
+        </button>
+        <button mat-stroked-button type="button" (click)="exportClick.emit()" aria-label="Exportar informe">
+          <mat-icon>download</mat-icon>
+          Exportar
+        </button>
+        <a mat-stroked-button routerLink="/command-center">
+          <mat-icon>bolt</mat-icon>
+          Mando
+        </a>
       </div>
     </header>
   `,
@@ -71,82 +70,66 @@ import { TimeRange, TimeRangeSelectorComponent } from './time-range-selector.com
     .dash-header {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 1.25rem;
-      padding: 1.5rem 1.65rem;
-      margin-bottom: 1.25rem;
-      border-radius: var(--app-radius-xl);
-      background: linear-gradient(135deg, var(--app-card), color-mix(in srgb, var(--cat-overview) 6%, var(--app-card)));
-      box-shadow: var(--app-shadow-md);
+      gap: 0.85rem 1.25rem;
+      padding: 0.15rem 0 0.85rem;
+      margin-bottom: 0.35rem;
+      flex-shrink: 0;
+      border-bottom: 1px solid color-mix(in srgb, var(--app-text) 6%, transparent);
     }
-    .dash-header__main {
+    .dash-header__brand {
       display: flex;
-      gap: 1.1rem;
-      flex: 1;
-      min-width: min(100%, 320px);
+      gap: 0.75rem;
+      align-items: center;
+      min-width: 0;
     }
     .dash-header__icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 16px;
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 22px color-mix(in srgb, var(--cat-overview) 28%, transparent);
-      mat-icon { font-size: 1.55rem; width: 1.55rem; height: 1.55rem; }
+      flex-shrink: 0;
+      background: color-mix(in srgb, #8b5cf6 12%, var(--app-card));
+      mat-icon { font-size: 1.2rem; width: 1.2rem; height: 1.2rem; color: #8b5cf6; }
     }
     .dash-header__title-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.65rem;
-      h1 { margin: 0; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; }
+      gap: 0.45rem;
+      h1 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.03em; }
     }
-    p {
-      margin: 0.35rem 0 0;
+    .dash-header__copy p {
+      margin: 0.18rem 0 0;
       color: var(--app-text-muted);
-      font-size: 0.92rem;
-      line-height: 1.5;
-      max-width: 560px;
+      font-size: 0.7rem;
     }
-    .dash-header__meta {
+    .dash-header__toolbar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.75rem;
-      margin-top: 0.65rem;
-    }
-    .dash-header__sync {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-size: 0.78rem;
-      color: var(--app-text-muted);
-      mat-icon { font-size: 15px; width: 15px; height: 15px; }
+      gap: 0.45rem;
+      justify-content: flex-end;
+      button, a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.28rem;
+        font-size: 0.72rem;
+      }
     }
     .dash-header__refreshing {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      font-size: 0.78rem;
+      gap: 0.3rem;
+      font-size: 0.66rem;
       color: var(--app-accent);
     }
-    .dash-header__controls {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 0.85rem;
-    }
-    .dash-header__actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      button { display: inline-flex; align-items: center; gap: 0.35rem; }
-    }
-    @media (max-width: 960px) {
-      .dash-header__controls { align-items: stretch; width: 100%; }
-      .dash-header__actions { justify-content: flex-start; }
+    @media (max-width: 720px) {
+      .dash-header { flex-direction: column; align-items: stretch; }
+      .dash-header__toolbar { justify-content: flex-start; }
     }
   `,
 })
@@ -155,6 +138,7 @@ export class DashboardHeaderComponent {
   @Input() demoMode = true
   @Input() refreshing = false
   @Input() timeRange: TimeRange = '24h'
+
   readonly refreshClick = output<void>()
   readonly exportClick = output<void>()
   readonly rangeChange = output<TimeRange>()

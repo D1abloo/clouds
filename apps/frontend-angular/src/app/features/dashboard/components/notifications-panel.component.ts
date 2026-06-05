@@ -58,10 +58,10 @@ export interface NotificationRow {
   `,
   styles: `
     .notif-panel {
-      padding: 1.25rem 1.35rem;
-      border-radius: var(--app-radius-lg);
-      background: var(--app-card);
-      box-shadow: var(--app-shadow-sm);
+      padding: 1.15rem 1.25rem;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--app-surface) 50%, var(--app-card));
+      box-shadow: none;
       height: 100%;
     }
     .notif-panel__head {

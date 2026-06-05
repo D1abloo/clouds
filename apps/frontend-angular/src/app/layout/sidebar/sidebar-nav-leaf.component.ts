@@ -16,6 +16,7 @@ import { SidebarService } from './sidebar.service'
       class="nav-leaf"
       [routerLink]="route()"
       routerLinkActive="nav-leaf--active"
+      [routerLinkActiveOptions]="activeOptions()"
       [matTooltip]="collapsed() ? label() : ''"
       matTooltipPosition="right"
     >
@@ -118,6 +119,14 @@ export class SidebarNavLeafComponent {
   readonly logo = input<NavLogoKey | undefined>()
   readonly collapsed = input(false)
   readonly badge = input<number | null>(null)
+  readonly exactActive = input(false)
+
+  activeOptions = () => ({
+    paths: this.exactActive() ? ('exact' as const) : ('subset' as const),
+    queryParams: 'ignored' as const,
+    fragment: 'ignored' as const,
+    matrixParams: 'ignored' as const,
+  })
 
   isFavorite = (): boolean => this.sidebar.isFavorite(this.route())
 
