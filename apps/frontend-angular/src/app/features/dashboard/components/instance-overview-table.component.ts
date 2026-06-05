@@ -1,4 +1,4 @@
-import { Component, Input, output, signal, computed, effect } from '@angular/core'
+import { Component, Input, output, signal, computed, effect, input } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
@@ -116,7 +116,7 @@ interface CloudFilterOption {
       } @else if (!filtered().length) {
         <app-empty-state icon="filter_alt_off" title="Sin coincidencias" message="Prueba otro cloud o ajusta los filtros" />
       } @else {
-        <div class="instance-split">
+        <div class="instance-split" [class.instance-split--three]="threeColumn()">
           <aside class="instance-list">
             <header class="instance-list__head">
               @if (selectedCloudLogo(); as logo) {
@@ -186,7 +186,9 @@ interface CloudFilterOption {
             } @else {
               <div class="instance-detail__empty">
                 @if (selectedCloudLogo(); as logo) {
-                  <app-brand-logo [logo]="logo" size="lg" />
+                  <span class="instance-detail__empty-icon">
+                    <app-brand-logo [logo]="logo" size="lg" />
+                  </span>
                 } @else {
                   <mat-icon>insights</mat-icon>
                 }
@@ -195,15 +197,23 @@ interface CloudFilterOption {
               </div>
             }
           </div>
+
+          @if (threeColumn()) {
+            <aside class="instance-feed" aria-label="Alertas y notificaciones">
+              <ng-content select="[dashboardFeed]" />
+            </aside>
+          }
         </div>
       }
     </div>
   `,
   styles: `
     .instance-shell {
-      padding: 0.9rem 1rem 1rem;
+      padding: 0.95rem 1rem 1.05rem;
       border-radius: 14px;
       background: color-mix(in srgb, var(--app-surface) 38%, var(--app-card));
+      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
+      box-shadow: var(--app-shadow-sm);
     }
     .instance-toolbar {
       display: flex;
@@ -285,15 +295,27 @@ interface CloudFilterOption {
       display: grid;
       grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
       gap: 0.85rem;
-      align-items: start;
+      align-items: stretch;
+    }
+    .instance-split--three {
+      grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(300px, 360px);
+    }
+    .instance-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-width: 0;
+      min-height: 100%;
     }
     .instance-list {
       display: flex;
       flex-direction: column;
       gap: 0.55rem;
-      padding: 0.7rem;
+      padding: 0.75rem;
       border-radius: 12px;
-      background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+      background: var(--app-card);
+      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
+      box-shadow: 0 1px 3px color-mix(in srgb, var(--app-text) 4%, transparent);
     }
     .instance-list__head {
       display: flex;
@@ -415,20 +437,38 @@ interface CloudFilterOption {
       background: transparent;
     }
     .instance-detail {
-      min-height: 320px;
-      padding: 0.7rem;
+      min-height: 420px;
+      padding: 0.75rem;
       border-radius: 12px;
-      background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+      background: color-mix(in srgb, var(--app-surface) 55%, var(--app-card));
+      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--app-text) 3%, transparent);
     }
     .instance-detail__empty {
-      min-height: 360px;
+      min-height: 400px;
+      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 2rem 1.5rem;
+      padding: 2.25rem 1.75rem;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--app-text) 3%, var(--app-card));
       color: var(--app-text-muted);
+    }
+    .instance-detail__empty-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      margin-bottom: 0.85rem;
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--app-surface) 50%, var(--app-card));
+      opacity: 0.85;
+    }
+    .instance-detail__empty {
       mat-icon {
         font-size: 2.5rem;
         width: 2.5rem;
@@ -453,6 +493,17 @@ interface CloudFilterOption {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
+    @media (max-width: 1280px) {
+      .instance-split--three {
+        grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(280px, 320px);
+      }
+    }
+    @media (max-width: 1100px) {
+      .instance-split--three {
+        grid-template-columns: 1fr;
+      }
+      .instance-feed { margin-top: 0.25rem; }
+    }
     @media (max-width: 960px) {
       .instance-split { grid-template-columns: 1fr; }
       .instance-toolbar__filters { grid-template-columns: 1fr; }
@@ -461,6 +512,7 @@ interface CloudFilterOption {
 })
 export class InstanceOverviewTableComponent {
   @Input({ required: true }) rows: DashboardInstanceRow[] = []
+  readonly threeColumn = input(false)
   readonly select = output<DashboardInstanceRow>()
 
   readonly selectedCloud = signal<CloudFilterValue>('AWS')
@@ -480,7 +532,7 @@ export class InstanceOverviewTableComponent {
   readonly envControl = new FormControl('', { nonNullable: true })
 
   readonly pageIndex = signal(0)
-  readonly pageSize = signal(8)
+  readonly pageSize = signal(6)
 
   private readonly search = toSignal(this.searchControl.valueChanges.pipe(startWith(''), debounceTime(200)), { initialValue: '' })
   private readonly status = toSignal(this.statusControl.valueChanges.pipe(startWith('')), { initialValue: '' })

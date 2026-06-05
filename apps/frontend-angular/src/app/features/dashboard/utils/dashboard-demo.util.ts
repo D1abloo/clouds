@@ -69,7 +69,7 @@ export const buildDemoDashboard = (): DashboardData => {
 
   return {
     totalInstances: instanceList.length,
-    runningInstances: instanceList.filter((i) => i.status === 'RUNNING').length,
+    runningInstances: 23,
     stoppedInstances: instanceList.filter((i) => i.status === 'STOPPED').length,
     warningInstances: instanceList.filter((i) => i.status === 'WARNING').length,
     errorInstances: instanceList.filter((i) => i.status === 'ERROR').length,
@@ -93,6 +93,7 @@ export const buildDemoDashboard = (): DashboardData => {
     recentAlerts: [
       { id: '1', title: 'CPU alta en aws-prod-app-3', severity: 'CRITICAL', status: 'open' },
       { id: '2', title: 'Disco casi lleno azure-db-5', severity: 'WARNING', status: 'open' },
+      { id: '3', title: 'Latencia elevada gcp-analytics-2', severity: 'UNKNOWN', status: 'open' },
     ],
     recentActivity: [
       { id: 'gh-1', action: 'github.demo.connect', resource: 'github', createdAt: new Date().toISOString() },

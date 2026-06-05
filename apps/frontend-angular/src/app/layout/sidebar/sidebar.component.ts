@@ -49,67 +49,71 @@ import { AuthStore } from '../../core/stores/auth.store'
         <mat-icon>{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
       </button>
 
-      <div class="sidebar-brand">
-        <div class="sidebar-brand__logo">
-          <mat-icon>cloud_queue</mat-icon>
-        </div>
-        @if (!collapsed()) {
-          <div class="sidebar-brand__text">
-            <strong>CloudOps</strong>
-            <span>Control Center</span>
+      <div class="sidebar-top">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand__logo">
+            <mat-icon>cloud_queue</mat-icon>
           </div>
-        }
-      </div>
-
-      <div class="sidebar-org">
-        <app-org-switcher />
-      </div>
-
-      <app-sidebar-search [collapsed]="collapsed()" />
-
-      @if (!collapsed() && favoriteEntries().length && !searchActive()) {
-        <div class="sidebar-favorites">
-          <div class="sidebar-favorites__label">
-            <mat-icon>star</mat-icon>
-            Acceso rápido
-          </div>
-          @for (fav of favoriteEntries(); track fav.route) {
-            <app-sidebar-nav-leaf
-              [label]="fav.label"
-              [route]="fav.route"
-              [icon]="fav.icon ?? 'star'"
-              [logo]="fav.logo"
-              [collapsed]="false"
-            />
+          @if (!collapsed()) {
+            <div class="sidebar-brand__text">
+              <strong>CloudOps</strong>
+              <span>Control Center</span>
+            </div>
           }
         </div>
-      }
 
-      <nav class="sidebar-nav" aria-label="Main navigation">
-        @if (searchActive()) {
-          @for (hit of searchHits(); track hit.route) {
-            <app-sidebar-nav-leaf
-              [label]="hit.label"
-              [route]="hit.route"
-              [icon]="hit.icon ?? 'chevron_right'"
-              [logo]="hit.logo"
-              [collapsed]="false"
-            />
-          }
-          @if (searchHits().length === 0) {
-            <p class="sidebar-nav__empty">Sin resultados para «{{ sidebarSvc.searchQuery() }}»</p>
-          }
-        } @else {
-          @for (mod of visibleModules(); track mod.id) {
-            <app-sidebar-nav-group
-              [module]="mod"
-              [collapsed]="collapsed()"
-              [active]="isModuleActive(mod.id)"
-              [badgeResolver]="resolveBadge"
-            />
-          }
+        <div class="sidebar-org">
+          <app-org-switcher />
+        </div>
+      </div>
+
+      <div class="sidebar-scroll">
+        <app-sidebar-search [collapsed]="collapsed()" />
+
+        @if (!collapsed() && favoriteEntries().length && !searchActive()) {
+          <div class="sidebar-favorites">
+            <div class="sidebar-favorites__label">
+              <mat-icon>star</mat-icon>
+              Acceso rápido
+            </div>
+            @for (fav of favoriteEntries(); track fav.route) {
+              <app-sidebar-nav-leaf
+                [label]="fav.label"
+                [route]="fav.route"
+                [icon]="fav.icon ?? 'star'"
+                [logo]="fav.logo"
+                [collapsed]="false"
+              />
+            }
+          </div>
         }
-      </nav>
+
+        <nav class="sidebar-nav" aria-label="Main navigation">
+          @if (searchActive()) {
+            @for (hit of searchHits(); track hit.route) {
+              <app-sidebar-nav-leaf
+                [label]="hit.label"
+                [route]="hit.route"
+                [icon]="hit.icon ?? 'chevron_right'"
+                [logo]="hit.logo"
+                [collapsed]="false"
+              />
+            }
+            @if (searchHits().length === 0) {
+              <p class="sidebar-nav__empty">Sin resultados para «{{ sidebarSvc.searchQuery() }}»</p>
+            }
+          } @else {
+            @for (mod of visibleModules(); track mod.id) {
+              <app-sidebar-nav-group
+                [module]="mod"
+                [collapsed]="collapsed()"
+                [active]="isModuleActive(mod.id)"
+                [badgeResolver]="resolveBadge"
+              />
+            }
+          }
+        </nav>
+      </div>
 
       <div class="sidebar-footer">
         <button
@@ -143,11 +147,12 @@ import { AuthStore } from '../../core/stores/auth.store'
     :host { display: contents; }
     .app-sidebar {
       position: relative;
-      z-index: 100;
+      z-index: 2;
       display: flex;
       flex-direction: column;
       height: 100dvh;
       max-height: 100dvh;
+      min-height: 0;
       width: 240px;
       flex-shrink: 0;
       overflow: hidden;
@@ -180,6 +185,9 @@ import { AuthStore } from '../../core/stores/auth.store'
       color: #fff;
       transform: scale(1.06);
     }
+    .sidebar-top {
+      flex-shrink: 0;
+    }
     .sidebar-brand {
       display: flex;
       align-items: center;
@@ -201,7 +209,26 @@ import { AuthStore } from '../../core/stores/auth.store'
       strong { display: block; font-size: 0.92rem; color: var(--sidebar-text); }
       span { font-size: 0.68rem; color: var(--sidebar-text-faint); }
     }
-    .sidebar-org { padding: 0 0.35rem 0.25rem; }
+    .sidebar-org { padding: 0 0.35rem 0.35rem; }
+    .sidebar-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in srgb, var(--sidebar-text-faint) 55%, transparent) transparent;
+    }
+    .sidebar-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--sidebar-text-faint) 45%, transparent);
+    }
+    .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+      background: color-mix(in srgb, var(--sidebar-text-muted) 55%, transparent);
+    }
     .sidebar-favorites { padding: 0 0.35rem 0.35rem; }
     .sidebar-favorites__label {
       display: flex;
@@ -216,10 +243,7 @@ import { AuthStore } from '../../core/stores/auth.store'
       mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
     }
     .sidebar-nav {
-      flex: 1;
-      padding: 0.25rem 0.4rem 0.5rem;
-      overflow-y: auto;
-      scrollbar-width: thin;
+      padding: 0.15rem 0.4rem 0.65rem;
     }
     .sidebar-nav__empty {
       padding: 1rem;
@@ -227,7 +251,11 @@ import { AuthStore } from '../../core/stores/auth.store'
       color: var(--sidebar-text-muted);
       text-align: center;
     }
-    .sidebar-footer { padding: 0.5rem; margin-top: auto; }
+    .sidebar-footer {
+      flex-shrink: 0;
+      padding: 0.5rem;
+      background: var(--sidebar-bg);
+    }
     .sidebar-user {
       display: flex;
       align-items: center;
@@ -282,6 +310,7 @@ import { AuthStore } from '../../core/stores/auth.store'
         left: 0;
         top: 0;
         bottom: 0;
+        z-index: 40;
       }
       .app-sidebar--collapsed {
         transform: translateX(-100%);
@@ -318,6 +347,9 @@ export class SidebarComponent {
       if (area) this.sidebarSvc.setExpanded(area.id, true)
       const cloudProvider = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
       if (cloudProvider) this.sidebarSvc.setExpanded(cloudProvider, true)
+      if (path === '/dashboard' && typeof window !== 'undefined' && window.innerWidth > 960) {
+        this.sidebarSvc.setCollapsed(false)
+      }
     })
   }
 

@@ -70,8 +70,9 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state/
     .alerts-panel {
       padding: 1.15rem 1.25rem;
       border-radius: 12px;
-      background: color-mix(in srgb, var(--app-surface) 50%, var(--app-card));
-      box-shadow: none;
+      background: var(--app-card);
+      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
+      box-shadow: var(--app-shadow-sm);
       height: 100%;
       display: flex;
       flex-direction: column;

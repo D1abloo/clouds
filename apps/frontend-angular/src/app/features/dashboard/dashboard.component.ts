@@ -1,4 +1,6 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
+import { RouterLink } from '@angular/router'
+import { MatIconModule } from '@angular/material/icon'
 import { DashboardHeaderComponent } from './components/dashboard-header.component'
 import {
   MetricStatsGridComponent,
@@ -21,11 +23,15 @@ import { DashboardData, DashboardInstanceRow } from './dashboard.models'
 import { finalize, catchError, of } from 'rxjs'
 import { buildDemoDashboard } from './utils/dashboard-demo.util'
 import { ApprovalsService } from '../approvals/approvals.service'
+import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
+    RouterLink,
+    MatIconModule,
+    BrandLogoComponent,
     DashboardHeaderComponent,
     MetricStatsGridComponent,
     AlertsTableComponent,
@@ -50,7 +56,7 @@ import { ApprovalsService } from '../approvals/approvals.service'
       <div class="dashboard-body">
         @if (page.loading()) {
           <div class="dashboard-skeleton animate-fade-in">
-            <div class="app-section-panel">
+            <div class="dashboard-kpis-panel">
               <div class="metric-stats-grid dashboard-skeleton__grid">
                 @for (i of [1, 2, 3, 4, 5, 6]; track i) {
                   <div class="metric-stat metric-stat--skeleton">
@@ -67,22 +73,54 @@ import { ApprovalsService } from '../approvals/approvals.service'
         } @else if (page.error()) {
           <app-error-state [message]="page.error()!" (retry)="loadData()" />
         } @else {
-          <section class="dashboard-kpis animate-fade-in" aria-label="Indicadores clave">
+          <section class="dashboard-kpis-panel animate-fade-in" aria-label="Indicadores clave">
             <app-metric-stats-grid [items]="dashboardKpiMetrics()" />
           </section>
 
-          <section class="dashboard-workspace animate-fade-in" aria-label="Instancias y actividad">
-            <div class="dashboard-workspace__main">
-              <app-instance-overview-table
-                [rows]="instanceList()"
-                (select)="openDrawer($event)"
-              />
-            </div>
-            <aside class="dashboard-workspace__feed" aria-label="Alertas y notificaciones">
+          <nav class="dashboard-pulse animate-fade-in" aria-label="Accesos operativos">
+            <a class="dashboard-pulse__chip" routerLink="/approvals">
+              <mat-icon>verified</mat-icon>
+              <span>Aprobaciones</span>
+              <strong>{{ pendingApprovals() }}</strong>
+            </a>
+            <a class="dashboard-pulse__chip dashboard-pulse__chip--warn" routerLink="/alerts/active">
+              <mat-icon>notifications_active</mat-icon>
+              <span>Alertas</span>
+              <strong>{{ n('alertsOpen') }}</strong>
+            </a>
+            <a class="dashboard-pulse__chip" routerLink="/jenkins">
+              <app-brand-logo logo="jenkins" size="sm" />
+              <span>Jenkins</span>
+              <strong>{{ jenkinsN('success') }} OK</strong>
+            </a>
+            <a class="dashboard-pulse__chip" routerLink="/billing/overview">
+              <mat-icon>payments</mat-icon>
+              <span>Facturación</span>
+              <strong>{{ formatSpend(n('monthlySpend')) }}</strong>
+            </a>
+            <a class="dashboard-pulse__chip" routerLink="/health-center">
+              <app-brand-logo logo="grafana" size="sm" />
+              <span>Salud</span>
+              <strong>94%</strong>
+            </a>
+            <a class="dashboard-pulse__chip" routerLink="/command-center">
+              <mat-icon>bolt</mat-icon>
+              <span>Mando</span>
+              <strong>5 tareas</strong>
+            </a>
+          </nav>
+
+          <app-instance-overview-table
+            class="animate-fade-in"
+            [rows]="instanceList()"
+            [threeColumn]="true"
+            (select)="openDrawer($event)"
+          >
+            <div class="dashboard-feed" dashboardFeed>
               <app-alerts-table [rows]="recentAlerts()" />
               <app-notifications-panel [items]="notificationRows()" />
-            </aside>
-          </section>
+            </div>
+          </app-instance-overview-table>
         }
       </div>
 
@@ -116,29 +154,72 @@ import { ApprovalsService } from '../approvals/approvals.service'
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-width: thin;
-      padding-bottom: 1.25rem;
-    }
-    .dashboard-kpis {
-      margin-bottom: 1rem;
-    }
-    .dashboard-kpis ::ng-deep .metric-stats-grid {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 0.55rem;
-    }
-    .dashboard-workspace {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+      padding-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
       gap: 0.85rem;
-      align-items: start;
     }
-    .dashboard-workspace__main { min-width: 0; }
-    .dashboard-workspace__feed {
+    .dashboard-kpis-panel {
+      padding: 0.85rem 0.95rem 0.95rem;
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--app-surface) 42%, var(--app-card));
+      box-shadow: var(--app-shadow-sm);
+    }
+    .dashboard-kpis-panel ::ng-deep .metric-stat {
+      background: var(--app-card);
+      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
+      box-shadow: 0 1px 3px color-mix(in srgb, var(--app-text) 4%, transparent);
+    }
+    .dashboard-pulse {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--app-surface) 36%, var(--app-card));
+      box-shadow: var(--app-shadow-xs);
+    }
+    .dashboard-pulse__chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      padding: 0.42rem 0.72rem;
+      border-radius: 999px;
+      text-decoration: none;
+      color: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: var(--app-card);
+      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--app-text) 3%, transparent);
+      transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
+      span { color: var(--app-text-muted); }
+      strong {
+        font-size: 0.72rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        color: var(--app-text);
+      }
+      mat-icon {
+        font-size: 0.95rem;
+        width: 0.95rem;
+        height: 0.95rem;
+        color: var(--app-accent);
+      }
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--app-shadow-sm);
+        background: color-mix(in srgb, var(--app-accent) 4%, var(--app-card));
+      }
+    }
+    .dashboard-pulse__chip--warn mat-icon { color: #d97706; }
+    .dashboard-pulse__chip--warn strong { color: #d97706; }
+    .dashboard-feed {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
       min-width: 0;
-      position: sticky;
-      top: 0;
+      height: 100%;
     }
     .dashboard-skeleton__grid .metric-stat--skeleton {
       pointer-events: none;
@@ -167,29 +248,6 @@ import { ApprovalsService } from '../approvals/approvals.service'
     @keyframes shimmer {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
-    }
-    @media (max-width: 1280px) {
-      .dashboard-kpis ::ng-deep .metric-stats-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-    }
-    @media (max-width: 1100px) {
-      .dashboard-workspace {
-        grid-template-columns: 1fr;
-      }
-      .dashboard-workspace__feed {
-        position: static;
-      }
-    }
-    @media (max-width: 640px) {
-      .dashboard-kpis ::ng-deep .metric-stats-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-    @media (max-width: 420px) {
-      .dashboard-kpis ::ng-deep .metric-stats-grid {
-        grid-template-columns: 1fr;
-      }
     }
   `,
 })
@@ -227,7 +285,7 @@ export class DashboardComponent implements OnInit {
         value: this.formatSpend(this.n('monthlySpend')),
         icon: 'payments',
         tone: 'success',
-        subtitle: `Previsión ${this.forecastSpend()}`,
+        subtitle: `Previsto ${this.forecastSpend()}`,
         trend: '−4%',
         trendDown: true,
         delay: 30,
@@ -237,7 +295,7 @@ export class DashboardComponent implements OnInit {
         value: this.n('alertsOpen'),
         icon: 'notifications_active',
         tone: 'danger',
-        subtitle: `${this.criticalAlerts()} críticas`,
+        subtitle: `${this.criticalAlerts()} crítico`,
         badge: 'Activas',
         delay: 60,
       },
@@ -246,7 +304,7 @@ export class DashboardComponent implements OnInit {
         value: this.pendingApprovals(),
         icon: 'verified',
         tone: 'warning',
-        subtitle: 'Pendientes de revisión',
+        subtitle: 'Pendiente de revisión',
         delay: 90,
       },
       {
@@ -263,7 +321,7 @@ export class DashboardComponent implements OnInit {
         icon: 'build',
         logo: 'jenkins',
         tone: 'warning',
-        subtitle: `${this.jenkinsN('success')} OK · ${this.jenkinsN('failed')} fallidos`,
+        subtitle: 'build en curso',
         delay: 150,
       },
     ]
