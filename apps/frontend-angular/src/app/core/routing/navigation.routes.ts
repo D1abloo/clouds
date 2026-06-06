@@ -36,23 +36,58 @@ export const NAVIGATION_ROUTES: Routes = [
   { path: 'command-center', ...platform('CommandCenterComponent', 'Command Center') },
   { path: 'deployments', ...platform('DeploymentsComponent', 'Deployments') },
   { path: 'backups', ...platform('BackupsComponent', 'Backups') },
-  { path: 'security-center', ...platform('SecurityCenterComponent', 'Security Center') },
-  { path: 'secrets-manager', ...platform('SecretsManagerComponent', 'Secrets Manager') },
+  { path: 'security-center', ...platform('SecurityCenterComponent', 'Centro de seguridad') },
+  { path: 'secrets-manager', ...platform('SecretsManagerComponent', 'Gestor de secretos') },
   { path: 'logs', ...platform('LogsCenterComponent', 'Logs') },
   { path: 'incidents', ...platform('IncidentsComponent', 'Incidents') },
   { path: 'network', ...platform('NetworkComponent', 'Network') },
   { path: 'storage', ...platform('StorageComponent', 'Storage') },
   { path: 'cost-optimizer', ...platform('CostOptimizerComponent', 'Cost Optimizer') },
   { path: 'reports', ...platform('ReportsComponent', 'Reports') },
-  { path: 'service-catalog', ...platform('ServiceCatalogComponent', 'Service Catalog') },
-  { path: 'approvals', ...platform('ApprovalsComponent', 'Approvals') },
-  { path: 'runbooks', ...platform('RunbooksComponent', 'Runbooks') },
-  { path: 'scheduler', ...platform('SchedulerComponent', 'Scheduler') },
+  {
+    path: 'service-catalog',
+    loadComponent: () =>
+      import('../../features/service-catalog/service-catalog-page.component').then(
+        (m) => m.ServiceCatalogPageComponent,
+      ),
+    data: { breadcrumb: 'Catálogo de servicios' },
+  },
+  {
+    path: 'approvals',
+    loadComponent: () =>
+      import('../../features/approvals/approvals-page.component').then((m) => m.ApprovalsPageComponent),
+    data: { breadcrumb: 'Aprobaciones' },
+  },
+  {
+    path: 'runbooks',
+    loadComponent: () =>
+      import('../../features/runbooks/runbooks-page.component').then((m) => m.RunbooksPageComponent),
+    data: { breadcrumb: 'Catálogo' },
+  },
+  {
+    path: 'runbooks/executions',
+    loadComponent: () =>
+      import('../../features/runbooks/runbooks-page.component').then((m) => m.RunbooksPageComponent),
+    data: { breadcrumb: 'Ejecuciones' },
+  },
+  {
+    path: 'scheduler',
+    loadComponent: () =>
+      import('../../features/scheduler/scheduler-page.component').then((m) => m.SchedulerPageComponent),
+    data: { breadcrumb: 'Programador' },
+  },
   { path: 'health-center', ...platform('HealthCenterComponent', 'Health Center') },
-  { path: 'compliance', ...platform('ComplianceComponent', 'Compliance') },
+  { path: 'compliance', ...platform('ComplianceComponent', 'Cumplimiento / Políticas') },
   { path: 'capacity-planner', ...platform('CapacityPlannerComponent', 'Capacity Planner') },
-  { path: 'change-management', ...platform('ChangeManagementComponent', 'Change Management') },
-  { path: 'access-control', ...platform('AccessControlComponent', 'Access Control') },
+  {
+    path: 'change-management',
+    loadComponent: () =>
+      import('../../features/change-management/change-management-page.component').then(
+        (m) => m.ChangeManagementPageComponent,
+      ),
+    data: { breadcrumb: 'Gestor de cambios' },
+  },
+  { path: 'access-control', ...platform('AccessControlComponent', 'Control de acceso') },
   {
     path: 'admin/api-tokens',
     loadComponent: () =>
@@ -80,16 +115,16 @@ export const NAVIGATION_ROUTES: Routes = [
   {
     path: 'cloud/:provider/:section',
     loadComponent: () =>
-      import('../../features/cloud-accounts/cloud-provider-hub.component').then(
-        (m) => m.CloudProviderHubComponent,
+      import('../../features/cloud/cloud-provider-page.component').then(
+        (m) => m.CloudProviderPageComponent,
       ),
     data: { breadcrumb: 'Cloud' },
   },
   {
     path: 'vps/:section',
     loadComponent: () =>
-      import('../../features/section-hub/section-hub.component').then((m) => m.SectionHubComponent),
-    data: { module: 'vps', parentTitle: 'VPS / Bare Metal' },
+      import('../../features/infrastructure/vps-page.component').then((m) => m.VpsPageComponent),
+    data: { breadcrumb: 'VPS', module: 'vps' },
   },
   {
     path: 'instances/all-instances',
@@ -184,6 +219,7 @@ export const NAVIGATION_ROUTES: Routes = [
     data: { breadcrumb: 'Terminal', module: 'terminal' },
   },
   { path: 'terminal', redirectTo: 'terminal/active-sessions', pathMatch: 'full' },
+  { path: 'terminal/shortcuts', redirectTo: 'terminal/history', pathMatch: 'full' },
   {
     path: 'billing/:section',
     loadComponent: () =>
@@ -209,7 +245,7 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'audit/:section',
     loadComponent: () =>
       import('../../features/audit/audit-page.component').then((m) => m.AuditPageComponent),
-    data: { breadcrumb: 'Audit', module: 'audit' },
+    data: { breadcrumb: 'Auditoría', module: 'audit' },
   },
   {
     path: 'settings/:section',

@@ -20,7 +20,10 @@ import { SidebarService } from '../sidebar/sidebar.service'
   standalone: true,
   imports: [RouterOutlet, SidebarComponent, TopbarComponent, DemoBannerComponent, ModuleAreaTabsComponent],
   template: `
-    <div class="layout-root">
+    <div
+      class="layout-root layout-root--sections-only"
+      [class.layout-root--mobile-nav-open]="!sidebarSvc.collapsed() && isMobile()"
+    >
       <app-sidebar />
 
       @if (!sidebarSvc.collapsed() && isMobile()) {
@@ -55,6 +58,8 @@ import { SidebarService } from '../sidebar/sidebar.service'
       flex-direction: column;
       overflow: hidden;
       background: var(--app-surface);
+      position: relative;
+      z-index: 1;
     }
     .layout-main-scroll {
       flex: 1;
@@ -71,6 +76,29 @@ import { SidebarService } from '../sidebar/sidebar.service'
       margin: 0 auto;
       min-height: auto;
     }
+    .layout-root--sections-only .layout-main-scroll {
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem 0.65rem 0.65rem;
+      overflow: hidden;
+    }
+    .layout-root--sections-only .layout-page {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      max-width: 100%;
+      width: 100%;
+      margin: 0;
+    }
+    .layout-root--sections-only app-demo-banner,
+    .layout-root--sections-only app-module-area-tabs {
+      flex-shrink: 0;
+    }
+    .layout-root--sections-only app-module-area-tabs ::ng-deep .module-area-tabs {
+      margin-bottom: 0.35rem;
+      padding: 0.2rem 0;
+    }
     .sidebar-backdrop {
       position: fixed;
       inset: 0;
@@ -80,6 +108,16 @@ import { SidebarService } from '../sidebar/sidebar.service'
     }
     @media (max-width: 960px) {
       .layout-main-scroll { padding: 1rem; }
+      .layout-root--sections-only .layout-main-scroll {
+        padding: 0.5rem 0.65rem 0.65rem;
+      }
+      .layout-root--mobile-nav-open .layout-main {
+        margin-left: min(272px, 78vw);
+        min-width: 0;
+      }
+      .layout-root--mobile-nav-open .sidebar-backdrop {
+        display: none;
+      }
     }
   `,
 })

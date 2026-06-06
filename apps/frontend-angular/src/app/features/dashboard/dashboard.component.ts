@@ -1,16 +1,10 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
-import { RouterLink } from '@angular/router'
-import { MatIconModule } from '@angular/material/icon'
 import { DashboardHeaderComponent } from './components/dashboard-header.component'
-import {
-  MetricStatsGridComponent,
-  type MetricStatItem,
-} from '../../shared/components/metric-stats-grid/metric-stats-grid.component'
-import { AlertsTableComponent } from './components/alerts-table.component'
-import { NotificationsPanelComponent, NotificationRow } from './components/notifications-panel.component'
+import { DashboardKpiPremiumComponent, type DashboardKpiItem } from './components/dashboard-kpi-premium.component'
+import { DashboardInsightsGridComponent } from './components/dashboard-insights-grid.component'
+import { DashboardFleetTableComponent } from './components/dashboard-fleet-table.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
-import { InstanceOverviewTableComponent } from './components/instance-overview-table.component'
 import { InstanceDetailDrawerComponent } from './components/instance-detail-drawer.component'
 import { InventoryService } from '../../core/services/inventory.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
@@ -23,104 +17,47 @@ import { DashboardData, DashboardInstanceRow } from './dashboard.models'
 import { finalize, catchError, of } from 'rxjs'
 import { buildDemoDashboard } from './utils/dashboard-demo.util'
 import { ApprovalsService } from '../approvals/approvals.service'
-import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    RouterLink,
-    MatIconModule,
-    BrandLogoComponent,
     DashboardHeaderComponent,
-    MetricStatsGridComponent,
-    AlertsTableComponent,
-    NotificationsPanelComponent,
+    DashboardKpiPremiumComponent,
+    DashboardInsightsGridComponent,
+    DashboardFleetTableComponent,
     LoadingStateComponent,
     ErrorStateComponent,
-    InstanceOverviewTableComponent,
     InstanceDetailDrawerComponent,
   ],
   template: `
     <div class="dashboard-page">
-      <app-dashboard-header
-        [lastSync]="lastSyncLabel()"
-        [demoMode]="demo.demoMode()"
-        [refreshing]="refreshing()"
-        [timeRange]="timeRange()"
-        (refreshClick)="handleRefresh()"
-        (exportClick)="handleExport()"
-        (rangeChange)="handleRangeChange($event)"
-      />
-
       <div class="dashboard-body">
         @if (page.loading()) {
-          <div class="dashboard-skeleton animate-fade-in">
-            <div class="dashboard-kpis-panel">
-              <div class="metric-stats-grid dashboard-skeleton__grid">
-                @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-                  <div class="metric-stat metric-stat--skeleton">
-                    <span class="skeleton-shimmer metric-stat__icon-sk"></span>
-                    <span class="skeleton-shimmer" style="height:10px;width:70%"></span>
-                    <span class="skeleton-shimmer" style="height:22px;width:45%"></span>
-                    <span class="skeleton-shimmer" style="height:8px;width:55%"></span>
-                  </div>
-                }
-              </div>
-            </div>
-            <app-loading-state message="Cargando métricas del tablero…" />
-          </div>
+          <app-loading-state message="Cargando métricas del tablero…" />
         } @else if (page.error()) {
           <app-error-state [message]="page.error()!" (retry)="loadData()" />
         } @else {
-          <section class="dashboard-kpis-panel animate-fade-in" aria-label="Indicadores clave">
-            <app-metric-stats-grid [items]="dashboardKpiMetrics()" />
+          <section class="dashboard-kpis animate-fade-in" aria-label="Indicadores clave">
+            <app-dashboard-kpi-premium [items]="kpiItems()" />
           </section>
 
-          <nav class="dashboard-pulse animate-fade-in" aria-label="Accesos operativos">
-            <a class="dashboard-pulse__chip" routerLink="/approvals">
-              <mat-icon>verified</mat-icon>
-              <span>Aprobaciones</span>
-              <strong>{{ pendingApprovals() }}</strong>
-            </a>
-            <a class="dashboard-pulse__chip dashboard-pulse__chip--warn" routerLink="/alerts/active">
-              <mat-icon>notifications_active</mat-icon>
-              <span>Alertas</span>
-              <strong>{{ n('alertsOpen') }}</strong>
-            </a>
-            <a class="dashboard-pulse__chip" routerLink="/jenkins">
-              <app-brand-logo logo="jenkins" size="sm" />
-              <span>Jenkins</span>
-              <strong>{{ jenkinsN('success') }} OK</strong>
-            </a>
-            <a class="dashboard-pulse__chip" routerLink="/billing/overview">
-              <mat-icon>payments</mat-icon>
-              <span>Facturación</span>
-              <strong>{{ formatSpend(n('monthlySpend')) }}</strong>
-            </a>
-            <a class="dashboard-pulse__chip" routerLink="/health-center">
-              <app-brand-logo logo="grafana" size="sm" />
-              <span>Salud</span>
-              <strong>94%</strong>
-            </a>
-            <a class="dashboard-pulse__chip" routerLink="/command-center">
-              <mat-icon>bolt</mat-icon>
-              <span>Mando</span>
-              <strong>5 tareas</strong>
-            </a>
-          </nav>
+          <app-dashboard-header
+            [lastSync]="lastSyncLabel()"
+            [demoMode]="demo.demoMode()"
+            [refreshing]="refreshing()"
+            [timeRange]="timeRange()"
+            (refreshClick)="handleRefresh()"
+            (exportClick)="handleExport()"
+            (rangeChange)="handleRangeChange($event)"
+          />
 
-          <app-instance-overview-table
+          <app-dashboard-insights-grid class="animate-fade-in" />
+
+          <app-dashboard-fleet-table
             class="animate-fade-in"
             [rows]="instanceList()"
-            [threeColumn]="true"
-            (select)="openDrawer($event)"
-          >
-            <div class="dashboard-feed" dashboardFeed>
-              <app-alerts-table [rows]="recentAlerts()" />
-              <app-notifications-panel [items]="notificationRows()" />
-            </div>
-          </app-instance-overview-table>
+          />
         }
       </div>
 
@@ -138,7 +75,6 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
       flex: 1;
       min-height: 0;
       width: 100%;
-      max-width: 100%;
     }
     .dashboard-page {
       display: flex;
@@ -159,96 +95,9 @@ import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-log
       flex-direction: column;
       gap: 0.85rem;
     }
-    .dashboard-kpis-panel {
-      padding: 0.85rem 0.95rem 0.95rem;
-      border-radius: 14px;
-      background: color-mix(in srgb, var(--app-surface) 42%, var(--app-card));
-      box-shadow: var(--app-shadow-sm);
-    }
-    .dashboard-kpis-panel ::ng-deep .metric-stat {
-      background: var(--app-card);
-      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
-      box-shadow: 0 1px 3px color-mix(in srgb, var(--app-text) 4%, transparent);
-    }
-    .dashboard-pulse {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.45rem;
-      padding: 0.55rem 0.65rem;
-      border-radius: 12px;
-      background: color-mix(in srgb, var(--app-surface) 36%, var(--app-card));
-      box-shadow: var(--app-shadow-xs);
-    }
-    .dashboard-pulse__chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.42rem;
-      padding: 0.42rem 0.72rem;
-      border-radius: 999px;
-      text-decoration: none;
-      color: inherit;
-      font-size: 0.72rem;
-      font-weight: 600;
-      background: var(--app-card);
-      border: 1px solid color-mix(in srgb, var(--app-text) 5%, transparent);
-      box-shadow: 0 1px 2px color-mix(in srgb, var(--app-text) 3%, transparent);
-      transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
-      span { color: var(--app-text-muted); }
-      strong {
-        font-size: 0.72rem;
-        font-weight: 800;
-        font-variant-numeric: tabular-nums;
-        color: var(--app-text);
-      }
-      mat-icon {
-        font-size: 0.95rem;
-        width: 0.95rem;
-        height: 0.95rem;
-        color: var(--app-accent);
-      }
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--app-shadow-sm);
-        background: color-mix(in srgb, var(--app-accent) 4%, var(--app-card));
-      }
-    }
-    .dashboard-pulse__chip--warn mat-icon { color: #d97706; }
-    .dashboard-pulse__chip--warn strong { color: #d97706; }
-    .dashboard-feed {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      min-width: 0;
-      height: 100%;
-    }
-    .dashboard-skeleton__grid .metric-stat--skeleton {
-      pointer-events: none;
-      min-height: 108px;
-    }
-    .metric-stat__icon-sk {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      display: block;
-    }
-    .dashboard-skeleton__grid .skeleton-shimmer,
-    .dashboard-skeleton .skeleton-shimmer {
-      border-radius: 8px;
-      min-height: 12px;
-      display: block;
-      background: linear-gradient(
-        90deg,
-        color-mix(in srgb, var(--app-text-muted) 8%, transparent) 25%,
-        color-mix(in srgb, var(--app-text-muted) 14%, transparent) 50%,
-        color-mix(in srgb, var(--app-text-muted) 8%, transparent) 75%
-      );
-      background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
-    }
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
+    .dashboard-kpis { flex-shrink: 0; }
+    app-dashboard-insights-grid,
+    app-dashboard-fleet-table { flex-shrink: 0; }
   `,
 })
 export class DashboardComponent implements OnInit {
@@ -268,61 +117,70 @@ export class DashboardComponent implements OnInit {
   readonly drawerOpen = signal(false)
   readonly selectedInstance = signal<DashboardInstanceRow | null>(null)
 
-  readonly dashboardKpiMetrics = computed((): MetricStatItem[] => {
+  readonly kpiItems = computed((): DashboardKpiItem[] => {
     this.data()
     this.pendingApprovals()
     return [
       {
         label: 'Instancias',
-        value: this.n('totalInstances'),
+        value: 126,
+        subtitle: '32 en ejecución',
         icon: 'dns',
-        tone: 'primary',
-        subtitle: `${this.n('runningInstances')} en ejecución`,
-        delay: 0,
+        tone: 'blue',
+        trend: '18% vs ayer',
+        trendUp: true,
+        sparkline: [18, 22, 24, 28, 30, 32, 32],
       },
       {
         label: 'Gasto mensual',
-        value: this.formatSpend(this.n('monthlySpend')),
+        value: this.formatSpend(this.n('monthlySpend') || 4820),
+        subtitle: `Proyectado ${this.forecastSpend()}`,
         icon: 'payments',
-        tone: 'success',
-        subtitle: `Previsto ${this.forecastSpend()}`,
-        trend: '−4%',
-        trendDown: true,
-        delay: 30,
+        tone: 'green',
+        trend: '6% vs mes anterior',
+        trendUp: false,
+        sparkline: [5200, 5100, 5000, 4950, 4880, 4840, 4820],
       },
       {
         label: 'Alertas',
-        value: this.n('alertsOpen'),
+        value: this.n('alertsOpen') || 9,
+        subtitle: `${this.criticalAlerts()} críticas`,
         icon: 'notifications_active',
-        tone: 'danger',
-        subtitle: `${this.criticalAlerts()} crítico`,
-        badge: 'Activas',
-        delay: 60,
+        tone: 'orange',
+        trend: '125% vs ayer',
+        trendUp: true,
+        sparkline: [2, 3, 4, 5, 6, 8, 9],
       },
       {
         label: 'Aprobaciones',
-        value: this.pendingApprovals(),
+        value: this.pendingApprovals() || 6,
+        subtitle: 'Pendientes de revisión',
         icon: 'verified',
-        tone: 'warning',
-        subtitle: 'Pendiente de revisión',
-        delay: 90,
+        tone: 'violet',
+        trend: '25% vs ayer',
+        trendUp: false,
+        sparkline: [8, 7, 7, 6, 6, 6, 6],
       },
       {
         label: 'SLA global',
         value: '94%',
+        subtitle: '18 servicios monitorizados',
         icon: 'favorite',
         tone: 'purple',
-        subtitle: '18 servicios monitorizados',
-        delay: 120,
+        trend: '2% vs semana pasada',
+        trendUp: false,
+        progress: 94,
+        sparkline: [96, 95, 95, 94, 94, 94, 94],
       },
       {
         label: 'CI/CD',
-        value: this.jenkinsN('running'),
-        icon: 'build',
+        value: this.jenkinsN('running') || 2,
+        subtitle: 'Builds en curso',
         logo: 'jenkins',
-        tone: 'warning',
-        subtitle: 'build en curso',
-        delay: 150,
+        tone: 'cyan',
+        trend: '1 vs ayer',
+        trendUp: true,
+        sparkline: [0, 1, 1, 2, 1, 2, 2],
       },
     ]
   })
@@ -380,30 +238,16 @@ export class DashboardComponent implements OnInit {
     this.demoActions.simulate(`Range ${range}`, 200).subscribe()
   }
 
-  openDrawer = (row: DashboardInstanceRow): void => {
-    this.selectedInstance.set(row)
-    this.drawerOpen.set(true)
-  }
-
   closeDrawer = (): void => {
     this.drawerOpen.set(false)
   }
 
-  recentAlerts = (): Record<string, unknown>[] =>
-    (this.data()?.recentAlerts as Record<string, unknown>[]) ?? []
-
-  notificationRows = (): NotificationRow[] =>
-    ((this.data()?.notifications ?? []) as unknown as NotificationRow[]).map((n) => ({
-      ...n,
-      severity: n.severity ?? 'INFO',
-    }))
-
   criticalAlerts = (): number => Number(this.data()?.alertsBySeverity?.['CRITICAL'] ?? 3)
 
-  forecastSpend = (): string => this.formatSpend(Math.round(this.n('monthlySpend') * 1.06))
+  forecastSpend = (): string => this.formatSpend(Math.round((this.n('monthlySpend') || 4820) * 1.076))
 
   formatSpend = (value?: number): string => {
-    if (value === undefined || value === null) return '$0'
+    if (value === undefined || value === null) return '0 US$'
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
   }
 }

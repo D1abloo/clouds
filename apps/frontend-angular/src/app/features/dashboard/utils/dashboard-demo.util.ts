@@ -31,7 +31,7 @@ const mkInstance = (
 })
 
 export const buildDemoDashboard = (): DashboardData => {
-  const aws = Array.from({ length: 6 }, (_, i) =>
+  const aws = Array.from({ length: 12 }, (_, i) =>
     mkInstance(`aws-${i + 1}`, `aws-prod-app-${i + 1}`, 'AWS', {
       region: ['us-east-1', 'eu-west-1', 'ap-southeast-1'][i % 3],
       status: i === 2 ? 'WARNING' : 'RUNNING',
@@ -78,7 +78,7 @@ export const buildDemoDashboard = (): DashboardData => {
     vpsDisconnected: 1,
     alertsOpen: 9,
     monthlySpend: 4820,
-    byProvider: { AWS: 6, GCP: 6, AZURE: 6, VPS: 8 },
+    byProvider: { AWS: 12, GCP: 6, AZURE: 6, VPS: 8 },
     byStatus: { running: 22, stopped: 1, warning: 1, error: 1, pending: 1 },
     alertsBySeverity: { CRITICAL: 3, WARNING: 4, INFO: 2 },
     cpuByProvider: { AWS: 62, GCP: 48, AZURE: 55, VPS: 41 },

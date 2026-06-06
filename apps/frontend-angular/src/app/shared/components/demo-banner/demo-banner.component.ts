@@ -18,7 +18,7 @@ import { DemoService } from '../../../core/services/demo.service'
               <strong>Modo demo</strong>
               <span class="demo-banner__pill">Datos simulados</span>
             </div>
-            <p>Sin recursos cloud reales conectados — todas las métricas y acciones son seguras para explorar</p>
+            <p>Estás explorando datos de demostración. Algunas métricas y recursos pueden diferir de tu entorno real.</p>
             @if (demo.status(); as s) {
               <div class="demo-banner__stats">
                 <span><strong>{{ s.instances }}</strong> instancias</span>
