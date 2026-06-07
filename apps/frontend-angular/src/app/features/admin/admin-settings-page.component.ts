@@ -61,7 +61,6 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
         title="Configuración"
         description="Preferencias de plataforma, integraciones, notificaciones, seguridad, tema y cuenta."
         icon="settings"
-        [demoMode]="true"
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />

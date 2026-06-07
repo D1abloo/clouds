@@ -20,7 +20,7 @@ export class DemoService {
     private readonly prisma: PrismaService,
   ) {}
 
-  isDemoMode = (): boolean => this.config.get<string>('DEMO_MODE', 'true') === 'true'
+  isDemoMode = (): boolean => this.config.get<string>('DEMO_MODE', 'false') === 'true'
 
   assertDemoMode = (): void => {
     if (!this.isDemoMode()) {

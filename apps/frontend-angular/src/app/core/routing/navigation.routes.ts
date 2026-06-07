@@ -19,13 +19,13 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'resource-explorer',
     loadComponent: () =>
       import('../../features/advanced/resource-explorer.component').then((m) => m.ResourceExplorerComponent),
-    data: { breadcrumb: 'Resource Explorer' },
+    data: { breadcrumb: 'Explorador de recursos' },
   },
   {
     path: 'topology-map',
     loadComponent: () =>
       import('../../features/advanced/topology-map.component').then((m) => m.TopologyMapComponent),
-    data: { breadcrumb: 'Topology Map' },
+    data: { breadcrumb: 'Mapa de topología' },
   },
   {
     path: 'ai-assistant',
@@ -33,17 +33,17 @@ export const NAVIGATION_ROUTES: Routes = [
       import('../../features/advanced/ai-assistant.component').then((m) => m.AiAssistantComponent),
     data: { breadcrumb: 'Asistente IA' },
   },
-  { path: 'command-center', ...platform('CommandCenterComponent', 'Command Center') },
-  { path: 'deployments', ...platform('DeploymentsComponent', 'Deployments') },
-  { path: 'backups', ...platform('BackupsComponent', 'Backups') },
+  { path: 'command-center', ...platform('CommandCenterComponent', 'Centro de mando') },
+  { path: 'deployments', ...platform('DeploymentsComponent', 'Despliegues') },
+  { path: 'backups', ...platform('BackupsComponent', 'Copias de seguridad') },
   { path: 'security-center', ...platform('SecurityCenterComponent', 'Centro de seguridad') },
   { path: 'secrets-manager', ...platform('SecretsManagerComponent', 'Gestor de secretos') },
   { path: 'logs', ...platform('LogsCenterComponent', 'Logs') },
-  { path: 'incidents', ...platform('IncidentsComponent', 'Incidents') },
-  { path: 'network', ...platform('NetworkComponent', 'Network') },
-  { path: 'storage', ...platform('StorageComponent', 'Storage') },
-  { path: 'cost-optimizer', ...platform('CostOptimizerComponent', 'Cost Optimizer') },
-  { path: 'reports', ...platform('ReportsComponent', 'Reports') },
+  { path: 'incidents', ...platform('IncidentsComponent', 'Incidentes') },
+  { path: 'network', ...platform('NetworkComponent', 'Red') },
+  { path: 'storage', ...platform('StorageComponent', 'Almacenamiento') },
+  { path: 'cost-optimizer', ...platform('CostOptimizerComponent', 'Optimizador de costes') },
+  { path: 'reports', ...platform('ReportsComponent', 'Informes') },
   {
     path: 'service-catalog',
     loadComponent: () =>
@@ -76,9 +76,9 @@ export const NAVIGATION_ROUTES: Routes = [
       import('../../features/scheduler/scheduler-page.component').then((m) => m.SchedulerPageComponent),
     data: { breadcrumb: 'Programador' },
   },
-  { path: 'health-center', ...platform('HealthCenterComponent', 'Health Center') },
+  { path: 'health-center', ...platform('HealthCenterComponent', 'Centro de salud') },
   { path: 'compliance', ...platform('ComplianceComponent', 'Cumplimiento / Políticas') },
-  { path: 'capacity-planner', ...platform('CapacityPlannerComponent', 'Capacity Planner') },
+  { path: 'capacity-planner', ...platform('CapacityPlannerComponent', 'Planificador de capacidad') },
   {
     path: 'change-management',
     loadComponent: () =>
@@ -125,28 +125,28 @@ export const NAVIGATION_ROUTES: Routes = [
       import('../../features/cloud/cloud-provider-page.component').then(
         (m) => m.CloudProviderPageComponent,
       ),
-    data: { breadcrumb: 'Cloud' },
+    data: { breadcrumb: 'Nubes' },
   },
   {
     path: 'vps/:section',
     loadComponent: () =>
       import('../../features/infrastructure/vps-page.component').then((m) => m.VpsPageComponent),
-    data: { breadcrumb: 'VPS', module: 'vps' },
+    data: { breadcrumb: 'VPS / Bare metal', module: 'vps' },
   },
   {
     path: 'instances/all-instances',
     loadComponent: () =>
       import('../../features/instances/instances-list.component').then((m) => m.InstancesListComponent),
-    data: { breadcrumb: 'Instances' },
+    data: { breadcrumb: 'Todas las instancias' },
   },
   {
     path: 'instances/:section',
     loadComponent: () =>
       import('../../features/section-hub/section-hub.component').then((m) => m.SectionHubComponent),
-    data: { module: 'instances', parentTitle: 'Instances' },
+    data: { module: 'instances', parentTitle: 'Instancias' },
   },
-  { path: 'docker/metrics', ...hub('docker', 'Docker', 'Metrics') },
-  { path: 'docker/events', ...hub('docker', 'Docker', 'Events') },
+  { path: 'docker/metrics', ...hub('docker', 'Docker', 'Métricas') },
+  { path: 'docker/events', ...hub('docker', 'Docker', 'Eventos') },
   { path: 'docker/overview', redirectTo: 'docker/containers', pathMatch: 'full' },
   {
     path: 'docker/:section',
@@ -154,7 +154,7 @@ export const NAVIGATION_ROUTES: Routes = [
       import('../../features/docker/docker-page.component').then((m) => m.DockerPageComponent),
     data: { breadcrumb: 'Docker', module: 'docker' },
   },
-  { path: 'kubernetes/metrics', ...hub('kubernetes', 'Kubernetes', 'Metrics') },
+  { path: 'kubernetes/metrics', ...hub('kubernetes', 'Kubernetes', 'Métricas') },
   { path: 'kubernetes/logs', ...hub('kubernetes', 'Kubernetes', 'Logs') },
   { path: 'kubernetes/ingress', ...hub('kubernetes', 'Kubernetes', 'Ingress') },
   { path: 'kubernetes/overview', redirectTo: 'kubernetes/pods', pathMatch: 'full' },
@@ -192,7 +192,7 @@ export const NAVIGATION_ROUTES: Routes = [
   },
   { path: 'repositories', redirectTo: 'repositories/github', pathMatch: 'full' },
   { path: 'jenkins/overview', redirectTo: 'jenkins/jobs', pathMatch: 'full' },
-  { path: 'jenkins/servers', ...hub('jenkins', 'Jenkins', 'Servers') },
+  { path: 'jenkins/servers', ...hub('jenkins', 'Jenkins', 'Servidores') },
   { path: 'jenkins/pipelines', ...hub('jenkins', 'Jenkins', 'Pipelines') },
   {
     path: 'jenkins/:section',
@@ -204,7 +204,7 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'terraform/launch-instance',
     loadComponent: () =>
       import('../../terraform/terraform.component').then((m) => m.TerraformComponent),
-    data: { breadcrumb: 'Launch Instance', openLaunch: true },
+    data: { breadcrumb: 'Lanzar instancia', openLaunch: true },
   },
   {
     path: 'terraform/overview',
@@ -216,7 +216,7 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'terraform/workspaces',
     loadComponent: () =>
       import('../../terraform/terraform.component').then((m) => m.TerraformComponent),
-    data: { breadcrumb: 'Workspaces' },
+    data: { breadcrumb: 'Workspaces Terraform' },
   },
   { path: 'terraform/:section', ...hub('terraform', 'Terraform') },
   {
@@ -231,14 +231,14 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'billing/:section',
     loadComponent: () =>
       import('../../features/billing/billing-page.component').then((m) => m.BillingPageComponent),
-    data: { breadcrumb: 'Billing', module: 'billing' },
+    data: { breadcrumb: 'Facturación', module: 'billing' },
   },
-  { path: 'metrics/:section', ...hub('metrics', 'Metrics') },
+  { path: 'metrics/:section', ...hub('metrics', 'Métricas') },
   {
     path: 'alerts/:section',
     loadComponent: () =>
       import('../../features/alerts/alerts-page.component').then((m) => m.AlertsPageComponent),
-    data: { breadcrumb: 'Alerts', module: 'alerts' },
+    data: { breadcrumb: 'Alertas', module: 'alerts' },
   },
   {
     path: 'notifications/:section',
@@ -246,7 +246,7 @@ export const NAVIGATION_ROUTES: Routes = [
       import('../../features/notifications/notifications-page.component').then(
         (m) => m.NotificationsPageComponent,
       ),
-    data: { breadcrumb: 'Notifications', module: 'notifications' },
+    data: { breadcrumb: 'Notificaciones', module: 'notifications' },
   },
   {
     path: 'audit/:section',

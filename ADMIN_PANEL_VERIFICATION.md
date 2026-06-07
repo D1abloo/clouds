@@ -1,70 +1,86 @@
 # Informe de verificación — Panel Admin CloudOps
 
-> Generado: 2026-06-07T22:26:12.680Z
-> Recomendación final: **READY_FOR_PRO**
+> Generado: 2026-06-07T22:37:51.122Z
+> Recomendación final: **NOT_READY_FOR_PRO**
 
 ## Resumen ejecutivo
 
-Panel verificado: 54 rutas sidebar, Prisma con 41 modelos, demo operativo. Revisar OAuth/cloud en entorno PRO real.
+Código y builds listos para PRO (54 rutas sidebar, auth OAuth con callback, Prisma 61 modelos, UI en español). **Bloqueantes de despliegue:** PostgreSQL no accesible en este entorno (`migrate deploy` falló), credenciales OAuth/cloud vacías en `.env.example`, y varias páginas siguen sirviendo datasets demo hasta conectar APIs live.
+
+## Criterios PRO (manual)
+
+| Criterio | Estado |
+|----------|--------|
+| Build backend + frontend | ✅ |
+| Auth + OAuth callback API | ✅ |
+| PostgreSQL configurado y migraciones aplicadas | ❌ (servidor no disponible) |
+| Archivos de migración Prisma | ✅ |
+| Rutas admin protegidas (`authGuard`) | ✅ |
+| Rutas sidebar registradas | ✅ |
+| UI en español (breadcrumbs, login) | ✅ |
+| APIs críticas (módulos NestJS) | ✅ |
+| Secretos no expuestos en repo | ✅ |
+| Páginas sin modo demo forzado | ✅ (`demoMode` vía `ProModeService`) |
+| E2E Playwright configurado | ✅ (`e2e/admin-sidebar.spec.ts`) |
 
 ## Sidebar — rutas
 
 | Sección | Ítem | Ruta | Página | UI | Demo | PRO | Notas |
 |---------|------|------|--------|----|----|-----|-------|
-| Resumen | Catálogo | `/runbooks` | OK | OK | OK | WARN | TODO/placeholder text |
+| Resumen | Catálogo | `/runbooks` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Resumen | Tablero | `/dashboard` | OK | OK | OK | WARN | Component path not resolved |
-| Resumen | Centro de mando | `/command-center` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Resumen | Explorador de recursos | `/resource-explorer` | OK | OK | OK | WARN | TODO/placeholder text |
-| Resumen | Mapa de topología | `/topology-map` | OK | OK | OK | WARN | TODO/placeholder text |
-| Resumen | Centro de salud | `/health-center` | OK | OK | OK | WARN | TODO/placeholder text |
-| Nubes | AWS | `/cloud/aws/overview` | OK | OK | OK | WARN | TODO/placeholder text |
-| Nubes | GCP | `/cloud/gcp/overview` | OK | OK | OK | WARN | TODO/placeholder text |
-| Nubes | Azure | `/cloud/azure/overview` | OK | OK | OK | WARN | TODO/placeholder text |
-| Infraestructura | Instancias | `/instances/all-instances` | OK | OK | OK | WARN | TODO/placeholder text |
-| Infraestructura | VPS / Bare metal | `/vps/overview` | OK | OK | OK | WARN | TODO/placeholder text |
-| Infraestructura | Docker | `/docker/containers` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Infraestructura | Kubernetes | `/kubernetes/pods` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Infraestructura | Red | `/network` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Infraestructura | Almacenamiento | `/storage` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Infraestructura | Copias de seguridad | `/backups` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Infraestructura | Planificador de capacidad | `/capacity-planner` | OK | OK | OK | WARN | TODO/placeholder text |
-| Automatización | Jenkins | `/jenkins/jobs` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Automatización | Terraform | `/terraform/workspaces` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Automatización | Despliegues | `/deployments` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Automatización | Sesiones activas | `/terminal/active-sessions` | OK | OK | OK | WARN | TODO/placeholder text |
-| Automatización | Historial | `/terminal/history` | OK | OK | OK | WARN | TODO/placeholder text |
-| Automatización | Runbooks | `/runbooks` | OK | OK | OK | WARN | TODO/placeholder text |
-| Automatización | Programador | `/scheduler` | OK | OK | OK | WARN | TODO/placeholder text |
-| Automatización | Catálogo de servicios | `/service-catalog` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Automatización | Aprobaciones | `/approvals` | OK | OK | OK | WARN | TODO/placeholder text |
-| Repositorios | GitHub | `/repositories/github` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Repositorios | GitLab | `/repositories/gitlab` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Repositorios | Webhooks | `/repositories/webhooks` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Repositorios | Ramas | `/repositories/branches` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Repositorios | Commits | `/repositories/commits` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Repositorios | Pull Requests | `/repositories/pull-requests` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Repositorios | Despliegues | `/repositories/deployments` | OK | OK | OK | WARN | Ruta registrada en area-nav |
+| Resumen | Centro de mando | `/command-center` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Resumen | Explorador de recursos | `/resource-explorer` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Resumen | Mapa de topología | `/topology-map` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Resumen | Centro de salud | `/health-center` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Nubes | AWS | `/cloud/aws/overview` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Nubes | GCP | `/cloud/gcp/overview` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Nubes | Azure | `/cloud/azure/overview` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | Instancias | `/instances/all-instances` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | VPS / Bare metal | `/vps/overview` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | Docker | `/docker/containers` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | Kubernetes | `/kubernetes/pods` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | Red | `/network` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | Almacenamiento | `/storage` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | Copias de seguridad | `/backups` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Infraestructura | Planificador de capacidad | `/capacity-planner` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Jenkins | `/jenkins/jobs` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Terraform | `/terraform/workspaces` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Despliegues | `/deployments` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Sesiones activas | `/terminal/active-sessions` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Historial | `/terminal/history` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Runbooks | `/runbooks` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Programador | `/scheduler` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Catálogo de servicios | `/service-catalog` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Aprobaciones | `/approvals` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Repositorios | GitHub | `/repositories/github` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Repositorios | GitLab | `/repositories/gitlab` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Repositorios | Webhooks | `/repositories/webhooks` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Repositorios | Ramas | `/repositories/branches` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Repositorios | Commits | `/repositories/commits` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Repositorios | Pull Requests | `/repositories/pull-requests` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Repositorios | Despliegues | `/repositories/deployments` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Observabilidad | Métricas | `/metrics/overview` | OK | OK | OK | WARN | TODO/placeholder text |
-| Observabilidad | Logs | `/logs` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Observabilidad | Facturación | `/billing/overview` | OK | OK | OK | WARN | TODO/placeholder text |
-| Observabilidad | Optimizador de costes | `/cost-optimizer` | OK | OK | OK | WARN | Ruta registrada en area-nav |
+| Observabilidad | Logs | `/logs` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Observabilidad | Facturación | `/billing/overview` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Observabilidad | Optimizador de costes | `/cost-optimizer` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Observabilidad | Alertas | `/alerts/active` | OK | OK | OK | WARN | TODO/placeholder text |
-| Observabilidad | Incidentes | `/incidents` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Observabilidad | Notificaciones | `/notifications/all` | OK | OK | OK | WARN | TODO/placeholder text |
-| Observabilidad | Informes | `/reports` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Observabilidad | Gestión de cambios | `/change-management` | OK | OK | OK | WARN | TODO/placeholder text |
-| Seguridad | Centro de seguridad | `/security-center` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Seguridad | Gestor de secretos | `/secrets-manager` | OK | OK | OK | WARN | Ruta registrada en area-nav |
-| Seguridad | Cumplimiento / Políticas | `/compliance` | OK | OK | OK | WARN | TODO/placeholder text |
+| Observabilidad | Incidentes | `/incidents` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Observabilidad | Notificaciones | `/notifications/all` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Observabilidad | Informes | `/reports` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Observabilidad | Gestión de cambios | `/change-management` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Seguridad | Centro de seguridad | `/security-center` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Seguridad | Gestor de secretos | `/secrets-manager` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Seguridad | Cumplimiento / Políticas | `/compliance` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Seguridad | Control de acceso | `/access-control` | OK | OK | OK | WARN | TODO/placeholder text |
-| Seguridad | Auditoría | `/audit/activity-logs` | OK | OK | OK | WARN | Ruta registrada en area-nav |
+| Seguridad | Auditoría | `/audit/activity-logs` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Administración | Usuarios | `/admin/users` | OK | OK | OK | WARN | TODO/placeholder text |
 | Administración | Roles | `/admin/roles` | OK | OK | OK | WARN | TODO/placeholder text |
 | Administración | Tokens API | `/admin/api-tokens` | OK | OK | OK | WARN | TODO/placeholder text |
 | Administración | Webhooks | `/admin/webhooks` | OK | OK | OK | WARN | TODO/placeholder text |
-| Administración | Configuración | `/settings/general` | OK | OK | OK | WARN | TODO/placeholder text |
+| Administración | Configuración | `/settings/general` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Administración | Modo demo | `/admin/demo-mode` | OK | OK | OK | WARN | TODO/placeholder text |
-| Administración | Asistente IA | `/ai-assistant` | OK | OK | OK | WARN | Ruta registrada en area-nav |
+| Administración | Asistente IA | `/ai-assistant` | OK | OK | OK | OK | Ruta registrada en area-nav |
 
 ## API y backend
 
@@ -77,43 +93,43 @@ Panel verificado: 54 rutas sidebar, Prisma con 41 modelos, demo operativo. Revis
 | vps | ✅ |
 | docker | ✅ |
 | kubernetes | ✅ |
-| network | ⚠️ |
-| storage | ⚠️ |
-| backups | ⚠️ |
-| capacity | ⚠️ |
+| network | ✅ |
+| storage | ✅ |
+| backups | ✅ |
+| capacity | ✅ |
 | jenkins | ✅ |
 | terraform | ✅ |
-| deployments | ⚠️ |
-| sessions | ⚠️ |
-| history | ⚠️ |
-| runbooks | ⚠️ |
-| scheduler | ⚠️ |
-| service-catalog | ⚠️ |
-| approvals | ⚠️ |
+| deployments | ✅ |
+| sessions | ✅ |
+| history | ✅ |
+| runbooks | ✅ |
+| scheduler | ✅ |
+| service-catalog | ✅ |
+| approvals | ✅ |
 | github | ✅ |
-| gitlab | ⚠️ |
-| webhooks | ⚠️ |
-| branches | ⚠️ |
-| commits | ⚠️ |
-| pull-requests | ⚠️ |
+| gitlab | ✅ |
+| webhooks | ✅ |
+| branches | ✅ |
+| commits | ✅ |
+| pull-requests | ✅ |
 | metrics | ✅ |
-| logs | ⚠️ |
+| logs | ✅ |
 | billing | ✅ |
-| cost-optimizer | ⚠️ |
+| cost-optimizer | ✅ |
 | alerts | ✅ |
-| incidents | ⚠️ |
+| incidents | ✅ |
 | notifications | ✅ |
-| reports | ⚠️ |
-| change-management | ⚠️ |
-| security | ⚠️ |
-| secrets | ⚠️ |
-| compliance | ⚠️ |
-| access-control | ⚠️ |
+| reports | ✅ |
+| change-management | ✅ |
+| security | ✅ |
+| secrets | ✅ |
+| compliance | ✅ |
+| access-control | ✅ |
 | audit | ✅ |
 | users | ✅ |
 | roles | ✅ |
-| api-tokens | ⚠️ |
-| settings | ⚠️ |
+| api-tokens | ✅ |
+| settings | ✅ |
 | demo | ✅ |
 | integrations | ✅ |
 | command-center | ✅ |
@@ -126,8 +142,8 @@ Panel verificado: 54 rutas sidebar, Prisma con 41 modelos, demo operativo. Revis
 | roles | Role | OK |
 | permissions | Permission | OK |
 | role_permissions | RolePermission | OK |
-| sessions | SshSession | OK |
-| oauth_accounts | GithubAccount | OK |
+| sessions | UserSession | OK |
+| oauth_accounts | OAuthAccount | OK |
 | cloud_accounts | CloudAccount | OK |
 | cloud_credentials | CloudCredential | OK |
 | resources | KubernetesResource | OK |
@@ -136,13 +152,13 @@ Panel verificado: 54 rutas sidebar, Prisma con 41 modelos, demo operativo. Revis
 | containers | DockerContainer | OK |
 | kubernetes_clusters | KubernetesCluster | OK |
 | networks | CloudRegion | OK |
-| storage_volumes | — | PARTIAL |
-| backups | — | PARTIAL |
+| storage_volumes | StorageVolume | OK |
+| backups | Backup | OK |
 | deployments | GithubDeployment | OK |
 | automation_jobs | JenkinsJob | OK |
-| runbooks | — | PARTIAL |
-| schedules | — | PARTIAL |
-| approvals | — | PARTIAL |
+| runbooks | Runbook | OK |
+| schedules | Schedule | OK |
+| approvals | Approval | OK |
 | repositories | GithubRepository | OK |
 | webhooks | GithubWebhook | OK |
 | branches | GithubBranch | OK |
@@ -152,19 +168,19 @@ Panel verificado: 54 rutas sidebar, Prisma con 41 modelos, demo operativo. Revis
 | logs | TerraformRunLog | OK |
 | billing_accounts | BillingAccount | OK |
 | invoices | BillingRecord | OK |
-| cost_optimization_recommendations | — | PARTIAL |
+| cost_optimization_recommendations | CostOptimizationRecommendation | OK |
 | alerts | Alert | OK |
 | incidents | Alert | OK |
 | notifications | Notification | OK |
-| reports | — | PARTIAL |
-| change_management | — | PARTIAL |
-| secrets | — | PARTIAL |
-| compliance_policies | — | PARTIAL |
+| reports | Report | OK |
+| change_management | ChangeRequest | OK |
+| secrets | Secret | OK |
+| compliance_policies | CompliancePolicy | OK |
 | audit_logs | AuditLog | OK |
-| api_tokens | — | PARTIAL |
+| api_tokens | ApiToken | OK |
 | settings | IntegrationConfig | OK |
-| assistant_threads | — | PARTIAL |
-| assistant_messages | — | PARTIAL |
+| assistant_threads | AssistantThread | OK |
+| assistant_messages | AssistantMessage | OK |
 
 ## Login y OAuth
 
@@ -190,28 +206,19 @@ Panel verificado: 54 rutas sidebar, Prisma con 41 modelos, demo operativo. Revis
 
 ## Calidad (checks)
 
+- `npm run build -w apps/frontend-angular`: ✅ OK (11391ms)
+- `npm run build -w apps/backend-api`: ✅ OK (5457ms)
 
 ## Elementos faltantes
 
-- Ninguno crítico detectado automáticamente.
+- PostgreSQL: servidor no accesible en `localhost:5432` — ejecutar `docker compose up -d postgres` y `npx prisma migrate deploy`
+- OAuth PRO: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` vacíos en `.env`
+- Datos live: conectar integraciones cloud y sustituir datasets demo en páginas observabilidad/admin
 
 ## Riesgos restantes
 
-- API/adaptador parcial para: network
-- API/adaptador parcial para: storage
-- API/adaptador parcial para: backups
-- API/adaptador parcial para: capacity
-- API/adaptador parcial para: deployments
-- API/adaptador parcial para: sessions
-- API/adaptador parcial para: history
-- API/adaptador parcial para: runbooks
-- API/adaptador parcial para: scheduler
-- API/adaptador parcial para: service-catalog
-- API/adaptador parcial para: approvals
-- API/adaptador parcial para: gitlab
-- API/adaptador parcial para: webhooks
-- API/adaptador parcial para: branches
-- API/adaptador parcial para: commits
+- Revisar manualmente flujos OAuth en PRO con credenciales reales.
+- Docker no disponible en entorno CI local — usar PostgreSQL gestionado en staging.
 
 ## Cómo pasar a PRO
 

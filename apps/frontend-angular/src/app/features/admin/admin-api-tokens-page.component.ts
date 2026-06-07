@@ -63,7 +63,6 @@ type TokenTab = 'active' | 'expiring' | 'revoked' | 'audit' | 'scopes' | 'polici
         title="Tokens API"
         description="Claves Bearer para autenticar integraciones, CI/CD y scripts contra la API de CloudOps."
         icon="vpn_key"
-        [demoMode]="true"
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />

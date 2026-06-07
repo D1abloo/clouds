@@ -24,7 +24,13 @@ export class AuthService {
   }
 
   startOAuth = (provider: 'google' | 'github') =>
-    this.api.get<{ redirectUrl?: string; demoMode?: boolean; message?: string }>(`auth/oauth/${provider}`)
+    this.api.get<{
+      redirectUrl?: string
+      demoMode?: boolean
+      proMode?: boolean
+      connectionRequired?: boolean
+      message?: string
+    }>(`auth/oauth/${provider}`)
 
   logout = (): void => {
     localStorage.removeItem(TOKEN_KEY)

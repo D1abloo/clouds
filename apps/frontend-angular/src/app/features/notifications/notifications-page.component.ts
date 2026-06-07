@@ -48,7 +48,6 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         title="Notificaciones"
         description="Alertas in-app y configuración de canales"
         icon="notifications"
-        [demoMode]="true"
         [actions]="[
           { label: 'Marcar todas leídas', icon: 'done_all', primary: true },
           { label: 'Actualizar', icon: 'refresh' },

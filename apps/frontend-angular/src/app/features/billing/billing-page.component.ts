@@ -43,7 +43,6 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         title="Facturación"
         description="Resumen de gasto cloud, previsiones y alertas de coste"
         icon="payments"
-        [demoMode]="true"
         [actions]="[
           { label: 'Sincronizar facturación', icon: 'sync', primary: true },
           { label: 'Exportar CSV', icon: 'download' },

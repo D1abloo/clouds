@@ -30,12 +30,15 @@ import { DemoModule } from './modules/demo/demo.module'
 import { InventoryModule } from './modules/inventory/inventory.module'
 import { DockerModule } from './modules/docker/docker.module'
 import { CommandCenterModule } from './modules/command-center/command-center.module'
-import { KubernetesApiModule } from './modules/kubernetes/kubernetes.module'
 import { IntegrationsModule } from './modules/integrations/integrations.module'
+import { KubernetesApiModule } from './modules/kubernetes/kubernetes.module'
+import { AppModeModule } from './common/config/app-mode.module'
+import { PlatformModule } from './modules/platform/platform.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    AppModeModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     PrismaModule,
     RedisModule,
@@ -65,6 +68,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module'
     KubernetesApiModule,
     CommandCenterModule,
     IntegrationsModule,
+    PlatformModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

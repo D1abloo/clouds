@@ -55,7 +55,6 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
         title="Roles"
         description="Define roles RBAC, matriz de permisos y asignaciones por usuario y ámbito."
         icon="manage_accounts"
-        [demoMode]="true"
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />

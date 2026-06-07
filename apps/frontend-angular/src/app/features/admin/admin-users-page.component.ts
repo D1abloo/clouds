@@ -60,7 +60,6 @@ type UserTab = 'active' | 'invited' | 'suspended' | 'audit' | 'sso' | 'sessions'
         title="Usuarios"
         description="Gestiona cuentas, invitaciones, SSO y sesiones activas de la organización CloudOps."
         icon="groups"
-        [demoMode]="true"
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />

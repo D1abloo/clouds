@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core'
+import { Component, inject, OnInit } from '@angular/core'
 import { HttpErrorResponse } from '@angular/common/http'
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms'
 import { Router } from '@angular/router'
@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
 import { MatIconModule } from '@angular/material/icon'
 import { AuthService } from '../../core/services/auth.service'
 import { ToastService } from '../../core/services/toast.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
 import { environment } from '../../../environments/environment'
 
 @Component({
@@ -86,10 +87,12 @@ import { environment } from '../../../environments/environment'
           </button>
         </form>
 
-        <button type="button" class="login-demo" [disabled]="loading || oauthLoading !== null" (click)="handleDemoLogin()">
-          <mat-icon>science</mat-icon>
-          Entrar en modo demo
-        </button>
+        @if (pro.showDemoLogin()) {
+          <button type="button" class="login-demo" [disabled]="loading || oauthLoading !== null" (click)="handleDemoLogin()">
+            <mat-icon>science</mat-icon>
+            Entrar en modo demo
+          </button>
+        }
 
         <aside class="login-hint" role="note">
           <strong>Credenciales demo</strong>
@@ -181,11 +184,12 @@ import { environment } from '../../../environments/environment'
     }
   `],
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder)
   private readonly auth = inject(AuthService)
   private readonly router = inject(Router)
   private readonly toast = inject(ToastService)
+  readonly pro = inject(ProModeService)
 
   loading = false
   oauthLoading: 'google' | 'github' | null = null
@@ -195,6 +199,10 @@ export class LoginComponent {
     email: ['admin@cloudops.local', [Validators.required, Validators.email]],
     password: ['Admin123!', [Validators.required, Validators.minLength(8)]],
   })
+
+  ngOnInit(): void {
+    this.pro.loadStatus()
+  }
 
   handleSubmit = (): void => {
     if (this.form.invalid) return
@@ -221,6 +229,10 @@ export class LoginComponent {
     this.auth.startOAuth(provider).subscribe({
       next: (res) => {
         this.oauthLoading = null
+        if (res.connectionRequired) {
+          this.error = res.message ?? 'Error al iniciar sesión — configure OAuth en modo PRO'
+          return
+        }
         if (res.redirectUrl) {
           window.location.href = res.redirectUrl
           return

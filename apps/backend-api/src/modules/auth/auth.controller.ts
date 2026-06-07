@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Ip, Get, Param } from '@nestjs/common'
+import { Controller, Post, Body, Req, Ip, Get, Param, Query } from '@nestjs/common'
 import { ApiTags, ApiOperation } from '@nestjs/swagger'
 import { ConfigService } from '@nestjs/config'
 import { AuthService } from './auth.service'
@@ -39,29 +39,55 @@ export class AuthController {
   @Get('oauth/:provider')
   @ApiOperation({ summary: 'OAuth redirect (Google/GitHub) — demo fallback or PRO redirect URL' })
   oauthStart(@Param('provider') provider: string) {
-    const demoMode = this.config.get<string>('DEMO_MODE', 'true') === 'true'
+    const demoMode = this.config.get<string>('DEMO_MODE', 'false') === 'true'
+    const proMode = this.config.get<string>('PRO_MODE', 'true') === 'true' || !demoMode
     const normalized = provider.toLowerCase()
     if (normalized !== 'google' && normalized !== 'github') {
-      return { demoMode, message: 'Proveedor OAuth no soportado' }
+      return { demoMode, proMode, message: 'Proveedor OAuth no soportado' }
     }
 
     const clientId =
       normalized === 'google'
         ? this.config.get<string>('GOOGLE_CLIENT_ID')
         : this.config.get<string>('GITHUB_CLIENT_ID')
-    const callbackBase = this.config.get<string>('OAUTH_CALLBACK_URL', 'http://localhost:4200/auth/callback')
+    const callbackBase = this.config.get<string>('OAUTH_CALLBACK_URL', `${this.config.get('AUTH_URL', 'http://localhost:4200')}/auth/callback`)
 
-    if (!demoMode && clientId) {
+    if (proMode && clientId) {
       const redirectUrl =
         normalized === 'google'
           ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(`${callbackBase}/google`)}&response_type=code&scope=openid%20email%20profile`
           : `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(`${callbackBase}/github`)}&scope=read:user%20user:email`
-      return { redirectUrl, demoMode: false }
+      return { redirectUrl, demoMode: false, proMode: true }
+    }
+
+    if (proMode && !clientId) {
+      return {
+        demoMode: false,
+        proMode: true,
+        connectionRequired: true,
+        message: `Configure ${normalized === 'google' ? 'GOOGLE_CLIENT_ID' : 'GITHUB_CLIENT_ID'} para OAuth en modo PRO`,
+      }
     }
 
     return {
       demoMode: true,
-      message: `OAuth ${normalized} simulado — en PRO configure ${normalized === 'google' ? 'GOOGLE_CLIENT_ID' : 'GITHUB_CLIENT_ID'}`,
+      proMode: false,
+      message: `OAuth ${normalized} simulado — disponible en modo demo`,
     }
+  }
+
+  @Public()
+  @Get('oauth/callback/:provider')
+  @ApiOperation({ summary: 'OAuth callback — intercambio code → sesión JWT' })
+  oauthCallback(
+    @Param('provider') provider: string,
+    @Query('code') code: string,
+    @Query('error') oauthError: string,
+    @Ip() ip: string,
+  ) {
+    if (oauthError) {
+      return { error: oauthError, message: 'OAuth cancelado o denegado' }
+    }
+    return this.authService.oauthCallback(provider, code, ip)
   }
 }

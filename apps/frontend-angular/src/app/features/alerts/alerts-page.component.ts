@@ -128,7 +128,6 @@ export class AlertRuleDialogComponent {
         title="Alertas"
         description="Incidentes activos, reglas, silencios y enrutamiento de notificaciones"
         icon="notifications_active"
-        [demoMode]="true"
         [actions]="[
           { label: 'Crear regla', icon: 'add', primary: true },
           { label: 'Actualizar', icon: 'refresh' },

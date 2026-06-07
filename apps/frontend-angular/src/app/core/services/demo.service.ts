@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http'
 import { ApiClientService } from './api-client.service'
 import { ToastService } from './toast.service'
 import { AuthService } from './auth.service'
+import { ProModeService } from './pro-mode.service'
 import { finalize } from 'rxjs'
 import { environment } from '../../../environments/environment'
 
@@ -30,14 +31,16 @@ export class DemoService {
   private readonly api = inject(ApiClientService)
   private readonly toast = inject(ToastService)
   private readonly auth = inject(AuthService)
+  private readonly proModeSvc = inject(ProModeService)
 
   readonly loading = signal(false)
   readonly statusLoading = signal(false)
   readonly statusOffline = signal(false)
   readonly status = signal<DemoStatus | null>(null)
 
-  /** Server-side demo flag (preferred) with env fallback for UI hints */
-  readonly demoMode = computed(() => this.status()?.enabled ?? environment.demoMode)
+  readonly demoMode = computed(
+    () => this.proModeSvc.status()?.demoMode ?? this.status()?.enabled ?? environment.demoMode,
+  )
 
   readonly canManageDemo = computed(() => {
     const roles = this.auth.user()?.roles ?? []

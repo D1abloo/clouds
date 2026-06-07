@@ -29,6 +29,9 @@
     "github:demo:test": "npm run github:demo:test -w apps/backend-api",
     "github:demo:setup": "bash scripts/github-demo-setup.sh"
   },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"

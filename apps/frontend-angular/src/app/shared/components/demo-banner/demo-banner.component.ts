@@ -3,13 +3,14 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatButtonModule } from '@angular/material/button'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
 import { DemoService } from '../../../core/services/demo.service'
+import { ProModeService } from '../../../core/services/pro-mode.service'
 
 @Component({
   selector: 'app-demo-banner',
   standalone: true,
   imports: [MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   template: `
-    @if (demo.demoMode()) {
+    @if (demo.demoMode() && pro.demoMode()) {
       <div class="demo-banner animate-fade-in" role="status" aria-label="Demo mode active">
         <div class="demo-banner__content">
           <div class="demo-banner__icon"><mat-icon>science</mat-icon></div>
@@ -127,8 +128,12 @@ import { DemoService } from '../../../core/services/demo.service'
 })
 export class DemoBannerComponent implements OnInit {
   readonly demo = inject(DemoService)
+  readonly pro = inject(ProModeService)
 
   ngOnInit(): void {
-    this.demo.refreshStatus()
+    this.pro.loadStatus()
+    if (this.pro.demoMode()) {
+      this.demo.refreshStatus()
+    }
   }
 }

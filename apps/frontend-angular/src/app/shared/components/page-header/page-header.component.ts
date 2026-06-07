@@ -7,6 +7,7 @@ import { RealtimeStatusBadgeComponent } from '../realtime-status-badge/realtime-
 import { NavIconComponent } from '../nav-icon/nav-icon.component'
 import { resolvePageVisual, type NavVisualTone } from '../../theme/nav-visual.config'
 import type { NavLogoKey } from '../../theme/nav-logo.types'
+import { ProModeService } from '../../../core/services/pro-mode.service'
 
 export interface PageHeaderAction {
   label: string
@@ -33,8 +34,10 @@ export interface PageHeaderAction {
           <div>
             <div class="page-header-premium__title-row">
               <h1>{{ title }}</h1>
-              @if (demoMode) {
+              @if (showDemoBadge()) {
                 <app-realtime-status-badge mode="demo" label="Datos demo" icon="science" />
+              } @else if (pro.proMode()) {
+                <app-realtime-status-badge mode="live" label="Modo PRO" icon="verified" />
               }
             </div>
             @if (description) {
@@ -150,16 +153,19 @@ export interface PageHeaderAction {
 })
 export class PageHeaderComponent {
   private readonly router = inject(Router)
+  readonly pro = inject(ProModeService)
 
   @Input({ required: true }) title!: string
   @Input() description = ''
   @Input() icon = ''
   @Input() tone: NavVisualTone | '' = ''
   @Input() lastSync = ''
-  @Input() demoMode = true
+  @Input() demoMode?: boolean
   @Input() actionsOnly = false
   @Input() actions: PageHeaderAction[] = []
   readonly actionClick = output<string>()
+
+  readonly showDemoBadge = computed(() => this.demoMode ?? this.pro.demoMode())
 
   private readonly url = toSignal(
     this.router.events.pipe(

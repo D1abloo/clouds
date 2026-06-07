@@ -3,6 +3,8 @@ import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
+import { AppModeService } from '../../common/config/app-mode.service'
+import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubDemoService } from './github-demo.service'
 import { mapAccount, mapDemoAccountProfile } from './github-mappers'
 import { DEMO_GITHUB_ACCOUNT_ID, DEMO_GITHUB_REPOS } from './github-demo.data'
@@ -15,9 +17,21 @@ export class GithubAccountsService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeGateway,
+    private readonly mode: AppModeService,
   ) {}
 
   async list() {
+    if (this.mode.isProMode() && !this.mode.canUseDemoFallback()) {
+      const items = await this.prisma.githubAccount.findMany({ orderBy: { createdAt: 'desc' } })
+      if (!items.length) {
+        return {
+          ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
+          demoMode: false,
+        }
+      }
+      return { items: items.map(mapAccount), demoMode: false, proMode: true }
+    }
+
     if (!this.demo.isDbReady() || !this.demo.isSessionActive()) {
       if (!this.demo.isSessionActive()) {
         return { items: [], demoMode: true }

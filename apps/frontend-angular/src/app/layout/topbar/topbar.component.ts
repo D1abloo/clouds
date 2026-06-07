@@ -18,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip'
 import { AuthService } from '../../core/services/auth.service'
 import { ThemeService } from '../../core/services/theme.service'
 import { DemoService } from '../../core/services/demo.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { AlertsStore } from '../../core/stores/alerts.store'
 import { resolveRouteLabel } from '../../core/routing/route-labels'
@@ -57,9 +58,9 @@ import { AppLogoComponent } from '../../shared/components/app-logo/app-logo.comp
 
       <!-- Status pills (compact) -->
       <div class="topbar-pills">
-        <span class="mode-pill" [class.mode-pill--demo]="demo.demoMode()">
+        <span class="mode-pill" [class.mode-pill--demo]="pro.demoMode()">
           <span class="mode-dot"></span>
-          {{ demo.demoMode() ? 'Demo' : 'Live' }}
+          {{ pro.proMode() ? 'PRO' : 'Demo' }}
         </span>
         <span
           class="ws-pill"
@@ -233,6 +234,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService)
   readonly theme = inject(ThemeService)
   readonly demo = inject(DemoService)
+  readonly pro = inject(ProModeService)
   readonly realtime = inject(RealtimeService)
   readonly alertsStore = inject(AlertsStore)
   private readonly router = inject(Router)
@@ -255,7 +257,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.realtime.connect()
-    this.demo.refreshStatus()
+    this.pro.loadStatus()
+    if (this.pro.demoMode()) {
+      this.demo.refreshStatus()
+    }
     this.updateBreadcrumb(this.router.url)
     this.routerSub = this.router.events
       .pipe(filter((e) => e instanceof NavigationEnd))

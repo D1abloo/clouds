@@ -63,7 +63,6 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
         icon="auto_awesome"
         title="Asistente IA"
         description="CloudOps Copilot — consulta instancias, costes, alertas, Kubernetes, aprobaciones y diagnósticos con contexto de plataforma (modo demo)."
-        [demoMode]="true"
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />

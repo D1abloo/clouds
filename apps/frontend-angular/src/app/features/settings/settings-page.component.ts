@@ -32,7 +32,6 @@ import { environment } from '../../../environments/environment'
         title="Configuración"
         description="Preferencias generales, usuarios, integraciones y modo demo"
         icon="settings"
-        [demoMode]="true"
         [actions]="[
           { label: 'Guardar cambios', icon: 'save', primary: true },
           { label: 'Exportar config', icon: 'download' },

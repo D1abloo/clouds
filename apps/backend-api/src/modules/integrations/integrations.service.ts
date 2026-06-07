@@ -29,7 +29,7 @@ export class IntegrationsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  isDemoMode = (): boolean => this.config.get<string>('DEMO_MODE', 'true') === 'true'
+  isDemoMode = (): boolean => this.config.get<string>('DEMO_MODE', 'false') === 'true'
 
   isLiveMode = (): boolean => {
     const forceLive = this.config.get<string>('INTEGRATIONS_LIVE', 'false') === 'true'

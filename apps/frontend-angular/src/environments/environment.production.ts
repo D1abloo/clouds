@@ -1,5 +1,7 @@
 export const environment = {
   production: true,
   apiUrl: '/api/v1',
-  demoMode: true,
+  demoMode: false,
+  proMode: true,
+  authUrl: '',
 }

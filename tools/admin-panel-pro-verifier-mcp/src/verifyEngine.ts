@@ -63,7 +63,7 @@ export const buildVerificationReport = async (
       pageStatus,
       uiStatus,
       demoStatus: 'OK',
-      proStatus: pageOk ? 'WARN' : 'FAIL',
+      proStatus: pageOk && mockIssues.length === 0 ? 'OK' : pageOk ? 'WARN' : 'FAIL',
       notes: mockIssues.slice(0, 2).join('; ') || 'Ruta registrada en area-nav',
     }
   })
@@ -104,7 +104,7 @@ export const buildVerificationReport = async (
   const qualityChecks: QualityCheckRow[] = []
   if (runChecks) {
     for (const cmd of ['npm run build -w apps/frontend-angular', 'npm run build -w apps/backend-api']) {
-      const res = await runAllowlistedCommand(cmd.replace(/ -w [\w-]+/, ''), root)
+      const res = await runAllowlistedCommand(cmd, root)
       qualityChecks.push({
         command: cmd,
         ok: res.ok,
@@ -126,9 +126,43 @@ export const buildVerificationReport = async (
 
   loginChecks.filter((c) => !c.ok).forEach((c) => missing.push(`Login: falta ${c.k}`))
 
+  const authPath = path.join(root, 'apps/backend-api/src/modules/auth/auth.controller.ts')
+  const authSrc = fs.existsSync(authPath) ? fs.readFileSync(authPath, 'utf8') : ''
+  const oauthCallbackReady = /oauth\/callback|@Get\(['"]callback/i.test(authSrc)
+
+  const partialSchema = schema.filter((s) => s.status === 'PARTIAL' || s.status === 'MISSING')
+  const mockSidebar = sidebar.filter((s) => s.proStatus !== 'OK' || /TODO|placeholder|mock/i.test(s.notes))
+  const partialApis = Object.entries(apiCoverage).filter(([, ok]) => !ok)
+
+  if (!oauthCallbackReady) {
+    missing.push('Auth: falta endpoint OAuth callback (intercambio code → sesión JWT)')
+  }
+  if (partialSchema.length > 0) {
+    missing.push(`Prisma: ${partialSchema.length} tablas PRO sin modelo dedicado`)
+  }
+  if (mockSidebar.length > 12) {
+    missing.push(`UI: ${mockSidebar.length} rutas con datos demo/mock o señales placeholder`)
+  }
+  if (partialApis.length > 10) {
+    missing.push(`API: ${partialApis.length} módulos backend sin adaptador dedicado`)
+  }
+
+  const envExample = fs.existsSync(path.join(root, '.env.example'))
+    ? fs.readFileSync(path.join(root, '.env.example'), 'utf8')
+    : ''
+  const proConfigured = envExample.includes('PRO_MODE=true') && envExample.includes('DEMO_MODE=false')
+
   const blocking = sidebar.filter((s) => s.pageStatus === 'FAIL').length + missing.length
-  const recommendation: VerificationReport['recommendation'] =
-    blocking === 0 && loginChecks.every((c) => c.ok) ? 'READY_FOR_PRO' : 'NOT_READY_FOR_PRO'
+  const proReady =
+    proConfigured &&
+    loginChecks.every((c) => c.ok) &&
+    oauthCallbackReady &&
+    blocking === 0 &&
+    partialSchema.length === 0 &&
+    partialApis.length === 0 &&
+    (runChecks ? qualityChecks.every((q) => q.ok) : true)
+
+  const recommendation: VerificationReport['recommendation'] = proReady ? 'READY_FOR_PRO' : 'NOT_READY_FOR_PRO'
 
   return {
     generatedAt: new Date().toISOString(),

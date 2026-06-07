@@ -25,6 +25,7 @@ import { ErrorStateComponent } from '../components/error-state/error-state.compo
 import { StatusBadgeComponent } from '../components/status-badge/status-badge.component'
 import { NavIconComponent } from '../components/nav-icon/nav-icon.component'
 import { PlatformActionService } from './platform-action.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
 import { getPlatformRowOps, isPlatformScopeModule } from './platform-module-ops.catalog'
 import { observabilityModuleMeta } from './observability-meta.util'
 import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.models'
@@ -56,7 +57,7 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
         [title]="config().title"
         [description]="config().description"
         [icon]="config().icon"
-        [demoMode]="true"
+        [demoMode]="pro.demoMode()"
         [actions]="config().headerActions"
         (actionClick)="handleHeaderAction($event)"
       />
@@ -281,6 +282,7 @@ export class PlatformModulePageComponent implements OnInit {
   readonly config = input.required<PlatformModuleConfig>()
 
   private readonly actions = inject(PlatformActionService)
+  readonly pro = inject(ProModeService)
 
   readonly loading = signal(true)
   readonly error = signal<string | null>(null)

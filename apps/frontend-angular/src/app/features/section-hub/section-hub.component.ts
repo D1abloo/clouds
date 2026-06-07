@@ -26,7 +26,6 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
         [title]="title()"
         [description]="description()"
         [icon]="section() === 'roles' ? 'badge' : 'monitoring'"
-        [demoMode]="true"
         [actions]="headerActions()"
         (actionClick)="handleAction($event)"
       />

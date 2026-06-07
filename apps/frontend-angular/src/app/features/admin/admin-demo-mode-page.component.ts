@@ -29,7 +29,6 @@ import {
         title="Modo demo"
         description="Datos cloud simulados para explorar CloudOps sin recursos reales AWS/GCP/Azure."
         icon="science"
-        [demoMode]="true"
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />

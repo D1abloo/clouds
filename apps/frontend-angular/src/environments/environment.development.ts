@@ -1,5 +1,7 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:3001/api/v1',
-  demoMode: true,
+  demoMode: false,
+  proMode: true,
+  authUrl: 'http://localhost:4200',
 }

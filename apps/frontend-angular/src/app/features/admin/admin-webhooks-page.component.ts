@@ -54,7 +54,6 @@ type WebhookTab = 'webhooks' | 'deliveries' | 'failures' | 'payloads' | 'config'
         title="Webhooks"
         description="Endpoints HTTP que reciben eventos POST de CloudOps (alertas, despliegues, facturación)."
         icon="webhook"
-        [demoMode]="true"
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />
