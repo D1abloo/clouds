@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "admin-panel-pro-verifier-mcp": {
+      "command": "node",
+      "args": ["tools/admin-panel-pro-verifier-mcp/dist/index.js"],
+      "env": {
+        "PROJECT_ROOT": "."
+      }
+    }
+  }
+}

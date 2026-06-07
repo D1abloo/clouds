@@ -1,0 +1,55 @@
+---
+description: Verificación PRO del panel admin CloudOps — UI en español, demo funcional, sin mockups estáticos
+alwaysApply: true
+---
+
+# Verificación panel admin — Demo → PRO
+
+Antes de activar PRO Mode (`DEMO_MODE=false`, `PRO_MODE=true`), Cursor debe cumplir estas reglas en **todo** el panel.
+
+## Idioma visible
+
+- **100 % español** en labels, botones, menús, formularios, errores, empty states, notificaciones, modales, tablas, tooltips, login y onboarding.
+- No dejar breadcrumbs ni títulos en inglés salvo nombres de producto (AWS, Jenkins, Terraform, GitHub).
+
+## Funcionalidad real
+
+- **Nunca** dejar mockups estáticos, botones muertos, enlaces rotos, pantallas TODO o páginas incompletas.
+- Cada ítem del sidebar (y sub-ítem) debe tener ruta válida, página cargable y acciones demo o PRO reales.
+- Demo Mode debe ser el **entorno final de prueba** antes de PRO: datos semilla realistas, acciones simuladas con feedback en español.
+
+## Sidebar — verificar siempre
+
+Usar `SIDEBAR_MAIN_MODULES` en `apps/frontend-angular/src/app/core/routing/area-nav.config.ts` como fuente de verdad.
+
+Secciones: Resumen, Nubes, Infraestructura, Automatización, Repositorios, Observabilidad, Seguridad, Administración.
+
+Por cada ruta comprobar: componente, tabs/filtros/tablas donde aplique, estados loading/empty/error, badge activo, icono/logo oficial, responsive.
+
+## PRO readiness
+
+- PostgreSQL + Prisma: migraciones, seeds, tablas con PK/FK/`created_at`/`updated_at`.
+- APIs o adaptadores por módulo; credenciales solo en variables de entorno (nunca en código ni logs).
+- OAuth Google/GitHub preparado; RBAC, auditoría, build de producción.
+
+## Calidad visual y a11y
+
+- Márgenes, padding, densidad de tablas, tipografía, logos oficiales (no emoji ni SVG rotos).
+- Sidebar colapsado, móvil/tablet/desktop, foco teclado, `aria-label` en acciones.
+
+## Herramientas de verificación
+
+1. Ejecutar MCP **`admin-panel-pro-verifier-mcp`** (ver `MCP_ADMIN_PANEL_VERIFIER.md`).
+2. Generar **`ADMIN_PANEL_VERIFICATION.md`** con `generate_admin_panel_verification_report`.
+3. Recomendación final: `READY_FOR_PRO` solo si no hay bloqueantes.
+
+## Flujo antes de PRO
+
+```text
+migraciones → seed demo → app en DEMO_MODE → login → recorrer sidebar → lint/typecheck/test/build → informe → fix bloqueantes → commit
+```
+
+## Prohibido
+
+- Exponer secretos (OAuth, DB, API tokens, cloud credentials).
+- Ejecutar comandos shell arbitrarios fuera de la allowlist del MCP verificador.

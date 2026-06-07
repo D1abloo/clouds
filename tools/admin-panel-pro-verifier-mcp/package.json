@@ -1,0 +1,23 @@
+{
+  "name": "admin-panel-pro-verifier-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server to verify CloudOps admin panel readiness for PRO mode",
+  "type": "module",
+  "bin": {
+    "admin-panel-pro-verifier-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "verify:report": "node dist/generateReportCli.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  }
+}
