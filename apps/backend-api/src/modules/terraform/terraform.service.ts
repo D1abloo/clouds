@@ -3,6 +3,8 @@ import { CloudProvider, TerraformStatus } from '@prisma/client'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
+import { IntegrationsService } from '../integrations/integrations.service'
+import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
 
 export interface TerraformPlanRequest {
   provider: CloudProvider
@@ -16,6 +18,7 @@ export class TerraformRunnerService {
     private prisma: PrismaService,
     private audit: AuditService,
     private realtime: RealtimeGateway,
+    private integrations: IntegrationsService,
   ) {}
 
   async createRun(dto: TerraformPlanRequest, userId?: string) {
@@ -68,6 +71,18 @@ export class TerraformRunnerService {
     await this.audit.create({ userId, action: 'terraform.plan', resource: 'terraform_run', resourceId: runId })
     this.realtime.emitTerraformUpdate(runId, { status: 'PLANNED', planOutput })
 
+    void this.integrations.emitPlatformEvent(
+      {
+        eventType: PLATFORM_EVENTS.CHANGE_CREATE,
+        title: `Terraform plan — ${run.workspace.name}`,
+        body: `Plan completed for workspace ${run.workspace.name} (${run.workspace.provider})`,
+        severity: 'info',
+        source: 'Terraform',
+        metadata: { runId, workspace: run.workspace.name, provider: run.workspace.provider },
+      },
+      userId,
+    )
+
     return updated
   }
 
@@ -95,6 +110,18 @@ export class TerraformRunnerService {
     this.realtime.emitTerraformProgress(runId, 'Done', 100, 'Apply complete')
     this.realtime.emitTerraformUpdate(runId, { status: 'APPLIED' })
 
+    void this.integrations.emitPlatformEvent(
+      {
+        eventType: PLATFORM_EVENTS.DEPLOY_SUCCESS,
+        title: `Terraform apply — ${run.workspace.name}`,
+        body: `Workspace ${run.workspace.name} applied successfully (${run.workspace.provider})`,
+        severity: 'info',
+        source: 'Terraform',
+        metadata: { runId, workspace: run.workspace.name, provider: run.workspace.provider },
+      },
+      userId,
+    )
+
     return updated
   }
 
@@ -109,6 +136,19 @@ export class TerraformRunnerService {
     })
 
     await this.audit.create({ userId, action: 'terraform.destroy', resource: 'terraform_run', resourceId: runId })
+
+    void this.integrations.emitPlatformEvent(
+      {
+        eventType: PLATFORM_EVENTS.DEPLOY_FAILED,
+        title: `Terraform destroy — run ${runId}`,
+        body: 'Infrastructure destroy completed — resources removed',
+        severity: 'warning',
+        source: 'Terraform',
+        metadata: { runId, action: 'destroy' },
+      },
+      userId,
+    )
+
     return updated
   }
 

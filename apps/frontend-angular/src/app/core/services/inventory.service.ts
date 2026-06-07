@@ -5,6 +5,7 @@ import { ApiClientService } from './api-client.service'
 import { CloudProvider } from '../models/api.models'
 import { DockerService } from './docker.service'
 import { KubernetesService } from './kubernetes.service'
+import { demoJenkinsInventory, normalizeJenkinsInventory } from '../../features/jenkins/jenkins.demo'
 import { buildDemoDashboard, buildDemoProviderSummary } from '../../features/dashboard/utils/dashboard-demo.util'
 import { DashboardData } from '../../features/dashboard/dashboard.models'
 
@@ -40,7 +41,12 @@ export class InventoryService {
   jenkins = (): Observable<Record<string, unknown>> =>
     this.api
       .get<Record<string, unknown>>('inventory/jenkins')
-      .pipe(catchError((): Observable<Record<string, unknown>> => of({ jobCount: 0, jobItems: [] })))
+      .pipe(
+        map((data) => this.mergeJenkins(data)),
+        catchError((): Observable<Record<string, unknown>> =>
+          of(demoJenkinsInventory() as unknown as Record<string, unknown>),
+        ),
+      )
 
   github = (): Observable<Record<string, unknown>> =>
     this.api.get<Record<string, unknown>>('inventory/github').pipe(
@@ -87,5 +93,10 @@ export class InventoryService {
     const demo = buildDemoDashboard()
     if ((data.instanceList?.length ?? 0) > 0) return data
     return { ...demo, ...data, instanceList: demo.instanceList }
+  }
+
+  private mergeJenkins = (data: Record<string, unknown>): Record<string, unknown> => {
+    const normalized = normalizeJenkinsInventory(data)
+    return normalized as unknown as Record<string, unknown>
   }
 }

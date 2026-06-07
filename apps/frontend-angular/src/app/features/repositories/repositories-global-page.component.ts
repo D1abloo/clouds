@@ -1,11 +1,11 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { ActivatedRoute } from '@angular/router'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { map } from 'rxjs'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { GithubService } from '../../core/services/github.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { catchError, of } from 'rxjs'
 import {
@@ -17,7 +17,6 @@ import { CLIENT_DEMO_GITLAB_DEPLOYMENTS, CLIENT_DEMO_GITLAB_WEBHOOKS } from './u
 import {
   buildGlobalDemoBranches,
   buildGlobalDemoCommits,
-  buildRepositoriesSectionMetrics,
   type GlobalBranchRow,
   type GlobalCommitRow,
 } from './utils/repositories-global-demo.util'
@@ -31,6 +30,8 @@ import { BranchesGlobalSectionComponent } from './sections/branches-global-secti
 import { CommitsGlobalSectionComponent } from './sections/commits-global-section.component'
 import { PullRequestsGithubSectionComponent } from './sections/pull-requests-github-section.component'
 import { DeploymentsGlobalSectionComponent } from './sections/deployments-global-section.component'
+import { RepositoriesActionService } from './repositories-action.service'
+import { RepositoriesCrossNavComponent } from './components/repositories-cross-nav.component'
 
 const GLOBAL_SECTIONS: RepositoriesSectionId[] = [
   'webhooks',
@@ -45,7 +46,6 @@ const GLOBAL_SECTIONS: RepositoriesSectionId[] = [
   standalone: true,
   imports: [
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
     ErrorStateComponent,
     GithubLogsPanelComponent,
@@ -54,81 +54,82 @@ const GLOBAL_SECTIONS: RepositoriesSectionId[] = [
     CommitsGlobalSectionComponent,
     PullRequestsGithubSectionComponent,
     DeploymentsGlobalSectionComponent,
+    RepositoriesCrossNavComponent,
   ],
   template: `
-    <div class="page-container" [class]="'page-container--' + section()">
+    <div class="page-container repo-module-page" [class]="'page-container--' + section()">
       <app-page-header
         [title]="headerMeta().title"
         [description]="headerMeta().description"
+        [icon]="sectionIcon()"
         [actions]="headerMeta().headerActions"
         (actionClick)="handleHeader($event)"
       />
+
+      <app-repositories-cross-nav [activeId]="section()" />
 
       @if (page.loading()) {
         <app-loading-state [message]="loadingMessage()" />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="init()" />
       } @else {
-        <div class="summary-grid app-section-panel stagger-children">
-          @for (card of headerMeta().summaryCards; track card.title) {
-            <app-summary-card
-              [title]="card.title"
-              [value]="metric(card.valueKey)"
-              [icon]="card.icon"
-              variant="elevated"
-            />
-          }
-        </div>
-
         @switch (section()) {
           @case ('webhooks') {
             <app-webhooks-global-section
               [allWebhooks]="allWebhooks()"
-              (create)="runDemo('Crear webhook')"
-              (test)="runDemo('Probar webhook')"
-              (viewPayload)="runDemo('Ver payload')"
-              (toggle)="runDemo('Desactivar webhook demo')"
-              (retry)="runDemo('Reintentar evento')"
+              (create)="actions.createWebhook()"
+              (test)="actions.testWebhook()"
+              (viewPayload)="actions.viewPayload($event)"
+              (toggle)="actions.toggleWebhook($event)"
+              (retry)="actions.retryWebhook($event)"
             />
           }
           @case ('branches') {
             <app-branches-global-section
               [branches]="globalBranches()"
-              (sync)="runDemo('Sincronizar ramas')"
-              (compare)="runDemo('Comparar ramas')"
-              (viewCommits)="runDemo('Ver commits de rama')"
-              (deployBranch)="runDemo('Desplegar rama')"
+              (sync)="actions.syncBranches()"
+              (compare)="actions.compareBranches(globalBranches()[0])"
+              (viewCommits)="actions.viewBranchCommits($event)"
+              (deployBranch)="actions.deployBranch($event)"
             />
           }
           @case ('commits') {
             <app-commits-global-section
               [commits]="globalCommits()"
-              (viewDetail)="runDemo('Ver detalle commit')"
-              (copySha)="runDemo('SHA copiado')"
-              (deploy)="runDemo('Desplegar commit')"
-              (openSource)="runDemo('Abrir origen')"
+              (refresh)="actions.refreshCommits()"
+              (deployLatest)="deployLatestCommit()"
+              (viewDetail)="actions.viewCommitDetail($event)"
+              (viewDiff)="actions.viewCommitDiff($event)"
+              (viewCi)="actions.viewCommitCi($event)"
+              (copySha)="actions.copyCommitSha($event)"
+              (deploy)="actions.deployCommit($event)"
+              (openSource)="actions.openCommitSource($event)"
             />
           }
           @case ('pull-requests') {
             <app-pull-requests-github-section
               [pullRequests]="githubPullRequests()"
-              (viewPr)="runDemo('Ver Pull Request')"
-              (viewCommits)="runDemo('Ver commits del PR')"
-              (viewChecks)="runDemo('Ver checks')"
-              (deployPreview)="runDemo('Desplegar preview')"
-              (openGithub)="runDemo('Abrir en GitHub')"
+              (viewPr)="actions.viewPr($event)"
+              (viewCommits)="actions.viewPrCommits($event)"
+              (viewChecks)="actions.viewPrChecks($event)"
+              (viewGithubActions)="actions.viewPrGithubActions($event)"
+              (deployPreview)="actions.deployPrPreview($event)"
+              (openGithub)="actions.openPrGithub($event)"
+              (requestReview)="actions.requestPrReview($event)"
+              (mergePr)="actions.mergePr($event)"
             />
           }
           @case ('deployments') {
             <app-deployments-global-section
               [deployments]="allDeployments()"
-              (newDeploy)="runDemo('Nuevo despliegue — elige GitHub o GitLab en su sección')"
-              (viewLogs)="viewLogs($event)"
-              (viewTarget)="runDemo('Ver destino')"
-              (viewCommit)="runDemo('Ver commit')"
-              (viewPipeline)="runDemo('Ver pipeline')"
-              (retry)="runDemo('Reintentar despliegue')"
-              (rollback)="runDemo('Rollback demo')"
+              (newDeploy)="actions.newDeploy()"
+              (viewHistory)="actions.deployHistory()"
+              (viewLogs)="actions.viewDeployLogs($event)"
+              (viewTarget)="actions.viewDeployTarget($event)"
+              (viewCommit)="actions.viewDeployCommit($event)"
+              (viewPipeline)="actions.viewDeployPipeline($event)"
+              (retry)="actions.retryDeploy($event)"
+              (rollback)="actions.rollbackDeploy($event)"
             />
           }
         }
@@ -153,7 +154,7 @@ const GLOBAL_SECTIONS: RepositoriesSectionId[] = [
 export class RepositoriesGlobalPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly github = inject(GithubService)
-  private readonly demoActions = inject(DemoActionsService)
+  readonly actions = inject(RepositoriesActionService)
 
   readonly page = createPageLoader(false)
   readonly githubPullRequests = signal(CLIENT_DEMO_GITHUB_PRS)
@@ -165,20 +166,31 @@ export class RepositoriesGlobalPageComponent implements OnInit {
   readonly logsText = signal('')
   readonly logsTitle = signal('')
 
-  readonly section = computed(
-    () => (this.route.snapshot.paramMap.get('section') ?? 'webhooks') as RepositoriesSectionId,
+  /** Reactivo al cambiar /repositories/:section — evita mostrar siempre la misma pestaña */
+  readonly section = toSignal(
+    this.route.paramMap.pipe(
+      map((p) => (p.get('section') ?? 'webhooks') as RepositoriesSectionId),
+    ),
+    {
+      initialValue: (this.route.snapshot.paramMap.get('section') ?? 'webhooks') as RepositoriesSectionId,
+    },
   )
 
-  readonly headerMeta = computed(() => REPOSITORIES_SECTION_META[this.section()])
+  readonly headerMeta = computed(() => {
+    const s = this.section()
+    return REPOSITORIES_SECTION_META[s] ?? REPOSITORIES_SECTION_META.webhooks
+  })
 
-  readonly sectionMetrics = computed(() =>
-    buildRepositoriesSectionMetrics({
-      githubRepos: 6,
-      githubWebhooks: CLIENT_DEMO_WEBHOOKS.length,
-      gitlabWebhooks: CLIENT_DEMO_GITLAB_WEBHOOKS.length,
-      deployments: this.allDeployments(),
-    }),
-  )
+  readonly sectionIcon = computed((): string => {
+    const icons: Partial<Record<RepositoriesSectionId, string>> = {
+      webhooks: 'webhook',
+      branches: 'account_tree',
+      commits: 'history_edu',
+      'pull-requests': 'merge',
+      deployments: 'rocket_launch',
+    }
+    return icons[this.section()] ?? 'folder_special'
+  })
 
   readonly loadingMessage = computed(() => {
     const m: Record<string, string> = {
@@ -192,8 +204,7 @@ export class RepositoriesGlobalPageComponent implements OnInit {
   })
 
   ngOnInit(): void {
-    if (!GLOBAL_SECTIONS.includes(this.section())) return
-    this.init()
+    if (GLOBAL_SECTIONS.includes(this.section())) this.init()
   }
 
   init = (): void => {
@@ -204,8 +215,6 @@ export class RepositoriesGlobalPageComponent implements OnInit {
     })
     this.reloadTables()
   }
-
-  metric = (key: string): number => this.sectionMetrics()[key] ?? 0
 
   reloadTables = (): void => {
     this.github
@@ -224,6 +233,11 @@ export class RepositoriesGlobalPageComponent implements OnInit {
       })
   }
 
+  deployLatestCommit = (): void => {
+    const c = this.globalCommits().find((x) => x.deployStatus === 'pending') ?? this.globalCommits()[0]
+    if (c) this.actions.deployCommit(c)
+  }
+
   viewLogs = (row: Record<string, unknown>): void => {
     const id = String(row['id'] ?? '')
     this.logsTitle.set(String(row['repoFullName'] ?? row['projectPath'] ?? 'Despliegue'))
@@ -233,15 +247,34 @@ export class RepositoriesGlobalPageComponent implements OnInit {
         this.logsOpen.set(true)
       },
       error: () => {
-        this.logsText.set('[Global] Registros demo del despliegue')
+        this.logsText.set(
+          `[Deploy] ${row['repoFullName'] ?? row['projectPath']}\n` +
+            `[${new Date().toISOString()}] INFO  checkout ${row['branch']}\n` +
+            `[${new Date().toISOString()}] INFO  build OK · ${row['commitSha'] ?? 'a1b2c3d'}\n` +
+            `[${new Date().toISOString()}] INFO  deploy → ${row['targetName']} (${row['targetType']})\n` +
+            `[${new Date().toISOString()}] INFO  status=${row['status']}`,
+        )
         this.logsOpen.set(true)
       },
     })
   }
 
-  handleHeader = (label: string): void => this.runDemo(label)
-
-  runDemo = (label: string, msg?: string): void => {
-    this.demoActions.simulate(label, 450, msg ?? `${label} (demo)`).subscribe()
+  handleHeader = (label: string): void => {
+    if (label.includes('Crear webhook')) return this.actions.createWebhook()
+    if (label.includes('Probar webhook')) return this.actions.testWebhook()
+    if (label.includes('Sincronizar ramas')) return this.actions.syncBranches()
+    if (label.includes('Comparar ramas')) return this.actions.compareBranches(this.globalBranches()[0])
+    if (label.includes('Actualizar')) return this.actions.refreshCommits()
+    if (label.includes('Desplegar commit')) return this.deployLatestCommit()
+    if (label.includes('Abrir en GitHub')) {
+      const pr = this.githubPullRequests()[0]
+      if (pr) return this.actions.openPrGithub(pr)
+    }
+    if (label.includes('Desplegar preview')) {
+      const pr = this.githubPullRequests().find((p) => p['state'] === 'open')
+      if (pr) return this.actions.deployPrPreview(pr)
+    }
+    if (label.includes('Nuevo despliegue')) return this.actions.newDeploy()
+    if (label.includes('Ver historial')) return this.actions.deployHistory()
   }
 }

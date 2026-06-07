@@ -157,4 +157,31 @@ export class KubernetesService {
       clusterRam: Math.round(50 + Math.random() * 25),
     }
   }
+
+  async scaleDeployment(name: string, namespace: string, replicas: number, _userId?: string) {
+    const deployment = await this.prisma.kubernetesResource.findFirst({
+      where: {
+        kind: 'Deployment',
+        name: { equals: name, mode: 'insensitive' },
+        ...(namespace ? { namespace } : {}),
+      },
+      include: { cluster: true },
+    })
+
+    if (deployment) {
+      await this.prisma.kubernetesResource.update({
+        where: { id: deployment.id },
+        data: { status: `Available · ${replicas}/${replicas} replicas` },
+      })
+    }
+
+    return {
+      name,
+      namespace,
+      replicas,
+      clusterName: deployment?.cluster?.name ?? 'prod-cluster',
+      ready: replicas,
+      status: 'Available',
+    }
+  }
 }

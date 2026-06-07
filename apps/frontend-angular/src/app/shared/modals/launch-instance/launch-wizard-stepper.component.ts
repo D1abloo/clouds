@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core'
+import { ChangeDetectionStrategy, Component, input, computed } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 
 export type WizardStepId = 1 | 2 | 3 | 4 | 5
@@ -6,14 +6,15 @@ export type WizardStepId = 1 | 2 | 3 | 4 | 5
 export interface WizardStepDef {
   id: WizardStepId
   label: string
+  icon: string
 }
 
 export const LAUNCH_WIZARD_STEPS: WizardStepDef[] = [
-  { id: 1, label: 'Provider' },
-  { id: 2, label: 'Account' },
-  { id: 3, label: 'Configure' },
-  { id: 4, label: 'Options' },
-  { id: 5, label: 'Plan' },
+  { id: 1, label: 'Proveedor', icon: 'cloud' },
+  { id: 2, label: 'Destino', icon: 'folder_special' },
+  { id: 3, label: 'Instancia', icon: 'memory' },
+  { id: 4, label: 'Recursos', icon: 'speed' },
+  { id: 5, label: 'Lanzar', icon: 'rocket_launch' },
 ]
 
 @Component({
@@ -22,21 +23,20 @@ export const LAUNCH_WIZARD_STEPS: WizardStepDef[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule],
   template: `
-    <nav class="launch-stepper" aria-label="Launch wizard progress">
-      @for (step of steps; track step.id; let last = $last) {
-        <div class="launch-stepper__item" [class]="stepState(step.id)">
-          <span class="launch-stepper__circle">
+    <nav class="lw-stepper" aria-label="Pasos del asistente">
+      @for (step of steps; track step.id) {
+        <div class="lw-step" [class]="stepState(step.id)">
+          <span class="lw-step__marker">
             @if (step.id < activeStep()) {
-              <mat-icon class="launch-stepper__check">check</mat-icon>
+              <mat-icon>check</mat-icon>
             } @else {
               {{ step.id }}
             }
           </span>
-          <span class="launch-stepper__label">{{ step.label }}</span>
+          <span class="lw-step__text">
+            <span class="lw-step__label">{{ step.label }}</span>
+          </span>
         </div>
-        @if (!last) {
-          <span class="launch-stepper__line" [class.launch-stepper__line--done]="step.id < activeStep()"></span>
-        }
       }
     </nav>
   `,
@@ -48,8 +48,8 @@ export class LaunchWizardStepperComponent {
 
   stepState = (id: WizardStepId): string => {
     const active = this.activeStep()
-    if (id < active) return 'launch-stepper__item--done'
-    if (id === active) return 'launch-stepper__item--active'
-    return 'launch-stepper__item--pending'
+    if (id < active) return 'lw-step--done'
+    if (id === active) return 'lw-step--active'
+    return 'lw-step--pending'
   }
 }

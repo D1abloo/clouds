@@ -22,6 +22,7 @@ import { RealtimeService } from '../../core/services/realtime.service'
 import { AlertsStore } from '../../core/stores/alerts.store'
 import { resolveRouteLabel } from '../../core/routing/route-labels'
 import { CommandPaletteComponent } from './command-palette.component'
+import { AppLogoComponent } from '../../shared/components/app-logo/app-logo.component'
 
 @Component({
   selector: 'app-topbar',
@@ -34,6 +35,7 @@ import { CommandPaletteComponent } from './command-palette.component'
     MatTooltipModule,
     RouterLink,
     CommandPaletteComponent,
+    AppLogoComponent,
   ],
   template: `
     <!-- Command Palette overlay -->
@@ -43,6 +45,7 @@ import { CommandPaletteComponent } from './command-palette.component'
 
     <header class="topbar">
       <div class="flex items-center gap-1 text-[0.82rem]">
+        <app-logo size="sm" class="topbar-logo" />
         <span class="font-medium text-[color:var(--sidebar-text-muted)]">CloudOps</span>
         @if (pageLabel()) {
           <mat-icon class="!h-4 !w-4 !text-[0.95rem] text-[color:var(--sidebar-text-faint)]">chevron_right</mat-icon>

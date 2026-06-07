@@ -10,7 +10,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { AuthService } from '../../core/services/auth.service'
 import { ThemeService } from '../../core/services/theme.service'
 import { DemoService } from '../../core/services/demo.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { environment } from '../../../environments/environment'
 
 @Component({
@@ -28,7 +28,17 @@ import { environment } from '../../../environments/environment'
   ],
   template: `
     <div class="page-container">
-      <app-page-header title="Settings" description="General preferences, users, integrations and demo mode" />
+      <app-page-header
+        title="Configuración"
+        description="Preferencias generales, usuarios, integraciones y modo demo"
+        icon="settings"
+        [demoMode]="true"
+        [actions]="[
+          { label: 'Guardar cambios', icon: 'save', primary: true },
+          { label: 'Exportar config', icon: 'download' },
+        ]"
+        (actionClick)="handleHeader($event)"
+      />
 
       <div class="table-card">
       <mat-tab-group class="soft-tabs" animationDuration="280ms">
@@ -36,28 +46,28 @@ import { environment } from '../../../environments/environment'
           <div class="tab-panel">
             <div class="settings-panel surface-elevated">
                 <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Backend URL</mat-label>
+                  <mat-label>URL del backend</mat-label>
                   <input matInput [value]="apiUrl" readonly />
                 </mat-form-field>
-                <p>Sync frequency: every 15 minutes (demo)</p>
+                <p>Frecuencia de sincronización: cada 15 minutos (demo)</p>
             </div>
           </div>
         </mat-tab>
-        <mat-tab label="Users">
+        <mat-tab label="Usuarios">
           <div class="tab-panel">
-            <p>Demo users: super_admin and admin roles (see Demo Mode tab for credentials).</p>
-            <button mat-stroked-button type="button" (click)="simulateAction('Create user')">Create user</button>
+            <p>Usuarios demo: roles super_admin y admin (ver pestaña Modo Demo para credenciales).</p>
+            <button mat-stroked-button type="button" (click)="simulateAction('Crear usuario')">Crear usuario</button>
           </div>
         </mat-tab>
         <mat-tab label="Roles"><div class="tab-panel"><p>super_admin, admin, operator, viewer</p></div></mat-tab>
-        <mat-tab label="Permissions"><div class="tab-panel"><p>RBAC matrix (demo) — cloud.*, vps.*, terraform.apply</p></div></mat-tab>
-        <mat-tab label="Secrets"><div class="tab-panel"><button mat-stroked-button (click)="simulateAction('Configure secrets')">Configure secrets</button></div></mat-tab>
-        <mat-tab label="Integrations"><div class="tab-panel"><button mat-stroked-button (click)="simulateAction('Configure webhooks')">Configure webhooks</button></div></mat-tab>
-        <mat-tab label="Demo Mode">
+        <mat-tab label="Permisos"><div class="tab-panel"><p>Matriz RBAC (demo) — cloud.*, vps.*, terraform.apply</p></div></mat-tab>
+        <mat-tab label="Secretos"><div class="tab-panel"><button mat-stroked-button (click)="simulateAction('Configurar secretos')">Configurar secretos</button></div></mat-tab>
+        <mat-tab label="Integraciones"><div class="tab-panel"><button mat-stroked-button (click)="simulateAction('Configurar webhooks')">Configurar webhooks</button></div></mat-tab>
+        <mat-tab label="Modo Demo">
           <div class="tab-panel">
             <div class="settings-panel surface-elevated">
-              <h3 class="panel-title">Demo Mode</h3>
-                <p>Simulated cloud data — no real AWS/GCP/Azure resources.</p>
+                <h3 class="panel-title">Modo Demo</h3>
+                <p>Datos cloud simulados — sin recursos reales AWS/GCP/Azure.</p>
                 <p><strong>Status:</strong> {{ demo.demoMode() ? 'Activo' : 'Desactivado en servidor' }}</p>
                 <p><strong>User:</strong> {{ demoUserLabel }}</p>
                 @if (!demo.canManageDemo()) {
@@ -70,32 +80,32 @@ import { environment } from '../../../environments/environment'
                   @if (demo.loading()) {
                     <mat-spinner diameter="24" />
                   } @else {
-                    <button mat-flat-button color="primary" type="button" [disabled]="!demo.canManageDemo()" (click)="demo.loadDemo()">Cargar datos demo</button>
-                    <button mat-stroked-button color="warn" type="button" [disabled]="!demo.canManageDemo()" (click)="demo.resetDemo()">Reset demo</button>
+                    <button mat-flat-button color="primary" type="button" [disabled]="!demo.canManageDemo()" (click)="handleDemoLoad()">Cargar datos demo</button>
+                    <button mat-stroked-button color="warn" type="button" [disabled]="!demo.canManageDemo()" (click)="handleDemoReset()">Reiniciar demo</button>
                   }
                 </div>
             </div>
           </div>
         </mat-tab>
-        <mat-tab label="Theme">
+        <mat-tab label="Tema">
           <div class="tab-panel">
-            <mat-slide-toggle [checked]="theme.mode() === 'dark'" (change)="handleThemeChange($event.checked)" aria-label="Dark mode">
-              Dark mode
+            <mat-slide-toggle [checked]="theme.mode() === 'dark'" (change)="handleThemeChange($event.checked)" aria-label="Modo oscuro">
+              Modo oscuro
             </mat-slide-toggle>
           </div>
         </mat-tab>
-        <mat-tab label="Notifications">
+        <mat-tab label="Notificaciones">
           <div class="tab-panel">
             <mat-slide-toggle checked disabled>In-app</mat-slide-toggle>
-            <mat-slide-toggle checked (change)="simulateAction('Email notifications')">Email</mat-slide-toggle>
+            <mat-slide-toggle checked (change)="simulateAction('Notificaciones email')">Email</mat-slide-toggle>
           </div>
         </mat-tab>
-        <mat-tab label="Account">
+        <mat-tab label="Cuenta">
           <div class="tab-panel">
             <p><strong>Email:</strong> {{ auth.user()?.email }}</p>
-            <p><strong>Name:</strong> {{ auth.user()?.name ?? '—' }}</p>
+            <p><strong>Nombre:</strong> {{ auth.user()?.name ?? '—' }}</p>
             <p><strong>Roles:</strong> {{ auth.user()?.roles?.join(', ') ?? '—' }}</p>
-            <button mat-stroked-button color="warn" type="button" class="logout-btn" (click)="auth.logout()">Sign out</button>
+            <button mat-stroked-button color="warn" type="button" class="logout-btn" (click)="auth.logout()">Cerrar sesión</button>
           </div>
         </mat-tab>
       </mat-tab-group>
@@ -117,7 +127,7 @@ export class SettingsPageComponent implements OnInit {
   readonly auth = inject(AuthService)
   readonly theme = inject(ThemeService)
   readonly demo = inject(DemoService)
-  readonly demoActions = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
   readonly apiUrl = environment.apiUrl
   readonly demoUserLabel = 'demo@cloudops.local / Demo1234!'
 
@@ -129,7 +139,22 @@ export class SettingsPageComponent implements OnInit {
     this.theme.setTheme(dark ? 'dark' : 'light')
   }
 
+  handleHeader = (label: string): void => {
+    const actionId = label === 'Guardar cambios' ? 'save' : 'export'
+    this.actions.runPageAction('settings', actionId, label, { area: 'admin' })
+  }
+
   simulateAction = (label: string): void => {
-    this.demoActions.simulate(label, 400).subscribe()
+    this.actions.runPageAction('settings', 'save', label, { area: 'admin' })
+  }
+
+  handleDemoLoad = (): void => {
+    this.demo.loadDemo()
+    this.actions.runPageAction('settings', 'demo-load', 'Datos demo cargados', { area: 'admin' })
+  }
+
+  handleDemoReset = (): void => {
+    this.demo.resetDemo()
+    this.actions.runPageAction('settings', 'demo-reset', 'Demo reiniciado', { area: 'admin' })
   }
 }

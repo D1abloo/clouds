@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import { AlertSeverity } from '@prisma/client'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { IntegrationsService } from '../integrations/integrations.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
 
 @Injectable()
@@ -9,6 +10,7 @@ export class AlertsService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private integrations: IntegrationsService,
     private realtime: RealtimeGateway,
   ) {}
 
@@ -39,6 +41,26 @@ export class AlertsService {
     if (userId) {
       await this.notifications.create(userId, 'in-app', `Alert: ${rule.name}`, message)
     }
+
+    const severity =
+      rule.severity === AlertSeverity.CRITICAL
+        ? 'critical'
+        : rule.severity === AlertSeverity.WARNING
+          ? 'warning'
+          : 'info'
+    const eventType = rule.severity === AlertSeverity.CRITICAL ? 'alert.critical' : 'alert.warning'
+
+    void this.integrations.dispatch(
+      {
+        eventType,
+        title: rule.name,
+        body: message,
+        severity,
+        source: 'CloudOps Alerts',
+        metadata: { alertId: alert.id, ruleId: rule.id },
+      },
+      userId,
+    )
 
     this.realtime.emitAlert(alert)
     return alert

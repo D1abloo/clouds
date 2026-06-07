@@ -20,6 +20,17 @@ export const sectionToTabIndex = (module: string, section: string): number => {
       terraform: 10,
       audit: 11,
     },
+    vps: {
+      overview: 0,
+      servers: 0,
+      ssh: 1,
+      services: 2,
+      docker: 3,
+      kubernetes: 4,
+      ports: 5,
+      metrics: 6,
+      audit: 7,
+    },
     docker: {
       overview: 0,
       containers: 0,
@@ -33,11 +44,16 @@ export const sectionToTabIndex = (module: string, section: string): number => {
       overview: 0,
       servers: 0,
       jobs: 0,
+      pipelines: 2,
       builds: 1,
-      pipelines: 0,
-      logs: 2,
-      parameters: 3,
-      history: 4,
+      logs: 4,
+      parameters: 5,
+      history: 1,
+      artifacts: 6,
+      tests: 7,
+      agents: 8,
+      nodes: 8,
+      queue: 3,
       'failed-builds': 1,
     },
     kubernetes: {
@@ -92,11 +108,12 @@ export const bindSectionTabs = (
   destroyRef: DestroyRef,
   tabIndex: WritableSignal<number>,
   module: string,
+  sectionMap?: (section: string) => number,
 ): void => {
   route.paramMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
     const section = params.get('section')
     if (section) {
-      tabIndex.set(sectionToTabIndex(module, section))
+      tabIndex.set(sectionMap ? sectionMap(section) : sectionToTabIndex(module, section))
     }
   })
 }

@@ -34,7 +34,7 @@ import { ResourceStatus } from '../../../core/models/api.models'
       width: 8px;
       height: 8px;
     }
-    .status-badge--running { color: var(--status-running); background: color-mix(in srgb, var(--status-running) 22%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--status-running) 35%, transparent); }
+    .status-badge--running { color: var(--status-running); background: color-mix(in srgb, var(--status-running) 22%, transparent); }
     .status-badge--stopped { color: var(--status-stopped); background: color-mix(in srgb, var(--status-stopped) 18%, transparent); }
     .status-badge--pending, .status-badge--planning, .status-badge--planned { color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 22%, transparent); }
     .status-badge--applied { color: var(--status-info); background: color-mix(in srgb, var(--status-info) 22%, transparent); }

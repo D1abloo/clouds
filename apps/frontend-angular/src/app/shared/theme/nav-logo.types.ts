@@ -1,4 +1,4 @@
-/** Brand / platform logos (inline SVG from Simple Icons + files in src/assets/logos). */
+/** Brand / platform logos (SVG inline vía `BRAND_LOGO_SVG`; GCP = logo oficial Google Cloud). */
 export type NavLogoKey =
   | 'aws'
   | 'gcp'

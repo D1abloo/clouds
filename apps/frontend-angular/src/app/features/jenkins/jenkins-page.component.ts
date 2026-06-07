@@ -1,89 +1,55 @@
 import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
 import { ActivatedRoute } from '@angular/router'
 import { bindSectionTabs } from '../../core/routing/section-tab.util'
-import { DatePipe } from '@angular/common'
-import { FormControl, ReactiveFormsModule } from '@angular/forms'
-import { MatTabsModule } from '@angular/material/tabs'
-import { MatTableModule } from '@angular/material/table'
-import { MatFormFieldModule } from '@angular/material/form-field'
-import { MatInputModule } from '@angular/material/input'
-import { MatButtonModule } from '@angular/material/button'
-import { MatIconModule } from '@angular/material/icon'
-import { MatMenuModule } from '@angular/material/menu'
-import { MatDialog, MatDialogModule } from '@angular/material/dialog'
+import { FormControl } from '@angular/forms'
+import { MatDialog } from '@angular/material/dialog'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
+import { JenkinsOverviewComponent } from './jenkins-overview.component'
+import { JenkinsSidebarComponent } from './jenkins-sidebar.component'
+import { JenkinsJobWorkspaceComponent } from './jenkins-job-workspace.component'
+import {
+  JenkinsLaunchDetailDialogComponent,
+  JenkinsLaunchDialogComponent,
+  buildJenkinsLaunchDetail,
+  defaultLaunchParams,
+  type JenkinsLaunchDetailData,
+} from './jenkins-launch-dialog.component'
+import { launchDetailKey } from './jenkins-launch-detail-panel.component'
 import { InventoryService } from '../../core/services/inventory.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
-import { invNum } from '../../core/utils/inventory.util'
-
-type JobRow = Record<string, unknown>
-
-@Component({
-  selector: 'app-jenkins-launch-dialog',
-  standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, ReactiveFormsModule],
-  template: `
-    <h2 mat-dialog-title>Launch job</h2>
-    <mat-dialog-content>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Branch</mat-label>
-        <input matInput [formControl]="branch" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Environment</mat-label>
-        <input matInput [formControl]="env" />
-      </mat-form-field>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close type="button">Cancel</button>
-      <button mat-flat-button color="primary" type="button" [mat-dialog-close]="{ branch: branch.value, env: env.value }">Launch</button>
-    </mat-dialog-actions>
-  `,
-  styles: `.full { width: 100%; }`,
-})
-export class JenkinsLaunchDialogComponent {
-  readonly branch = new FormControl('main', { nonNullable: true })
-  readonly env = new FormControl('staging', { nonNullable: true })
-}
+import {
+  JenkinsCreateJobDialogComponent,
+} from './jenkins-create-job-dialog.component'
+import { jobToRow, normalizeJenkinsInventory } from './jenkins.demo'
+import type { JenkinsBuild, JenkinsInventory, JenkinsJob } from './jenkins.models'
+import { jenkinsSectionToTab } from './jenkins.models'
 
 @Component({
   selector: 'app-jenkins-page',
   standalone: true,
   imports: [
-    DatePipe,
-    ReactiveFormsModule,
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
-    EmptyStateComponent,
     ErrorStateComponent,
-    StatusBadgeComponent,
-    MatTabsModule,
-    MatTableModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatMenuModule,
+    JenkinsOverviewComponent,
+    JenkinsSidebarComponent,
+    JenkinsJobWorkspaceComponent,
   ],
   template: `
-    <div class="page-container">
+    <div class="page-container jenkins-page">
       <app-page-header
         title="Jenkins"
-        description="CI/CD servers, jobs, builds and logs"
+        description="Automatización CI/CD — controladores, pipelines, cola de builds y agentes"
         [actions]="[
-          { label: 'Add Jenkins', icon: 'add', primary: true },
-          { label: 'Validate connection', icon: 'verified' },
-          { label: 'Refresh jobs', icon: 'refresh' },
+          { label: 'Crear job', icon: 'playlist_add', primary: true },
+          { label: 'Añadir controlador', icon: 'dns' },
+          { label: 'Validar conexión', icon: 'verified' },
+          { label: 'Sincronizar jobs', icon: 'sync' },
         ]"
         (actionClick)="handleHeader($event)"
       />
@@ -92,181 +58,313 @@ export class JenkinsLaunchDialogComponent {
         <app-loading-state />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
-      } @else {
-        <div class="summary-grid app-section-panel stagger-children">
-          <app-summary-card title="Servers" [value]="n('serverCount')" icon="dns" variant="elevated" />
-          <app-summary-card title="Jobs" [value]="n('jobCount')" icon="work" variant="elevated" />
-          <app-summary-card title="Running builds" [value]="n('buildsRunning')" icon="hourglass_top" variant="elevated" />
-          <app-summary-card title="Success" [value]="n('buildsSuccess')" icon="check_circle" iconColor="primary" variant="elevated" />
-          <app-summary-card title="Failed" [value]="n('buildsFailed')" icon="cancel" iconColor="warn" variant="elevated" />
+      } @else if (inventory()) {
+        @let inv = inventory()!;
+        <app-jenkins-overview
+          [inventory]="inv"
+          [executorPercent]="executorPercent()"
+          (buildSelect)="handleOverviewBuild($event)"
+          (jobSelect)="handleJobSelect($event)"
+        />
+
+        <div class="jenkins-workspace-layout">
+          <app-jenkins-sidebar
+            [inventory]="inv"
+            [filteredJobs]="filteredJobs()"
+            [selectedServerId]="selectedServerId()"
+            [selectedJobName]="selectedJob()?.name ?? ''"
+            (serverSelect)="handleServerSelect($event)"
+            (jobSelect)="handleJobSelect($event)"
+            (searchChange)="searchControl.setValue($event)"
+            (createJob)="openCreateJobDialog()"
+          />
+          <main class="jenkins-workspace-main">
+            <app-jenkins-job-workspace
+              [job]="selectedJob()"
+              [inventory]="inv"
+              [agents]="inv.agents"
+              [workspaceTab]="workspaceTab()"
+              [selectedBuild]="selectedBuild()"
+              [jobLaunches]="launchesForSelectedJob()"
+              [jobLaunch]="launchForSelectedJob()"
+              [consoleLog]="consoleLog()"
+              (buildNow)="launchJob($event)"
+              (action)="handleJobAction($event)"
+              (workspaceTabChange)="workspaceTab.set($event)"
+              (buildSelect)="handleBuildSelect($event)"
+              (openLaunchDetail)="openLaunchDetailDialog($event)"
+            />
+          </main>
         </div>
 
-        <div class="table-card">
-        <mat-tab-group
-          class="soft-tabs"
-          animationDuration="280ms"
-          [selectedIndex]="tabIndex()"
-          (selectedIndexChange)="tabIndex.set($event)"
-        >
-          <mat-tab label="Jobs">
-            <div class="tab-panel">
-              <mat-form-field appearance="outline">
-                <mat-label>Search jobs</mat-label>
-                <input matInput [formControl]="searchControl" />
-              </mat-form-field>
-              <div class="data-table-wrap">
-              <table mat-table [dataSource]="filteredJobs()" class="premium-table table-row-hover">
-                <ng-container matColumnDef="name">
-                  <th mat-header-cell *matHeaderCellDef>Job</th>
-                  <td mat-cell *matCellDef="let row">{{ row.name }}</td>
-                </ng-container>
-                <ng-container matColumnDef="server">
-                  <th mat-header-cell *matHeaderCellDef>Server</th>
-                  <td mat-cell *matCellDef="let row">{{ row.server }}</td>
-                </ng-container>
-                <ng-container matColumnDef="status">
-                  <th mat-header-cell *matHeaderCellDef>Status</th>
-                  <td mat-cell *matCellDef="let row"><app-status-badge [value]="row.status" /></td>
-                </ng-container>
-                <ng-container matColumnDef="lastRun">
-                  <th mat-header-cell *matHeaderCellDef>Last run</th>
-                  <td mat-cell *matCellDef="let row">{{ row.lastRun }}</td>
-                </ng-container>
-                <ng-container matColumnDef="duration">
-                  <th mat-header-cell *matHeaderCellDef>Duration</th>
-                  <td mat-cell *matCellDef="let row">{{ row.duration }}</td>
-                </ng-container>
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef></th>
-                  <td mat-cell *matCellDef="let row">
-                    <button mat-icon-button [matMenuTriggerFor]="jobMenu" aria-label="Actions"><mat-icon>more_vert</mat-icon></button>
-                    <mat-menu #jobMenu="matMenu">
-                      <button mat-menu-item (click)="launchJob(row)">Launch job</button>
-                      <button mat-menu-item (click)="viewBuild(row)">View build</button>
-                      <button mat-menu-item (click)="viewLogs(row)">View logs</button>
-                      <button mat-menu-item (click)="retryBuild(row)">Retry build</button>
-                    </mat-menu>
-                  </td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="jobCols"></tr>
-                <tr mat-row *matRowDef="let row; columns: jobCols" class="table-row-hover"></tr>
-              </table>
-              </div>
-            </div>
-          </mat-tab>
-          <mat-tab label="Builds">
-            <div class="tab-panel">
-              @for (b of builds(); track $index) {
-                <p class="build-line">
-                  <app-status-badge [value]="$any(b).status" />
-                  {{ $any(b).jobName }} #{{ $any(b).buildNum }} · {{ ($any(b).createdAt) | date: 'short' }}
-                </p>
-              }
-            </div>
-          </mat-tab>
-          <mat-tab label="Logs"><div class="tab-panel"><pre class="mono log-box">{{ buildLog() }}</pre></div></mat-tab>
-          <mat-tab label="Parameters"><div class="tab-panel"><p>branch, environment, deploy_target (demo)</p></div></mat-tab>
-          <mat-tab label="History"><div class="tab-panel"><p>{{ builds().length }} builds in history.</p></div></mat-tab>
-        </mat-tab-group>
-        </div>
       }
     </div>
   `,
   styles: `
-    .build-line { display: flex; align-items: center; gap: 0.5rem; margin: 0.35rem 0; }
-    .log-box { background: var(--app-elevated); padding: 1rem; border-radius: var(--app-radius-md); box-shadow: var(--app-shadow-xs); font-size: 0.75rem; max-height: 360px; overflow: auto; }
+    .jenkins-workspace-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 300px) 1fr;
+      gap: 1rem;
+      min-height: 560px;
+      align-items: stretch;
+    }
+    @media (max-width: 1024px) {
+      .jenkins-workspace-layout { grid-template-columns: 1fr; }
+    }
+    .jenkins-workspace-main {
+      min-width: 0;
+      border-radius: var(--app-radius-lg);
+      background: var(--app-card);
+      box-shadow: var(--app-shadow-sm);
+      overflow: hidden;
+    }
   `,
 })
 export class JenkinsPageComponent implements OnInit {
-  private readonly inventory = inject(InventoryService)
+  private readonly inventorySvc = inject(InventoryService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   private readonly route = inject(ActivatedRoute)
   private readonly destroyRef = inject(DestroyRef)
 
   readonly page = createPageLoader(true)
-  readonly tabIndex = signal(0)
-  readonly data = signal<Record<string, unknown> | null>(null)
+  readonly inventory = signal<JenkinsInventory | null>(null)
+  readonly selectedServerId = signal('all')
+  readonly selectedJob = signal<JenkinsJob | null>(null)
+  readonly selectedBuild = signal<JenkinsBuild | null>(null)
+  readonly workspaceTab = signal(0)
+  readonly launchHistory = signal<JenkinsLaunchDetailData[]>([])
+  readonly activeLaunchKey = signal<string | null>(null)
   readonly searchControl = new FormControl('', { nonNullable: true })
-  readonly jobCols = ['name', 'server', 'status', 'lastRun', 'duration', 'actions']
 
   private readonly searchTerm = toSignal(
     this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')),
     { initialValue: '' },
   )
 
-  jobs = computed(() => (this.data()?.['jobItems'] as JobRow[]) ?? [])
-  builds = computed(() => (this.data()?.['builds'] as Record<string, unknown>[]) ?? [])
+  readonly launchesForSelectedJob = computed(() => {
+    const job = this.selectedJob()
+    if (!job) return []
+    return this.launchHistory().filter((l) => l.jobName === job.name)
+  })
 
-  filteredJobs = computed(() => {
+  readonly launchForSelectedJob = computed(() => {
+    const launches = this.launchesForSelectedJob()
+    if (launches.length === 0) return null
+    const key = this.activeLaunchKey()
+    if (key) {
+      const match = launches.find((l) => launchDetailKey(l) === key)
+      if (match) return match
+    }
+    return launches[0]
+  })
+
+  readonly filteredJobs = computed(() => {
+    const inv = this.inventory()
+    if (!inv) return []
     const term = (this.searchTerm() ?? '').toLowerCase()
-    return this.jobs().filter((j) => !term || String(j['name']).toLowerCase().includes(term))
+    const server = this.selectedServerId()
+    return inv.jobItems.filter((j) => {
+      const matchServer = server === 'all' || j.serverId === server
+      const matchTerm =
+        !term ||
+        j.name.toLowerCase().includes(term) ||
+        j.folder.toLowerCase().includes(term) ||
+        j.server.toLowerCase().includes(term)
+      return matchServer && matchTerm
+    })
+  })
+
+  readonly consoleLog = computed(() => {
+    const job = this.selectedJob()
+    const inv = this.inventory()
+    if (!job || !inv) return ''
+    return inv.logsByJob[job.name] ?? ''
   })
 
   ngOnInit(): void {
-    bindSectionTabs(this.route, this.destroyRef, this.tabIndex, 'jenkins')
+    bindSectionTabs(this.route, this.destroyRef, this.workspaceTab, 'jenkins', jenkinsSectionToTab)
     this.load()
   }
 
-  n = (key: string): number => invNum(this.data(), key)
+  executorPercent = (): number => {
+    const inv = this.inventory()
+    if (!inv || inv.executorTotal === 0) return 0
+    return Math.round((inv.executorBusy / inv.executorTotal) * 100)
+  }
+
+  handleOverviewBuild = (build: JenkinsBuild): void => {
+    const job = this.inventory()?.jobItems.find((j) => j.name === build.jobName)
+    if (job) this.handleJobSelect(job)
+    this.selectedBuild.set(build)
+    this.workspaceTab.set(1)
+  }
 
   load = (): void => {
-    this.page.run(this.inventory.jenkins(), {
-      onSuccess: (d) => this.data.set(d),
-      errorMessage: 'Failed to load Jenkins inventory',
+    this.page.run(this.inventorySvc.jenkins(), {
+      onSuccess: (d) => {
+        const inv = normalizeJenkinsInventory(d)
+        this.inventory.set(inv)
+        const jobs = inv.jobItems
+        if (jobs.length > 0 && !this.selectedJob()) {
+          const pick = jobs.find((j) => j.status === 'RUNNING') ?? jobs[0]
+          this.selectedJob.set(pick)
+          const build = inv.builds.find((b) => b.jobName === pick.name)
+          if (build) this.selectedBuild.set(build)
+        }
+        this.seedDemoLaunch(jobs, inv.demoMode)
+      },
+      errorMessage: 'No se pudo cargar Jenkins',
     })
   }
 
-  handleHeader = (label: string): void => {
-    if (label === 'Add Jenkins') {
-      this.demoActions.simulate('Add Jenkins server', 700).subscribe()
-      return
-    }
-    if (label === 'Validate connection') {
-      this.demoActions.simulate('Jenkins validation', 900, 'Connection OK (demo)').subscribe()
-      return
-    }
-    this.load()
+  private seedDemoLaunch = (jobs: JenkinsJob[], demoMode: boolean): void => {
+    if (!demoMode || this.launchHistory().length > 0) return
+    const job = jobs.find((j) => j.status === 'RUNNING') ?? jobs[0]
+    if (!job) return
+    this.pushLaunch(buildJenkinsLaunchDetail(jobToRow(job), defaultLaunchParams(jobToRow(job))))
   }
 
-  launchJob = (row: JobRow): void => {
+  private pushLaunch = (detail: JenkinsLaunchDetailData): void => {
+    const key = launchDetailKey(detail)
+    const rest = this.launchHistory().filter((l) => launchDetailKey(l) !== key)
+    this.launchHistory.set([detail, ...rest])
+    this.activeLaunchKey.set(key)
+  }
+
+  handleServerSelect = (id: string): void => {
+    this.selectedServerId.set(id)
+  }
+
+  handleJobSelect = (job: JenkinsJob): void => {
+    this.selectedJob.set(job)
+    const build = this.inventory()?.builds.find((b) => b.jobName === job.name)
+    this.selectedBuild.set(build ?? null)
+    this.workspaceTab.set(0)
+    const launch = this.launchHistory().find((l) => l.jobName === job.name)
+    this.activeLaunchKey.set(launch ? launchDetailKey(launch) : null)
+  }
+
+  handleBuildSelect = (build: JenkinsBuild): void => {
+    this.selectedBuild.set(build)
+    this.workspaceTab.set(2)
+  }
+
+  openCreateJobDialog = (): void => {
+    const inv = this.inventory()
+    if (!inv) return
     this.dialog
-      .open(JenkinsLaunchDialogComponent, { width: '400px' })
+      .open(JenkinsCreateJobDialogComponent, {
+        width: '980px',
+        maxWidth: '98vw',
+        maxHeight: '94vh',
+        data: { servers: inv.servers, folders: inv.folders },
+      })
       .afterClosed()
-      .subscribe((params) => {
-        if (!params) return
-        this.demoActions
-          .simulate(`Launch ${row['name']}`, 1200, `Build started — branch ${params.branch}`)
-          .subscribe(() => this.load())
+      .subscribe((job) => {
+        if (!job) return
+        const logs = { ...inv.logsByJob, [job.name]: `[Pipeline] Job creado — ${job.name}\n` }
+        const servers = inv.servers.map((s) =>
+          s.id === job.serverId ? { ...s, jobs: s.jobs + 1 } : s,
+        )
+        this.inventory.set({
+          ...inv,
+          jobItems: [...inv.jobItems, job],
+          jobCount: inv.jobItems.length + 1,
+          servers,
+          logsByJob: logs,
+        })
+        this.selectedJob.set(job)
+        this.selectedServerId.set(job.serverId)
+        this.demoActions.simulate(`Job ${job.name} creado`, 800, 'Configuración guardada (demo)').subscribe()
       })
   }
 
-  viewBuild = (row: JobRow): void => {
-    this.dialog.open(DetailDialogComponent, {
-      width: '440px',
-      data: {
-        title: `Build — ${row['name']}`,
-        rows: [
-          { label: 'Server', value: String(row['server']) },
-          { label: 'Last run', value: String(row['lastRun']) },
-          { label: 'Duration', value: String(row['duration']) },
-          { label: 'Status', value: String(row['status']) },
-        ],
-      },
+  handleHeader = (label: string): void => {
+    if (label === 'Crear job') {
+      this.openCreateJobDialog()
+      return
+    }
+    if (label === 'Añadir controlador') {
+      this.demoActions.simulate('Añadir controlador Jenkins', 700).subscribe()
+      return
+    }
+    if (label === 'Validar conexión') {
+      this.demoActions.simulate('Validación Jenkins', 900, 'Conexión OK (demo)').subscribe()
+      return
+    }
+    this.load()
+  }
+
+  launchJob = (job: JenkinsJob): void => {
+    const row = jobToRow(job)
+    this.dialog
+      .open(JenkinsLaunchDialogComponent, {
+        width: '920px',
+        maxWidth: '96vw',
+        maxHeight: '94vh',
+        data: { job: row },
+      })
+      .afterClosed()
+      .subscribe((detail) => {
+        if (!detail) return
+        const inv = this.inventory()
+        const launched = inv?.jobItems.find((j) => j.name === detail.jobName)
+        if (launched) {
+          this.selectedJob.set(launched)
+          this.selectedBuild.set({
+            jobName: detail.jobName,
+            buildNum: detail.buildNum,
+            status: detail.status,
+            createdAt: detail.startedAt,
+            duration: '—',
+            branch: detail.params.branch,
+            triggeredBy: detail.triggeredBy,
+          })
+        }
+        this.pushLaunch(detail)
+        this.registerLaunchBuild(detail)
+        this.openLaunchDetailDialog(detail)
+        this.demoActions.simulate(`Build ${detail.jobName}`, 900, `#${detail.buildNum} en cola`).subscribe()
+      })
+  }
+
+  private registerLaunchBuild = (detail: JenkinsLaunchDetailData): void => {
+    const inv = this.inventory()
+    if (!inv) return
+    const build: JenkinsBuild = {
+      jobName: detail.jobName,
+      buildNum: detail.buildNum,
+      status: detail.status,
+      createdAt: detail.startedAt,
+      duration: '—',
+      branch: detail.params.branch,
+      triggeredBy: detail.triggeredBy,
+      commit: 'nuevo',
+    }
+    this.inventory.set({
+      ...inv,
+      builds: [build, ...inv.builds],
+      buildsRunning: inv.buildsRunning + 1,
+      queueSize: inv.queueSize + 1,
     })
   }
 
-  viewLogs = (row: JobRow): void => {
-    this.dialog.open(DetailDialogComponent, {
-      width: '560px',
-      data: { title: `Logs — ${row['name']}`, rows: [], extra: this.buildLog() },
+  handleJobAction = (ev: { job: JenkinsJob; type: 'poll' | 'stop' | 'replay' }): void => {
+    const labels = { poll: 'Poll SCM', stop: 'Detener build', replay: 'Replay' }
+    this.demoActions.simulate(`${labels[ev.type]} — ${ev.job.name}`, 800).subscribe()
+  }
+
+  openLaunchDetailDialog = (detail?: JenkinsLaunchDetailData): void => {
+    const data = detail ?? this.launchForSelectedJob()
+    if (!data) return
+    this.activeLaunchKey.set(launchDetailKey(data))
+    this.dialog.open(JenkinsLaunchDetailDialogComponent, {
+      width: '940px',
+      maxWidth: '98vw',
+      maxHeight: '94vh',
+      panelClass: 'jenkins-launch-detail-dialog-panel',
+      data,
     })
   }
-
-  retryBuild = (row: JobRow): void => {
-    this.demoActions.simulate(`Retry ${row['name']}`, 1000).subscribe(() => this.load())
-  }
-
-  buildLog = (): string =>
-    `[Pipeline] Start\n[Pipeline] checkout\n[Pipeline] npm ci\n[Pipeline] npm test — 142 tests passed\n[Pipeline] docker build -t app:latest .\n[Pipeline] deploy staging OK\nFinished: SUCCESS`
 }

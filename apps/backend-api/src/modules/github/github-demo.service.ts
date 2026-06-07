@@ -14,6 +14,10 @@ import {
   type GithubDeploymentDemo,
   type GithubRepoDemo,
 } from './github-demo.data'
+import {
+  filterDemoReposByPermissions,
+  type GithubSyncPermissions,
+} from './github-sync-permissions.util'
 import { mapDeployment } from './github-mappers'
 
 type MemoryDeployment = ReturnType<typeof mapDeployment> & { logs?: string }
@@ -22,6 +26,7 @@ type MemoryDeployment = ReturnType<typeof mapDeployment> & { logs?: string }
 export class GithubDemoService implements OnModuleInit {
   private readonly logger = new Logger(GithubDemoService.name)
   private readonly memoryDeployments: MemoryDeployment[] = []
+  private readonly accountSyncPermissions = new Map<string, GithubSyncPermissions>()
   private dbReady = false
   private demoSessionActive = true
 
@@ -38,8 +43,34 @@ export class GithubDemoService implements OnModuleInit {
     return tokenRef.startsWith('demo:') || tokenRef === 'demo'
   }
 
-  listMemoryRepos() {
-    return DEMO_GITHUB_REPOS.map((d) => toApiRepoFromDemo(d))
+  setAccountSyncPermissions(accountId: string, perms: GithubSyncPermissions): void {
+    this.accountSyncPermissions.set(accountId, perms)
+  }
+
+  getAccountSyncPermissions(accountId: string): GithubSyncPermissions | undefined {
+    return this.accountSyncPermissions.get(accountId)
+  }
+
+  resolveSyncPermissions(accountId: string, override?: GithubSyncPermissions): GithubSyncPermissions {
+    const stored = this.accountSyncPermissions.get(accountId) ?? {}
+    return { ...stored, ...override }
+  }
+
+  filterReposForAccount(accountId: string, override?: GithubSyncPermissions) {
+    return filterDemoReposByPermissions(
+      DEMO_GITHUB_REPOS,
+      this.resolveSyncPermissions(accountId, override),
+    )
+  }
+
+  listMemoryRepos(accountId?: string, override?: GithubSyncPermissions) {
+    const result = accountId
+      ? this.filterReposForAccount(accountId, override)
+      : filterDemoReposByPermissions(DEMO_GITHUB_REPOS, {
+          scopes: ['repo', 'workflow', 'admin:repo_hook', 'read:user', 'read:org'],
+          repoScope: 'all',
+        })
+    return result.repos.map((d) => toApiRepoFromDemo(d))
   }
 
   getMemoryRepo(repoId: string) {
@@ -199,9 +230,10 @@ export class GithubDemoService implements OnModuleInit {
     }
   }
 
-  async populateAccount(accountId: string): Promise<number> {
+  async populateAccount(accountId: string, override?: GithubSyncPermissions): Promise<number> {
+    const { repos } = this.filterReposForAccount(accountId, override)
     let count = 0
-    for (const demo of DEMO_GITHUB_REPOS) {
+    for (const demo of repos) {
       const repo = await this.prisma.githubRepository.upsert({
         where: { accountId_fullName: { accountId, fullName: demo.fullName } },
         create: {

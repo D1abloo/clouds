@@ -80,16 +80,37 @@ import { SidebarService } from '../sidebar/sidebar.service'
       display: flex;
       flex-direction: column;
       padding: 0.5rem 0.65rem 0.65rem;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    .layout-root--sections-only .layout-main-scroll:has(.hlth-page-host),
+    .layout-root--sections-only .layout-main-scroll:has(.cloud-page-host),
+    .layout-root--sections-only .layout-main-scroll:has(.tf-page--in-layout),
+    .layout-root--sections-only .layout-main-scroll:has(.terminal-studio),
+    .layout-root--sections-only .layout-main-scroll:has(.terminal-history),
+    .layout-root--sections-only .layout-main-scroll:has(.runbooks-page),
+    .layout-root--sections-only .layout-main-scroll:has(.sched-page) {
       overflow: hidden;
     }
     .layout-root--sections-only .layout-page {
+      flex: 0 0 auto;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      min-height: auto;
+    }
+    .layout-root--sections-only .layout-page:has(.hlth-page-host),
+    .layout-root--sections-only .layout-page:has(.cloud-page-host),
+    .layout-root--sections-only .layout-page:has(.tf-page--in-layout),
+    .layout-root--sections-only .layout-page:has(.terminal-studio),
+    .layout-root--sections-only .layout-page:has(.terminal-history),
+    .layout-root--sections-only .layout-page:has(.runbooks-page),
+    .layout-root--sections-only .layout-page:has(.sched-page) {
       display: flex;
       flex-direction: column;
       flex: 1;
       min-height: 0;
-      max-width: 100%;
-      width: 100%;
-      margin: 0;
+      overflow: hidden;
     }
     .layout-root--sections-only app-demo-banner,
     .layout-root--sections-only app-module-area-tabs {

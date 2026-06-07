@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
+import { IntegrationsService } from '../integrations/integrations.service'
+import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
 import { CreateVpsDto } from './dto/create-vps.dto'
 import { isDangerousCommand } from '../ssh/command-validator'
 
@@ -9,6 +11,7 @@ export class VpsService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private integrations: IntegrationsService,
   ) {}
 
   async create(dto: CreateVpsDto, userId?: string) {
@@ -95,6 +98,56 @@ export class VpsService {
       orderBy: { createdAt: 'desc' },
       take: 50,
     })
+  }
+
+  async createFleetBackup(region?: string, userId?: string) {
+    const hosts = await this.prisma.vpsServer.findMany({ where: { deletedAt: null } })
+    const filtered = region
+      ? hosts.filter((h) => {
+          const meta = (h.metadata as Record<string, unknown>) ?? {}
+          return meta['region'] === region || h.hostname.includes(region)
+        })
+      : hosts
+
+    const snapshots = await Promise.all(
+      filtered.map(async (vps) => {
+        const output = `[Backup] Snapshot created for ${vps.name} (${vps.hostname})`
+        const execution = await this.prisma.commandExecution.create({
+          data: {
+            userId: userId ?? 'system',
+            command: 'backup-fleet-snapshot',
+            output,
+            exitCode: 0,
+          },
+        })
+        await this.audit.create({
+          userId,
+          action: 'vps.backup',
+          resource: 'vps',
+          resourceId: vps.id,
+          metadata: { commandId: execution.id, region: region ?? 'all' },
+        })
+        return { vpsId: vps.id, name: vps.name, executionId: execution.id }
+      }),
+    )
+
+    void this.integrations.emitPlatformEvent(
+      {
+        eventType: PLATFORM_EVENTS.BACKUP_COMPLETED,
+        title: `VPS fleet backup — ${region ?? 'all regions'}`,
+        body: `Snapshot backup completed on ${snapshots.length} host(s)`,
+        severity: 'info',
+        source: 'VPS',
+        metadata: { region: region ?? 'all', hosts: snapshots.length, snapshots },
+      },
+      userId,
+    )
+
+    return {
+      hosts: snapshots.length,
+      region: region ?? 'all',
+      snapshots,
+    }
   }
 
   private sanitize(vps: { id: string; name: string; hostname: string; port: number; username: string; sshKeyRef: string; metadata?: unknown; [key: string]: unknown }) {

@@ -15,7 +15,16 @@ import { MatButtonModule } from '@angular/material/button'
         <mat-form-field appearance="outline" class="filter-bar__search">
           <mat-label>{{ searchLabel }}</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input matInput [formControl]="searchControl" (input)="searchChange.emit(searchControl.value)" />
+          <input
+            matInput
+            [formControl]="searchControl"
+            [placeholder]="searchPlaceholder"
+            [attr.aria-label]="searchLabel"
+            (input)="searchChange.emit(searchControl.value)"
+          />
+          @if (searchHint) {
+            <mat-hint>{{ searchHint }}</mat-hint>
+          }
         </mat-form-field>
       }
       <div class="filter-bar__slots">
@@ -40,7 +49,9 @@ import { MatButtonModule } from '@angular/material/button'
 export class FilterBarComponent {
   @Input() showSearch = true
   @Input() showRefresh = true
-  @Input() searchLabel = 'Search'
+  @Input() searchLabel = 'Buscar'
+  @Input() searchPlaceholder = ''
+  @Input() searchHint = ''
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly searchChange = output<string>()
   readonly refreshClick = output<void>()

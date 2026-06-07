@@ -10,6 +10,30 @@ import {
   defaultSshKeys,
   type SecurityRisk,
 } from './security-center.demo'
+import type { SecurityScanReport } from './security-scan-report.util'
+
+const SCAN_REPORTS_STORAGE_KEY = 'cloudops-security-scan-reports'
+
+const loadScanReportsFromStorage = (): SecurityScanReport[] => {
+  try {
+    const raw = localStorage.getItem(SCAN_REPORTS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as SecurityScanReport[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export interface ScanCompletionResult {
+  previousScore: number
+  newScore: number
+  scoreDelta: number
+  resourcesScanned: number
+  totalFindings: number
+  newFindings: SecurityRisk[]
+  report?: SecurityScanReport
+}
 
 @Injectable({ providedIn: 'root' })
 export class SecurityCenterService {
@@ -23,6 +47,9 @@ export class SecurityCenterService {
   readonly recommendations = signal(defaultRecommendations())
   readonly lastScanAt = signal<string | null>(null)
   readonly scanning = signal(false)
+  readonly scanReports = signal<SecurityScanReport[]>(loadScanReportsFromStorage())
+
+  readonly latestScanReport = computed(() => this.scanReports()[0] ?? null)
 
   readonly openPortCount = computed(() => this.ports().length)
   readonly exposedServiceCount = computed(() => this.services().length)
@@ -68,9 +95,25 @@ export class SecurityCenterService {
     )
   }
 
-  completeScan = (): void => {
+  completeScan = (result?: Pick<ScanCompletionResult, 'newFindings'>): void => {
     this.lastScanAt.set(new Date().toISOString())
     this.scanning.set(false)
+
+    if (result?.newFindings.length) {
+      this.risks.update((rows) => [...result.newFindings, ...rows])
+    }
+
     this.refreshKpis()
   }
+
+  saveScanReport = (report: SecurityScanReport): void => {
+    this.scanReports.update((rows) => {
+      const next = [report, ...rows.filter((r) => r.id !== report.id)].slice(0, 25)
+      localStorage.setItem(SCAN_REPORTS_STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  getScanReport = (id: string): SecurityScanReport | undefined =>
+    this.scanReports().find((r) => r.id === id)
 }

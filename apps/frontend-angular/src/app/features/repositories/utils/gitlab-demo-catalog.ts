@@ -164,8 +164,9 @@ export const CLIENT_DEMO_GITLAB_WEBHOOKS: Record<string, unknown>[] = [
 ]
 
 export const CLIENT_DEMO_GITLAB_DEPLOYMENTS: Record<string, unknown>[] = [
-  { id: 'gl-dep-1', provider: 'gitlab', projectPath: 'cloudops-platform/gitlab-payment-service', branch: 'main', targetName: 'k8s-prod-payments', targetType: 'kubernetes', status: 'success', createdAt: now() },
-  { id: 'gl-dep-2', provider: 'gitlab', projectPath: 'cloudops-platform/gitlab-inventory-service', branch: 'develop', targetName: 'vps-staging-02', targetType: 'vps', status: 'running', createdAt: now() },
+  { id: 'gl-dep-1', provider: 'gitlab', projectPath: 'cloudops-platform/gitlab-payment-service', branch: 'main', targetName: 'k8s-prod-payments', targetType: 'kubernetes', environment: 'production', status: 'success', createdAt: now(), commitSha: 'gl0f6e5d4c3b2a100000000000000000000000000', commitMessage: 'fix(payments): idempotencia en webhook de cobros', duration: '5m 18s', triggeredBy: 'cloudops-gitlab', strategy: 'canary', version: 'v1.12.0', healthCheck: 'OK · canary 100%', previousVersion: 'v1.11.3', pipelineId: 'gl-pipe-8841', stages: ['build', 'test', 'deploy', 'verify'] },
+  { id: 'gl-dep-2', provider: 'gitlab', projectPath: 'cloudops-platform/gitlab-inventory-service', branch: 'develop', targetName: 'vps-staging-02', targetType: 'vps', environment: 'staging', status: 'running', createdAt: now(), commitSha: 'gl1e5d4c3b2a1098700000000000000000000007', commitMessage: 'feat(inventory): sync incremental con catálogo externo', duration: '1m 52s', triggeredBy: 'ana.dev', strategy: 'rolling', version: 'v2.0.0-beta.4', healthCheck: 'Verificando…', pipelineId: 'gl-pipe-8844', stages: ['build', 'test', 'deploy'] },
+  { id: 'gl-dep-3', provider: 'gitlab', projectPath: 'devops-templates/gitlab-devops-templates', branch: 'main', targetName: 'docker-registry-01', targetType: 'docker', environment: 'production', status: 'failed', createdAt: now(), commitSha: 'gl2failed000000000000000000000000000000', commitMessage: 'ci: plantilla deploy docker con registry auth', duration: '2m 44s', triggeredBy: 'luis.cloud', error: 'docker push denied — token expirado', strategy: 'push', version: 'v0.4.1', healthCheck: 'N/A', previousVersion: 'v0.4.0', pipelineId: 'gl-pipe-8838', stages: ['build', 'push'] },
 ]
 
 export const CLIENT_DEMO_GITLAB_ISSUES: Record<string, unknown>[] = [

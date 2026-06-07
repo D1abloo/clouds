@@ -2,7 +2,6 @@ import { Component, Input, output, inject, computed } from '@angular/core'
 import { Router, NavigationEnd } from '@angular/router'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { filter, map, startWith } from 'rxjs'
-import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { RealtimeStatusBadgeComponent } from '../realtime-status-badge/realtime-status-badge.component'
 import { NavIconComponent } from '../nav-icon/nav-icon.component'
@@ -19,42 +18,47 @@ export interface PageHeaderAction {
 @Component({
   selector: 'app-page-header',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RealtimeStatusBadgeComponent, NavIconComponent],
+  imports: [MatIconModule, RealtimeStatusBadgeComponent, NavIconComponent],
   template: `
-    <header class="page-header-premium surface-elevated animate-fade-in">
-      <div class="page-header-premium__main">
-        <div class="page-header-premium__icon" [class]="'tone-' + visualTone()">
-          <app-nav-icon [icon]="displayIcon()" [logo]="displayLogo()" size="lg" />
-        </div>
-        <div>
-          <div class="page-header-premium__title-row">
-            <h1>{{ title }}</h1>
-            @if (demoMode) {
-              <app-realtime-status-badge mode="demo" label="Datos demo" icon="science" />
+    <header
+      class="page-header-premium animate-fade-in"
+      [class.page-header-premium--actions-only]="actionsOnly"
+      [class.surface-elevated]="!actionsOnly"
+    >
+      @if (!actionsOnly) {
+        <div class="page-header-premium__main">
+          <div class="page-header-premium__icon" [class]="'tone-' + visualTone()">
+            <app-nav-icon [icon]="displayIcon()" [logo]="displayLogo()" size="lg" />
+          </div>
+          <div>
+            <div class="page-header-premium__title-row">
+              <h1>{{ title }}</h1>
+              @if (demoMode) {
+                <app-realtime-status-badge mode="demo" label="Datos demo" icon="science" />
+              }
+            </div>
+            @if (description) {
+              <p>{{ description }}</p>
+            }
+            @if (lastSync) {
+              <span class="last-sync"><mat-icon>schedule</mat-icon> {{ lastSync }}</span>
             }
           </div>
-          @if (description) {
-            <p>{{ description }}</p>
-          }
-          @if (lastSync) {
-            <span class="last-sync"><mat-icon>schedule</mat-icon> {{ lastSync }}</span>
-          }
         </div>
-      </div>
+      }
       @if (actions.length) {
         <div class="page-header-premium__actions">
           @for (action of actions; track action.label) {
-            @if (action.primary) {
-              <button mat-flat-button color="primary" [disabled]="action.disabled" type="button" (click)="actionClick.emit(action.label)">
-                @if (action.icon) { <mat-icon>{{ action.icon }}</mat-icon> }
-                {{ action.label }}
-              </button>
-            } @else {
-              <button mat-stroked-button [disabled]="action.disabled" type="button" (click)="actionClick.emit(action.label)">
-                @if (action.icon) { <mat-icon>{{ action.icon }}</mat-icon> }
-                {{ action.label }}
-              </button>
-            }
+            <button
+              type="button"
+              class="page-action-btn"
+              [class.page-action-btn--primary]="action.primary"
+              [disabled]="action.disabled"
+              (click)="actionClick.emit(action.label)"
+            >
+              @if (action.icon) { <mat-icon>{{ action.icon }}</mat-icon> }
+              {{ action.label }}
+            </button>
           }
         </div>
       }
@@ -109,7 +113,7 @@ export interface PageHeaderAction {
     .last-sync {
       display: inline-flex;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.35rem;
       margin-top: 0.5rem;
       font-size: 0.75rem;
       color: var(--app-text-muted);
@@ -118,8 +122,29 @@ export interface PageHeaderAction {
     .page-header-premium__actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
-      button { display: inline-flex; align-items: center; gap: 0.35rem; }
+      align-items: flex-start;
+      align-self: flex-start;
+      gap: 0.35rem;
+      height: fit-content;
+      min-height: 0;
+      padding: 0;
+    }
+    .page-header-premium--actions-only {
+      justify-content: center;
+      padding: 0;
+      margin-bottom: 0.35rem;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+    .page-header-premium--actions-only .page-header-premium__actions {
+      justify-content: center;
+      width: 100%;
+      gap: 0.35rem;
+    }
+    .page-header-premium--actions-only .page-header-premium__actions .page-action-btn {
+      color: #111;
+      border-color: color-mix(in srgb, #111 18%, transparent);
     }
   `,
 })
@@ -132,6 +157,7 @@ export class PageHeaderComponent {
   @Input() tone: NavVisualTone | '' = ''
   @Input() lastSync = ''
   @Input() demoMode = true
+  @Input() actionsOnly = false
   @Input() actions: PageHeaderAction[] = []
   readonly actionClick = output<string>()
 

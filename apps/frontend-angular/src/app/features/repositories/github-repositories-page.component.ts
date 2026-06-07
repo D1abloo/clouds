@@ -2,7 +2,6 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl } from '@angular/forms'
 import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { InventoryService } from '../../core/services/inventory.service'
@@ -16,6 +15,7 @@ import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { catchError, map, of, switchMap, type Observable } from 'rxjs'
 import { GithubAccountDialogComponent } from './components/github-account-dialog.component'
+import { githubSyncPermissionsPayload } from './utils/github-sync-permissions.util'
 import { buildGithubInventoryFallback } from './utils/github-inventory-fallback'
 import {
   buildClientGithubDemoState,
@@ -29,21 +29,23 @@ import { RepositoryDetailDrawerComponent } from './components/repository-detail-
 import { GithubLogsPanelComponent } from './components/github-logs-panel.component'
 import { GithubSectionComponent } from './sections/github-section.component'
 import { REPOSITORIES_SECTION_META } from './repositories-section.config'
+import { RepositoriesActionService } from './repositories-action.service'
+import { RepositoriesCrossNavComponent } from './components/repositories-cross-nav.component'
 
 @Component({
   selector: 'app-github-repositories-page',
   standalone: true,
   imports: [
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
     ErrorStateComponent,
     RepositoryDetailDrawerComponent,
     GithubLogsPanelComponent,
     GithubSectionComponent,
+    RepositoriesCrossNavComponent,
   ],
   template: `
-    <div class="page-container page-container--github">
+    <div class="page-container page-container--github repo-module-page">
       <app-page-header
         [title]="meta.title"
         [description]="meta.description"
@@ -51,17 +53,13 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
         (actionClick)="handleHeader($event)"
       />
 
+      <app-repositories-cross-nav activeId="github" />
+
       @if (page.loading()) {
         <app-loading-state message="Cargando GitHub…" />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid app-section-panel stagger-children">
-          @for (card of meta.summaryCards; track card.title) {
-            <app-summary-card [title]="card.title" [value]="metric(card.valueKey)" [icon]="card.icon" variant="elevated" />
-          }
-        </div>
-
         <app-github-section
           [repos]="repos()"
           [account]="primaryAccount()"
@@ -73,12 +71,12 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
           (connectDemo)="handleQuickConnect()"
           (validate)="handleValidate()"
           (sync)="handleSync()"
-          (viewActions)="runDemo('Ver GitHub Actions')"
-          (createWebhook)="runDemo('Crear webhook GitHub')"
+          (viewActions)="repoActions.viewGithubActions()"
+          (createWebhook)="repoActions.createGithubWebhook()"
           (viewLogs)="openGithubLogs()"
           (openDetail)="openDrawer($event)"
           (deploy)="openDeploy($event)"
-          (openExternal)="runDemo('Abrir en GitHub')"
+          (openExternal)="repoActions.openGithub($event.fullName)"
         />
       }
     </div>
@@ -112,6 +110,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
   private readonly inventory = inject(InventoryService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
+  readonly repoActions = inject(RepositoriesActionService)
 
   readonly meta = REPOSITORIES_SECTION_META.github
   readonly page = createPageLoader(false)
@@ -149,16 +148,6 @@ export class GithubRepositoriesPageComponent implements OnInit {
     this.repoControl.valueChanges.subscribe((id) => {
       if (id) this.loadRepoDetails(id)
     })
-  }
-
-  metric = (key: string): number => {
-    const map: Record<string, number> = {
-      githubRepoCount: this.repos().length,
-      githubActionsCount: 6,
-      githubOpenPrs: this.githubPullRequests().filter((p) => p['state'] === 'open').length,
-      githubWebhookCount: CLIENT_DEMO_WEBHOOKS.length,
-    }
-    return map[key] ?? 0
   }
 
   bootstrapGithubDemo = (): void => {
@@ -257,17 +246,73 @@ export class GithubRepositoriesPageComponent implements OnInit {
   }
 
   openAddAccount = (): void => {
-    const ref = this.dialog.open(GithubAccountDialogComponent, { width: '440px' })
+    const ref = this.dialog.open(GithubAccountDialogComponent, {
+      width: '920px',
+      maxWidth: '96vw',
+      maxHeight: '92vh',
+      autoFocus: 'first-tabbable',
+    })
     ref.afterClosed().subscribe((body) => {
       if (!body) return
       this.github
-        .createAccount(body)
+        .createAccount({
+          label: body.label,
+          username: body.username,
+          token: body.token,
+          organization: body.organization,
+          accountType: body.accountType,
+          authMethod: body.authMethod,
+          scopes: body.scopes,
+          environment: body.environment,
+          autoSync: body.autoSync,
+          syncInterval: body.syncInterval,
+          repoScope: body.repoScope,
+          webhookUrl: body.webhookUrl,
+          webhookSecret: body.webhookSecret,
+          webhookEvents: body.webhookEvents,
+          description: body.description,
+          contactEmail: body.contactEmail,
+          useDemoData: body.useDemoData,
+        })
         .pipe(
-          switchMap((acc) =>
-            this.github.validateAccount(acc.id).pipe(switchMap(() => this.github.syncAccount(acc.id))),
-          ),
+          switchMap((created) => {
+            const afterValidate = body.validateBeforeSave
+              ? this.github.validateAccount(created.id).pipe(map(() => created))
+              : of(created)
+            return afterValidate.pipe(
+              switchMap((acc) =>
+                body.syncOnConnect
+                  ? this.github
+                      .syncAccount(acc.id, githubSyncPermissionsPayload(body))
+                      .pipe(map((sync) => ({ acc, sync })))
+                  : of({ acc, sync: null }),
+              ),
+            )
+          }),
         )
-        .subscribe({ next: () => this.handleSync() })
+        .subscribe({
+          next: ({ acc, sync }) => {
+            this.accounts.update((list) => {
+              const rest = list.filter((a) => a.id !== acc.id)
+              return [acc, ...rest]
+            })
+            if (sync?.repos?.length) {
+              this.repos.set(sync.repos)
+              this.repoControl.setValue(sync.repos[0].id)
+            } else if (sync) {
+              this.runDemo('Sync GitHub', sync.message)
+            }
+            this.runDemo(
+              'Cuenta GitHub añadida',
+              sync
+                ? `${body.label} · ${sync.synced} repos según permisos`
+                : `${body.label} · ${body.useDemoData ? 'modo demo' : body.authMethod}`,
+            )
+            if (body.syncOnConnect && sync && !sync.repos?.length) {
+              this.handleSync()
+            }
+          },
+        })
     })
   }
 

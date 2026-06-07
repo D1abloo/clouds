@@ -72,13 +72,42 @@ export class GithubService {
     label?: string
     username?: string
     token?: string
+    organization?: string
+    accountType?: string
+    authMethod?: string
+    scopes?: string[]
+    environment?: string
+    autoSync?: boolean
+    syncInterval?: string
+    repoScope?: string
+    webhookUrl?: string
+    webhookSecret?: string
+    webhookEvents?: string[]
+    description?: string
+    contactEmail?: string
+    useDemoData?: boolean
   }): Observable<GithubAccount & { message?: string }> => this.api.post('github/accounts', body)
 
   validateAccount = (id: string): Observable<{ valid: boolean; account: GithubAccount; message: string }> =>
     this.api.post(`github/accounts/${id}/validate`, {})
 
-  syncAccount = (id: string): Observable<{ synced: number; lastSyncAt: string; message: string }> =>
-    this.api.post(`github/accounts/${id}/sync`, {})
+  syncAccount = (
+    id: string,
+    body?: {
+      scopes?: string[]
+      repoScope?: string
+      organization?: string
+      accountType?: string
+    },
+  ): Observable<{
+    synced: number
+    skipped?: number
+    total?: number
+    reasons?: string[]
+    repos?: GithubRepo[]
+    lastSyncAt: string
+    message: string
+  }> => this.api.post(`github/accounts/${id}/sync`, body ?? {})
 
   deleteAccount = (id: string): Observable<{ deleted: boolean; message: string }> =>
     this.api.delete(`github/accounts/${id}`)

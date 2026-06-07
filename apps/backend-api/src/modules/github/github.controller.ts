@@ -51,7 +51,26 @@ export class GithubController {
   @Post('accounts')
   createAccount(
     @CurrentUser() user: JwtPayload,
-    @Body() body: { label?: string; username?: string; token?: string },
+    @Body()
+    body: {
+      label?: string
+      username?: string
+      token?: string
+      organization?: string
+      accountType?: string
+      authMethod?: string
+      scopes?: string[]
+      environment?: string
+      autoSync?: boolean
+      syncInterval?: string
+      repoScope?: string
+      webhookUrl?: string
+      webhookSecret?: string
+      webhookEvents?: string[]
+      description?: string
+      contactEmail?: string
+      useDemoData?: boolean
+    },
   ) {
     return this.accounts.create(user.sub, body)
   }
@@ -62,8 +81,18 @@ export class GithubController {
   }
 
   @Post('accounts/:id/sync')
-  syncAccount(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
-    return this.accounts.sync(user.sub, id)
+  syncAccount(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body()
+    body?: {
+      scopes?: string[]
+      repoScope?: string
+      organization?: string
+      accountType?: string
+    },
+  ) {
+    return this.accounts.sync(user.sub, id, body)
   }
 
   @Delete('accounts/:id')

@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common'
 import { AuditModule } from '../audit/audit.module'
 import { NotificationsModule } from '../notifications/notifications.module'
 import { RealtimeModule } from '../realtime/realtime.module'
+import { IntegrationsModule } from '../integrations/integrations.module'
 import { GithubController } from './github.controller'
 import { GithubAccountsService } from './github-accounts.service'
 import { GithubRepositoriesService } from './github-repositories.service'
@@ -14,7 +15,7 @@ import { GithubDemoService } from './github-demo.service'
 import { GithubSummaryService } from './github-summary.service'
 
 @Module({
-  imports: [AuditModule, NotificationsModule, forwardRef(() => RealtimeModule)],
+  imports: [AuditModule, NotificationsModule, IntegrationsModule, forwardRef(() => RealtimeModule)],
   controllers: [GithubController],
   providers: [
     GithubDemoService,

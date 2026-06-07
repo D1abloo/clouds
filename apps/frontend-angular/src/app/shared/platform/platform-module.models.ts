@@ -1,6 +1,6 @@
 import type { PageHeaderAction } from '../components/page-header/page-header.component'
 
-export type PlatformColumnType = 'text' | 'status' | 'date' | 'severity'
+export type PlatformColumnType = 'text' | 'status' | 'date' | 'severity' | 'logo'
 
 export interface PlatformColumn {
   key: string

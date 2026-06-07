@@ -1,108 +1,99 @@
 import { ChangeDetectionStrategy, Component, inject, computed } from '@angular/core'
-import { ActivatedRoute, RouterLink } from '@angular/router'
+import { ActivatedRoute } from '@angular/router'
 import { MatIconModule } from '@angular/material/icon'
 import { MatButtonModule } from '@angular/material/button'
-import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
-import { ChartCardComponent } from '../../shared/ui/chart-card.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import { MatDialog } from '@angular/material/dialog'
-import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
-import { chartColor } from '../../shared/theme/chart-palette'
-
-interface DemoRow {
-  name: string
-  status: string
-  detail: string
-  cost?: string
-}
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
+import { metricsHubDescription, metricsHubRows, type MetricsHubRow } from '../../shared/platform/metrics-hub.demo'
+import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
 @Component({
   selector: 'app-section-hub',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    RouterLink,
     MatIconModule,
     MatButtonModule,
     PageHeaderComponent,
-    SummaryCardComponent,
-    ChartCardComponent,
     StatusBadgeComponent,
+    NavIconComponent,
   ],
   template: `
     <div class="page-container section-hub animate-fade-in">
       <app-page-header
         [title]="title()"
         [description]="description()"
-        [actions]="headerActions"
+        [icon]="section() === 'roles' ? 'badge' : 'monitoring'"
+        [demoMode]="true"
+        [actions]="headerActions()"
         (actionClick)="handleAction($event)"
       />
 
-      <div class="summary-grid app-section-panel stagger-children">
-        <app-summary-card title="Resources" [value]="demoStats().resources" icon="dns" variant="elevated" iconColor="purple" />
-        <app-summary-card title="Healthy" [value]="demoStats().healthy" icon="check_circle" variant="elevated" iconColor="success" />
-        <app-summary-card title="Warnings" [value]="demoStats().warnings" icon="warning" variant="elevated" iconColor="warn" />
-        <app-summary-card title="Monthly cost" [value]="demoStats().cost" icon="payments" variant="elevated" iconColor="cyan" />
-      </div>
-
       <div class="hub-quick-actions">
-        <button type="button" class="hub-action-chip" (click)="handleAction('Refresh')"><mat-icon>refresh</mat-icon> Refresh</button>
-        <button type="button" class="hub-action-chip" (click)="handleAction('Export')"><mat-icon>download</mat-icon> Export</button>
-        <button type="button" class="hub-action-chip" (click)="handleAction('Sync')"><mat-icon>sync</mat-icon> Sync</button>
+        <button type="button" class="hub-action-chip" (click)="handleAction('Actualizar')"><mat-icon>refresh</mat-icon> Actualizar</button>
+        <button type="button" class="hub-action-chip" (click)="handleAction('Exportar')"><mat-icon>download</mat-icon> Exportar</button>
+        <button type="button" class="hub-action-chip" (click)="handleAction('Sincronizar')"><mat-icon>sync</mat-icon> Sincronizar</button>
       </div>
 
-      <div class="section-hub__grid">
-        <div class="table-card section-hub__table">
-          <div class="table-toolbar">
-            <h3>{{ sectionLabel() }}</h3>
-            <span class="section-hub__meta">Demo dataset · {{ rows().length }} rows</span>
+      @if (isMetrics()) {
+        <div class="metrics-bar">
+          <app-nav-icon logo="prometheus" size="md" />
+          <div>
+            <strong>Métricas · Prometheus + Grafana</strong>
+            <span>Scrape 15s · retención 30 días · 847 series activas</span>
           </div>
-          <div class="data-table-wrap">
-            <table class="premium-table table-row-hover">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Status</th>
-                  <th>Detail</th>
-                  @if (showCost()) { <th>Cost</th> }
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of rows(); track row.name) {
-                  <tr>
-                    <td><strong>{{ row.name }}</strong></td>
-                    <td><app-status-badge [value]="row.status" /></td>
-                    <td>{{ row.detail }}</td>
-                    @if (showCost()) { <td>{{ row.cost }}</td> }
-                    <td><button type="button" class="hub-link-btn" (click)="viewRow(row)">View</button></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+          <div class="metrics-bar__logos">
+            @for (logo of metricsLogos; track logo) {
+              <span class="metrics-logo-chip"><app-nav-icon [logo]="logo" size="sm" /></span>
+            }
           </div>
         </div>
+      }
 
-        <div class="section-hub__charts">
-          <app-chart-card title="Activity" subtitle="Last 24h (demo)" kind="bar" [data]="chartBars()" />
-          <app-chart-card title="Status mix" kind="donut" [data]="chartDonut()" />
+      <div class="table-card section-hub__table">
+        <div class="table-toolbar">
+          <h3>{{ sectionLabel() }}</h3>
+          <span class="section-hub__meta">Dataset demo · {{ rows().length }} filas</span>
+        </div>
+        <div class="data-table-wrap">
+          <table class="premium-table table-row-hover">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th>Detalle</th>
+                @if (isMetrics()) { <th>CPU</th><th>Memoria</th><th>Fuente</th> }
+                @else if (showCost()) { <th>Coste</th> }
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.name) {
+                <tr>
+                  <td><strong>{{ row.name }}</strong></td>
+                  <td><app-status-badge [value]="row.status" /></td>
+                  <td>{{ row.detail }}</td>
+                  @if (isMetrics()) {
+                    <td>{{ row.cpu ?? '—' }}</td>
+                    <td>{{ row.memory ?? '—' }}</td>
+                    <td><span class="source-chip">{{ row.source ?? 'prometheus' }}</span></td>
+                  } @else if (showCost()) {
+                    <td>{{ row.cost }}</td>
+                  }
+                  <td>
+                    <button type="button" class="hub-link-btn" (click)="viewRow(row)">Ver detalle</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   `,
   styles: `
-    .section-hub__grid {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 1rem;
-    }
-    .section-hub__charts {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
     .section-hub__meta {
       font-size: 0.72rem;
       color: var(--app-text-muted);
@@ -121,20 +112,21 @@ interface DemoRow {
       font-weight: 700;
       cursor: pointer;
     }
-    @media (max-width: 1100px) {
-      .section-hub__grid { grid-template-columns: 1fr; }
+    .metrics-bar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem;
+      padding: 0.65rem 0.85rem; margin-bottom: 0.65rem;
+      border-left: 3px solid #e6522c; background: color-mix(in srgb, #e6522c 5%, transparent);
+      strong { display: block; font-size: 0.82rem; }
+      span { font-size: 0.68rem; color: var(--app-text-muted); }
     }
+    .metrics-bar__logos { display: flex; gap: 0.35rem; margin-left: auto; }
+    .metrics-logo-chip { padding: 0.15rem 0.35rem; border-radius: 6px; background: #fff; border: 1px solid #0000000d; }
+    .source-chip { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #047857; }
   `,
 })
 export class SectionHubComponent {
   private readonly route = inject(ActivatedRoute)
-  private readonly demo = inject(DemoActionsService)
-  private readonly dialog = inject(MatDialog)
-
-  readonly headerActions = [
-    { label: 'Refresh', icon: 'refresh' },
-    { label: 'Export', icon: 'download', primary: true },
-  ]
+  private readonly actions = inject(PlatformActionService)
 
   readonly module = computed(() => this.route.snapshot.data['module'] as string ?? 'module')
   readonly section = computed(() => this.route.snapshot.paramMap.get('section') ?? 'overview')
@@ -143,44 +135,38 @@ export class SectionHubComponent {
     const parent = this.route.snapshot.data['parentTitle'] as string | undefined
     return parent ? `${parent} — ${this.sectionLabel()}` : this.sectionLabel()
   })
-  readonly description = computed(
-    () =>
+  readonly headerActions = computed(() => [
+    { label: 'Exportar', icon: 'download', primary: true },
+    { label: 'Actualizar', icon: 'refresh' },
+  ])
+
+  readonly description = computed(() => {
+    if (this.module() === 'metrics') return metricsHubDescription(this.section())
+    return (
       (this.route.snapshot.data['description'] as string) ??
-      `Manage ${this.sectionLabel()} with filters, metrics and actions (demo mode).`,
-  )
+      `Gestiona ${this.sectionLabel()} con filtros, métricas y acciones (modo demo).`
+    )
+  })
 
-  readonly demoStats = computed(() => ({
-    resources: 12 + (this.section().length % 8),
-    healthy: 9,
-    warnings: 2,
-    cost: '$4,820',
-  }))
+  readonly metricsLogos: NavLogoKey[] = ['prometheus', 'grafana', 'kubernetes', 'docker', 'aws']
 
-  readonly rows = computed((): DemoRow[] => {
+  readonly rows = computed((): MetricsHubRow[] => {
     const s = this.section()
     const mod = this.module()
+    if (mod === 'metrics') return metricsHubRows(s)
     return Array.from({ length: 8 }, (_, i) => ({
       name: `${mod}-${s}-${i + 1}`,
       status: i % 4 === 0 ? 'warning' : i % 7 === 0 ? 'error' : 'running',
-      detail: `Region eu-west-${i + 1} · demo`,
+      detail: `Región eu-west-${i + 1} · demo`,
       cost: `$${120 + i * 15}`,
     }))
   })
 
-  readonly showCost = computed(() => ['billing', 'instances', 'cost'].some((k) => this.section().includes(k)))
+  isMetrics = (): boolean => this.module() === 'metrics'
 
-  chartBars = () =>
-    [40, 55, 48, 62, 58, 70, 65].map((v, i) => ({
-      label: `${i * 4}h`,
-      value: v,
-      color: chartColor(i),
-    }))
-
-  chartDonut = () => [
-    { label: 'Running', value: 22, color: chartColor(4) },
-    { label: 'Warning', value: 3, color: chartColor(3) },
-    { label: 'Stopped', value: 2, color: chartColor(6) },
-  ]
+  readonly showCost = computed(() =>
+    !this.isMetrics() && ['billing', 'instances', 'cost'].some((k) => this.section().includes(k)),
+  )
 
   formatSection = (slug: string): string =>
     slug
@@ -189,20 +175,10 @@ export class SectionHubComponent {
       .join(' ')
 
   handleAction = (label: string): void => {
-    this.demo.simulate(`${this.title()}: ${label}`, 600).subscribe()
+    this.actions.runHubAction(this.module(), this.section(), label)
   }
 
-  viewRow = (row: DemoRow): void => {
-    this.dialog.open(DetailDialogComponent, {
-      width: '480px',
-      data: {
-        title: row.name,
-        rows: [
-          { label: 'Status', value: row.status },
-          { label: 'Detail', value: row.detail },
-          ...(row.cost ? [{ label: 'Cost', value: row.cost }] : []),
-        ],
-      },
-    })
+  viewRow = (row: MetricsHubRow): void => {
+    this.actions.runHubAction(this.module(), this.section(), 'Ver detalle', row)
   }
 }

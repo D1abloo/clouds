@@ -568,3 +568,37 @@ model GithubDeployment {
   @@index([repoId, createdAt])
   @@map("github_deployments")
 }
+
+model IntegrationConfig {
+  id         String                @id
+  label      String
+  category   String
+  enabled    Boolean               @default(false)
+  status     String                @default("disconnected")
+  config     Json                  @default("{}")
+  events     Json                  @default("[]")
+  lastSync   DateTime?             @map("last_sync")
+  createdAt  DateTime              @default(now()) @map("created_at")
+  updatedAt  DateTime              @updatedAt @map("updated_at")
+  deliveries IntegrationDelivery[]
+
+  @@map("integration_configs")
+}
+
+model IntegrationDelivery {
+  id            String            @id @default(uuid())
+  integrationId String            @map("integration_id")
+  eventType     String            @map("event_type")
+  title         String
+  body          String            @db.Text
+  status        String
+  httpStatus    Int?              @map("http_status")
+  latencyMs     Int?              @map("latency_ms")
+  error         String?
+  payload       Json?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  integration   IntegrationConfig @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId, createdAt])
+  @@map("integration_deliveries")
+}

@@ -1,309 +1,503 @@
-<div class="launch-modal" [class.launch-modal--enter]="true">
+<div class="launch-modal">
   <header class="launch-modal__header">
-    <div>
-      <h2>Launch instance</h2>
-      <p>Multi-cloud provisioning with Terraform plan-first workflow</p>
+    <div class="launch-modal__title">
+      <mat-icon class="launch-modal__icon" aria-hidden="true">rocket_launch</mat-icon>
+      <div>
+        <h2>Lanzar instancia</h2>
+        <p>Paso {{ step() }} de 5 · {{ stepHeadline().title }}</p>
+      </div>
     </div>
-    <button type="button" class="launch-modal__close" mat-dialog-close aria-label="Close">
+    <div class="launch-modal__header-meta">
+      @if (launching()) {
+        <div class="launch-modal__progress-pill launch-modal__progress-pill--launch" aria-label="Progreso del lanzamiento">
+          <span>Lanzamiento</span>
+          <strong>{{ launchPercent() }}%</strong>
+        </div>
+      } @else {
+        <div class="launch-modal__progress-pill" aria-label="Progreso del asistente">
+          <span>Asistente</span>
+          <strong>{{ wizardProgress() }}%</strong>
+        </div>
+        <div class="launch-modal__progress-pill launch-modal__progress-pill--ready" aria-label="Preparación">
+          <span>Listo</span>
+          <strong>{{ readinessPct() }}%</strong>
+        </div>
+      }
+    </div>
+    <button type="button" class="launch-modal__close" mat-dialog-close aria-label="Cerrar">
       <mat-icon>close</mat-icon>
     </button>
   </header>
 
   <app-launch-wizard-stepper [activeStep]="step()" />
 
-  <div class="launch-modal__body" [class.launch-modal__body--forward]="animDir() === 'forward'" [class.launch-modal__body--back]="animDir() === 'back'">
-    @if (step() === 1) {
-      <section class="launch-step">
-        <p class="launch-step__hint">Select your cloud provider</p>
-        <div class="provider-grid">
-          @for (p of providers; track p) {
-            <button
-              type="button"
-              class="provider-card"
-              [class.provider-card--selected]="form().provider === p"
-              [class.provider-card--dimmed]="form().provider !== p"
-              [class.provider-card--pulse]="selectedProviderAnim() === p"
-              (click)="selectProvider(p)"
-            >
-              <span class="provider-card__logo" [style.color]="providerColor(p)">{{ providerLabel(p) }}</span>
-              <span class="provider-card__name">{{ providerLabel(p) }}</span>
-            </button>
-          }
-        </div>
-      </section>
-    }
+  <div class="launch-modal__body">
+    <main
+      class="launch-modal__form"
+      [class.launch-modal__form--forward]="animDir() === 'forward'"
+      [class.launch-modal__form--back]="animDir() === 'back'"
+    >
+      <p class="launch-modal__lead">{{ stepHeadline().sub }}</p>
 
-    @if (step() === 2) {
-      <section class="launch-step">
-        <p class="launch-step__hint">Account and location</p>
-        <div class="launch-field-row">
-          <label class="launch-label">Cloud account</label>
-          <select class="launch-select" [ngModel]="form().accountId" (ngModelChange)="patchForm({ accountId: $event }); onAccountChange()">
-            <option value="">Select account (demo)</option>
-            @for (a of accountsForProvider(); track a.id) {
-              <option [value]="a.id">{{ a.name }}</option>
-            }
-          </select>
-        </div>
-        <div class="launch-field-row">
-          <label class="launch-label">Region</label>
-          <select class="launch-select" [ngModel]="form().region" (ngModelChange)="patchForm({ region: $event }); loadNetworks()">
-            @for (r of regions(); track r.id) {
-              <option [value]="r.id">{{ r.name }}</option>
-            }
-          </select>
-        </div>
-        @if (form().provider === 'GCP') {
-          <div class="launch-field-row">
-            <label class="launch-label">Zone</label>
-            <input class="launch-input" [ngModel]="form().gcpZone" (ngModelChange)="patchForm({ gcpZone: $event })" placeholder="europe-west1-b" />
-          </div>
-        }
-        @if (form().provider === 'AZURE') {
-          <div class="launch-field-row">
-            <label class="launch-label">Subscription</label>
-            <input class="launch-input" [ngModel]="form().azureSubscription" (ngModelChange)="patchForm({ azureSubscription: $event })" />
-          </div>
-          <div class="launch-field-row">
-            <label class="launch-label">Resource group</label>
-            <select class="launch-select" [ngModel]="form().azureResourceGroup" (ngModelChange)="patchForm({ azureResourceGroup: $event })">
-              <option value="rg-cloudops">rg-cloudops</option>
-              <option value="rg-staging">rg-staging</option>
-            </select>
-          </div>
-        }
-      </section>
-    }
-
-    @if (step() === 3) {
-      <section class="launch-step">
-        <p class="launch-step__hint">Instance configuration</p>
-        <div class="launch-field-row">
-          <label class="launch-label">Instance name</label>
-          <input class="launch-input" [ngModel]="form().name" (ngModelChange)="patchForm({ name: $event })" placeholder="web-prod-01" />
-        </div>
-        <div class="launch-field-row">
-          <label class="launch-label">Tags</label>
-          <input class="launch-input" [ngModel]="form().tags" (ngModelChange)="patchForm({ tags: $event })" placeholder="env=prod,team=platform" />
-        </div>
-        @if (form().provider === 'AWS') {
-          <div class="launch-field-row">
-            <label class="launch-label">AMI</label>
-            <select class="launch-select" [ngModel]="form().ami" (ngModelChange)="patchForm({ ami: $event })">
-              @for (a of amiOptions; track a) { <option [value]="a">{{ a }}</option> }
-            </select>
-          </div>
-          <div class="launch-field-row">
-            <label class="launch-label">Key pair</label>
-            <select class="launch-select" [ngModel]="form().keyPair" (ngModelChange)="patchForm({ keyPair: $event })">
-              @for (k of keyPairs; track k) { <option [value]="k">{{ k }}</option> }
-            </select>
-          </div>
-          <div class="launch-field-row">
-            <label class="launch-label">VPC / Subnet</label>
-            <select class="launch-select" [ngModel]="form().vpcId" (ngModelChange)="patchForm({ vpcId: $event })">
-              @for (n of networks(); track n.id) { <option [value]="n.id">{{ n.name }}</option> }
-            </select>
-            <select class="launch-select" [ngModel]="form().subnetId" (ngModelChange)="patchForm({ subnetId: $event })">
-              @for (n of networks(); track n.id) { <option [value]="n.id">{{ n.name }}</option> }
-            </select>
-          </div>
-          <div class="launch-field-row">
-            <label class="launch-label">Security groups</label>
-            <div class="chip-row">
-              @for (sg of securityGroupOptions(); track sg.id) {
-                <button type="button" class="launch-chip" [class.launch-chip--on]="form().securityGroups.includes(sg.id)" (click)="toggleSecurityGroup(sg.id)">{{ sg.name }}</button>
-              }
-            </div>
-          </div>
-        }
-        @if (form().provider === 'GCP') {
-          <div class="family-cards">
-            @for (fam of ['general', 'compute', 'memory']; track fam) {
-              <button type="button" class="family-card" [class.family-card--on]="form().gcpFamily === fam" (click)="setGcpFamily(fam)">
-                {{ fam === 'general' ? 'General Purpose' : fam === 'compute' ? 'Compute' : 'Memory' }}
+      @if (step() === 1) {
+        <section class="li-section">
+          <div class="li-providers" role="radiogroup" aria-label="Proveedor cloud">
+            @for (p of providers; track p) {
+              <button
+                type="button"
+                class="li-provider"
+                role="radio"
+                [attr.aria-checked]="form().provider === p"
+                [class.li-provider--on]="form().provider === p"
+                (click)="selectProvider(p)"
+              >
+                <span class="li-provider__mark" aria-hidden="true"></span>
+                <app-brand-logo class="li-provider__logo" [logo]="providerBrandLogo(p)" size="xl" />
+                <span class="li-provider__body">
+                  <strong>{{ providerLabel(p) }}</strong>
+                  <span>{{ providerTagline(p) }}</span>
+                </span>
               </button>
             }
           </div>
-          <div class="launch-field-row">
-            <label class="launch-label">Machine type</label>
-            <select class="launch-select" [ngModel]="form().gcpMachineType" (ngModelChange)="patchForm({ gcpMachineType: $event })">
-              <option value="e2-medium">e2-medium</option>
-              <option value="n2-standard-2">n2-standard-2</option>
-              <option value="c2-standard-4">c2-standard-4</option>
-            </select>
+          @if (form().provider) {
+            <div class="li-info-card">
+              <h4>Detalles del proveedor</h4>
+              <ul>
+                <li><mat-icon>public</mat-icon> {{ providerInfo().regions }}</li>
+                <li><mat-icon>widgets</mat-icon> {{ providerInfo().services }}</li>
+                <li><mat-icon>schedule</mat-icon> {{ providerInfo().sla }}</li>
+              </ul>
+            </div>
+          }
+        </section>
+      }
+
+      @if (step() === 2) {
+        <section class="li-section">
+          <div class="li-block">
+            <h4 class="li-block__title">Organización Terraform</h4>
+            <div class="li-folders">
+              @for (folder of folders; track folder.id) {
+                <button
+                  type="button"
+                  class="li-folder"
+                  [class.li-folder--on]="form().folderId === folder.id"
+                  (click)="selectFolder(folder.id)"
+                >
+                  <mat-icon>{{ folder.icon }}</mat-icon>
+                  <span class="li-folder__text">
+                    <strong>{{ folder.label }}</strong>
+                    <span class="mono">{{ folder.path }}</span>
+                  </span>
+                </button>
+              }
+            </div>
+            <p class="li-note">{{ selectedFolder()?.hint }}</p>
           </div>
-          <div class="launch-field-row">
-            <label class="launch-label">VPC / Subnet</label>
-            <input class="launch-input" [ngModel]="form().gcpVpc" (ngModelChange)="patchForm({ gcpVpc: $event })" placeholder="VPC" />
-            <input class="launch-input" [ngModel]="form().gcpSubnet" (ngModelChange)="patchForm({ gcpSubnet: $event })" placeholder="Subnet" />
+          <div class="li-block">
+            <h4 class="li-block__title">Cuenta, workspace y región</h4>
+            <div class="li-grid">
+              <label class="li-field">
+                <span>Workspace destino</span>
+                <select class="li-control" [ngModel]="form().targetWorkspaceId" (ngModelChange)="patchForm({ targetWorkspaceId: $event })">
+                  <option value="">Nuevo (automático)</option>
+                  @for (ws of workspaceOptions(); track ws.id) {
+                    <option [value]="ws.id">{{ ws.name }} · {{ ws.provider }} · {{ ws.status }}</option>
+                  }
+                </select>
+              </label>
+              <label class="li-field">
+                <span>Cuenta cloud</span>
+                <select class="li-control" [ngModel]="form().accountId" (ngModelChange)="patchForm({ accountId: $event }); onAccountChange()">
+                  <option value="">Sin cuenta (demo)</option>
+                  @for (a of accountsForProvider(); track a.id) {
+                    <option [value]="a.id">{{ a.name }}</option>
+                  }
+                </select>
+              </label>
+              <label class="li-field">
+                <span>Región</span>
+                <select class="li-control" [ngModel]="form().region" (ngModelChange)="patchForm({ region: $event }); loadNetworks()">
+                  @for (r of regions(); track r.id) {
+                    <option [value]="r.id">{{ r.name }}</option>
+                  }
+                </select>
+              </label>
+              @if (form().provider === 'GCP') {
+                <label class="li-field">
+                  <span>Zona</span>
+                  <input class="li-control" [ngModel]="form().gcpZone" (ngModelChange)="patchForm({ gcpZone: $event })" />
+                </label>
+              }
+              @if (form().provider === 'AZURE') {
+                <label class="li-field">
+                  <span>Resource group</span>
+                  <select class="li-control" [ngModel]="form().azureResourceGroup" (ngModelChange)="patchForm({ azureResourceGroup: $event })">
+                    <option value="rg-cloudops">rg-cloudops</option>
+                    <option value="rg-staging">rg-staging</option>
+                  </select>
+                </label>
+              }
+            </div>
           </div>
-          <label class="launch-toggle">
-            <input type="checkbox" [ngModel]="form().gcpExternalIp" (ngModelChange)="patchForm({ gcpExternalIp: $event })" />
-            External IP
+          @if (form().provider === 'AWS' && networks().length) {
+            <div class="li-block">
+              <h4 class="li-block__title">Red (VPC)</h4>
+              <div class="li-grid">
+                <label class="li-field">
+                  <span>VPC</span>
+                  <select class="li-control" [ngModel]="form().vpcId" (ngModelChange)="patchForm({ vpcId: $event })">
+                    @for (n of networks(); track n.id) {
+                      <option [value]="n.id">{{ n.name }}</option>
+                    }
+                  </select>
+                </label>
+                <label class="li-field">
+                  <span>Security groups</span>
+                  <div class="li-pick-list">
+                    @for (sg of securityGroupOptions(); track sg.id) {
+                      <button
+                        type="button"
+                        class="li-pick"
+                        [class.li-pick--on]="form().securityGroups.includes(sg.id)"
+                        (click)="toggleSecurityGroup(sg.id)"
+                      >
+                        {{ sg.name }}
+                      </button>
+                    }
+                  </div>
+                </label>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      @if (step() === 3) {
+        <section class="li-section">
+          <label class="li-field li-field--wide">
+            <span>Nombre de instancia</span>
+            <input class="li-control li-control--lg" [ngModel]="form().name" (ngModelChange)="patchForm({ name: $event })" placeholder="web-prod-01" />
+            <span class="li-field__hint mono">{{ hclResourceName() }}</span>
           </label>
-        }
-        @if (form().provider === 'AZURE') {
-          <div class="image-list">
-            @for (img of azureImages; track img.name) {
-              <button type="button" class="image-card" [class.image-card--on]="form().azureImage === img.name" (click)="patchForm({ azureImage: img.name })">
-                <strong>{{ img.name }}</strong>
-                <span>{{ img.publisher }} · {{ img.sku }}</span>
-              </button>
+          <div class="li-grid">
+            <label class="li-field li-field--wide">
+              <span>Tags (key=value)</span>
+              <input class="li-control" [ngModel]="form().tags" (ngModelChange)="patchForm({ tags: $event })" />
+            </label>
+            @if (form().provider === 'AWS') {
+              <label class="li-field">
+                <span>AMI</span>
+                <select class="li-control" [ngModel]="form().ami" (ngModelChange)="patchForm({ ami: $event })">
+                  @for (a of amiOptions; track a) { <option [value]="a">{{ a }}</option> }
+                </select>
+              </label>
+              <label class="li-field">
+                <span>Key pair SSH</span>
+                <select class="li-control" [ngModel]="form().keyPair" (ngModelChange)="patchForm({ keyPair: $event })">
+                  @for (k of keyPairs; track k) { <option [value]="k">{{ k }}</option> }
+                </select>
+              </label>
+            }
+            @if (form().provider === 'GCP') {
+              <label class="li-field">
+                <span>Sistema operativo</span>
+                <select class="li-control" [ngModel]="form().gcpDiskOs" (ngModelChange)="patchForm({ gcpDiskOs: $event })">
+                  @for (os of gcpOsOptions; track os) { <option [value]="os">{{ os }}</option> }
+                </select>
+              </label>
+              <label class="li-field">
+                <span>Cuenta de servicio</span>
+                <input class="li-control" [ngModel]="form().gcpServiceAccount" (ngModelChange)="patchForm({ gcpServiceAccount: $event })" />
+              </label>
             }
           </div>
-          <div class="auth-toggle">
-            <button type="button" [class.auth-toggle__on]="form().azureAuth === 'ssh'" (click)="patchForm({ azureAuth: 'ssh' })">SSH key</button>
-            <button type="button" [class.auth-toggle__on]="form().azureAuth === 'password'" (click)="patchForm({ azureAuth: 'password' })">Password</button>
-          </div>
-          @if (form().azureAuth === 'ssh') {
-            <textarea class="launch-textarea" rows="3" [ngModel]="form().azureSshKey" (ngModelChange)="patchForm({ azureSshKey: $event })" placeholder="Paste public SSH key"></textarea>
-          }
-        }
-      </section>
-    }
-
-    @if (step() === 4) {
-      <section class="launch-step launch-step--configure">
-        <p class="launch-step__hint">Provider-specific options</p>
-        @if (form().provider === 'AWS') {
-          <div class="type-table-wrap">
-            <table class="type-table">
-              <thead><tr><th>Type</th><th>vCPUs</th><th>RAM</th><th>$/hr</th></tr></thead>
-              <tbody>
-                @for (group of awsGroups; track group.name) {
-                  <tr class="type-table__group" (click)="toggleGroup(group)"><td colspan="4">{{ group.name }} {{ group.open ? '▼' : '▶' }}</td></tr>
-                  @if (group.open) {
-                    @for (t of group.types; track t; let i = $index) {
-                      <tr class="type-table__row" [class.type-table__row--selected]="form().instanceType === t" (click)="patchForm({ instanceType: t })">
-                        <td>{{ t }}</td>
-                        <td>{{ pricing.estimateCost('AWS', t).row?.vcpus ?? '—' }}</td>
-                        <td>{{ pricing.estimateCost('AWS', t).row?.ramGb ?? '—' }} GB</td>
-                        <td>{{ formatMoney(pricing.estimateCost('AWS', t).hourly) }}</td>
-                      </tr>
-                    }
-                  }
+          @if (form().provider === 'AZURE') {
+            <div class="li-block">
+              <h4 class="li-block__title">Imagen de máquina</h4>
+              <div class="li-pick-list">
+                @for (img of azureImages; track img.name) {
+                  <button
+                    type="button"
+                    class="li-pick"
+                    [class.li-pick--on]="form().azureImage === img.name"
+                    (click)="patchForm({ azureImage: img.name })"
+                  >
+                    {{ img.name }}
+                  </button>
                 }
-              </tbody>
-            </table>
-          </div>
-          <div class="ebs-block">
-            <span class="launch-label">EBS type</span>
-            <div class="toggle-row">
-              @for (dt of ['gp3', 'io2', 'gp2']; track dt) {
-                <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().ebsType === dt" (click)="setEbsType(dt)">{{ dt }}</button>
+              </div>
+            </div>
+          }
+        </section>
+      }
+
+      @if (step() === 4) {
+        <section class="li-section">
+          @if (selectedTypeSpecs(); as specs) {
+            <div class="li-spec-banner">
+              <div>
+                <span class="mono">{{ activeInstanceType() }}</span>
+                <span>{{ specs.vcpus }} vCPU · {{ specs.ramGb }} GB RAM · {{ specs.network }}</span>
+              </div>
+              <strong>{{ formatMoney(specs.hourly) }}/h</strong>
+            </div>
+          }
+          <div class="li-block">
+            <h4 class="li-block__title">Tipo de instancia</h4>
+            <div class="li-types">
+              @for (row of instanceTypeCards(); track row.type) {
+                <button
+                  type="button"
+                  class="li-type"
+                  [class.li-type--on]="isTypeSelected(row.type)"
+                  (click)="selectInstanceType(row.type)"
+                >
+                  <span class="mono li-type__id">{{ row.type }}</span>
+                  <span>{{ row.vcpus }} vCPU · {{ row.ramGb }} GB</span>
+                  <strong>{{ formatMoney(row.hourlyUsd) }}/h</strong>
+                </button>
               }
             </div>
-            <label class="launch-label">Size {{ form().ebsSizeGb }} GB</label>
-            <input type="range" min="8" max="500" [ngModel]="form().ebsSizeGb" (ngModelChange)="patchForm({ ebsSizeGb: +$event })" />
           </div>
-        }
-        @if (form().provider === 'GCP') {
-          <div class="os-cards">
-            @for (os of gcpOsOptions; track os) {
-              <button type="button" class="os-card" [class.os-card--on]="form().gcpDiskOs === os" (click)="patchForm({ gcpDiskOs: os })">{{ os }}</button>
-            }
-          </div>
-          <div class="toggle-row">
-            @for (dt of ['pd-balanced', 'pd-ssd', 'pd-extreme']; track dt) {
-              <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().gcpDiskType === dt" (click)="setGcpDiskType(dt)">{{ dt }}</button>
-            }
-          </div>
-          <label class="launch-label">Disk {{ form().gcpDiskSizeGb }} GB</label>
-          <input type="range" min="10" max="500" [ngModel]="form().gcpDiskSizeGb" (ngModelChange)="patchForm({ gcpDiskSizeGb: +$event })" />
-        }
-        @if (form().provider === 'AZURE') {
-          <div class="type-table-wrap">
-            <table class="type-table">
-              <thead><tr><th>Size</th><th>vCPUs</th><th>RAM</th><th>$/hr</th></tr></thead>
-              <tbody>
-                @for (group of azureGroups; track group.name) {
-                  <tr class="type-table__group" (click)="toggleGroup(group)"><td colspan="4">{{ group.name }}</td></tr>
-                  @if (group.open) {
-                    @for (t of group.types; track t) {
-                      <tr class="type-table__row" [class.type-table__row--selected]="form().azureVmSize === t" (click)="patchForm({ azureVmSize: t })">
-                        <td>{{ t }}</td>
-                        <td>{{ pricing.estimateCost('AZURE', t).row?.vcpus }}</td>
-                        <td>{{ pricing.estimateCost('AZURE', t).row?.ramGb }} GB</td>
-                        <td>{{ formatMoney(pricing.estimateCost('AZURE', t).hourly) }}</td>
-                      </tr>
-                    }
-                  }
-                }
-              </tbody>
-            </table>
-          </div>
-          <div class="toggle-row">
-            @for (dt of ['Standard_HDD', 'Standard_SSD', 'Premium_SSD']; track dt) {
-              <button type="button" class="toggle-btn" [class.toggle-btn--on]="form().azureOsDisk === dt" (click)="setAzureOsDisk(dt)">{{ dt }}</button>
-            }
-          </div>
-        }
-      </section>
-    }
-
-    @if (step() === 5) {
-      <section class="launch-step">
-        <p class="launch-step__hint">Cost estimate & Terraform plan</p>
-        <div class="cost-cards">
-          <div class="cost-card">
-            <span>Hourly</span>
-            <strong>{{ formatMoney(costEstimate().hourly) }}</strong>
-          </div>
-          <div class="cost-card">
-            <span>Daily</span>
-            <strong>{{ formatMoney(costDaily()) }}</strong>
-          </div>
-          <div class="cost-card cost-card--highlight">
-            <span>Monthly</span>
-            <strong>{{ formatMoney(costEstimate().monthly) }}</strong>
-          </div>
-        </div>
-        <table class="summary-table">
-          @for (row of summaryRows(); track row.label; let i = $index) {
-            <tr [class.summary-table__alt]="i % 2 === 1">
-              <td class="summary-table__label">{{ row.label }}</td>
-              <td class="summary-table__value">{{ row.value }}</td>
-            </tr>
+          @if (form().provider === 'GCP' || form().provider === 'AWS') {
+            <div class="li-block">
+              <h4 class="li-block__title">Almacenamiento</h4>
+              @if (form().provider === 'GCP') {
+                <label class="li-field">
+                  <span>Disco boot · {{ form().gcpDiskSizeGb }} GB</span>
+                  <input type="range" class="li-range" min="10" max="500" [ngModel]="form().gcpDiskSizeGb" (ngModelChange)="patchForm({ gcpDiskSizeGb: +$event })" />
+                </label>
+                <div class="li-pick-list">
+                  <button type="button" class="li-pick" [class.li-pick--on]="form().gcpDiskType === 'pd-balanced'" (click)="setGcpDiskType('pd-balanced')">pd-balanced</button>
+                  <button type="button" class="li-pick" [class.li-pick--on]="form().gcpDiskType === 'pd-ssd'" (click)="setGcpDiskType('pd-ssd')">pd-ssd</button>
+                  <button type="button" class="li-pick" [class.li-pick--on]="form().gcpDiskType === 'pd-extreme'" (click)="setGcpDiskType('pd-extreme')">pd-extreme</button>
+                </div>
+              }
+              @if (form().provider === 'AWS') {
+                <label class="li-field">
+                  <span>EBS · {{ form().ebsSizeGb }} GB · {{ form().ebsIops }} IOPS</span>
+                  <input type="range" class="li-range" min="20" max="500" [ngModel]="form().ebsSizeGb" (ngModelChange)="patchForm({ ebsSizeGb: +$event })" />
+                </label>
+                <div class="li-pick-list">
+                  <button type="button" class="li-pick" [class.li-pick--on]="form().ebsType === 'gp3'" (click)="setEbsType('gp3')">gp3</button>
+                  <button type="button" class="li-pick" [class.li-pick--on]="form().ebsType === 'io2'" (click)="setEbsType('io2')">io2</button>
+                  <button type="button" class="li-pick" [class.li-pick--on]="form().ebsType === 'gp2'" (click)="setEbsType('gp2')">gp2</button>
+                </div>
+              }
+            </div>
           }
-        </table>
-        @if (costOverThreshold()) {
-          <p class="cost-warn">Monthly estimate exceeds threshold ({{ settingsStore.monthlyCostThresholdUsd() | number }} USD).</p>
-        }
-        <button type="button" class="launch-btn-secondary" (click)="generatePlan()">
-          <mat-icon>architecture</mat-icon>
-          Generate Terraform plan
-        </button>
-        @if (planPreview() || hclPreview()) {
-          <pre class="plan-terminal">{{ hclPreview() }}
+        </section>
+      }
+
+      @if (step() === 5) {
+        <section class="li-section">
+          <div class="li-cost-row">
+            <div class="li-cost-row__item">
+              <span>Por hora</span>
+              <strong>{{ formatMoney(costEstimate().hourly) }}</strong>
+            </div>
+            <div class="li-cost-row__item">
+              <span>Por día</span>
+              <strong>{{ formatMoney(costDaily()) }}</strong>
+            </div>
+            <div class="li-cost-row__item li-cost-row__item--main">
+              <span>Mensual (730 h)</span>
+              <strong>{{ formatMoney(costEstimate().monthly) }}</strong>
+            </div>
+          </div>
+          @if (costOverThreshold()) {
+            <p class="li-alert"><mat-icon>warning</mat-icon> Supera el umbral de {{ settingsStore.monthlyCostThresholdUsd() | number }} USD/mes.</p>
+          }
+          <div class="li-actions-row">
+            <button type="button" class="li-btn li-btn--secondary" (click)="generatePlan()">
+              <mat-icon>architecture</mat-icon> Generar plan
+            </button>
+            <button type="button" class="li-btn li-btn--ghost" (click)="saveTemplate()">
+              <mat-icon>bookmark</mat-icon> Guardar plantilla
+            </button>
+          </div>
+          @if (planStats(); as stats) {
+            <div class="li-plan-stats">
+              <span class="li-plan-stats__add">+{{ stats.add }}</span>
+              <span class="li-plan-stats__chg">~{{ stats.change }}</span>
+              <span class="li-plan-stats__del">-{{ stats.destroy }}</span>
+              <span class="li-plan-stats__lbl">{{ stats.summary }}</span>
+            </div>
+          }
+          @if (planPreview() || hclPreview()) {
+            <pre class="li-code mono">{{ hclPreview() }}
 
 {{ planPreview() }}</pre>
-        }
-        @if (!planGenerated()) {
-          <p class="plan-hint">Generate a plan before launching. Apply requires confirmation.</p>
-        }
-        <label class="launch-label">Type "LAUNCH" to confirm apply</label>
-        <input class="launch-input" [ngModel]="confirmText()" (ngModelChange)="confirmText.set($event)" placeholder="LAUNCH" />
-        @if (launching()) {
-          <div class="progress-track">
-            <div class="progress-bar" [style.width.%]="launchPercent()" [style.background]="progressColor()"></div>
+          } @else {
+            <p class="li-note">Genera el plan para ver el diff de recursos antes del apply.</p>
+          }
+          <label class="li-field li-field--wide">
+            <span>Confirmación — escribe LAUNCH</span>
+            <input
+              class="li-control li-control--confirm"
+              [ngModel]="confirmText()"
+              (ngModelChange)="confirmText.set($event)"
+              placeholder="LAUNCH"
+              autocomplete="off"
+            />
+          </label>
+        </section>
+      }
+    </main>
+
+    <aside class="launch-modal__summary" aria-label="Resumen y progreso">
+      @if (launching()) {
+        <div class="li-launch-panel">
+          <div class="li-launch-target">
+            <app-brand-logo [logo]="providerBrandLogo(form().provider)" size="xl" />
+            <mat-icon class="li-launch-target__arrow" aria-hidden="true">arrow_forward</mat-icon>
+            <app-brand-logo logo="terraform" size="xl" />
+            <div class="li-launch-target__info">
+              <strong class="mono">{{ launchSnapshot().instanceName }}</strong>
+              <span>{{ launchSnapshot().provider }} · {{ launchSnapshot().region }}</span>
+              <span class="mono">{{ launchSnapshot().type }}</span>
+            </div>
           </div>
-          <span class="progress-label">{{ launchStepLabel() }} {{ launchPercent() }}%</span>
-        }
-        <button type="button" class="launch-link launch-link--left" (click)="saveTemplate()">Save as template</button>
-      </section>
-    }
+          <header class="li-launch-panel__head">
+            <div>
+              <h3>Progreso del lanzamiento</h3>
+              <span class="li-launch-panel__sub">{{ launchPhasesDone() }}/{{ launchPhases().length }} fases · {{ launchSnapshot().monthlyCost }}/mes</span>
+            </div>
+            <span class="li-launch-panel__pct">{{ launchPercent() }}%</span>
+          </header>
+          <div class="li-launch-panel__overall">
+            <div class="li-launch-panel__bar" role="progressbar" [attr.aria-valuenow]="launchPercent()" aria-valuemin="0" aria-valuemax="100">
+              <span [style.width.%]="launchPercent()"></span>
+            </div>
+            <div class="li-launch-panel__meta">
+              <span><mat-icon>schedule</mat-icon> {{ formatElapsed() }}</span>
+              <span>{{ launchEtaLabel() }}</span>
+            </div>
+          </div>
+          @if (activeLaunchPhase(); as phase) {
+            <div class="li-launch-panel__current">
+              <mat-icon>{{ phase.icon }}</mat-icon>
+              <div>
+                <strong>{{ phase.label }}</strong>
+                <span>{{ phase.description }}</span>
+                @if (phase.detailLine) {
+                  <span class="li-launch-panel__detail">{{ phase.detailLine }} · {{ phase.weightLabel }} del total</span>
+                }
+              </div>
+              <span class="li-launch-panel__phase-pct">{{ phase.percent }}%</span>
+            </div>
+          }
+          <div class="li-launch-panel__scroll">
+            <ol class="li-launch-phases">
+              @for (ph of launchPhases(); track ph.id) {
+                <li class="li-launch-phase" [attr.data-status]="ph.status">
+                  <mat-icon>{{ ph.status === 'done' ? 'check_circle' : ph.status === 'active' ? 'sync' : ph.status === 'error' ? 'error' : 'radio_button_unchecked' }}</mat-icon>
+                  <div class="li-launch-phase__main">
+                    <div class="li-launch-phase__row">
+                      <span class="li-launch-phase__label">{{ ph.label }}</span>
+                      <span class="li-launch-phase__weight">{{ ph.weightLabel }}</span>
+                    </div>
+                    @if (ph.detailLine && ph.status === 'active') {
+                      <span class="li-launch-phase__detail">{{ ph.detailLine }}</span>
+                    }
+                    <div class="li-launch-phase__mini"><span [style.width.%]="ph.percent"></span></div>
+                  </div>
+                  <span class="li-launch-phase__pct">{{ ph.percent }}%</span>
+                </li>
+              }
+            </ol>
+            <dl class="li-launch-facts">
+              <div><dt>Carpeta</dt><dd class="mono">{{ launchSnapshot().folderPath }}</dd></div>
+              <div><dt>Workspace</dt><dd>{{ launchSnapshot().workspace }}</dd></div>
+              @if (launchSnapshot().zone) {
+                <div><dt>Zona</dt><dd class="mono">{{ launchSnapshot().zone }}</dd></div>
+              }
+            </dl>
+            @if (launchLogs().length) {
+              <div class="li-launch-log">
+                <span class="li-launch-log__title">Registro en vivo</span>
+                @for (line of launchLogs(); track $index) {
+                  <div class="mono">{{ line }}</div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="li-summary-panel">
+          <div class="li-summary-brand">
+            <app-brand-logo [logo]="providerBrandLogo(form().provider)" size="lg" />
+            <div>
+              <h3>Resumen del despliegue</h3>
+              <span>{{ form().provider }} · {{ form().region }}</span>
+            </div>
+          </div>
+          <div class="li-readiness">
+            <div class="li-readiness__head">
+              <span>Preparación</span>
+              <strong>{{ readinessPct() }}%</strong>
+            </div>
+            <div class="li-readiness__bar">
+              <span [style.width.%]="readinessPct()"></span>
+            </div>
+            <ul class="li-readiness__list">
+              @for (item of readinessItems(); track item.id) {
+                <li [class.li-readiness__item--done]="item.done">
+                  <mat-icon>{{ item.done ? 'check' : 'circle' }}</mat-icon>
+                  {{ item.label }}
+                </li>
+              }
+            </ul>
+          </div>
+          @for (section of summarySections(); track section.title) {
+            <div class="li-summary-group">
+              <h4>{{ section.title }}</h4>
+              @for (row of section.rows; track row.label) {
+                <div class="launch-modal__spec">
+                  <dt>{{ row.label }}</dt>
+                  <dd [class.mono]="row.mono">{{ row.value }}</dd>
+                </div>
+              }
+            </div>
+          }
+          @if (step() >= 4) {
+            <div class="launch-modal__cost">
+              <span>Coste estimado / mes</span>
+              <strong>{{ formatMoney(costEstimate().monthly) }}</strong>
+              <span class="mono">{{ activeInstanceType() }} · {{ formatMoney(costEstimate().hourly) }}/h</span>
+            </div>
+          }
+          @if (planStats(); as stats) {
+            <div class="li-summary-plan">
+              <h4>Plan Terraform</h4>
+              <p>{{ stats.summary }}</p>
+            </div>
+          }
+          <p class="launch-modal__footnote">
+            ID de lanzamiento: <span class="mono">launch-{{ form().name }}</span><br />
+            Se persistirá en <span class="mono">{{ selectedFolder()?.path }}</span>
+          </p>
+        </div>
+      }
+    </aside>
   </div>
 
   <footer class="launch-modal__footer">
-    <button type="button" class="launch-btn-cancel" (click)="cancel()">Cancel</button>
-    @if (step() > 1) {
-      <button type="button" class="launch-btn-cancel" (click)="prevStep()">Back</button>
-    }
-    @if (step() < 5) {
-      <button type="button" class="launch-btn-primary" (click)="nextStep()">Continue</button>
-    } @else {
-      <button type="button" class="launch-btn-primary" [disabled]="!launchEnabled()" (click)="launch()">Launch instance</button>
-    }
+    <span class="launch-modal__footer-hint">Paso {{ step() }}/5 · Listo al {{ readinessPct() }}%</span>
+    <div class="launch-modal__footer-actions">
+      <button type="button" class="li-btn li-btn--ghost" (click)="cancel()">Cancelar</button>
+      @if (step() > 1) {
+        <button type="button" class="li-btn li-btn--ghost" (click)="prevStep()">Atrás</button>
+      }
+      @if (step() < 5) {
+        <button type="button" class="li-btn li-btn--primary" (click)="nextStep()">Continuar</button>
+      } @else {
+        <button type="button" class="li-btn li-btn--primary" [disabled]="!launchEnabled()" (click)="launch()">
+          Lanzar instancia
+        </button>
+      }
+    </div>
   </footer>
 </div>

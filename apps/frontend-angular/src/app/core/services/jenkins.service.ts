@@ -21,4 +21,11 @@ export class JenkinsService {
 
   listJobs = (serverId?: string): Observable<Record<string, unknown>[]> =>
     this.api.get<Record<string, unknown>[]>(serverId ? `jenkins/servers/${serverId}/jobs` : 'jenkins/servers/mock/jobs')
+
+  triggerBuild = (
+    serverId: string,
+    jobName: string,
+    parameters: Record<string, string> = {},
+  ): Observable<{ queued: boolean; build: { number: number; status: string } }> =>
+    this.api.post(`jenkins/servers/${serverId}/jobs/${encodeURIComponent(jobName)}/build`, { parameters })
 }

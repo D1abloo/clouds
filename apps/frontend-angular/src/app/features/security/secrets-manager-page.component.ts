@@ -9,18 +9,21 @@ import { MatMenuModule } from '@angular/material/menu'
 import { MatDialog, MatDialogModule } from '@angular/material/dialog'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { ToastService } from '../../core/services/toast.service'
+import { SECURITY_ACCENT, SECURITY_ACCENT_BORDER, SECURITY_ACCENT_LIGHT, SECURITY_ACTION_BTN, SECURITY_ACTION_BTN_ICON, SECURITY_ACTION_BTN_PRIMARY, SECURITY_ACTION_BTN_SM } from './security.config'
 import {
   defaultRotationPolicies,
   defaultRotations,
   defaultSecretAudit,
   defaultSecrets,
   SECRET_TYPE_LABELS,
+  type RotationPolicy,
   type SecretAuditEntry,
   type SecretRecord,
   type SecretRotation,
 } from './secrets-manager.demo'
 import { SecretDetailDialogComponent } from './secret-detail-dialog.component'
 import { SecretAddDialogComponent } from './secret-add-dialog.component'
+import { SecretPolicyDetailDialogComponent } from './secret-policy-detail-dialog.component'
 
 type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
 
@@ -37,7 +40,7 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
           <h2 class="secret-intro__title">Gestor de secretos</h2>
           <p class="secret-intro__desc">
             Centraliza claves SSH, credenciales cloud, tokens API y referencias Vault con rotación
-            automatizada y trazabilidad completa de accesos.
+            automatizada, políticas de cumplimiento y trazabilidad completa de accesos.
           </p>
         </div>
         <div class="secret-intro__actions">
@@ -51,15 +54,6 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
             <mat-icon>history</mat-icon> Ver auditoría
           </button>
         </div>
-      </section>
-
-      <section class="secret-kpis">
-        @for (kpi of kpis; track kpi.label) {
-          <article class="secret-kpi" [attr.data-tone]="kpi.tone">
-            <mat-icon>{{ kpi.icon }}</mat-icon>
-            <div><span>{{ kpi.label }}</span><strong>{{ kpi.value }}</strong></div>
-          </article>
-        }
       </section>
 
       <div class="secret-bar">
@@ -89,14 +83,14 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
               <thead><tr><th></th><th>Nombre</th><th>Tipo</th><th>Referencia</th><th>Expira</th><th>Estado</th><th></th></tr></thead>
               <tbody>
                 @for (row of filteredSecrets(); track row.id) {
-                  <tr>
-                    <td><input type="checkbox" [checked]="selectedIds().has(row.id)" (change)="toggleSelect(row.id)" aria-label="Seleccionar" /></td>
-                    <td>{{ row.name }}</td>
+                  <tr (click)="openDetail(row)" class="secret-table__row">
+                    <td (click)="$event.stopPropagation()"><input type="checkbox" [checked]="selectedIds().has(row.id)" (change)="toggleSelect(row.id)" aria-label="Seleccionar" /></td>
+                    <td><strong>{{ row.name }}</strong></td>
                     <td>{{ typeLabel(row.type) }}</td>
                     <td class="mono">{{ row.reference }}</td>
                     <td>{{ row.expires }}</td>
                     <td><app-status-badge [value]="row.status" /></td>
-                    <td class="secret-table__actions">
+                    <td class="secret-table__actions" (click)="$event.stopPropagation()">
                       <button type="button" class="secret-icon-btn" [matMenuTriggerFor]="secMenu" (click)="activeSecret.set(row)" aria-label="Acciones"><mat-icon>more_vert</mat-icon></button>
                     </td>
                   </tr>
@@ -105,22 +99,30 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
             </table>
           }
           @case ('rotation') {
-            <table class="secret-table" aria-label="Rotación">
-              <thead><tr><th>Secreto</th><th>Política</th><th>Última rotación</th><th>Próxima</th><th>Auto</th><th>Estado</th><th></th></tr></thead>
-              <tbody>
-                @for (row of rotations(); track row.id) {
-                  <tr>
-                    <td>{{ row.secret }}</td>
-                    <td>{{ row.policy }}</td>
-                    <td>{{ row.lastRotated | date: 'dd MMM yyyy' }}</td>
-                    <td>{{ row.nextRotation }}</td>
-                    <td>{{ row.autoRotate ? 'Sí' : 'No' }}</td>
-                    <td><app-status-badge [value]="row.status" /></td>
-                    <td><button type="button" class="secret-btn secret-btn--sm" (click)="handleRotateOne(row)">Rotar</button></td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+            <ul class="secret-rot-list">
+              @for (row of rotations(); track row.id) {
+                <li class="secret-rot">
+                  <div class="secret-rot__main">
+                    <header>
+                      <strong>{{ row.secret }}</strong>
+                      <app-status-badge [value]="row.status" />
+                    </header>
+                    <p>{{ row.method }}</p>
+                    <dl>
+                      <div><dt>Política</dt><dd>{{ row.policy }}</dd></div>
+                      <div><dt>Ventana</dt><dd>{{ row.window }}</dd></div>
+                      <div><dt>Última rotación</dt><dd>{{ row.lastRotated | date: 'dd MMM yyyy' }}</dd></div>
+                      <div><dt>Próxima</dt><dd>{{ row.nextRotation }}</dd></div>
+                      <div><dt>Auto</dt><dd>{{ row.autoRotate ? 'Sí' : 'No' }}</dd></div>
+                      <div><dt>Afectados</dt><dd>{{ row.secretsAffected }}</dd></div>
+                    </dl>
+                  </div>
+                  <button type="button" class="secret-btn secret-btn--primary secret-btn--sm" (click)="handleRotateOne(row)">
+                    <mat-icon>sync</mat-icon> Rotar
+                  </button>
+                </li>
+              }
+            </ul>
           }
           @case ('audit') {
             <table class="secret-table" aria-label="Auditoría secretos">
@@ -142,9 +144,28 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
             <div class="secret-policies">
               @for (pol of policies(); track pol.id) {
                 <article class="secret-policy">
-                  <header><h3>{{ pol.name }}</h3><app-status-badge [value]="pol.status" /></header>
-                  <p>{{ pol.scope }}</p>
-                  <dl><div><dt>Intervalo</dt><dd>{{ pol.intervalDays }} días</dd></div><div><dt>Secretos</dt><dd>{{ pol.secretsCount }}</dd></div></dl>
+                  <header>
+                    <div>
+                      <h3>{{ pol.name }}</h3>
+                      <span class="secret-policy__scope">{{ pol.scope }}</span>
+                    </div>
+                    <app-status-badge [value]="pol.status" />
+                  </header>
+                  <p>{{ pol.description }}</p>
+                  <dl>
+                    <div><dt>Intervalo</dt><dd>{{ pol.intervalDays }} días</dd></div>
+                    <div><dt>Secretos</dt><dd>{{ pol.secretsCount }}</dd></div>
+                    <div><dt>Última ejecución</dt><dd>{{ pol.lastRun | date: 'dd MMM yyyy' }}</dd></div>
+                    <div><dt>Próxima</dt><dd>{{ pol.nextRun | date: 'dd MMM yyyy' }}</dd></div>
+                  </dl>
+                  <ul class="secret-policy__rules">
+                    @for (rule of pol.rules.slice(0, 2); track rule) { <li>{{ rule }}</li> }
+                  </ul>
+                  <div class="secret-policy__actions">
+                    <button type="button" class="secret-btn secret-btn--primary secret-btn--sm" (click)="openPolicyDetail(pol)">
+                      <mat-icon>visibility</mat-icon> Ver detalle
+                    </button>
+                  </div>
                 </article>
               }
             </div>
@@ -163,40 +184,49 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
     :host { display: block; flex: 1; min-height: 0; }
     .secret-page { display: flex; flex-direction: column; gap: 0.65rem; overflow-y: auto; scrollbar-width: thin; color: #0f172a; font-size: 0.8125rem; }
     .secret-intro { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; }
-    .secret-intro__eyebrow { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; color: #db2777; }
+    .secret-intro__eyebrow { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; color: ${SECURITY_ACCENT}; }
     .secret-intro__title { margin: 0.2rem 0; font-size: 1.05rem; font-weight: 700; }
     .secret-intro__desc { margin: 0; max-width: 40rem; font-size: 0.72rem; color: #64748b; line-height: 1.55; }
-    .secret-intro__actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-    .secret-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.38rem 0.7rem; border-radius: 9px; border: 1px solid #e2e8f0; background: #fff; font: inherit; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
-    .secret-btn--primary { background: #ec4899; border-color: #db2777; color: #fff; }
-    .secret-btn--sm { padding: 0.25rem 0.5rem; font-size: 0.64rem; }
-    .secret-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
-    .secret-kpi { display: flex; gap: 0.45rem; padding: 0.55rem 0.65rem; border-radius: 11px; background: #fdf2f8; border: 1px solid #fbcfe8; }
-    .secret-kpi mat-icon { color: #db2777; }
-    .secret-kpi span { display: block; font-size: 0.55rem; font-weight: 650; text-transform: uppercase; color: #94a3b8; }
-    .secret-kpi strong { font-size: 1rem; font-weight: 700; }
+    .secret-intro__actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: flex-start; height: fit-content; padding: 0; }
+    .secret-btn { ${SECURITY_ACTION_BTN} }
+    .secret-btn mat-icon { ${SECURITY_ACTION_BTN_ICON} }
+    .secret-btn--primary { ${SECURITY_ACTION_BTN_PRIMARY} }
+    .secret-btn--sm { ${SECURITY_ACTION_BTN_SM} }
     .secret-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-    .secret-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.2rem; border-radius: 10px; background: #fdf2f8; }
-    .secret-tabs__tab { display: inline-flex; align-items: center; gap: 0.28rem; padding: 0.35rem 0.6rem; border: none; border-radius: 8px; background: transparent; font: inherit; font-size: 0.68rem; font-weight: 600; color: #9d174d; cursor: pointer; }
-    .secret-tabs__tab--on { background: #fff; color: #831843; box-shadow: 0 1px 2px rgb(190 24 93 / 0.08); }
-    .secret-search { display: flex; align-items: center; gap: 0.35rem; flex: 1; max-width: 16rem; padding: 0.35rem 0.55rem; border-radius: 9px; border: 1px solid #fbcfe8; margin-left: auto; }
+    .secret-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.2rem; border-radius: 10px; background: ${SECURITY_ACCENT_LIGHT}; }
+    .secret-tabs__tab { display: inline-flex; align-items: center; gap: 0.28rem; padding: 0.35rem 0.6rem; border: none; border-radius: 8px; background: transparent; font: inherit; font-size: 0.68rem; font-weight: 600; color: #4338ca; cursor: pointer; }
+    .secret-tabs__tab--on { background: #fff; color: ${SECURITY_ACCENT}; box-shadow: 0 1px 2px rgb(79 70 229 / 0.08); }
+    .secret-search { display: flex; align-items: center; gap: 0.35rem; flex: 1; max-width: 16rem; padding: 0.35rem 0.55rem; border-radius: 9px; border: 1px solid ${SECURITY_ACCENT_BORDER}; margin-left: auto; }
     .secret-search input { flex: 1; border: none; background: transparent; font: inherit; font-size: 0.72rem; outline: none; }
-    .secret-filter { padding: 0.35rem 0.5rem; border-radius: 9px; border: 1px solid #fbcfe8; font: inherit; font-size: 0.68rem; }
+    .secret-filter { padding: 0.35rem 0.5rem; border-radius: 9px; border: 1px solid ${SECURITY_ACCENT_BORDER}; font: inherit; font-size: 0.68rem; }
     .secret-table-wrap { border-radius: 11px; border: 1px solid #e2e8f0; background: #fff; overflow: auto; }
     .secret-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
     .secret-table th { text-align: left; padding: 0.5rem 0.65rem; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; background: #f8fafc; }
     .secret-table td { padding: 0.5rem 0.65rem; border-bottom: 1px solid #f1f5f9; }
+    .secret-table__row { cursor: pointer; }
+    .secret-table__row:hover td { background: ${SECURITY_ACCENT_LIGHT}; }
     .secret-empty { text-align: center; color: #94a3b8; padding: 1.5rem !important; }
     .secret-icon-btn { border: none; background: transparent; cursor: pointer; color: #64748b; }
     .secret-action { font-weight: 700; font-size: 0.62rem; &[data-action='DELETE'] { color: #b91c1c; } &[data-action='ROTATE'] { color: #059669; } }
-    .secret-policies { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; padding: 0.65rem; }
-    .secret-policy { padding: 0.65rem; border-radius: 10px; border: 1px solid #fbcfe8; background: #fdf2f8; }
-    .secret-policy header { display: flex; justify-content: space-between; align-items: center; }
-    .secret-policy h3 { margin: 0; font-size: 0.78rem; }
-    .secret-policy p { margin: 0.35rem 0; font-size: 0.68rem; color: #64748b; }
-    .secret-policy dl { display: flex; gap: 1rem; margin: 0; font-size: 0.68rem; dt { color: #94a3b8; } dd { margin: 0; font-weight: 600; } }
+    .secret-rot-list { list-style: none; margin: 0; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.45rem; }
+    .secret-rot {
+      display: grid; grid-template-columns: 1fr auto; gap: 0.65rem; align-items: start;
+      padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid ${SECURITY_ACCENT_BORDER}; background: ${SECURITY_ACCENT_LIGHT};
+    }
+    .secret-rot header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+    .secret-rot header strong { font-size: 0.82rem; }
+    .secret-rot p { margin: 0 0 0.4rem; font-size: 0.68rem; color: #64748b; line-height: 1.45; }
+    .secret-rot dl { display: flex; flex-wrap: wrap; gap: 0.65rem 1rem; margin: 0; font-size: 0.66rem; dt { color: #94a3b8; } dd { margin: 0; font-weight: 600; } }
+    .secret-policies { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; padding: 0.65rem; }
+    .secret-policy { padding: 0.75rem; border-radius: 10px; border: 1px solid ${SECURITY_ACCENT_BORDER}; background: ${SECURITY_ACCENT_LIGHT}; display: flex; flex-direction: column; gap: 0.35rem; }
+    .secret-policy header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+    .secret-policy h3 { margin: 0; font-size: 0.82rem; }
+    .secret-policy__scope { display: block; font-size: 0.62rem; color: #64748b; margin-top: 0.1rem; }
+    .secret-policy p { margin: 0; font-size: 0.68rem; color: #64748b; line-height: 1.45; }
+    .secret-policy dl { display: flex; flex-wrap: wrap; gap: 0.65rem 1rem; margin: 0; font-size: 0.66rem; dt { color: #94a3b8; } dd { margin: 0; font-weight: 600; } }
+    .secret-policy__rules { margin: 0; padding-left: 1rem; font-size: 0.64rem; color: #475569; line-height: 1.45; }
+    .secret-policy__actions { margin-top: 0.25rem; }
     .mono { font-family: ui-monospace, monospace; font-size: 0.68rem; }
-    @media (max-width: 900px) { .secret-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   `,
 })
 export class SecretsManagerPageComponent {
@@ -215,13 +245,6 @@ export class SecretsManagerPageComponent {
   readonly typeControl = new FormControl('', { nonNullable: true })
   private readonly searchTerm = toSignal(this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')), { initialValue: '' })
   private readonly typeFilter = toSignal(this.typeControl.valueChanges.pipe(startWith('')), { initialValue: '' })
-
-  readonly kpis = [
-    { label: 'Total secretos', value: 47, icon: 'vpn_key', tone: 'pink' },
-    { label: 'Expiran pronto', value: 5, icon: 'schedule', tone: 'warn' },
-    { label: 'Refs Vault', value: 12, icon: 'lock', tone: 'cyan' },
-    { label: 'Rotados (30d)', value: 8, icon: 'autorenew', tone: 'success' },
-  ]
 
   readonly tabs = [
     { id: 'secrets' as const, label: 'Secretos', icon: 'vpn_key' },
@@ -253,7 +276,12 @@ export class SecretsManagerPageComponent {
   }
 
   openAddDialog = (): void => {
-    const ref = this.dialog.open(SecretAddDialogComponent, { width: 'min(460px, 94vw)', maxWidth: '94vw' })
+    const ref = this.dialog.open(SecretAddDialogComponent, {
+      width: 'min(720px, 96vw)',
+      maxWidth: '96vw',
+      maxHeight: '92vh',
+      panelClass: 'sec-secret-dialog-panel',
+    })
     ref.afterClosed().subscribe((secret: SecretRecord | undefined) => {
       if (!secret) return
       this.secrets.update((rows) => [secret, ...rows])
@@ -270,11 +298,27 @@ export class SecretsManagerPageComponent {
   }
 
   openDetail = (row: SecretRecord): void => {
-    const ref = this.dialog.open(SecretDetailDialogComponent, { width: 'min(520px, 94vw)', data: { secret: row } })
+    const ref = this.dialog.open(SecretDetailDialogComponent, {
+      width: 'min(720px, 96vw)',
+      maxWidth: '96vw',
+      maxHeight: '92vh',
+      panelClass: 'sec-secret-dialog-panel',
+      data: { secret: row },
+    })
     ref.afterClosed().subscribe((result) => {
       if (result?.rotated) {
         this.secrets.update((rows) => rows.map((s) => (s.id === result.id ? { ...s, status: 'running', lastRotated: new Date().toISOString() } : s)))
       }
+    })
+  }
+
+  openPolicyDetail = (policy: RotationPolicy): void => {
+    this.dialog.open(SecretPolicyDetailDialogComponent, {
+      width: 'min(680px, 94vw)',
+      maxWidth: '94vw',
+      maxHeight: '90vh',
+      panelClass: 'sec-secret-policy-dialog-panel',
+      data: { policy },
     })
   }
 

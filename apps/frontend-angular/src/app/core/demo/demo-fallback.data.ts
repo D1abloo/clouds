@@ -82,6 +82,8 @@ export const demoInstances = (): Instance[] => {
   }))
 }
 
+export { demoJenkinsInventory } from '../../features/jenkins/jenkins.demo'
+
 export const demoCloudAccounts = (provider?: CloudProvider): CloudAccount[] => {
   const providers: CloudProvider[] = provider ? [provider] : ['AWS', 'GCP', 'AZURE']
   return providers.flatMap((p, pi) =>

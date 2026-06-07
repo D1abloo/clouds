@@ -2,10 +2,12 @@ import { Injectable, inject, signal, computed } from '@angular/core'
 import { TerraformService } from '../services/terraform.service'
 import { RealtimeService } from '../services/realtime.service'
 import { CloudProvider } from '../models/api.models'
+import type { TerraformLaunchRecord } from '../../terraform/terraform-folders'
 
 export interface TerraformWorkspaceItem {
   id: string
   name: string
+  folderId: string
   provider: CloudProvider
   hcl: string
   status: 'idle' | 'planning' | 'planned' | 'applying' | 'applied' | 'error'
@@ -17,12 +19,19 @@ export interface TerraformRunItem {
   provider: CloudProvider
   status: string
   createdAt: string
+  folderId?: string
+  instanceName?: string
+  label?: string
 }
 
 export interface LaunchProgress {
   step: string
   percent: number
   log: string
+  instanceName?: string
+  provider?: string
+  region?: string
+  status?: 'running' | 'success' | 'error'
 }
 
 @Injectable({ providedIn: 'root' })
@@ -31,6 +40,7 @@ export class TerraformRunStore {
   private readonly realtime = inject(RealtimeService)
 
   private readonly _runs = signal<TerraformRunItem[]>([])
+  private readonly _launches = signal<TerraformLaunchRecord[]>([])
   private readonly _workspaces = signal<TerraformWorkspaceItem[]>([])
   private readonly _activeWorkspaceId = signal<string | null>(null)
   private readonly _activeRunId = signal<string | null>(null)
@@ -41,6 +51,7 @@ export class TerraformRunStore {
   private readonly _launchProgress = signal<LaunchProgress | null>(null)
 
   readonly runs = this._runs.asReadonly()
+  readonly launches = this._launches.asReadonly()
   readonly workspaces = this._workspaces.asReadonly()
   readonly activeWorkspaceId = this._activeWorkspaceId.asReadonly()
   readonly activeRunId = this._activeRunId.asReadonly()
@@ -87,6 +98,27 @@ export class TerraformRunStore {
 
   setRuns = (runs: TerraformRunItem[]): void => {
     this._runs.set(runs)
+  }
+
+  setLaunches = (launches: TerraformLaunchRecord[]): void => {
+    this._launches.set(launches)
+  }
+
+  addLaunch = (launch: TerraformLaunchRecord): void => {
+    this._launches.update((list) => [launch, ...list])
+    this._runs.update((list) => [
+      {
+        id: launch.id,
+        workspaceName: launch.workspaceName,
+        provider: launch.provider,
+        status: launch.status,
+        createdAt: launch.createdAt,
+        folderId: launch.folderId,
+        instanceName: launch.instanceName,
+        label: launch.name,
+      },
+      ...list,
+    ])
   }
 
   setActiveRun = (runId: string | null): void => {

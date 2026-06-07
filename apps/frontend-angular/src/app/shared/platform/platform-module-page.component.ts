@@ -16,18 +16,17 @@ import { MatSelectModule } from '@angular/material/select'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatMenuModule } from '@angular/material/menu'
-import { MatDialog } from '@angular/material/dialog'
 import { debounceTime, startWith, delay, of, timeout, finalize } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../components/page-header/page-header.component'
-import { SummaryCardComponent } from '../components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../components/error-state/error-state.component'
 import { StatusBadgeComponent } from '../components/status-badge/status-badge.component'
-import { DetailDialogComponent } from '../components/detail-dialog/detail-dialog.component'
-import { ChartCardComponent } from '../ui/chart-card.component'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { NavIconComponent } from '../components/nav-icon/nav-icon.component'
+import { PlatformActionService } from './platform-action.service'
+import { getPlatformRowOps, isPlatformScopeModule } from './platform-module-ops.catalog'
+import { observabilityModuleMeta } from './observability-meta.util'
 import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.models'
 
 @Component({
@@ -38,12 +37,11 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
     DatePipe,
     ReactiveFormsModule,
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
     StatusBadgeComponent,
-    ChartCardComponent,
+    NavIconComponent,
     MatTabsModule,
     MatFormFieldModule,
     MatInputModule,
@@ -58,32 +56,50 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
         [title]="config().title"
         [description]="config().description"
         [icon]="config().icon"
+        [demoMode]="true"
         [actions]="config().headerActions"
-        [lastSync]="lastSync()"
         (actionClick)="handleHeaderAction($event)"
       />
 
       @if (loading()) {
-        <app-loading-state message="Loading module data…" />
+        <app-loading-state message="Cargando módulo…" />
       } @else if (error()) {
         <app-error-state [message]="error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid app-section-panel stagger-children">
-          @for (card of config().summaryCards; track card.title) {
-            <app-summary-card
-              [title]="card.title"
-              [value]="card.value"
-              [icon]="card.icon"
-              [trend]="card.trend"
-              [iconColor]="card.iconColor ?? 'primary'"
-            />
-          }
-        </div>
+        @if (isObservability()) {
+          <div class="obs-integration-bar">
+            <app-nav-icon [logo]="obsMeta().primaryLogo" size="md" />
+            <div>
+              <strong>{{ obsMeta().label }}</strong>
+              <span>{{ obsMeta().stackLabel }}</span>
+            </div>
+            <div class="obs-integration-bar__logos">
+              @for (logo of obsMeta().integrations; track logo) {
+                <span class="obs-logo-chip" [attr.title]="logo"><app-nav-icon [logo]="logo" size="sm" /></span>
+              }
+            </div>
+          </div>
+        }
+
+        @if (config().summaryCards.length) {
+          <div class="obs-summary-row">
+            @for (card of config().summaryCards; track card.title) {
+              <article class="obs-summary-card" [attr.data-tone]="card.iconColor ?? 'primary'">
+                <mat-icon>{{ card.icon }}</mat-icon>
+                <div>
+                  <span>{{ card.title }}</span>
+                  <strong>{{ card.value }}</strong>
+                  @if (card.trend) { <small>{{ card.trend }}</small> }
+                </div>
+              </article>
+            }
+          </div>
+        }
 
         @if (config().quickActions?.length) {
           <div class="hub-quick-actions">
             @for (qa of config().quickActions!; track qa.label) {
-              <button type="button" class="hub-action-chip" (click)="runAction(qa.label)">
+              <button type="button" class="hub-action-chip" (click)="runQuickAction(qa.label)">
                 <mat-icon>{{ qa.icon }}</mat-icon>
                 {{ qa.label }}
               </button>
@@ -105,8 +121,14 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
                     <div class="filter-row table-toolbar">
                       @if (tab.searchPlaceholder) {
                         <mat-form-field appearance="outline">
-                          <mat-label>Search</mat-label>
-                          <input matInput [formControl]="searchControl" [placeholder]="tab.searchPlaceholder" />
+                          <mat-label>Buscar</mat-label>
+                          <input
+                            matInput
+                            [formControl]="searchControl"
+                            [placeholder]="tab.searchPlaceholder"
+                            [attr.aria-label]="tab.searchPlaceholder"
+                          />
+                          <mat-hint>{{ tab.searchPlaceholder }}</mat-hint>
                         </mat-form-field>
                       }
                       @for (f of tab.filters ?? []; track f.key) {
@@ -117,7 +139,7 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
                             (selectionChange)="onFilterChange(f.key, $event.value)"
                           >
                             @for (opt of f.options; track opt) {
-                              <mat-option [value]="opt">{{ opt || 'All' }}</mat-option>
+                              <mat-option [value]="opt">{{ opt || 'Todos' }}</mat-option>
                             }
                           </mat-select>
                         </mat-form-field>
@@ -127,13 +149,13 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
 
                   @if (filteredRows(tab, i).length === 0) {
                     <app-empty-state
-                      [title]="tab.emptyMessage ?? 'No records'"
-                      description="Adjust filters or run a sync to refresh demo data."
+                      [title]="tab.emptyMessage ?? 'Sin registros'"
+                      description="Ajusta los filtros o sincroniza para refrescar los datos demo."
                       icon="inbox"
                     />
                   } @else {
                     <div class="platform-module__body">
-                      <div class="data-table-wrap platform-module__table">
+                      <div class="data-table-wrap">
                         <table class="premium-table table-row-hover">
                           <thead>
                             <tr>
@@ -156,17 +178,28 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
                                       </span>
                                     } @else if (col.type === 'date') {
                                       {{ formatDate(row[col.key]) }}
+                                    } @else if (col.type === 'logo') {
+                                      <app-nav-icon [logo]="$any(row[col.key])" size="sm" />
                                     } @else {
                                       {{ row[col.key] }}
                                     }
                                   </td>
                                 }
                                 <td>
+                                  @if (config().id === 'reports') {
+                                    <button mat-stroked-button type="button" class="row-detail-btn" (click)="openRowDetail(row, tab.label)">
+                                      <mat-icon>article</mat-icon> Leer informe
+                                    </button>
+                                  } @else {
+                                    <button mat-stroked-button type="button" class="row-detail-btn" (click)="openRowDetail(row, tab.label)">
+                                      <mat-icon>visibility</mat-icon> Ver
+                                    </button>
+                                  }
                                   <button
                                     mat-icon-button
                                     [matMenuTriggerFor]="rowMenu"
-                                    aria-label="Row actions"
-                                    (click)="selectedRow.set(row)"
+                                    aria-label="Acciones de fila"
+                                    (click)="selectRow(row, tab.label)"
                                   >
                                     <mat-icon>more_vert</mat-icon>
                                   </button>
@@ -176,19 +209,6 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
                           </tbody>
                         </table>
                       </div>
-
-                      @if (tab.charts?.length) {
-                        <div class="platform-module__charts">
-                          @for (chart of tab.charts!; track chart.title) {
-                            <app-chart-card
-                              [title]="chart.title"
-                              [subtitle]="chart.subtitle ?? ''"
-                              [kind]="chart.kind"
-                              [data]="chart.data"
-                            />
-                          }
-                        </div>
-                      }
                     </div>
                   }
                 </div>
@@ -199,38 +219,23 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
       }
 
       <mat-menu #rowMenu="matMenu">
-        <button mat-menu-item type="button" (click)="viewDetail()">
-          <mat-icon>visibility</mat-icon> View details
-        </button>
-        <button mat-menu-item type="button" (click)="runAction('Execute action')">
-          <mat-icon>play_arrow</mat-icon> Execute
-        </button>
-        @if (config().id === 'approvals') {
-          <button mat-menu-item type="button" (click)="runAction('Approve')">
-            <mat-icon>check</mat-icon> Approve
-          </button>
-          <button mat-menu-item type="button" (click)="runAction('Reject')">
-            <mat-icon>close</mat-icon> Reject
+        @for (item of rowMenuItems(); track item.id) {
+          <button
+            mat-menu-item
+            type="button"
+            [disabled]="item.disabled"
+            [attr.title]="item.disabledReason ?? null"
+            (click)="runRowAction(item.id, item.label)"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            {{ item.label }}
           </button>
         }
-        <button mat-menu-item type="button" (click)="runAction('Export row')">
-          <mat-icon>download</mat-icon> Export
-        </button>
       </mat-menu>
     </div>
   `,
   styles: `
     .platform-module__panel { overflow: hidden; }
-    .platform-module__body {
-      display: grid;
-      grid-template-columns: 1.5fr 1fr;
-      gap: 1rem;
-    }
-    .platform-module__charts {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
     .severity-pill {
       display: inline-flex;
       padding: 0.15rem 0.5rem;
@@ -242,21 +247,46 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
     .severity-pill--critical { color: #ef4444; background: color-mix(in srgb, #ef4444 22%, transparent); }
     .severity-pill--warning { color: #f59e0b; background: color-mix(in srgb, #f59e0b 22%, transparent); }
     .severity-pill--info { color: #38bdf8; background: color-mix(in srgb, #38bdf8 22%, transparent); }
-    @media (max-width: 1100px) {
-      .platform-module__body { grid-template-columns: 1fr; }
+    .obs-integration-bar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem 1rem;
+      padding: 0.65rem 0.85rem; margin-bottom: 0.75rem;
+      border-left: 3px solid var(--cat-observability, #10b981);
+      background: color-mix(in srgb, #10b981 5%, transparent);
+      strong { display: block; font-size: 0.82rem; }
+      span { font-size: 0.68rem; color: var(--app-text-muted); }
     }
+    .obs-integration-bar__logos { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
+    .obs-logo-chip {
+      display: inline-flex; padding: 0.15rem 0.35rem; border-radius: 6px;
+      background: #fff; border: 1px solid #0000000d;
+    }
+    .obs-summary-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.5rem; margin-bottom: 0.85rem;
+    }
+    .obs-summary-card {
+      display: flex; gap: 0.45rem; align-items: flex-start; padding: 0.55rem 0.65rem;
+      border-left: 3px solid #10b981; background: color-mix(in srgb, var(--app-text) 3%, transparent);
+      mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; color: #047857; }
+      span { display: block; font-size: 0.62rem; text-transform: uppercase; color: var(--app-text-muted); }
+      strong { display: block; font-size: 1rem; font-weight: 800; margin-top: 0.08rem; }
+      small { font-size: 0.62rem; color: #047857; }
+    }
+    .obs-summary-card[data-tone='warn'] { border-left-color: #f59e0b; mat-icon { color: #b45309; } }
+    .obs-summary-card[data-tone='cyan'] { border-left-color: #06b6d4; mat-icon { color: #0891b2; } }
+    .row-detail-btn { margin-right: 0.15rem; font-size: 0.72rem; mat-icon { font-size: 1rem; width: 1rem; height: 1rem; margin-right: 0.1rem; } }
   `,
 })
 export class PlatformModulePageComponent implements OnInit {
   readonly config = input.required<PlatformModuleConfig>()
 
-  private readonly demo = inject(DemoActionsService)
-  private readonly dialog = inject(MatDialog)
+  private readonly actions = inject(PlatformActionService)
 
   readonly loading = signal(true)
   readonly error = signal<string | null>(null)
   readonly tabIndex = signal(0)
   readonly selectedRow = signal<Record<string, unknown> | null>(null)
+  readonly selectedTabLabel = signal('')
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly filterValues = signal<Record<string, string>>({})
 
@@ -266,6 +296,27 @@ export class PlatformModulePageComponent implements OnInit {
   )
 
   activeTab = computed(() => this.config().tabs[this.tabIndex()] ?? this.config().tabs[0])
+
+  readonly observabilityIds = new Set(['logs', 'incidents', 'cost-optimizer', 'reports', 'change-management'])
+
+  isObservability = (): boolean => this.observabilityIds.has(this.config().id)
+
+  obsMeta = () => observabilityModuleMeta(this.config().id)
+
+  openRowDetail = (row: Record<string, unknown>, tabLabel: string): void => {
+    this.actions.openDetail(this.config().id, row, tabLabel)
+  }
+
+  rowMenuItems = computed(() => {
+    const row = this.selectedRow()
+    const tab = this.selectedTabLabel() || this.activeTab().label
+    const moduleId = this.config().id
+    if (!row) return []
+    if (isPlatformScopeModule(moduleId)) {
+      return getPlatformRowOps(moduleId, tab, row)
+    }
+    return getPlatformRowOps(moduleId, tab, row)
+  })
 
   onFilterChange = (key: string, value: string): void => {
     this.filterValues.update((m) => ({ ...m, [key]: value }))
@@ -286,11 +337,9 @@ export class PlatformModulePageComponent implements OnInit {
       )
       .subscribe({
         next: () => {},
-        error: () => {},
+        error: () => this.error.set('No se pudo cargar el módulo'),
       })
   }
-
-  lastSync = (): string => `Synced ${new Date().toLocaleTimeString()}`
 
   filteredRows = (tab: PlatformModuleTab, tabIdx: number): Record<string, unknown>[] => {
     if (this.tabIndex() !== tabIdx) return tab.rows
@@ -322,39 +371,28 @@ export class PlatformModulePageComponent implements OnInit {
   formatDate = (v: unknown): string => {
     if (!v) return '—'
     try {
-      return new Date(String(v)).toLocaleString()
+      return new Date(String(v)).toLocaleString('es-ES')
     } catch {
       return String(v)
     }
   }
 
+  selectRow = (row: Record<string, unknown>, tabLabel: string): void => {
+    this.selectedRow.set(row)
+    this.selectedTabLabel.set(tabLabel)
+  }
+
   handleHeaderAction = (label: string): void => {
-    if (label === 'Refresh') {
-      this.load()
-      return
-    }
-    this.runAction(label)
+    this.actions.runModuleAction(this.config().id, label, this.activeTab().label, undefined, () => this.load())
   }
 
-  runAction = (label: string): void => {
-    this.demo.simulate(`${this.config().title}: ${label}`, 700).subscribe()
+  runQuickAction = (label: string): void => {
+    this.actions.runQuickAction(this.config().id, label, this.activeTab().label)
   }
 
-  viewDetail = (): void => {
+  runRowAction = (actionId: string, actionLabel: string): void => {
     const row = this.selectedRow()
     if (!row) return
-    this.dialog.open(DetailDialogComponent, {
-      width: '520px',
-      data: {
-        title: String(row['name'] ?? row['action'] ?? row['id'] ?? 'Details'),
-        rows: Object.entries(row)
-          .filter(([k]) => !k.startsWith('_'))
-          .map(([label, value]) => ({
-            label: label.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()),
-            value: String(value ?? '—'),
-          })),
-        extra: `[demo] Full trace for ${this.config().id}\n${JSON.stringify(row, null, 2)}`,
-      },
-    })
+    this.actions.runRowAction(this.config().id, actionId, row, this.selectedTabLabel(), actionLabel)
   }
 }

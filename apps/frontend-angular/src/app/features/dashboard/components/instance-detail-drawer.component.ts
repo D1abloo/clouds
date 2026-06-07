@@ -12,6 +12,10 @@ import { DashboardInstanceRow } from '../dashboard.models'
 import { DemoActionsService } from '../../../core/services/demo-actions.service'
 import { buildInstanceTrendChart } from '../utils/dashboard-instance-charts.util'
 import {
+  computeInstanceCostPerMinute,
+  formatCostPerMinute,
+} from '../utils/dashboard-instance-cost.util'
+import {
   instanceAlerts,
   instanceAuditLog,
   instanceDockerContainers,
@@ -44,7 +48,7 @@ import {
           <div class="instance-drawer__identity">
             <div class="instance-drawer__logo">
               @if (providerLogo(); as logo) {
-                <app-brand-logo [logo]="logo" size="md" />
+                <app-brand-logo [logo]="logo" size="lg" />
               } @else {
                 <mat-icon>dns</mat-icon>
               }
@@ -89,6 +93,13 @@ import {
               <strong>{{ formatCost(instance.monthlyCost) }}</strong>
             </div>
           </div>
+          <div class="kpi-chip">
+            <mat-icon>schedule</mat-icon>
+            <div>
+              <span>Coste/min</span>
+              <strong>{{ costPerMinuteLabel() }}</strong>
+            </div>
+          </div>
           <div class="kpi-chip" [class.kpi-chip--warn]="instance.alertCount">
             <mat-icon>notifications</mat-icon>
             <div>
@@ -127,6 +138,31 @@ import {
                   <div><dt>Región</dt><dd>{{ instance.region ?? '—' }}</dd></div>
                   <div><dt>Proveedor</dt><dd>{{ instance.provider }}</dd></div>
                 </dl>
+              </section>
+
+              <section class="detail-section">
+                <h3><mat-icon>monitoring</mat-icon> Uso en tiempo real</h3>
+                <div class="usage-bars">
+                  @for (m of liveMetrics(); track m.label) {
+                    <div class="usage-bars__row">
+                      <div class="usage-bars__head">
+                        <span>{{ m.label }}</span>
+                        <strong>{{ m.value }}%</strong>
+                      </div>
+                      <div class="usage-bars__track" [class]="m.tone">
+                        <i [style.width.%]="m.value"></i>
+                      </div>
+                    </div>
+                  }
+                </div>
+                <app-mini-chart
+                  title=""
+                  kind="bar"
+                  [data]="resourceBarData()"
+                  [animated]="true"
+                  unit="%"
+                  [showShare]="false"
+                />
               </section>
 
               <section class="detail-section">
@@ -419,7 +455,7 @@ import {
     }
     .instance-drawer__kpis {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 0.45rem;
       padding: 0 1.2rem 0.85rem;
       flex-shrink: 0;
@@ -591,6 +627,34 @@ import {
     .sev-warning { background: color-mix(in srgb, #f59e0b 14%, var(--app-card)); color: #b45309; }
     .sev-info { background: color-mix(in srgb, #3b82f6 12%, var(--app-card)); color: #2563eb; }
     .muted { color: var(--app-text-muted); font-size: 0.82rem; }
+    .usage-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-bottom: 0.75rem;
+    }
+    .usage-bars__head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      margin-bottom: 0.2rem;
+      strong { font-variant-numeric: tabular-nums; }
+    }
+    .usage-bars__track {
+      height: 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--app-text) 8%, transparent);
+      overflow: hidden;
+      i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        transition: width 0.4s ease;
+      }
+    }
+    .usage-bars__track--ok i { background: linear-gradient(90deg, #10b981, #34d399); }
+    .usage-bars__track--warn i { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .usage-bars__track--high i { background: linear-gradient(90deg, #ef4444, #f87171); }
     @media (max-width: 520px) {
       .instance-drawer__kpis { grid-template-columns: repeat(2, 1fr); }
     }
@@ -629,6 +693,34 @@ export class InstanceDetailDrawerComponent {
 
   readonly auditRows = () =>
     this.instance ? instanceAuditLog(this.instance) : []
+
+  liveMetrics = () => {
+    if (!this.instance) return []
+    const seed = this.instance.id.length * 7
+    const cpu = this.instance.status === 'WARNING' ? 92 : this.instance.status === 'ERROR' ? 95 : 45 + (seed % 30)
+    const ram = this.instance.status === 'WARNING' ? 78 : this.instance.status === 'ERROR' ? 88 : 52 + (seed % 25)
+    const disk = this.instance.status === 'WARNING' ? 85 : this.instance.status === 'ERROR' ? 90 : 40 + (seed % 35)
+    const tone = (v: number) => (v > 85 ? 'usage-bars__track--high' : v > 70 ? 'usage-bars__track--warn' : 'usage-bars__track--ok')
+    return [
+      { label: 'CPU', value: cpu, tone: tone(cpu) },
+      { label: 'RAM', value: ram, tone: tone(ram) },
+      { label: 'Disco', value: disk, tone: tone(disk) },
+    ]
+  }
+
+  resourceBarData = () => {
+    const m = this.liveMetrics()
+    return m.map((item, i) => ({
+      label: item.label,
+      value: item.value,
+      color: ['#8b5cf6', '#3b82f6', '#10b981'][i],
+    }))
+  }
+
+  costPerMinuteLabel = (): string => {
+    if (!this.instance) return '—'
+    return formatCostPerMinute(computeInstanceCostPerMinute(this.instance))
+  }
 
   statusClass = (status: string): string =>
     status === 'running' ? 'detail-list__status detail-list__status--ok' : 'detail-list__status'

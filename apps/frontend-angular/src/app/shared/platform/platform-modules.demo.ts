@@ -1,5 +1,11 @@
 import { chartColor } from '../theme/chart-palette'
 import type { PlatformModuleConfig } from './platform-module.models'
+import {
+  INFRA_BACKUPS_CONFIG,
+  INFRA_CAPACITY_CONFIG,
+  INFRA_NETWORK_CONFIG,
+  INFRA_STORAGE_CONFIG,
+} from '../../features/infrastructure/infrastructure.demo'
 
 const bars = (n = 7) =>
   Array.from({ length: n }, (_, i) => ({
@@ -41,7 +47,7 @@ export const COMMAND_CENTER_CONFIG: PlatformModuleConfig = {
   tabs: [
     {
       label: 'Recent',
-      searchPlaceholder: 'Search actions…',
+      searchPlaceholder: 'Acción, recurso o destino…',
       filters: [{ key: 'target', label: 'Target', options: ['', 'AWS', 'VPS', 'Docker', 'K8s', 'Jenkins', 'Terraform'] }],
       columns: [
         { key: 'action', label: 'Action' },
@@ -109,7 +115,7 @@ export const DEPLOYMENTS_CONFIG: PlatformModuleConfig = {
   tabs: [
     {
       label: 'Deployments',
-      searchPlaceholder: 'Search deployment…',
+      searchPlaceholder: 'Nombre del despliegue o entorno…',
       filters: [
         { key: 'env', label: 'Environment', options: ['', 'production', 'staging', 'dev'] },
         { key: 'status', label: 'Status', options: ['', 'running', 'success', 'failed'] },
@@ -157,126 +163,72 @@ export const DEPLOYMENTS_CONFIG: PlatformModuleConfig = {
   ],
 }
 
-export const BACKUPS_CONFIG: PlatformModuleConfig = {
-  id: 'backups',
-  title: 'Backups',
-  description: 'Snapshots, scheduled backups, last run status, restore demo and failed backup alerts.',
-  icon: 'backup',
-  headerActions: [
-    { label: 'Create backup', icon: 'add', primary: true },
-    { label: 'Restore demo', icon: 'restore' },
-    { label: 'Run now', icon: 'play_arrow' },
-  ],
-  summaryCards: [
-    { title: 'Scheduled', value: 14, icon: 'event', iconColor: 'cyan' },
-    { title: 'Last 24h OK', value: 11, icon: 'check_circle', iconColor: 'success' },
-    { title: 'Failed', value: 2, icon: 'error', iconColor: 'warn' },
-    { title: 'Total size', value: '2.4 TB', icon: 'storage', iconColor: 'purple' },
-  ],
-  tabs: [
-    {
-      label: 'Snapshots',
-      searchPlaceholder: 'Search snapshot…',
-      columns: [
-        { key: 'name', label: 'Snapshot' },
-        { key: 'source', label: 'Source' },
-        { key: 'size', label: 'Size' },
-        { key: 'status', label: 'Status', type: 'status' },
-        { key: 'createdAt', label: 'Created', type: 'date' },
-      ],
-      rows: [
-        { name: 'snap-web-prod-daily', source: 'vol-web-01', size: '120 GB', status: 'running', createdAt: ts(1440) },
-        { name: 'snap-db-primary', source: 'vol-db-main', size: '500 GB', status: 'running', createdAt: ts(2880) },
-        { name: 'snap-staging', source: 'vol-stg-01', size: '80 GB', status: 'warning', createdAt: ts(720) },
-      ],
-      charts: [{ title: 'Backup volume trend', kind: 'bar', data: bars() }],
-    },
-    {
-      label: 'Schedules',
-      columns: [
-        { key: 'name', label: 'Schedule' },
-        { key: 'cron', label: 'Cron' },
-        { key: 'retention', label: 'Retention' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { name: 'Daily AWS EBS', cron: '0 2 * * *', retention: '30 days', status: 'running' },
-        { name: 'Weekly VPS tar', cron: '0 3 * * 0', retention: '12 weeks', status: 'running' },
-      ],
-    },
-    {
-      label: 'Alerts',
-      columns: [
-        { key: 'backup', label: 'Backup' },
-        { key: 'message', label: 'Message' },
-        { key: 'severity', label: 'Severity', type: 'severity' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { backup: 'snap-staging', message: 'Backup exceeded window — retry scheduled', severity: 'warning', status: 'warning' },
-        { backup: 'k8s-etcd', message: 'Connection timeout to backup agent', severity: 'critical', status: 'failed' },
-      ],
-    },
-  ],
-}
+export const BACKUPS_CONFIG: PlatformModuleConfig = INFRA_BACKUPS_CONFIG
 
 export const SECURITY_CENTER_CONFIG: PlatformModuleConfig = {
   id: 'security-center',
-  title: 'Security Center',
-  description: 'Security risks, open ports, exposed services, firewalls, SSH keys, secrets exposure and recommendations.',
+  title: 'Centro de Seguridad',
+  description: 'Riesgos, puertos abiertos, servicios expuestos, firewalls, claves SSH, exposición de secretos y recomendaciones.',
   icon: 'security',
   headerActions: [
-    { label: 'Run scan', icon: 'radar', primary: true },
-    { label: 'Export report', icon: 'download' },
-    { label: 'Remediate', icon: 'healing' },
+    { label: 'Ejecutar escaneo', icon: 'radar', primary: true },
+    { label: 'Exportar informe', icon: 'download' },
+    { label: 'Remediar', icon: 'healing' },
   ],
   summaryCards: [
-    { title: 'Risk score', value: '72/100', icon: 'shield', iconColor: 'warn', trend: 'Medium' },
-    { title: 'Open ports', value: 18, icon: 'settings_ethernet', iconColor: 'warn' },
-    { title: 'Exposed services', value: 4, icon: 'public_off', iconColor: 'warn' },
-    { title: 'Recommendations', value: 9, icon: 'lightbulb', iconColor: 'cyan' },
+    { title: 'Puntuación de riesgo', value: '72/100', icon: 'shield', iconColor: 'warn', trend: 'Medio' },
+    { title: 'Puertos abiertos', value: 18, icon: 'settings_ethernet', iconColor: 'warn' },
+    { title: 'Servicios expuestos', value: 4, icon: 'public_off', iconColor: 'warn' },
+    { title: 'Recomendaciones', value: 9, icon: 'lightbulb', iconColor: 'cyan' },
+  ],
+  quickActions: [
+    { label: 'Escanear puertos', icon: 'radar' },
+    { label: 'Revisar IAM', icon: 'policy' },
+    { label: 'Exportar informe', icon: 'download' },
   ],
   tabs: [
     {
-      label: 'Risks',
-      filters: [{ key: 'severity', label: 'Severity', options: ['', 'critical', 'warning', 'info'] }],
+      label: 'Riesgos',
+      filters: [{ key: 'severity', label: 'Severidad', options: ['', 'critical', 'warning', 'info'] }],
       columns: [
-        { key: 'finding', label: 'Finding' },
-        { key: 'resource', label: 'Resource' },
-        { key: 'severity', label: 'Severity', type: 'severity' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'finding', label: 'Hallazgo' },
+        { key: 'resource', label: 'Recurso' },
+        { key: 'severity', label: 'Severidad', type: 'severity' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
-        { finding: 'SSH port 22 open to 0.0.0.0/0', resource: 'vps-bastion-01', severity: 'critical', status: 'failed' },
-        { finding: 'S3 bucket public read', resource: 'aws-logs-archive', severity: 'critical', status: 'warning' },
-        { finding: 'Unused admin IAM key', resource: 'aws-root-alt', severity: 'warning', status: 'warning' },
+        { finding: 'Puerto SSH 22 abierto a 0.0.0.0/0', resource: 'vps-bastion-01', severity: 'critical', status: 'failed' },
+        { finding: 'Bucket S3 con lectura pública', resource: 'aws-logs-archive', severity: 'critical', status: 'warning' },
+        { finding: 'Clave IAM admin sin uso', resource: 'aws-root-alt', severity: 'warning', status: 'warning' },
       ],
-      charts: [{ title: 'Risk by category', kind: 'donut', data: donut() }],
+      charts: [{ title: 'Riesgos por categoría', kind: 'donut', data: donut() }],
     },
     {
-      label: 'Open ports',
+      label: 'Puertos abiertos',
       columns: [
         { key: 'host', label: 'Host' },
-        { key: 'port', label: 'Port' },
-        { key: 'service', label: 'Service' },
-        { key: 'exposure', label: 'Exposure' },
+        { key: 'port', label: 'Puerto' },
+        { key: 'service', label: 'Servicio' },
+        { key: 'exposure', label: 'Exposición' },
       ],
       rows: [
-        { host: 'web-prod-01', port: '443', service: 'https', exposure: 'Public LB' },
+        { host: 'web-prod-01', port: '443', service: 'https', exposure: 'LB público' },
         { host: 'vps-bastion', port: '22', service: 'ssh', exposure: '0.0.0.0/0' },
+        { host: 'api-gateway', port: '8080', service: 'http', exposure: 'VPC interna' },
       ],
+      charts: [{ title: 'Puertos por exposición', kind: 'bar', data: bars(5) }],
     },
     {
-      label: 'Recommendations',
+      label: 'Recomendaciones',
       columns: [
-        { key: 'title', label: 'Recommendation' },
-        { key: 'impact', label: 'Impact' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'title', label: 'Recomendación' },
+        { key: 'impact', label: 'Impacto' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
-        { title: 'Restrict SSH to VPN CIDR', impact: 'High', status: 'pending' },
-        { title: 'Enable MFA for admin users', impact: 'High', status: 'running' },
-        { title: 'Rotate API tokens > 90 days', impact: 'Medium', status: 'pending' },
+        { title: 'Restringir SSH a CIDR VPN', impact: 'Alto', status: 'pending' },
+        { title: 'Habilitar MFA para admins', impact: 'Alto', status: 'running' },
+        { title: 'Rotar tokens API > 90 días', impact: 'Medio', status: 'pending' },
       ],
     },
   ],
@@ -284,31 +236,35 @@ export const SECURITY_CENTER_CONFIG: PlatformModuleConfig = {
 
 export const SECRETS_MANAGER_CONFIG: PlatformModuleConfig = {
   id: 'secrets-manager',
-  title: 'Secrets Manager',
-  description: 'SSH keys, cloud credentials, API tokens, Vault references, rotation policy and audit trail.',
+  title: 'Gestor de Secretos',
+  description: 'Claves SSH, credenciales cloud, tokens API, referencias Vault, política de rotación y auditoría.',
   icon: 'key',
   headerActions: [
-    { label: 'Add secret', icon: 'add', primary: true },
-    { label: 'Rotate selected', icon: 'sync' },
-    { label: 'Audit log', icon: 'history' },
+    { label: 'Añadir secreto', icon: 'add', primary: true },
+    { label: 'Rotar seleccionados', icon: 'sync' },
+    { label: 'Registro auditoría', icon: 'history' },
   ],
   summaryCards: [
-    { title: 'Total secrets', value: 47, icon: 'vpn_key', iconColor: 'purple' },
-    { title: 'Expiring soon', value: 5, icon: 'schedule', iconColor: 'warn' },
-    { title: 'Vault refs', value: 12, icon: 'lock', iconColor: 'cyan' },
-    { title: 'Rotated (30d)', value: 8, icon: 'autorenew', iconColor: 'success' },
+    { title: 'Total secretos', value: 47, icon: 'vpn_key', iconColor: 'purple' },
+    { title: 'Expiran pronto', value: 5, icon: 'schedule', iconColor: 'warn' },
+    { title: 'Refs Vault', value: 12, icon: 'lock', iconColor: 'cyan' },
+    { title: 'Rotados (30d)', value: 8, icon: 'autorenew', iconColor: 'success' },
+  ],
+  quickActions: [
+    { label: 'Rotar expirados', icon: 'autorenew' },
+    { label: 'Ver auditoría', icon: 'history' },
   ],
   tabs: [
     {
-      label: 'Secrets',
-      searchPlaceholder: 'Search secret…',
-      filters: [{ key: 'type', label: 'Type', options: ['', 'ssh', 'cloud', 'api', 'vault'] }],
+      label: 'Secretos',
+      searchPlaceholder: 'Nombre del secreto o clave…',
+      filters: [{ key: 'type', label: 'Tipo', options: ['', 'ssh', 'cloud', 'api', 'vault'] }],
       columns: [
-        { key: 'name', label: 'Name' },
-        { key: 'type', label: 'Type' },
-        { key: 'reference', label: 'Reference' },
-        { key: 'expires', label: 'Expires' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'name', label: 'Nombre' },
+        { key: 'type', label: 'Tipo' },
+        { key: 'reference', label: 'Referencia' },
+        { key: 'expires', label: 'Expira' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { name: 'aws-prod-deploy', type: 'cloud', reference: 'vault/aws/prod#deploy', expires: '2026-09-01', status: 'running' },
@@ -317,12 +273,12 @@ export const SECRETS_MANAGER_CONFIG: PlatformModuleConfig = {
       ],
     },
     {
-      label: 'Rotation',
+      label: 'Rotación',
       columns: [
-        { key: 'secret', label: 'Secret' },
-        { key: 'policy', label: 'Policy' },
-        { key: 'lastRotated', label: 'Last rotated', type: 'date' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'secret', label: 'Secreto' },
+        { key: 'policy', label: 'Política' },
+        { key: 'lastRotated', label: 'Última rotación', type: 'date' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { secret: 'aws-prod-deploy', policy: 'Every 90 days', lastRotated: ts(43200), status: 'running' },
@@ -330,12 +286,12 @@ export const SECRETS_MANAGER_CONFIG: PlatformModuleConfig = {
       ],
     },
     {
-      label: 'Audit',
+      label: 'Auditoría',
       columns: [
-        { key: 'action', label: 'Action' },
-        { key: 'secret', label: 'Secret' },
-        { key: 'user', label: 'User' },
-        { key: 'at', label: 'When', type: 'date' },
+        { key: 'action', label: 'Acción' },
+        { key: 'secret', label: 'Secreto' },
+        { key: 'user', label: 'Usuario' },
+        { key: 'at', label: 'Cuándo', type: 'date' },
       ],
       rows: [
         { action: 'READ', secret: 'aws-prod-deploy', user: 'terraform-sa', at: ts(30) },
@@ -347,33 +303,37 @@ export const SECRETS_MANAGER_CONFIG: PlatformModuleConfig = {
 
 export const LOGS_CONFIG: PlatformModuleConfig = {
   id: 'logs',
-  title: 'Logs',
-  description: 'Centralized logs from system, Docker, Kubernetes, Jenkins, Terraform, SSH and audit with search and filters.',
+  title: 'Centro de Logs',
+  description: 'Logs centralizados de sistema, Docker, Kubernetes, Jenkins, Terraform, SSH y auditoría con búsqueda y filtros.',
   icon: 'article',
   headerActions: [
-    { label: 'Live tail', icon: 'stream', primary: true },
-    { label: 'Export', icon: 'download' },
-    { label: 'Save query', icon: 'bookmark' },
+    { label: 'Tail en vivo', icon: 'stream', primary: true },
+    { label: 'Exportar', icon: 'download' },
+    { label: 'Guardar consulta', icon: 'bookmark' },
   ],
   summaryCards: [
-    { title: 'Events (1h)', value: '12.4k', icon: 'receipt_long', iconColor: 'cyan' },
-    { title: 'Errors', value: 84, icon: 'error', iconColor: 'warn' },
-    { title: 'Sources', value: 6, icon: 'source', iconColor: 'purple' },
-    { title: 'Retention', value: '30 days', icon: 'archive', iconColor: 'success' },
+    { title: 'Eventos (1h)', value: '12.4k', icon: 'receipt_long', iconColor: 'cyan' },
+    { title: 'Errores', value: 84, icon: 'error', iconColor: 'warn' },
+    { title: 'Fuentes', value: 6, icon: 'source', iconColor: 'purple' },
+    { title: 'Retención', value: '30 días', icon: 'archive', iconColor: 'success' },
+  ],
+  quickActions: [
+    { label: 'Tail errores K8s', icon: 'stream' },
+    { label: 'Exportar última hora', icon: 'download' },
   ],
   tabs: [
     {
-      label: 'All logs',
-      searchPlaceholder: 'Search logs…',
+      label: 'Todos los logs',
+      searchPlaceholder: 'Mensaje, servicio o nivel…',
       filters: [
-        { key: 'source', label: 'Source', options: ['', 'system', 'docker', 'kubernetes', 'jenkins', 'terraform', 'ssh', 'audit'] },
-        { key: 'level', label: 'Level', options: ['', 'error', 'warning', 'info'] },
+        { key: 'source', label: 'Fuente', options: ['', 'system', 'docker', 'kubernetes', 'jenkins', 'terraform', 'ssh', 'audit'] },
+        { key: 'level', label: 'Nivel', options: ['', 'error', 'warning', 'info'] },
       ],
       columns: [
-        { key: 'time', label: 'Time', type: 'date' },
-        { key: 'source', label: 'Source' },
-        { key: 'level', label: 'Level', type: 'severity' },
-        { key: 'message', label: 'Message' },
+        { key: 'time', label: 'Hora', type: 'date' },
+        { key: 'source', label: 'Fuente' },
+        { key: 'level', label: 'Nivel', type: 'severity' },
+        { key: 'message', label: 'Mensaje' },
       ],
       rows: [
         { time: ts(2), source: 'kubernetes', level: 'error', message: 'Pod checkout-api-7f2 crash loop — OOMKilled' },
@@ -382,14 +342,14 @@ export const LOGS_CONFIG: PlatformModuleConfig = {
         { time: ts(15), source: 'ssh', level: 'warning', message: 'Failed login attempt from 203.0.113.44' },
         { time: ts(22), source: 'docker', level: 'info', message: 'Container nginx-edge started' },
       ],
-      charts: [{ title: 'Log volume', kind: 'bar', data: bars() }],
+      charts: [{ title: 'Volumen de logs', kind: 'bar', data: bars() }],
     },
     {
-      label: 'Errors',
+      label: 'Errores',
       columns: [
-        { key: 'source', label: 'Source' },
-        { key: 'count', label: 'Count' },
-        { key: 'lastSeen', label: 'Last seen', type: 'date' },
+        { key: 'source', label: 'Fuente' },
+        { key: 'count', label: 'Cantidad' },
+        { key: 'lastSeen', label: 'Último visto', type: 'date' },
       ],
       rows: [
         { source: 'kubernetes', count: 42, lastSeen: ts(2) },
@@ -401,43 +361,47 @@ export const LOGS_CONFIG: PlatformModuleConfig = {
 
 export const INCIDENTS_CONFIG: PlatformModuleConfig = {
   id: 'incidents',
-  title: 'Incidents',
-  description: 'Open and resolved incidents with severity, timeline, affected resources and remediation actions.',
+  title: 'Incidentes',
+  description: 'Incidentes abiertos y resueltos con severidad, línea temporal, recursos afectados y acciones de remediación.',
   icon: 'crisis_alert',
   headerActions: [
-    { label: 'Declare incident', icon: 'add', primary: true },
-    { label: 'Post update', icon: 'campaign' },
-    { label: 'Resolve', icon: 'check_circle' },
+    { label: 'Declarar incidente', icon: 'add', primary: true },
+    { label: 'Publicar actualización', icon: 'campaign' },
+    { label: 'Resolver', icon: 'check_circle' },
   ],
   summaryCards: [
-    { title: 'Open', value: 3, icon: 'error', iconColor: 'warn' },
-    { title: 'Critical', value: 1, icon: 'priority_high', iconColor: 'warn' },
-    { title: 'Resolved (7d)', value: 7, icon: 'done_all', iconColor: 'success' },
+    { title: 'Abiertos', value: 3, icon: 'error', iconColor: 'warn' },
+    { title: 'Críticos', value: 1, icon: 'priority_high', iconColor: 'warn' },
+    { title: 'Resueltos (7d)', value: 7, icon: 'done_all', iconColor: 'success' },
     { title: 'MTTR', value: '42m', icon: 'timer', iconColor: 'cyan' },
+  ],
+  quickActions: [
+    { label: 'Abrir war room', icon: 'groups' },
+    { label: 'Actualizar status page', icon: 'public' },
   ],
   tabs: [
     {
-      label: 'Open',
-      filters: [{ key: 'severity', label: 'Severity', options: ['', 'critical', 'warning', 'info'] }],
+      label: 'Abiertos',
+      filters: [{ key: 'severity', label: 'Severidad', options: ['', 'critical', 'warning', 'info'] }],
       columns: [
         { key: 'id', label: 'ID' },
-        { key: 'title', label: 'Title' },
-        { key: 'severity', label: 'Severity', type: 'severity' },
-        { key: 'resources', label: 'Affected' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'title', label: 'Título' },
+        { key: 'severity', label: 'Severidad', type: 'severity' },
+        { key: 'resources', label: 'Afectados' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { id: 'INC-1042', title: 'Checkout API latency spike', severity: 'critical', resources: 'k8s/checkout, ALB', status: 'failed' },
         { id: 'INC-1041', title: 'Backup agent unreachable', severity: 'warning', resources: 'vps-backup-01', status: 'warning' },
       ],
-      charts: [{ title: 'Incidents by severity', kind: 'donut', data: donut() }],
+      charts: [{ title: 'Incidentes por severidad', kind: 'donut', data: donut() }],
     },
     {
-      label: 'Timeline',
+      label: 'Línea temporal',
       columns: [
-        { key: 'incident', label: 'Incident' },
-        { key: 'event', label: 'Event' },
-        { key: 'at', label: 'When', type: 'date' },
+        { key: 'incident', label: 'Incidente' },
+        { key: 'event', label: 'Evento' },
+        { key: 'at', label: 'Cuándo', type: 'date' },
       ],
       rows: [
         { incident: 'INC-1042', event: 'Detected — p99 > 2s', at: ts(90) },
@@ -446,12 +410,12 @@ export const INCIDENTS_CONFIG: PlatformModuleConfig = {
       ],
     },
     {
-      label: 'Resolved',
+      label: 'Resueltos',
       columns: [
         { key: 'id', label: 'ID' },
-        { key: 'title', label: 'Title' },
-        { key: 'duration', label: 'Duration' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'title', label: 'Título' },
+        { key: 'duration', label: 'Duración' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { id: 'INC-1038', title: 'Jenkins agent disk full', duration: '1h 12m', status: 'success' },
@@ -461,160 +425,115 @@ export const INCIDENTS_CONFIG: PlatformModuleConfig = {
   ],
 }
 
-export const NETWORK_CONFIG: PlatformModuleConfig = {
-  id: 'network',
-  title: 'Network',
-  description: 'VPC/VNet, subnets, firewalls, security groups, load balancers, IPs, ports and traffic overview.',
-  icon: 'hub',
-  headerActions: [
-    { label: 'Add rule', icon: 'add', primary: true },
-    { label: 'Sync topology', icon: 'sync' },
-    { label: 'Traffic map', icon: 'map' },
-  ],
-  summaryCards: [
-    { title: 'VPCs / VNets', value: 8, icon: 'account_tree', iconColor: 'purple' },
-    { title: 'Subnets', value: 24, icon: 'device_hub', iconColor: 'cyan' },
-    { title: 'Load balancers', value: 6, icon: 'balance', iconColor: 'success' },
-    { title: 'Public IPs', value: 14, icon: 'language', iconColor: 'warn' },
-  ],
-  tabs: [
-    {
-      label: 'VPC / VNet',
-      searchPlaceholder: 'Search network…',
-      columns: [
-        { key: 'name', label: 'Name' },
-        { key: 'cidr', label: 'CIDR' },
-        { key: 'provider', label: 'Provider' },
-        { key: 'subnets', label: 'Subnets' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { name: 'vpc-prod-main', cidr: '10.0.0.0/16', provider: 'AWS', subnets: 6, status: 'running' },
-        { name: 'vnet-core', cidr: '10.1.0.0/16', provider: 'Azure', subnets: 4, status: 'running' },
-      ],
-      charts: [{ title: 'Traffic (Mbps)', kind: 'line', data: bars() }],
-    },
-    {
-      label: 'Firewalls & SG',
-      columns: [
-        { key: 'name', label: 'Group' },
-        { key: 'rules', label: 'Rules' },
-        { key: 'attached', label: 'Attached to' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { name: 'sg-web-public', rules: 4, attached: 'ALB, web-tier', status: 'running' },
-        { name: 'nsg-db-internal', rules: 2, attached: 'db-subnet', status: 'running' },
-      ],
-    },
-    {
-      label: 'Load balancers',
-      columns: [
-        { key: 'name', label: 'Name' },
-        { key: 'type', label: 'Type' },
-        { key: 'targets', label: 'Targets' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { name: 'alb-checkout', type: 'ALB', targets: 6, status: 'running' },
-        { name: 'ilb-internal-api', type: 'Internal', targets: 3, status: 'running' },
-      ],
-    },
-  ],
-}
+export const NETWORK_CONFIG: PlatformModuleConfig = INFRA_NETWORK_CONFIG
 
 export const COST_OPTIMIZER_CONFIG: PlatformModuleConfig = {
   id: 'cost-optimizer',
-  title: 'Cost Optimizer',
-  description: 'Savings recommendations, underutilized instances, orphaned resources, forecast and estimated savings.',
+  title: 'Optimizador de Costes',
+  description: 'Recomendaciones de ahorro, instancias infrautilizadas, recursos huérfanos, previsión y ahorro estimado.',
   icon: 'savings',
   headerActions: [
-    { label: 'Apply recommendation', icon: 'savings', primary: true },
-    { label: 'Refresh analysis', icon: 'refresh' },
-    { label: 'Export', icon: 'download' },
+    { label: 'Aplicar recomendación', icon: 'savings', primary: true },
+    { label: 'Actualizar análisis', icon: 'refresh' },
+    { label: 'Exportar', icon: 'download' },
   ],
   summaryCards: [
-    { title: 'Est. monthly savings', value: '$2,840', icon: 'savings', iconColor: 'success', trend: '+12% vs last month' },
-    { title: 'Recommendations', value: 15, icon: 'lightbulb', iconColor: 'cyan' },
-    { title: 'Underutilized', value: 7, icon: 'trending_down', iconColor: 'warn' },
-    { title: 'Orphaned', value: 4, icon: 'link_off', iconColor: 'warn' },
+    { title: 'Ahorro mensual est.', value: '$2.840', icon: 'savings', iconColor: 'success', trend: '+12% vs mes anterior' },
+    { title: 'Recomendaciones', value: 15, icon: 'lightbulb', iconColor: 'cyan' },
+    { title: 'Infrautilizados', value: 7, icon: 'trending_down', iconColor: 'warn' },
+    { title: 'Huérfanos', value: 4, icon: 'link_off', iconColor: 'warn' },
+  ],
+  quickActions: [
+    { label: 'Aplicar top 3', icon: 'savings' },
+    { label: 'Exportar informe', icon: 'download' },
   ],
   tabs: [
     {
-      label: 'Recommendations',
+      label: 'Recomendaciones',
       columns: [
-        { key: 'resource', label: 'Resource' },
-        { key: 'issue', label: 'Issue' },
-        { key: 'savings', label: 'Est. savings/mo' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'resource', label: 'Recurso' },
+        { key: 'issue', label: 'Problema' },
+        { key: 'savings', label: 'Ahorro est./mes' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { resource: 'i-0a2b3c4d (m5.2xlarge)', issue: 'CPU avg 8% — downsize to m5.large', savings: '$420', status: 'pending' },
         { resource: 'vol-orphan-001', issue: 'Unattached EBS volume', savings: '$85', status: 'warning' },
         { resource: 'gcp-analytics-vm', issue: 'Reserved instance candidate', savings: '$310', status: 'running' },
       ],
-      charts: [{ title: 'Savings by category', kind: 'donut', data: donut() }],
+      charts: [{ title: 'Ahorro por categoría', kind: 'donut', data: donut() }],
     },
     {
-      label: 'Forecast',
+      label: 'Previsión',
       columns: [
-        { key: 'month', label: 'Month' },
-        { key: 'projected', label: 'Projected' },
-        { key: 'optimized', label: 'With optimizations' },
+        { key: 'month', label: 'Mes' },
+        { key: 'projected', label: 'Proyectado' },
+        { key: 'optimized', label: 'Con optimizaciones' },
       ],
       rows: [
         { month: 'Jul 2026', projected: '$18,200', optimized: '$15,360' },
         { month: 'Aug 2026', projected: '$18,450', optimized: '$15,510' },
       ],
-      charts: [{ title: 'Cost forecast', kind: 'line', data: bars() }],
+      charts: [{ title: 'Previsión de costes', kind: 'line', data: bars() }],
     },
   ],
 }
 
 export const REPORTS_CONFIG: PlatformModuleConfig = {
   id: 'reports',
-  title: 'Reports',
-  description: 'Generate and export demo reports for cost, security, availability, activity and infrastructure.',
+  title: 'Informes',
+  description: 'Informes ejecutivos de costes, seguridad, disponibilidad, actividad e infraestructura — redactados y exportables.',
   icon: 'assessment',
   headerActions: [
-    { label: 'Generate report', icon: 'add', primary: true },
-    { label: 'Schedule', icon: 'event' },
-    { label: 'Download PDF', icon: 'picture_as_pdf' },
+    { label: 'Generar informe', icon: 'add', primary: true },
+    { label: 'Programar', icon: 'event' },
+    { label: 'Descargar PDF', icon: 'download' },
   ],
   summaryCards: [
-    { title: 'Templates', value: 8, icon: 'description', iconColor: 'purple' },
-    { title: 'Generated (30d)', value: 22, icon: 'history', iconColor: 'cyan' },
-    { title: 'Scheduled', value: 5, icon: 'event', iconColor: 'success' },
-    { title: 'Last run', value: '2h ago', icon: 'schedule', iconColor: 'primary' },
+    { title: 'Plantillas', value: 8, icon: 'description', iconColor: 'purple' },
+    { title: 'Generados (30d)', value: 22, icon: 'history', iconColor: 'cyan' },
+    { title: 'Programados', value: 5, icon: 'event', iconColor: 'success' },
+    { title: 'Última ejecución', value: 'hace 2h', icon: 'schedule', iconColor: 'primary' },
+  ],
+  quickActions: [
+    { label: 'Informe ejecutivo', icon: 'summarize' },
+    { label: 'Exportar CSV', icon: 'table_chart' },
   ],
   tabs: [
     {
-      label: 'Reports',
-      searchPlaceholder: 'Search report…',
-      filters: [{ key: 'type', label: 'Type', options: ['', 'cost', 'security', 'availability', 'activity', 'infra'] }],
+      label: 'Informes',
+      searchPlaceholder: 'Título o tipo de informe…',
+      filters: [{ key: 'type', label: 'Tipo', options: ['', 'cost', 'security', 'availability', 'activity', 'infra'] }],
       columns: [
-        { key: 'name', label: 'Report' },
-        { key: 'type', label: 'Type' },
-        { key: 'period', label: 'Period' },
-        { key: 'status', label: 'Status', type: 'status' },
-        { key: 'generatedAt', label: 'Generated', type: 'date' },
+        { key: 'name', label: 'Informe' },
+        { key: 'cloud', label: 'Cloud', type: 'logo' },
+        { key: 'type', label: 'Tipo' },
+        { key: 'period', label: 'Periodo' },
+        { key: 'status', label: 'Estado', type: 'status' },
+        { key: 'generatedAt', label: 'Generado', type: 'date' },
       ],
       rows: [
-        { name: 'Monthly cloud cost', type: 'cost', period: 'May 2026', status: 'success', generatedAt: ts(120) },
-        { name: 'Security posture', type: 'security', period: 'Q2 2026', status: 'success', generatedAt: ts(1440) },
-        { name: 'SLA availability', type: 'availability', period: 'Last 30d', status: 'running', generatedAt: ts(60) },
+        { id: 'rpt-1', name: 'Informe mensual de costes AWS', type: 'cost', cloud: 'aws', period: 'Mayo 2026', status: 'success', generatedAt: ts(120) },
+        { id: 'rpt-1b', name: 'Informe mensual de costes GCP', type: 'cost', cloud: 'gcp', period: 'Mayo 2026', status: 'success', generatedAt: ts(180) },
+        { id: 'rpt-1c', name: 'Informe mensual de costes Azure', type: 'cost', cloud: 'azure', period: 'Mayo 2026', status: 'success', generatedAt: ts(240) },
+        { id: 'rpt-2', name: 'Postura de seguridad AWS Q2', type: 'security', cloud: 'aws', period: 'Q2 2026', status: 'success', generatedAt: ts(1440) },
+        { id: 'rpt-2b', name: 'Postura de seguridad GCP Q2', type: 'security', cloud: 'gcp', period: 'Q2 2026', status: 'success', generatedAt: ts(1500) },
+        { id: 'rpt-3', name: 'Disponibilidad y SLA producción AWS', type: 'availability', cloud: 'aws', period: 'Últimos 30 días', status: 'running', generatedAt: ts(60) },
+        { id: 'rpt-4', name: 'Actividad operativa semanal GCP', type: 'activity', cloud: 'gcp', period: 'Semana 23 · 2026', status: 'success', generatedAt: ts(300) },
+        { id: 'rpt-5', name: 'Inventario de infraestructura Azure', type: 'infra', cloud: 'azure', period: 'Junio 2026', status: 'success', generatedAt: ts(45) },
       ],
     },
     {
-      label: 'Templates',
+      label: 'Plantillas',
       columns: [
-        { key: 'name', label: 'Template' },
-        { key: 'format', label: 'Format' },
-        { key: 'sections', label: 'Sections' },
+        { key: 'name', label: 'Plantilla' },
+        { key: 'format', label: 'Formato' },
+        { key: 'sections', label: 'Secciones' },
       ],
       rows: [
-        { name: 'Executive cost summary', format: 'PDF + CSV', sections: 'AWS, GCP, Azure, VPS' },
-        { name: 'Compliance audit pack', format: 'PDF', sections: 'Access, secrets, changes' },
+        { id: 'tpl-1', name: 'Resumen ejecutivo de costes', type: 'cost', format: 'PDF + CSV', sections: 'AWS, GCP, Azure, VPS, previsión' },
+        { id: 'tpl-2', name: 'Pack auditoría cumplimiento', type: 'security', format: 'PDF', sections: 'Accesos, secretos, cambios, SOC2' },
+        { id: 'tpl-3', name: 'Informe SLA / SLO', type: 'availability', format: 'PDF + CSV', sections: 'Disponibilidad, incidentes, regiones' },
       ],
     },
   ],
@@ -639,7 +558,7 @@ export const SERVICE_CATALOG_CONFIG: PlatformModuleConfig = {
   tabs: [
     {
       label: 'Catalog',
-      searchPlaceholder: 'Search template…',
+      searchPlaceholder: 'Nombre de plantilla o módulo…',
       filters: [{ key: 'category', label: 'Category', options: ['', 'instance', 'terraform', 'jenkins', 'docker', 'kubernetes'] }],
       columns: [
         { key: 'name', label: 'Template' },
@@ -721,81 +640,36 @@ export const APPROVALS_CONFIG: PlatformModuleConfig = {
   ],
 }
 
-export const STORAGE_CONFIG: PlatformModuleConfig = {
-  id: 'storage',
-  title: 'Storage',
-  description: 'Cloud volumes, disks, object storage buckets and attachment status across providers.',
-  icon: 'storage',
-  headerActions: [
-    { label: 'Create volume', icon: 'add', primary: true },
-    { label: 'Attach', icon: 'link' },
-    { label: 'Sync', icon: 'sync' },
-  ],
-  summaryCards: [
-    { title: 'Volumes', value: 38, icon: 'sd_storage', iconColor: 'purple' },
-    { title: 'Attached', value: 31, icon: 'link', iconColor: 'success' },
-    { title: 'Unattached', value: 4, icon: 'link_off', iconColor: 'warn' },
-    { title: 'Total capacity', value: '12.8 TB', icon: 'database', iconColor: 'cyan' },
-  ],
-  tabs: [
-    {
-      label: 'Volumes',
-      searchPlaceholder: 'Search volume…',
-      filters: [{ key: 'provider', label: 'Provider', options: ['', 'AWS', 'GCP', 'Azure', 'VPS'] }],
-      columns: [
-        { key: 'id', label: 'ID' },
-        { key: 'size', label: 'Size' },
-        { key: 'type', label: 'Type' },
-        { key: 'attached', label: 'Attached to' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { id: 'vol-web-01', size: '100 GB', type: 'gp3', attached: 'web-prod-01', status: 'running' },
-        { id: 'vol-db-main', size: '500 GB', type: 'io2', attached: 'db-primary', status: 'running' },
-        { id: 'vol-orphan-001', size: '50 GB', type: 'standard', attached: '—', status: 'warning' },
-      ],
-      charts: [{ title: 'Capacity by provider', kind: 'donut', data: donut() }],
-    },
-    {
-      label: 'Object storage',
-      columns: [
-        { key: 'bucket', label: 'Bucket' },
-        { key: 'provider', label: 'Provider' },
-        { key: 'size', label: 'Size' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { bucket: 'cloudops-logs-prod', provider: 'AWS S3', size: '820 GB', status: 'running' },
-        { bucket: 'gcp-backups-eu', provider: 'GCS', size: '1.2 TB', status: 'running' },
-      ],
-    },
-  ],
-}
+export const STORAGE_CONFIG: PlatformModuleConfig = INFRA_STORAGE_CONFIG
 
 export const ACCESS_CONTROL_CONFIG: PlatformModuleConfig = {
   id: 'access-control',
-  title: 'Access Control',
-  description: 'IAM policies, role assignments, SSH access and cloud permission boundaries.',
+  title: 'Control de Acceso',
+  description: 'Políticas IAM, asignaciones de roles, acceso SSH y límites de permisos cloud.',
   icon: 'admin_panel_settings',
   headerActions: [
-    { label: 'Grant access', icon: 'person_add', primary: true },
-    { label: 'Review policies', icon: 'policy' },
-    { label: 'Export', icon: 'download' },
+    { label: 'Conceder acceso', icon: 'person_add', primary: true },
+    { label: 'Revisar políticas', icon: 'policy' },
+    { label: 'Exportar', icon: 'download' },
   ],
   summaryCards: [
-    { title: 'Users with access', value: 24, icon: 'group', iconColor: 'purple' },
+    { title: 'Usuarios con acceso', value: 24, icon: 'group', iconColor: 'purple' },
     { title: 'Roles', value: 8, icon: 'badge', iconColor: 'cyan' },
-    { title: 'Policies', value: 32, icon: 'policy', iconColor: 'success' },
-    { title: 'Violations', value: 2, icon: 'gpp_bad', iconColor: 'warn' },
+    { title: 'Políticas', value: 32, icon: 'policy', iconColor: 'success' },
+    { title: 'Violaciones', value: 2, icon: 'gpp_bad', iconColor: 'warn' },
+  ],
+  quickActions: [
+    { label: 'Revisar IAM', icon: 'policy' },
+    { label: 'Exportar matriz', icon: 'download' },
   ],
   tabs: [
     {
-      label: 'Assignments',
+      label: 'Asignaciones',
       columns: [
-        { key: 'user', label: 'User' },
-        { key: 'role', label: 'Role' },
-        { key: 'scope', label: 'Scope' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'user', label: 'Usuario' },
+        { key: 'role', label: 'Rol' },
+        { key: 'scope', label: 'Ámbito' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { user: 'admin@cloudops', role: 'Super Admin', scope: 'Global', status: 'running' },
@@ -804,52 +678,58 @@ export const ACCESS_CONTROL_CONFIG: PlatformModuleConfig = {
       ],
     },
     {
-      label: 'Policies',
+      label: 'Políticas',
       columns: [
-        { key: 'name', label: 'Policy' },
-        { key: 'resources', label: 'Resources' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'name', label: 'Política' },
+        { key: 'resources', label: 'Recursos' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
-        { name: 'terraform-apply-prod', resources: 'Terraform workspaces', status: 'running' },
+        { name: 'terraform-apply-prod', resources: 'Workspaces Terraform', status: 'running' },
         { name: 'ssh-bastion-only', resources: 'VPS SSH', status: 'running' },
       ],
+      charts: [{ title: 'Permisos por rol', kind: 'donut', data: donut() }],
     },
   ],
 }
 
 export const USERS_CONFIG: PlatformModuleConfig = {
   id: 'users',
-  title: 'Users',
-  description: 'Manage platform users, invitations, MFA status and last activity.',
+  title: 'Usuarios',
+  description: 'Gestiona usuarios de la plataforma, invitaciones, estado MFA y última actividad.',
   icon: 'group',
   headerActions: [
-    { label: 'Invite user', icon: 'person_add', primary: true },
-    { label: 'Export', icon: 'download' },
+    { label: 'Invitar usuario', icon: 'person_add', primary: true },
+    { label: 'Exportar', icon: 'download' },
     { label: 'Sync SSO', icon: 'sync' },
   ],
   summaryCards: [
-    { title: 'Total users', value: 24, icon: 'group', iconColor: 'purple' },
-    { title: 'Active', value: 21, icon: 'check_circle', iconColor: 'success' },
-    { title: 'MFA enabled', value: 18, icon: 'security', iconColor: 'cyan' },
-    { title: 'Pending invites', value: 2, icon: 'mail', iconColor: 'warn' },
+    { title: 'Total usuarios', value: 24, icon: 'group', iconColor: 'purple' },
+    { title: 'Activos', value: 21, icon: 'check_circle', iconColor: 'success' },
+    { title: 'MFA activo', value: 18, icon: 'security', iconColor: 'cyan' },
+    { title: 'Invitaciones pend.', value: 2, icon: 'mail', iconColor: 'warn' },
+  ],
+  quickActions: [
+    { label: 'Invitar usuario', icon: 'person_add' },
+    { label: 'Exportar lista', icon: 'download' },
   ],
   tabs: [
     {
-      label: 'Users',
-      searchPlaceholder: 'Search user…',
+      label: 'Usuarios',
+      searchPlaceholder: 'Usuario, email o rol…',
       columns: [
         { key: 'email', label: 'Email' },
-        { key: 'name', label: 'Name' },
-        { key: 'role', label: 'Role' },
-        { key: 'lastLogin', label: 'Last login', type: 'date' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'name', label: 'Nombre' },
+        { key: 'role', label: 'Rol' },
+        { key: 'lastLogin', label: 'Último acceso', type: 'date' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { email: 'admin@cloudops.local', name: 'Admin User', role: 'Super Admin', lastLogin: ts(60), status: 'running' },
         { email: 'dev@cloudops.local', name: 'Dev Team', role: 'Developer', lastLogin: ts(240), status: 'running' },
         { email: 'ops@cloudops.local', name: 'Ops Lead', role: 'Operator', lastLogin: ts(480), status: 'running' },
       ],
+      charts: [{ title: 'Usuarios por rol', kind: 'donut', data: donut() }],
     },
   ],
 }
@@ -878,7 +758,7 @@ export const RUNBOOKS_CONFIG: PlatformModuleConfig = {
   tabs: [
     {
       label: 'Runbooks',
-      searchPlaceholder: 'Search runbook…',
+      searchPlaceholder: 'Título del runbook o etiqueta…',
       columns: [
         { key: 'name', label: 'Runbook' },
         { key: 'steps', label: 'Steps' },
@@ -932,7 +812,7 @@ export const SCHEDULER_CONFIG: PlatformModuleConfig = {
   tabs: [
     {
       label: 'Scheduled tasks',
-      searchPlaceholder: 'Search task…',
+      searchPlaceholder: 'Tarea, asignado o estado…',
       filters: [{ key: 'type', label: 'Type', options: ['', 'instance', 'jenkins', 'ssh', 'backup', 'sync', 'report', 'docker'] }],
       columns: [
         { key: 'name', label: 'Task' },
@@ -1036,30 +916,34 @@ export const HEALTH_CENTER_CONFIG: PlatformModuleConfig = {
 
 export const COMPLIANCE_CONFIG: PlatformModuleConfig = {
   id: 'compliance',
-  title: 'Compliance / Policies',
-  description: 'Policy violations — missing tags, backups, encryption, open ports, budget overruns and expiring secrets.',
+  title: 'Cumplimiento / Políticas',
+  description: 'Violaciones de políticas: etiquetas, backups, cifrado, puertos abiertos, presupuesto y secretos expirados.',
   icon: 'policy',
   headerActions: [
-    { label: 'Run scan', icon: 'radar', primary: true },
-    { label: 'Remediate all', icon: 'healing' },
-    { label: 'Export', icon: 'download' },
+    { label: 'Ejecutar escaneo', icon: 'radar', primary: true },
+    { label: 'Remediar todo', icon: 'healing' },
+    { label: 'Exportar', icon: 'download' },
   ],
   summaryCards: [
-    { title: 'Violations', value: 14, icon: 'gpp_bad', iconColor: 'warn' },
-    { title: 'Critical', value: 3, icon: 'priority_high', iconColor: 'warn' },
-    { title: 'Rules active', value: 12, icon: 'rule', iconColor: 'cyan' },
-    { title: 'Compliance score', value: '87%', icon: 'verified', iconColor: 'success' },
+    { title: 'Violaciones', value: 14, icon: 'gpp_bad', iconColor: 'warn' },
+    { title: 'Críticas', value: 3, icon: 'priority_high', iconColor: 'warn' },
+    { title: 'Reglas activas', value: 12, icon: 'rule', iconColor: 'cyan' },
+    { title: 'Puntuación', value: '87%', icon: 'verified', iconColor: 'success' },
+  ],
+  quickActions: [
+    { label: 'Escaneo completo', icon: 'radar' },
+    { label: 'Exportar informe', icon: 'download' },
   ],
   tabs: [
     {
-      label: 'Violations',
-      filters: [{ key: 'severity', label: 'Severity', options: ['', 'critical', 'warning', 'info'] }],
+      label: 'Violaciones',
+      filters: [{ key: 'severity', label: 'Severidad', options: ['', 'critical', 'warning', 'info'] }],
       columns: [
-        { key: 'rule', label: 'Rule' },
-        { key: 'resource', label: 'Resource' },
-        { key: 'severity', label: 'Severity', type: 'severity' },
-        { key: 'recommendation', label: 'Recommendation' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'rule', label: 'Regla' },
+        { key: 'resource', label: 'Recurso' },
+        { key: 'severity', label: 'Severidad', type: 'severity' },
+        { key: 'recommendation', label: 'Recomendación' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { rule: 'Missing tags', resource: 'i-0a2b3c4d', severity: 'warning', recommendation: 'Add env, owner, cost-center tags', status: 'warning' },
@@ -1071,15 +955,15 @@ export const COMPLIANCE_CONFIG: PlatformModuleConfig = {
         { rule: 'Open security group', resource: 'sg-web-public', severity: 'warning', recommendation: 'Tighten ingress rules', status: 'warning' },
         { rule: 'Secret expiring', resource: 'github-ci-token', severity: 'warning', recommendation: 'Rotate within 14 days', status: 'warning' },
       ],
-      charts: [{ title: 'Violations by rule', kind: 'bar', data: bars(8) }],
+      charts: [{ title: 'Violaciones por regla', kind: 'bar', data: bars(8) }],
     },
     {
-      label: 'Rules',
+      label: 'Reglas',
       columns: [
-        { key: 'name', label: 'Rule' },
-        { key: 'scope', label: 'Scope' },
-        { key: 'violations', label: 'Violations' },
-        { key: 'status', label: 'Status', type: 'status' },
+        { key: 'name', label: 'Regla' },
+        { key: 'scope', label: 'Ámbito' },
+        { key: 'violations', label: 'Violaciones' },
+        { key: 'status', label: 'Estado', type: 'status' },
       ],
       rows: [
         { name: 'require-tags', scope: 'All cloud resources', violations: 4, status: 'running' },
@@ -1090,98 +974,55 @@ export const COMPLIANCE_CONFIG: PlatformModuleConfig = {
   ],
 }
 
-export const CAPACITY_PLANNER_CONFIG: PlatformModuleConfig = {
-  id: 'capacity-planner',
-  title: 'Capacity Planner',
-  description: 'CPU/RAM/disk utilization, traffic analysis, resize recommendations and growth predictions.',
-  icon: 'analytics',
-  headerActions: [
-    { label: 'Generate plan', icon: 'auto_graph', primary: true },
-    { label: 'Apply resize', icon: 'straighten' },
-    { label: 'Export', icon: 'download' },
-  ],
-  summaryCards: [
-    { title: 'Underutilized CPU', value: 7, icon: 'speed', iconColor: 'cyan' },
-    { title: 'Underutilized RAM', value: 5, icon: 'memory', iconColor: 'purple' },
-    { title: 'Disk near limit', value: 3, icon: 'storage', iconColor: 'warn' },
-    { title: 'Est. savings', value: '$1,240/mo', icon: 'savings', iconColor: 'success' },
-  ],
-  tabs: [
-    {
-      label: 'Recommendations',
-      columns: [
-        { key: 'resource', label: 'Resource' },
-        { key: 'cpu', label: 'CPU avg' },
-        { key: 'ram', label: 'RAM avg' },
-        { key: 'disk', label: 'Disk' },
-        { key: 'action', label: 'Recommendation' },
-        { key: 'savings', label: 'Savings/mo' },
-      ],
-      rows: [
-        { resource: 'web-prod-01', cpu: '8%', ram: '22%', disk: '48%', action: 'Downsize t3.large → t3.medium', savings: '$42' },
-        { resource: 'db-primary', cpu: '45%', ram: '78%', disk: '92%', action: 'Increase disk +100GB', savings: '—' },
-        { resource: 'analytics-vm', cpu: '12%', ram: '18%', disk: '35%', action: 'Reserved instance', savings: '$310' },
-      ],
-      charts: [
-        { title: 'CPU utilization', kind: 'bar', data: bars() },
-        { title: 'Growth forecast', kind: 'line', data: bars(6) },
-      ],
-    },
-    {
-      label: 'Traffic',
-      columns: [
-        { key: 'resource', label: 'Resource' },
-        { key: 'networkIn', label: 'In (Mbps)' },
-        { key: 'networkOut', label: 'Out (Mbps)' },
-        { key: 'status', label: 'Status', type: 'status' },
-      ],
-      rows: [
-        { resource: 'alb-checkout', networkIn: 420, networkOut: 890, status: 'warning' },
-        { resource: 'web-prod-01', networkIn: 45, networkOut: 120, status: 'running' },
-      ],
-    },
-  ],
-}
+export const CAPACITY_PLANNER_CONFIG: PlatformModuleConfig = INFRA_CAPACITY_CONFIG
 
 export const CHANGE_MANAGEMENT_CONFIG: PlatformModuleConfig = {
   id: 'change-management',
-  title: 'Change Management',
-  description: 'Recent changes across audit, Terraform, Jenkins and SSH — who changed what and when.',
+  title: 'Gestión de Cambios',
+  description: 'Cambios recientes en auditoría, Terraform, Jenkins y SSH — quién cambió qué y cuándo.',
   icon: 'change_circle',
   headerActions: [
-    { label: 'Export changelog', icon: 'download', primary: true },
-    { label: 'Filter critical', icon: 'filter_alt' },
-    { label: 'Subscribe', icon: 'notifications' },
+    { label: 'Exportar changelog', icon: 'download', primary: true },
+    { label: 'Filtrar críticos', icon: 'filter_alt' },
+    { label: 'Suscribirse', icon: 'notifications' },
   ],
   summaryCards: [
-    { title: 'Changes (24h)', value: 47, icon: 'history', iconColor: 'cyan' },
+    { title: 'Cambios (24h)', value: 47, icon: 'history', iconColor: 'cyan' },
     { title: 'Terraform', value: 8, icon: 'account_tree', iconColor: 'purple' },
     { title: 'Jenkins', value: 22, icon: 'build', iconColor: 'cyan' },
-    { title: 'Critical', value: 3, icon: 'priority_high', iconColor: 'warn' },
+    { title: 'Críticos', value: 3, icon: 'priority_high', iconColor: 'warn' },
+  ],
+  quickActions: [
+    { label: 'Exportar changelog', icon: 'download' },
+    { label: 'Suscribirse', icon: 'notifications' },
   ],
   tabs: [
     {
-      label: 'Recent changes',
-      searchPlaceholder: 'Search change…',
+      label: 'Cambios recientes',
+      searchPlaceholder: 'Cambio, ticket o ventana…',
       filters: [
-        { key: 'source', label: 'Source', options: ['', 'audit', 'terraform', 'jenkins', 'ssh'] },
-        { key: 'severity', label: 'Severity', options: ['', 'critical', 'warning', 'info'] },
+        { key: 'source', label: 'Fuente', options: ['', 'audit', 'terraform', 'jenkins', 'ssh'] },
+        { key: 'severity', label: 'Severidad', options: ['', 'critical', 'warning', 'info'] },
       ],
       columns: [
-        { key: 'user', label: 'User' },
-        { key: 'resource', label: 'Resource' },
-        { key: 'action', label: 'Action' },
-        { key: 'before', label: 'Before' },
-        { key: 'after', label: 'After' },
-        { key: 'source', label: 'Source' },
-        { key: 'severity', label: 'Severity', type: 'severity' },
-        { key: 'at', label: 'When', type: 'date' },
+        { key: 'user', label: 'Usuario' },
+        { key: 'resource', label: 'Recurso' },
+        { key: 'action', label: 'Acción' },
+        { key: 'before', label: 'Antes' },
+        { key: 'after', label: 'Después' },
+        { key: 'source', label: 'Fuente' },
+        { key: 'severity', label: 'Severidad', type: 'severity' },
+        { key: 'at', label: 'Cuándo', type: 'date' },
       ],
       rows: [
         { user: 'terraform-sa', resource: 'aws-production', action: 'apply', before: 'v1.2', after: 'v1.3 (+3 resources)', source: 'terraform', severity: 'warning', at: ts(45) },
         { user: 'jenkins-ci', resource: 'deploy-staging', action: 'deploy', before: 'v2.4.0', after: 'v2.4.1', source: 'jenkins', severity: 'info', at: ts(90) },
         { user: 'ops@cloudops', resource: 'vps-bastion-01', action: 'ssh command', before: '—', after: 'systemctl restart nginx', source: 'ssh', severity: 'info', at: ts(120) },
         { user: 'admin@cloudops', resource: 'db-primary-prod', action: 'stop instance', before: 'running', after: 'stopped', source: 'audit', severity: 'critical', at: ts(180) },
+      ],
+      charts: [
+        { title: 'Cambios por fuente', kind: 'donut', data: donut() },
+        { title: 'Actividad 24 h', kind: 'bar', data: bars() },
       ],
     },
   ],

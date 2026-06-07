@@ -11,7 +11,6 @@ import { MatSelectModule } from '@angular/material/select'
 import { MatDialog } from '@angular/material/dialog'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
@@ -33,7 +32,6 @@ type RunRow = Record<string, unknown>
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    SummaryCardComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -78,15 +76,6 @@ type RunRow = Record<string, unknown>
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid app-section-panel stagger-children premium-grid">
-          <app-summary-card title="Workspaces" [value]="n('workspaces')" icon="folder" variant="elevated" trend="Active" />
-          <app-summary-card title="Runs" [value]="n('runs')" icon="play_circle" variant="elevated" />
-          <app-summary-card title="Plans" [value]="n('plans')" icon="description" variant="elevated" trend="Pending review" />
-          <app-summary-card title="Applies" [value]="n('applies')" icon="check_circle" variant="elevated" iconColor="primary" />
-          <app-summary-card title="Errors" [value]="n('errors')" icon="error" variant="elevated" iconColor="warn" />
-          <app-summary-card title="Templates" [value]="templates().length" icon="code" variant="elevated" />
-        </div>
-
         <div class="surface-elevated tf-panel">
           <mat-tab-group class="soft-tabs" animationDuration="280ms" (selectedIndexChange)="activeTab.set($event)">
             <mat-tab>
@@ -94,9 +83,10 @@ type RunRow = Record<string, unknown>
               <div class="tab-panel">
                 <div class="table-toolbar">
                   <mat-form-field appearance="outline" class="search-field">
-                    <mat-label>Search runs</mat-label>
+                    <mat-label>Buscar ejecuciones</mat-label>
                     <mat-icon matPrefix>search</mat-icon>
-                    <input matInput [formControl]="searchControl" />
+                    <input matInput [formControl]="searchControl" placeholder="Workspace o proveedor…" aria-label="Filtrar runs de Terraform" />
+                    <mat-hint>Filtra por nombre del workspace o proveedor asociado</mat-hint>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Status</mat-label>

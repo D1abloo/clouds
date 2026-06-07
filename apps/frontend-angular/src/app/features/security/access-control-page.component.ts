@@ -9,6 +9,7 @@ import { MatMenuModule } from '@angular/material/menu'
 import { MatDialog, MatDialogModule } from '@angular/material/dialog'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { ToastService } from '../../core/services/toast.service'
+import { SECURITY_ACCENT, SECURITY_ACCENT_BORDER, SECURITY_ACCENT_LIGHT, SECURITY_ACTION_BTN, SECURITY_ACTION_BTN_ICON, SECURITY_ACTION_BTN_PRIMARY, SECURITY_ACTION_BTN_SM } from './security.config'
 import {
   defaultAccessViolations,
   defaultAssignments,
@@ -43,12 +44,6 @@ type AccessTab = 'assignments' | 'iam' | 'ssh' | 'cloud' | 'violations'
           <button type="button" class="access-btn" (click)="handleReviewPolicies()"><mat-icon>policy</mat-icon> Revisar políticas</button>
           <button type="button" class="access-btn" (click)="handleExportMatrix()"><mat-icon>download</mat-icon> Exportar matriz</button>
         </div>
-      </section>
-
-      <section class="access-kpis">
-        @for (kpi of kpis; track kpi.label) {
-          <article class="access-kpi" [attr.data-tone]="kpi.tone"><mat-icon>{{ kpi.icon }}</mat-icon><div><span>{{ kpi.label }}</span><strong>{{ kpi.value }}</strong></div></article>
-        }
       </section>
 
       <div class="access-bar">
@@ -149,38 +144,36 @@ type AccessTab = 'assignments' | 'iam' | 'ssh' | 'cloud' | 'violations'
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }
-    .access-page { display: flex; flex-direction: column; gap: 0.65rem; overflow-y: auto; scrollbar-width: thin; color: #0f172a; font-size: 0.8125rem; }
-    .access-intro { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; }
-    .access-intro__eyebrow { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; color: #db2777; }
-    .access-intro__title { margin: 0.2rem 0; font-size: 1.05rem; font-weight: 700; }
-    .access-intro__desc { margin: 0; max-width: 40rem; font-size: 0.72rem; color: #64748b; line-height: 1.55; }
-    .access-intro__actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-    .access-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.38rem 0.7rem; border-radius: 9px; border: 1px solid #e2e8f0; background: #fff; font: inherit; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
-    .access-btn--primary { background: #ec4899; border-color: #db2777; color: #fff; }
-    .access-btn--sm { padding: 0.25rem 0.5rem; font-size: 0.64rem; }
-    .access-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
-    .access-kpi { display: flex; gap: 0.45rem; padding: 0.55rem 0.65rem; border-radius: 11px; background: #fdf2f8; border: 1px solid #fbcfe8; }
-    .access-kpi mat-icon { color: #db2777; }
-    .access-kpi span { display: block; font-size: 0.55rem; font-weight: 650; text-transform: uppercase; color: #94a3b8; }
-    .access-kpi strong { font-size: 1rem; font-weight: 700; }
-    .access-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-    .access-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.2rem; border-radius: 10px; background: #fdf2f8; }
-    .access-tabs__tab { display: inline-flex; align-items: center; gap: 0.28rem; padding: 0.35rem 0.6rem; border: none; border-radius: 8px; background: transparent; font: inherit; font-size: 0.68rem; font-weight: 600; color: #9d174d; cursor: pointer; }
-    .access-tabs__tab--on { background: #fff; color: #831843; }
-    .access-search { display: flex; align-items: center; gap: 0.35rem; flex: 1; max-width: 16rem; padding: 0.35rem 0.55rem; border-radius: 9px; border: 1px solid #fbcfe8; margin-left: auto; }
-    .access-search input { flex: 1; border: none; background: transparent; font: inherit; font-size: 0.72rem; outline: none; }
-    .access-content { border-radius: 11px; border: 1px solid #e2e8f0; background: #fff; overflow: auto; }
-    .access-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
-    .access-table th { text-align: left; padding: 0.5rem 0.65rem; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; background: #f8fafc; }
-    .access-table td { padding: 0.5rem 0.65rem; border-bottom: 1px solid #f1f5f9; }
-    .access-empty { text-align: center; color: #94a3b8; padding: 1.5rem !important; }
-    .access-icon-btn { border: none; background: transparent; cursor: pointer; }
-    .access-sev { font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    .access-page { display: flex; flex-direction: column; gap: 0.45rem; overflow-y: auto; scrollbar-width: thin; color: #0f172a; font-size: 0.78rem; }
+    .access-intro { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; }
+    .access-intro__eyebrow { font-size: 0.54rem; font-weight: 700; text-transform: uppercase; color: ${SECURITY_ACCENT}; }
+    .access-intro__title { margin: 0.15rem 0; font-size: 0.95rem; font-weight: 700; }
+    .access-intro__desc { margin: 0; max-width: 38rem; font-size: 0.68rem; color: #64748b; line-height: 1.5; }
+    .access-intro__actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: flex-start; height: fit-content; padding: 0; }
+    .access-btn { ${SECURITY_ACTION_BTN} }
+    .access-btn mat-icon { ${SECURITY_ACTION_BTN_ICON} }
+    .access-btn--primary { ${SECURITY_ACTION_BTN_PRIMARY} }
+    .access-btn--sm { ${SECURITY_ACTION_BTN_SM} }
+    .access-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+    .access-tabs { display: flex; flex-wrap: wrap; gap: 0.15rem; padding: 0.15rem; border-radius: 8px; background: ${SECURITY_ACCENT_LIGHT}; }
+    .access-tabs__tab { display: inline-flex; align-items: center; gap: 0.22rem; padding: 0.25rem 0.45rem; border: none; border-radius: 6px; background: transparent; font: inherit; font-size: 0.62rem; font-weight: 600; color: #4338ca; cursor: pointer; }
+    .access-tabs__tab mat-icon { font-size: 0.8rem; width: 0.8rem; height: 0.8rem; }
+    .access-tabs__tab--on { background: #fff; color: ${SECURITY_ACCENT}; box-shadow: 0 1px 2px rgb(79 70 229 / 0.08); }
+    .access-search { display: flex; align-items: center; gap: 0.28rem; flex: 1; max-width: 14rem; padding: 0.28rem 0.45rem; border-radius: 7px; border: 1px solid ${SECURITY_ACCENT_BORDER}; margin-left: auto; }
+    .access-search mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; color: #94a3b8; }
+    .access-search input { flex: 1; border: none; background: transparent; font: inherit; font-size: 0.66rem; outline: none; }
+    .access-content { border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; overflow: auto; }
+    .access-table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+    .access-table th { text-align: left; padding: 0.35rem 0.5rem; font-size: 0.54rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; background: #f8fafc; }
+    .access-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid #f1f5f9; }
+    .access-empty { text-align: center; color: #94a3b8; padding: 1rem !important; font-size: 0.68rem; }
+    .access-icon-btn { border: none; background: transparent; cursor: pointer; color: #64748b; }
+    .access-icon-btn mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
+    .access-sev { font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
       &[data-sev='critical'] { color: #b91c1c; }
       &[data-sev='warning'] { color: #b45309; }
     }
-    .mono { font-family: ui-monospace, monospace; font-size: 0.68rem; }
-    @media (max-width: 900px) { .access-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .mono { font-family: ui-monospace, monospace; font-size: 0.64rem; }
   `,
 })
 export class AccessControlPageComponent {
@@ -197,13 +190,6 @@ export class AccessControlPageComponent {
 
   readonly searchControl = new FormControl('', { nonNullable: true })
   private readonly searchTerm = toSignal(this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')), { initialValue: '' })
-
-  readonly kpis = [
-    { label: 'Usuarios con acceso', value: 24, icon: 'group', tone: 'purple' },
-    { label: 'Roles', value: 8, icon: 'badge', tone: 'cyan' },
-    { label: 'Políticas', value: 32, icon: 'policy', tone: 'success' },
-    { label: 'Violaciones', value: 2, icon: 'gpp_bad', tone: 'warn' },
-  ]
 
   readonly tabs = [
     { id: 'assignments' as const, label: 'Asignaciones', icon: 'group' },

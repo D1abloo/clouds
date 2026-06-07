@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
+import { IntegrationsService } from '../integrations/integrations.service'
+import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
 
 @Injectable()
 export class JenkinsService {
@@ -9,6 +11,7 @@ export class JenkinsService {
     private prisma: PrismaService,
     private audit: AuditService,
     private realtime: RealtimeGateway,
+    private integrations: IntegrationsService,
   ) {}
 
   async createServer(data: { name: string; url: string; secretRef: string }, userId?: string) {
@@ -45,8 +48,38 @@ export class JenkinsService {
       metadata: { serverId, parameters },
     })
 
-    const build = { number: Math.floor(Math.random() * 100), status: 'RUNNING' as const }
+    const buildNum = Math.floor(Math.random() * 100) + 1
+    const build = { number: buildNum, status: 'RUNNING' as const }
     this.realtime.emitJenkinsBuild(serverId, jobName, build)
+
+    const willFail = jobName.toLowerCase().includes('fail') || jobName === 'terraform-apply'
+    setTimeout(() => {
+      const status = willFail ? 'FAILURE' : 'SUCCESS'
+      this.realtime.emitJenkinsBuild(serverId, jobName, { number: buildNum, status })
+      void this.integrations.emitPlatformEvent(
+        {
+          eventType: willFail ? PLATFORM_EVENTS.DEPLOY_FAILED : PLATFORM_EVENTS.DEPLOY_SUCCESS,
+          title: `Jenkins ${jobName} #${buildNum}`,
+          body: `Pipeline ${jobName} build #${buildNum} finished with ${status}`,
+          severity: willFail ? 'critical' : 'info',
+          source: 'Jenkins',
+          metadata: { serverId, jobName, buildNum, status, parameters },
+        },
+        userId,
+      )
+      void this.integrations.emitPlatformEvent(
+        {
+          eventType: PLATFORM_EVENTS.WORKFLOW_RUN,
+          title: `Workflow ${jobName}`,
+          body: `GitHub/Jenkins workflow completed: ${status}`,
+          severity: willFail ? 'warning' : 'info',
+          source: 'Jenkins',
+          metadata: { jobName, buildNum, status },
+        },
+        userId,
+      )
+    }, 1500)
+
     return { queued: true, build }
   }
 

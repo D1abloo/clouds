@@ -15,6 +15,16 @@ export interface DemoStatus {
   message: string
 }
 
+/** Valores estimados cuando el backend no responde (UI demo autónoma). */
+const DEMO_FALLBACK_STATUS: DemoStatus = {
+  enabled: environment.demoMode,
+  instances: 48,
+  vps: 12,
+  alerts: 32,
+  metrics: 1240,
+  message: 'Modo demo local — backend no disponible; contadores estimados del dataset',
+}
+
 @Injectable({ providedIn: 'root' })
 export class DemoService {
   private readonly api = inject(ApiClientService)
@@ -22,6 +32,8 @@ export class DemoService {
   private readonly auth = inject(AuthService)
 
   readonly loading = signal(false)
+  readonly statusLoading = signal(false)
+  readonly statusOffline = signal(false)
   readonly status = signal<DemoStatus | null>(null)
 
   /** Server-side demo flag (preferred) with env fallback for UI hints */
@@ -33,10 +45,20 @@ export class DemoService {
   })
 
   refreshStatus = (): void => {
-    this.api.get<DemoStatus>('demo/status').subscribe({
-      next: (s) => this.status.set(s),
-      error: () => this.status.set(null),
-    })
+    this.statusLoading.set(true)
+    this.api
+      .get<DemoStatus>('demo/status')
+      .pipe(finalize(() => this.statusLoading.set(false)))
+      .subscribe({
+        next: (s) => {
+          this.statusOffline.set(false)
+          this.status.set(s)
+        },
+        error: () => {
+          this.statusOffline.set(true)
+          this.status.set(DEMO_FALLBACK_STATUS)
+        },
+      })
   }
 
   loadDemo = (): void => {

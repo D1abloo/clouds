@@ -17,6 +17,8 @@ body.dark-theme {
   --brand-aws: #ff9900;
   --brand-gcp: #4285f4;
   --brand-azure: #0078d4;
+  --infra-accent: var(--brand-aws);
+  --infra-accent-deep: #c2410c;
   --brand-docker: #0ea5e9;
   --brand-k8s: #326ce5;
   --brand-jenkins: #d24939;

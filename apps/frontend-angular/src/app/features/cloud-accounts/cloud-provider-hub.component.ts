@@ -15,7 +15,6 @@ import { MatDialog } from '@angular/material/dialog'
 import { debounceTime, startWith, forkJoin, map, catchError, of, combineLatest } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
@@ -43,7 +42,6 @@ type InstanceRow = Record<string, unknown>
     RouterLink,
     ReactiveFormsModule,
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -71,15 +69,6 @@ type InstanceRow = Record<string, unknown>
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid app-section-panel stagger-children">
-          <app-summary-card [title]="accountLabel" [value]="n('accounts')" icon="account_balance" variant="elevated" />
-          <app-summary-card title="Instances" [value]="n('instances')" icon="dns" variant="elevated" />
-          <app-summary-card title="Active regions" [value]="n('regions')" icon="public" variant="elevated" />
-          <app-summary-card title="Monthly cost" [value]="formatCost(n('monthlyCost'))" icon="payments" variant="elevated" />
-          <app-summary-card title="Alerts" [value]="n('alerts')" icon="warning" iconColor="warn" variant="elevated" />
-          <app-summary-card title="Sync status" [value]="syncStatus()" icon="sync" [trend]="lastSyncLabel()" variant="elevated" />
-        </div>
-
         <div class="table-card">
         <mat-tab-group
           class="soft-tabs"
@@ -101,14 +90,15 @@ type InstanceRow = Record<string, unknown>
             <div class="tab-panel">
               <div class="filter-row table-toolbar">
                 <mat-form-field appearance="outline">
-                  <mat-label>Search</mat-label>
-                  <input matInput [formControl]="searchControl" />
+                  <mat-label>Buscar cuentas</mat-label>
+                  <input matInput [formControl]="searchControl" placeholder="Nombre o ID de cuenta…" aria-label="Filtrar cuentas del proveedor" />
+                  <mat-hint>Filtra la tabla de cuentas conectadas a este proveedor</mat-hint>
                 </mat-form-field>
               </div>
-              @if (accounts().length === 0) {
+              @if (filteredAccounts().length === 0) {
                 <app-empty-state icon="cloud_off" title="No accounts" description="Add a demo account to sync inventory." />
               } @else {
-                <table mat-table [dataSource]="accounts()" class="premium-table table-row-hover">
+                <table mat-table [dataSource]="filteredAccounts()" class="premium-table table-row-hover">
                   <ng-container matColumnDef="name">
                     <th mat-header-cell *matHeaderCellDef>Name</th>
                     <td mat-cell *matCellDef="let row">{{ row.name }}</td>
@@ -142,8 +132,9 @@ type InstanceRow = Record<string, unknown>
             <div class="tab-panel">
               <div class="filter-row">
                 <mat-form-field appearance="outline">
-                  <mat-label>Search</mat-label>
-                  <input matInput [formControl]="searchControl" />
+                  <mat-label>Buscar instancias</mat-label>
+                  <input matInput [formControl]="searchControl" placeholder="Nombre de la instancia…" aria-label="Filtrar instancias del proveedor" />
+                  <mat-hint>Filtra por nombre; combina con región y estado</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Region</mat-label>
@@ -403,6 +394,16 @@ export class CloudProviderHubComponent implements OnInit {
   regions = computed(() => (this.summary()?.['regionList'] as Record<string, unknown>[]) ?? [])
 
   regionOptions = computed(() => [...new Set(this.instances().map((i) => String(i['region'] ?? '')).filter(Boolean))])
+
+  filteredAccounts = computed(() => {
+    const term = (this.searchTerm() ?? '').toLowerCase()
+    return this.accounts().filter((a) => {
+      if (!term) return true
+      const name = String(a['name'] ?? '').toLowerCase()
+      const id = String(a['accountId'] ?? a['projectId'] ?? '').toLowerCase()
+      return name.includes(term) || id.includes(term)
+    })
+  })
 
   filteredInstances = computed(() => {
     const term = (this.searchTerm() ?? '').toLowerCase()

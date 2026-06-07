@@ -1,30 +1,38 @@
 import { Component, inject, OnInit, signal, computed, ChangeDetectionStrategy } from '@angular/core'
-import { DatePipe } from '@angular/common'
+import { DatePipe, DecimalPipe } from '@angular/common'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
-import { MatTableModule } from '@angular/material/table'
-import { MatFormFieldModule } from '@angular/material/form-field'
-import { MatInputModule } from '@angular/material/input'
-import { MatSelectModule } from '@angular/material/select'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import { MatDialogModule } from '@angular/material/dialog'
-import { debounceTime, startWith } from 'rxjs'
+import { MatDialog, MatDialogModule } from '@angular/material/dialog'
+import { startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { ActivatedRoute } from '@angular/router'
-import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
-import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
-import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { AuditService } from '../../core/services/audit.service'
 import { ToastService } from '../../core/services/toast.service'
-import { AuditLog } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import {
+  AUDIT_ACCENT,
+  AUDIT_ACCENT_BORDER,
+  AUDIT_ACCENT_LIGHT,
+  auditSeverityLabel,
+  downloadBlob,
+} from './audit.config'
+import {
+  defaultAuditActivities,
   defaultAuditExports,
   defaultComplianceTrail,
   defaultSecurityEvents,
-} from '../security/audit-security.demo'
+  type AuditActivityEntry,
+  type AuditExport,
+  type ComplianceTrailEntry,
+  type SecurityEvent,
+} from './audit.demo'
+import { AuditActivityLogComponent } from './audit-activity-log.component'
+import { AuditActivityDetailDialogComponent } from './audit-activity-detail-dialog.component'
+import { AuditSecurityEventDetailDialogComponent } from './audit-security-event-detail-dialog.component'
+import { AuditComplianceTrailDetailDialogComponent } from './audit-compliance-trail-detail-dialog.component'
+import { AuditExportDetailDialogComponent } from './audit-export-detail-dialog.component'
 
 type AuditView = 'activity' | 'security' | 'compliance' | 'exports'
 
@@ -34,38 +42,33 @@ type AuditView = 'activity' | 'security' | 'compliance' | 'exports'
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    DecimalPipe,
     ReactiveFormsModule,
-    PageHeaderComponent,
-    LoadingStateComponent,
-    EmptyStateComponent,
-    ErrorStateComponent,
     StatusBadgeComponent,
-    MatTableModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
     MatButtonModule,
     MatIconModule,
     MatDialogModule,
+    AuditActivityLogComponent,
   ],
   template: `
     <div class="page-container aud-page animate-fade-in">
-      <app-page-header
-        title="Auditoría"
-        description="Trazabilidad de actividad, eventos de seguridad, cumplimiento y exportaciones"
-        icon="manage_search"
-        [demoMode]="true"
-        [actions]="[
-          { label: 'Exportar CSV', icon: 'download', primary: true },
-          { label: 'Actualizar', icon: 'refresh' },
-        ]"
-        (actionClick)="handleHeader($event)"
-      />
-
-      <section class="aud-kpis">
-        @for (kpi of kpis; track kpi.label) {
-          <article class="aud-kpi"><mat-icon>{{ kpi.icon }}</mat-icon><div><span>{{ kpi.label }}</span><strong>{{ kpi.value }}</strong></div></article>
-        }
+      <section class="aud-intro">
+        <div class="aud-intro__main">
+          <span class="aud-intro__eyebrow">Plataforma · Trazabilidad</span>
+          <h2 class="aud-intro__title">Auditoría</h2>
+          <p class="aud-intro__desc">
+            Registro inmutable de actividad, eventos de seguridad, trail de cumplimiento y exportaciones.
+            Cada acción queda correlacionada con usuario, IP, sesión y metadatos para investigación forense.
+          </p>
+        </div>
+        <div class="aud-intro__actions">
+          <button type="button" class="page-action-btn page-action-btn--primary" (click)="handleExportCsv()">
+            <mat-icon>download</mat-icon> Exportar CSV
+          </button>
+          <button type="button" class="page-action-btn" (click)="handleRefresh()">
+            <mat-icon>refresh</mat-icon> Actualizar
+          </button>
+        </div>
       </section>
 
       <div class="aud-bar">
@@ -81,203 +84,216 @@ type AuditView = 'activity' | 'security' | 'compliance' | 'exports'
             >
               <mat-icon>{{ tab.icon }}</mat-icon>
               {{ tab.label }}
+              <span class="aud-tabs__count">{{ tabCount(tab.id) }}</span>
             </button>
           }
         </nav>
-        @if (view() === 'activity') {
-          <div class="aud-filters">
-            <mat-form-field appearance="outline" class="aud-filter-field">
-              <mat-label>Buscar</mat-label>
-              <input matInput [formControl]="searchControl" placeholder="Acción o recurso…" aria-label="Filtrar registros" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="aud-filter-field">
-              <mat-label>Acción</mat-label>
-              <mat-select [formControl]="actionControl">
-                <mat-option value="">Todas</mat-option>
-                @for (a of actionOptions(); track a) {
-                  <mat-option [value]="a">{{ a }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          </div>
+        @if (view() === 'security') {
+          <select class="aud-filter" [formControl]="severityControl" aria-label="Filtrar severidad">
+            <option value="">Todas las severidades</option>
+            <option value="critical">Crítico</option>
+            <option value="warning">Advertencia</option>
+            <option value="info">Informativo</option>
+          </select>
         }
       </div>
 
-      <div class="aud-content table-card">
-        @if (view() === 'activity') {
-          @if (page.loading()) {
-            <app-loading-state />
-          } @else if (page.error()) {
-            <app-error-state [message]="page.error()!" (retry)="load()" />
-          } @else if (filtered().length === 0) {
-            <app-empty-state title="Sin registros de auditoría" />
-          } @else {
-            <div class="data-table-wrap">
-              <table mat-table [dataSource]="filtered()" class="premium-table table-row-hover aud-table">
-                <ng-container matColumnDef="action">
-                  <th mat-header-cell *matHeaderCellDef>Acción</th>
-                  <td mat-cell *matCellDef="let row">
-                    <button mat-button type="button" class="link-btn" (click)="showDetail(row)">{{ row.action }}</button>
-                  </td>
-                </ng-container>
-                <ng-container matColumnDef="resource">
-                  <th mat-header-cell *matHeaderCellDef>Recurso</th>
-                  <td mat-cell *matCellDef="let row">{{ row.resource }}</td>
-                </ng-container>
-                <ng-container matColumnDef="ipAddress">
-                  <th mat-header-cell *matHeaderCellDef>IP</th>
-                  <td mat-cell *matCellDef="let row" class="mono">{{ row.ipAddress ?? '—' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="createdAt">
-                  <th mat-header-cell *matHeaderCellDef>Hora</th>
-                  <td mat-cell *matCellDef="let row">{{ row.createdAt | date: 'medium' }}</td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="cols"></tr>
-                <tr mat-row *matRowDef="let row; columns: cols" class="table-row-hover"></tr>
-              </table>
+      <div class="aud-content">
+        @switch (view()) {
+          @case ('activity') {
+            <app-audit-activity-log
+              [activities]="activities()"
+              [loading]="page.loading()"
+              [error]="page.error()"
+              (detail)="openActivityDetail($event)"
+              (refresh)="load()"
+              (copyCorrelation)="handleCopyCorrelation($event)"
+            />
+          }
+          @case ('security') {
+            <ul class="aud-list">
+              @for (ev of filteredSecurity(); track ev.id) {
+                <li>
+                  <button type="button" class="aud-card aud-card--sev" (click)="openSecurityDetail(ev)">
+                    <div class="aud-card__main">
+                      <header>
+                        <strong>{{ ev.event }}</strong>
+                        <span class="aud-sev" [attr.data-sev]="ev.severity">{{ severityLabel(ev.severity) }}</span>
+                      </header>
+                      <p>{{ ev.description }}</p>
+                      <div class="aud-card__meta">
+                        <span><mat-icon>source</mat-icon>{{ ev.source }}</span>
+                        <span><mat-icon>person</mat-icon>{{ ev.user }}</span>
+                        <span class="mono"><mat-icon>link</mat-icon>{{ ev.correlationId }}</span>
+                      </div>
+                    </div>
+                    <div class="aud-card__side">
+                      <app-status-badge [value]="ev.status" />
+                      <time>{{ ev.at | date: 'dd MMM HH:mm' }}</time>
+                      <span class="mono">{{ ev.ip }}</span>
+                    </div>
+                  </button>
+                </li>
+              } @empty {
+                <li class="aud-empty">Sin eventos de seguridad.</li>
+              }
+            </ul>
+          }
+          @case ('compliance') {
+            <div class="aud-trail-grid">
+              @for (ct of complianceTrail(); track ct.id) {
+                <article class="aud-trail-card">
+                  <header>
+                    <span class="aud-trail-card__fw">{{ ct.framework }}</span>
+                    <span class="aud-trail-card__outcome" [attr.data-outcome]="ct.outcome">{{ ct.outcome }}</span>
+                  </header>
+                  <h3>{{ ct.action }}</h3>
+                  <p>{{ ct.description }}</p>
+                  <dl>
+                    <div><dt>Control</dt><dd class="mono">{{ ct.controlId }}</dd></div>
+                    <div><dt>Actor</dt><dd>{{ ct.actor }}</dd></div>
+                    <div><dt>Recurso</dt><dd class="mono">{{ ct.resource }}</dd></div>
+                    <div><dt>Registrado</dt><dd>{{ ct.at | date: 'dd MMM HH:mm' }}</dd></div>
+                  </dl>
+                  <button type="button" class="page-action-btn page-action-btn--primary page-action-btn--sm" (click)="openComplianceDetail(ct)">
+                    <mat-icon>visibility</mat-icon> Ver evidencia
+                  </button>
+                </article>
+              }
             </div>
           }
-        }
-
-        @if (view() === 'security') {
-          <table class="aud-native-table" aria-label="Eventos de seguridad">
-            <thead><tr><th>Evento</th><th>Fuente</th><th>Severidad</th><th>Usuario</th><th>IP</th><th>Hora</th><th>Estado</th></tr></thead>
-            <tbody>
-              @for (ev of securityEvents(); track ev.id) {
-                <tr>
-                  <td>{{ ev.event }}</td><td>{{ ev.source }}</td>
-                  <td><span class="aud-sev" [attr.data-sev]="ev.severity">{{ ev.severity }}</span></td>
-                  <td>{{ ev.user }}</td><td class="mono">{{ ev.ip }}</td>
-                  <td>{{ ev.at | date: 'dd MMM HH:mm' }}</td>
-                  <td><app-status-badge [value]="ev.status" /></td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-
-        @if (view() === 'compliance') {
-          <table class="aud-native-table" aria-label="Trail de cumplimiento">
-            <thead><tr><th>Acción</th><th>Actor</th><th>Recurso</th><th>Framework</th><th>Resultado</th><th>Hora</th></tr></thead>
-            <tbody>
-              @for (ct of complianceTrail(); track ct.id) {
-                <tr>
-                  <td>{{ ct.action }}</td><td>{{ ct.actor }}</td><td>{{ ct.resource }}</td>
-                  <td>{{ ct.framework }}</td><td>{{ ct.outcome }}</td>
-                  <td>{{ ct.at | date: 'dd MMM HH:mm' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-
-        @if (view() === 'exports') {
-          <table class="aud-native-table" aria-label="Exportaciones">
-            <thead><tr><th>Informe</th><th>Formato</th><th>Registros</th><th>Solicitado por</th><th>Estado</th><th>Generado</th><th></th></tr></thead>
-            <tbody>
+          @case ('exports') {
+            <div class="aud-export-grid">
               @for (ex of exports(); track ex.id) {
-                <tr>
-                  <td>{{ ex.name }}</td><td>{{ ex.format }}</td><td>{{ ex.records }}</td>
-                  <td>{{ ex.requestedBy }}</td><td><app-status-badge [value]="ex.status" /></td>
-                  <td>{{ ex.generatedAt | date: 'dd MMM HH:mm' }}</td>
-                  <td>
+                <article class="aud-export-card">
+                  <header>
+                    <span class="aud-export-card__fmt">{{ ex.format }}</span>
+                    <app-status-badge [value]="ex.status" />
+                  </header>
+                  <h3>{{ ex.name }}</h3>
+                  <dl>
+                    <div><dt>Periodo</dt><dd>{{ ex.period }}</dd></div>
+                    <div><dt>Registros</dt><dd>{{ ex.records | number }}</dd></div>
+                    <div><dt>Solicitante</dt><dd>{{ ex.requestedBy }}</dd></div>
+                    <div><dt>Generado</dt><dd>{{ ex.generatedAt | date: 'dd MMM HH:mm' }}</dd></div>
+                  </dl>
+                  <div class="aud-export-card__actions">
+                    <button type="button" class="page-action-btn page-action-btn--primary page-action-btn--sm" (click)="openExportDetail(ex)">
+                      <mat-icon>visibility</mat-icon> Ver detalle
+                    </button>
                     @if (ex.status === 'success') {
-                      <button mat-stroked-button type="button" (click)="handleDownloadExport(ex.name)">Descargar</button>
-                    } @else {
-                      <button mat-stroked-button type="button" (click)="handleNewExport()">Nueva exportación</button>
+                      <button type="button" class="page-action-btn page-action-btn--sm" (click)="openExportDetail(ex)">
+                        <mat-icon>download</mat-icon> Descargar
+                      </button>
                     }
-                  </td>
-                </tr>
+                  </div>
+                </article>
               }
-            </tbody>
-          </table>
+            </div>
+          }
         }
       </div>
     </div>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }
-    .aud-page { display: flex; flex-direction: column; gap: 0.65rem; color: #0f172a; }
-    .link-btn { padding: 0; min-width: 0; text-transform: none; }
-    .aud-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
-    .aud-kpi {
-      display: flex; gap: 0.45rem; padding: 0.55rem 0.65rem; border-radius: 11px;
-      background: #fdf2f8; border: 1px solid #fbcfe8;
+    .aud-page { display: flex; flex-direction: column; gap: 0.65rem; overflow-y: auto; scrollbar-width: thin; color: #0f172a; font-size: 0.8125rem; }
+    .aud-intro { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; }
+    .aud-intro__eyebrow { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; color: ${AUDIT_ACCENT}; }
+    .aud-intro__title { margin: 0.2rem 0; font-size: 1.05rem; font-weight: 700; }
+    .aud-intro__desc { margin: 0; max-width: 42rem; font-size: 0.72rem; color: #64748b; line-height: 1.55; }
+    .aud-intro__actions { display: flex; gap: 0.35rem; flex-shrink: 0; flex-wrap: wrap; align-items: flex-start; height: fit-content; padding: 0; }
+    .aud-page .page-action-btn--primary {
+      background: ${AUDIT_ACCENT};
+      border-color: #0e7490;
+      &:hover:not(:disabled) { background: #0e7490; border-color: #0c4a6e; }
     }
-    .aud-kpi mat-icon { color: #db2777; font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
-    .aud-kpi span { display: block; font-size: 0.55rem; font-weight: 650; text-transform: uppercase; color: #94a3b8; }
-    .aud-kpi strong { font-size: 1rem; font-weight: 700; }
-    .aud-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem; }
-    .aud-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.2rem; border-radius: 10px; background: #fdf2f8; }
-    .aud-tabs__tab {
-      display: inline-flex; align-items: center; gap: 0.28rem; padding: 0.35rem 0.6rem;
-      border: none; border-radius: 8px; background: transparent; font: inherit; font-size: 0.68rem;
-      font-weight: 600; color: #9d174d; cursor: pointer;
-    }
-    .aud-tabs__tab--on { background: #fff; color: #831843; box-shadow: 0 1px 2px rgb(190 24 93 / 0.08); }
+    .aud-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+    .aud-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.2rem; border-radius: 10px; background: ${AUDIT_ACCENT_LIGHT}; }
+    .aud-tabs__tab { display: inline-flex; align-items: center; gap: 0.28rem; padding: 0.35rem 0.6rem; border: none; border-radius: 8px; background: transparent; font: inherit; font-size: 0.68rem; font-weight: 600; color: #0e7490; cursor: pointer; }
+    .aud-tabs__tab--on { background: #fff; color: ${AUDIT_ACCENT}; box-shadow: 0 1px 2px rgb(8 145 178 / 0.08); }
     .aud-tabs__tab mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
-    .aud-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-left: auto; }
-    .aud-filter-field { min-width: 10rem; font-size: 0.78rem; }
-    .aud-content { border-radius: 11px; overflow: auto; }
-    .aud-native-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
-    .aud-native-table th {
-      text-align: left; padding: 0.5rem 0.65rem; font-size: 0.58rem; font-weight: 700;
-      text-transform: uppercase; color: #94a3b8; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+    .aud-tabs__count { font-size: 0.58rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 999px; background: ${AUDIT_ACCENT_BORDER}; color: ${AUDIT_ACCENT}; }
+    .aud-search { display: flex; align-items: center; gap: 0.35rem; flex: 1; max-width: 16rem; padding: 0.35rem 0.55rem; border-radius: 9px; border: 1px solid ${AUDIT_ACCENT_BORDER}; margin-left: auto; }
+    .aud-search input { flex: 1; border: none; background: transparent; font: inherit; font-size: 0.72rem; outline: none; }
+    .aud-search mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; color: #94a3b8; }
+    .aud-filter { padding: 0.35rem 0.5rem; border-radius: 9px; border: 1px solid ${AUDIT_ACCENT_BORDER}; font: inherit; font-size: 0.68rem; }
+    .aud-content { border-radius: 11px; border: 1px solid #e2e8f0; background: #fff; overflow: auto; }
+    .aud-list { list-style: none; margin: 0; padding: 0.65rem; display: flex; flex-direction: column; gap: 0.4rem; }
+    .aud-card {
+      display: grid; grid-template-columns: 1fr auto; gap: 0.65rem; align-items: start; width: 100%;
+      padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid ${AUDIT_ACCENT_BORDER}; background: ${AUDIT_ACCENT_LIGHT};
+      text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .aud-native-table td { padding: 0.5rem 0.65rem; border-bottom: 1px solid #f1f5f9; }
-    .aud-native-table tr:hover td { background: #fdf2f8; }
-    .aud-sev { font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
-      &[data-sev='critical'] { color: #b91c1c; }
-      &[data-sev='warning'] { color: #b45309; }
-      &[data-sev='info'] { color: #0369a1; }
+    .aud-card:hover { border-color: ${AUDIT_ACCENT}; box-shadow: 0 2px 8px rgb(8 145 178 / 0.08); }
+    .aud-card header { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-bottom: 0.15rem; }
+    .aud-card header strong { font-size: 0.82rem; }
+    .aud-card__resource { font-size: 0.66rem; color: #64748b; }
+    .aud-card p { margin: 0.25rem 0 0.35rem; font-size: 0.68rem; color: #64748b; line-height: 1.45; }
+    .aud-card__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; font-size: 0.62rem; color: #94a3b8; }
+    .aud-card__meta span { display: inline-flex; align-items: center; gap: 0.2rem; }
+    .aud-card__meta mat-icon { font-size: 0.75rem; width: 0.75rem; height: 0.75rem; }
+    .aud-card__side { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; font-size: 0.64rem; color: #94a3b8; white-space: nowrap; }
+    .aud-sev { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 999px;
+      &[data-sev='critical'] { background: #fee2e2; color: #b91c1c; }
+      &[data-sev='warning'] { background: #fef3c7; color: #b45309; }
+      &[data-sev='info'] { background: #e0f2fe; color: #0369a1; }
     }
+    .aud-trail-grid, .aud-export-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; padding: 0.65rem; }
+    .aud-trail-card, .aud-export-card { padding: 0.75rem; border-radius: 10px; border: 1px solid ${AUDIT_ACCENT_BORDER}; background: ${AUDIT_ACCENT_LIGHT}; display: flex; flex-direction: column; gap: 0.35rem; }
+    .aud-trail-card header, .aud-export-card header { display: flex; justify-content: space-between; align-items: center; }
+    .aud-trail-card h3, .aud-export-card h3 { margin: 0; font-size: 0.82rem; }
+    .aud-trail-card p, .aud-export-card p { margin: 0; font-size: 0.68rem; color: #64748b; line-height: 1.45; }
+    .aud-trail-card dl, .aud-export-card dl { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin: 0; font-size: 0.66rem; dt { color: #94a3b8; } dd { margin: 0; font-weight: 600; } }
+    .aud-trail-card__fw { font-size: 0.62rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 999px; background: ${AUDIT_ACCENT}; color: #fff; }
+    .aud-trail-card__outcome { font-size: 0.6rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 999px;
+      &[data-outcome='Aprobado'], &[data-outcome='Completado'], &[data-outcome='Cerrado'] { background: #dcfce7; color: #15803d; }
+      &[data-outcome='Pendiente'] { background: #fef3c7; color: #b45309; }
+    }
+    .aud-export-card__fmt { font-size: 0.62rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 999px; background: ${AUDIT_ACCENT}; color: #fff; }
+    .aud-export-card__actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.15rem; }
+    .aud-empty { text-align: center; color: #94a3b8; padding: 1.5rem; }
     .mono { font-family: ui-monospace, monospace; font-size: 0.68rem; }
-    @media (max-width: 900px) { .aud-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   `,
 })
 export class AuditPageComponent implements OnInit {
   private readonly service = inject(AuditService)
   private readonly toast = inject(ToastService)
   private readonly route = inject(ActivatedRoute)
+  private readonly dialog = inject(MatDialog)
 
-  readonly searchControl = new FormControl('', { nonNullable: true })
-  readonly actionControl = new FormControl('', { nonNullable: true })
+  readonly severityControl = new FormControl('', { nonNullable: true })
   readonly page = createPageLoader(true)
-  readonly logs = signal<AuditLog[]>([])
+  readonly activities = signal<AuditActivityEntry[]>(defaultAuditActivities())
   readonly securityEvents = signal(defaultSecurityEvents())
   readonly complianceTrail = signal(defaultComplianceTrail())
   readonly exports = signal(defaultAuditExports())
-  readonly cols = ['action', 'resource', 'ipAddress', 'createdAt']
   readonly view = signal<AuditView>('activity')
 
-  readonly kpis = [
-    { label: 'Eventos (24h)', value: '1.2k', icon: 'receipt_long' },
-    { label: 'Seguridad', value: 89, icon: 'shield' },
-    { label: 'Cumplimiento', value: 42, icon: 'fact_check' },
-    { label: 'Exportaciones', value: 3, icon: 'download' },
-  ]
+  readonly severityLabel = auditSeverityLabel
 
   readonly tabs = [
-    { id: 'activity' as const, label: 'Registro de actividad', icon: 'history' },
+    { id: 'activity' as const, label: 'Registro actividad', icon: 'history' },
     { id: 'security' as const, label: 'Eventos seguridad', icon: 'security' },
     { id: 'compliance' as const, label: 'Trail cumplimiento', icon: 'gavel' },
     { id: 'exports' as const, label: 'Exportaciones', icon: 'download' },
   ]
 
-  private readonly searchTerm = toSignal(this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')), { initialValue: '' })
-  private readonly actionFilter = toSignal(this.actionControl.valueChanges.pipe(startWith('')), { initialValue: '' })
+  private readonly severityFilter = toSignal(this.severityControl.valueChanges.pipe(startWith('')), { initialValue: '' })
 
-  actionOptions = computed(() => [...new Set(this.logs().map((l) => l.action))])
-
-  filtered = computed(() => {
-    const term = (this.searchTerm() ?? '').toLowerCase()
-    const action = this.actionFilter()
-    return this.logs().filter((l) => {
-      const matchTerm = !term || l.action.toLowerCase().includes(term) || l.resource.toLowerCase().includes(term)
-      const matchAction = !action || l.action === action
-      return matchTerm && matchAction
-    })
+  filteredSecurity = computed(() => {
+    const sev = this.severityFilter()
+    return this.securityEvents().filter((e) => !sev || e.severity === sev)
   })
+
+  tabCount = (id: AuditView): number => {
+    switch (id) {
+      case 'activity': return this.activities().length
+      case 'security': return this.securityEvents().length
+      case 'compliance': return this.complianceTrail().length
+      case 'exports': return this.exports().length
+    }
+  }
 
   ngOnInit(): void {
     const section = this.route.snapshot.paramMap.get('section')
@@ -289,38 +305,67 @@ export class AuditPageComponent implements OnInit {
 
   load = (): void => {
     this.page.run(this.service.list(), {
-      onSuccess: (data) => this.logs.set(data),
+      onSuccess: () => { /* demo enriquecido ya cargado */ },
       errorMessage: 'Error al cargar el registro de auditoría',
     })
   }
 
-  handleHeader = (label: string): void => {
-    if (label === 'Exportar CSV') {
-      this.toast.success(`Exportados ${this.filtered().length} registros (CSV)`)
-      return
-    }
+  handleRefresh = (): void => {
     this.load()
     this.toast.info('Registro de auditoría actualizado')
   }
 
-  showDetail = (row: AuditLog): void => {
-    this.toast.info(`Evento: ${row.action} · ${row.resource}`)
+  handleExportCsv = (): void => {
+    const rows = this.activities()
+    const header = 'id,action,resource,user,ip,timestamp,module,status,environment,outcome,correlationId\n'
+    const body = rows.map((r) =>
+      `${r.id},${r.action},${r.resource},${r.userId ?? ''},${r.ipAddress ?? ''},${r.createdAt},${r.module},${r.status},${r.environment ?? ''},${r.outcome ?? ''},${r.correlationId ?? ''}`,
+    ).join('\n')
+    downloadBlob(header + body, `audit-activity-${Date.now()}.csv`, 'text/csv')
+    this.toast.success(`Exportados ${rows.length} registros (CSV)`)
   }
 
-  handleDownloadExport = (name: string): void => {
-    this.toast.success(`Descargando: ${name}`)
+  handleCopyCorrelation = (id: string): void => {
+    navigator.clipboard?.writeText(id).then(() => this.toast.success('ID de correlación copiado'))
   }
 
-  handleNewExport = (): void => {
-    this.exports.update((rows) => [{
-      id: `exp-${Date.now()}`,
-      name: 'Exportación personalizada',
-      format: 'CSV',
-      records: this.logs().length,
-      status: 'running',
-      generatedAt: new Date().toISOString(),
-      requestedBy: 'admin@cloudops',
-    }, ...rows])
-    this.toast.info('Exportación en curso…')
+  openActivityDetail = (entry: AuditActivityEntry): void => {
+    this.dialog.open(AuditActivityDetailDialogComponent, {
+      width: 'min(920px, 98vw)',
+      maxWidth: '98vw',
+      maxHeight: '92vh',
+      panelClass: 'aud-activity-dialog-panel',
+      data: { entry },
+    })
+  }
+
+  openSecurityDetail = (event: SecurityEvent): void => {
+    this.dialog.open(AuditSecurityEventDetailDialogComponent, {
+      width: 'min(860px, 96vw)',
+      maxWidth: '96vw',
+      maxHeight: '92vh',
+      panelClass: 'aud-security-dialog-panel',
+      data: { event },
+    })
+  }
+
+  openComplianceDetail = (entry: ComplianceTrailEntry): void => {
+    this.dialog.open(AuditComplianceTrailDetailDialogComponent, {
+      width: 'min(820px, 96vw)',
+      maxWidth: '96vw',
+      maxHeight: '90vh',
+      panelClass: 'aud-compliance-dialog-panel',
+      data: { entry },
+    })
+  }
+
+  openExportDetail = (exp: AuditExport): void => {
+    this.dialog.open(AuditExportDetailDialogComponent, {
+      width: 'min(720px, 94vw)',
+      maxWidth: '94vw',
+      maxHeight: '88vh',
+      panelClass: 'aud-export-dialog-panel',
+      data: { export: exp },
+    })
   }
 }

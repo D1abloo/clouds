@@ -4,6 +4,7 @@ export type ResourceStatus =
   | 'running'
   | 'stopped'
   | 'pending'
+  | 'applied'
   | 'error'
   | 'warning'
   | 'unknown'
@@ -139,4 +140,57 @@ export interface PaginatedMeta {
   total?: number
   page?: number
   limit?: number
+}
+
+export interface IntegrationConfigDto {
+  id: string
+  label: string
+  category: string
+  enabled: boolean
+  status: string
+  config: Record<string, unknown>
+  events: string[]
+  lastSync: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface IntegrationsStatusDto {
+  demoMode: boolean
+  liveMode: boolean
+  deliveryMode: 'live' | 'simulated'
+  enabledCount: number
+  message: string
+  coreIntegrations: string[]
+}
+
+export interface IntegrationDeliveryDto {
+  id: string
+  integrationId: string
+  eventType: string
+  title: string
+  body: string
+  status: 'sent' | 'simulated' | 'failed'
+  httpStatus: number | null
+  latencyMs: number | null
+  error: string | null
+  createdAt: string
+  integration?: { id: string; label: string }
+}
+
+export interface IntegrationTestResultDto {
+  integration: IntegrationConfigDto
+  result: { status: string; httpStatus?: number; latencyMs?: number; error?: string }
+  liveMode: boolean
+}
+
+export interface IntegrationPlatformSourceDto {
+  id: string
+  label: string
+  module: string
+  events: string[]
+}
+
+export interface IntegrationSourcesResponseDto {
+  sources: IntegrationPlatformSourceDto[]
 }

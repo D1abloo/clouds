@@ -13,6 +13,7 @@ import type { NavLogoKey } from '../../theme/nav-logo.types'
         [class]="sizeClass()"
         [attr.viewBox]="svg.viewBox"
         xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         [attr.aria-label]="logo()"
         focusable="false"
@@ -31,11 +32,13 @@ import type { NavLogoKey } from '../../theme/nav-logo.types'
     .brand-logo--sm { width: 16px; height: 16px; }
     .brand-logo--md { width: 20px; height: 20px; }
     .brand-logo--lg { width: 24px; height: 24px; }
+    .brand-logo--topo { width: 32px; height: 32px; }
+    .brand-logo--xl { width: 40px; height: 40px; }
   `,
 })
 export class BrandLogoComponent {
   readonly logo = input.required<NavLogoKey>()
-  readonly size = input<'sm' | 'md' | 'lg'>('md')
+  readonly size = input<'sm' | 'md' | 'lg' | 'topo' | 'xl'>('md')
 
   readonly def = computed(() => BRAND_LOGO_SVG[this.logo()])
 

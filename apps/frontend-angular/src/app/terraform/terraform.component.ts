@@ -27,8 +27,31 @@ import { RealtimeService } from '../core/services/realtime.service'
 import { ToastService } from '../core/services/toast.service'
 import { DemoActionsService } from '../core/services/demo-actions.service'
 import { LaunchInstanceModalComponent } from '../shared/modals/launch-instance/launch-instance-modal.component'
-import { TerraformEditorComponent } from './terraform-editor/terraform-editor.component'
 import { TerraformOverviewComponent } from './terraform-overview.component'
+import { TerraformWorkspaceHubComponent } from './terraform-workspace-hub.component'
+import { TerraformRailPanelComponent } from './terraform-rail-panel.component'
+import { TerraformInspectorPanelComponent } from './terraform-inspector-panel.component'
+import { TerraformLaunchProgressComponent } from './terraform-launch-progress.component'
+import {
+  TerraformCreateProjectDialogComponent,
+  type CreateProjectDialogData,
+  type CreateProjectDialogResult,
+} from './terraform-create-project-dialog.component'
+import {
+  PROJECT_ENV_PRESETS,
+  buildStatePreview,
+  defaultModulesForProvider,
+} from './terraform-create-project.meta'
+import {
+  defaultTerraformAutomations,
+  defaultTerraformDeployments,
+  defaultTerraformProjects,
+  findProjectByWorkspaceId,
+  type TerraformAutomation,
+  type TerraformDeploymentRecord,
+  type TerraformHubTabId,
+  type TerraformProject,
+} from './terraform-projects'
 import {
   BUILTIN_TEMPLATES,
   HCL_TEMPLATE_AWS,
@@ -37,16 +60,22 @@ import {
 } from './terraform-hcl-templates'
 import {
   defaultDemoWorkspaces,
+  defaultDemoLaunches,
   demoRunsFromSummary,
   mergeTerraformSummary,
   TERRAFORM_DEMO_SUMMARY,
+  TERRAFORM_FOLDERS,
   type TerraformPageSummary,
 } from './terraform.demo'
-import { PageHeaderComponent, type PageHeaderAction } from '../shared/components/page-header/page-header.component'
+import type { TerraformLaunchRecord } from './terraform-folders'
+import {
+  defaultTerraformLaunchDetails,
+  launchRecordsFromDetails,
+  type TerraformLaunchDetail,
+  launchDetailFromRecord,
+} from './terraform-launches.demo'
 import { LoadingStateComponent } from '../shared/components/loading-state/loading-state.component'
-import { StatusBadgeComponent } from '../shared/components/status-badge/status-badge.component'
 import { RunDetailDrawerComponent } from '../features/terraform/components/run-detail-drawer.component'
-import { TerraformPlanViewerComponent } from '../features/terraform/components/terraform-plan-viewer.component'
 import { CloudProvider } from '../core/models/api.models'
 
 @Component({
@@ -60,13 +89,13 @@ import { CloudProvider } from '../core/models/api.models'
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    PageHeaderComponent,
     LoadingStateComponent,
-    StatusBadgeComponent,
-    TerraformEditorComponent,
     TerraformOverviewComponent,
+    TerraformWorkspaceHubComponent,
+    TerraformRailPanelComponent,
+    TerraformInspectorPanelComponent,
+    TerraformLaunchProgressComponent,
     RunDetailDrawerComponent,
-    TerraformPlanViewerComponent,
   ],
   templateUrl: './terraform.component.html',
   styleUrl: './terraform.component.scss',
@@ -86,13 +115,16 @@ export class TerraformComponent implements OnInit {
   readonly inspectorRef = viewChild<ElementRef<HTMLElement>>('inspectorPane')
 
   readonly builtinTemplates = BUILTIN_TEMPLATES
-  readonly headerActions: PageHeaderAction[] = [
-    { label: 'Actualizar', icon: 'refresh' },
-    { label: 'Nuevo plan', icon: 'description' },
-    { label: 'Lanzar instancia', icon: 'rocket_launch', primary: true },
-  ]
 
-  readonly terminalHeight = signal(200)
+  readonly projects = signal<TerraformProject[]>(defaultTerraformProjects())
+  readonly automations = signal<TerraformAutomation[]>(defaultTerraformAutomations())
+  readonly deployments = signal<TerraformDeploymentRecord[]>(defaultTerraformDeployments())
+  readonly activeProjectId = signal<string | null>('proj-api-gateway')
+  readonly hubTab = signal<TerraformHubTabId>('launches')
+  readonly launchDetails = signal<TerraformLaunchDetail[]>(defaultTerraformLaunchDetails())
+  readonly selectedLaunchId = signal<string | null>('launch-4')
+
+  readonly terminalHeight = signal(300)
   readonly destroyConfirm = signal('')
   readonly showDestroyConfirm = signal(false)
   readonly busy = signal(false)
@@ -104,8 +136,10 @@ export class TerraformComponent implements OnInit {
   readonly drawerLogs = signal('')
 
   readonly wsSearch = new FormControl('', { nonNullable: true })
+  readonly expandedFolders = signal<Set<string>>(new Set(['apps', 'infra']))
+  readonly folders = TERRAFORM_FOLDERS
 
-  private readonly wsSearchTerm = toSignal(
+  readonly wsSearchTerm = toSignal(
     this.wsSearch.valueChanges.pipe(debounceTime(150), startWith('')),
     { initialValue: '' },
   )
@@ -117,6 +151,24 @@ export class TerraformComponent implements OnInit {
   readonly terminalLines = this.runStore.terminalLines
   readonly activeWorkspace = this.runStore.activeWorkspace
 
+  readonly activeProject = computed(() => {
+    const id = this.activeProjectId()
+    if (!id) return null
+    return this.projects().find((p) => p.id === id) ?? null
+  })
+
+  readonly selectedLaunch = computed(() => {
+    const id = this.selectedLaunchId()
+    if (!id) return null
+    return this.launchDetails().find((l) => l.id === id) ?? null
+  })
+
+  readonly projectAutomations = computed(() => {
+    const proj = this.activeProject()
+    if (!proj) return this.automations()
+    return this.automations().filter((a) => a.projectId === proj.id)
+  })
+
   readonly providerChips = computed(() => {
     const counts = this.cloudStore.countByProvider()
     return [
@@ -127,13 +179,7 @@ export class TerraformComponent implements OnInit {
     ]
   })
 
-  readonly filteredWorkspaces = computed(() => {
-    const term = (this.wsSearchTerm() ?? '').toLowerCase()
-    return this.runStore.workspaces().filter((ws) => {
-      if (!term) return true
-      return ws.name.toLowerCase().includes(term) || ws.provider.toLowerCase().includes(term)
-    })
-  })
+  readonly filteredWorkspaces = computed(() => this.runStore.workspaces())
 
   readonly planResources = computed(() => parsePlanResources(this.planOutput() ?? ''))
 
@@ -146,8 +192,6 @@ export class TerraformComponent implements OnInit {
 
   readonly actionsDisabled = computed(() => !this.activeProviderConnected() || this.busy())
 
-  readonly editorHeight = computed(() => `calc(100vh - 320px - ${this.terminalHeight()}px)`)
-
   ngOnInit(): void {
     this.realtime.connect()
     this.cloudStore.load()
@@ -155,11 +199,6 @@ export class TerraformComponent implements OnInit {
     if (this.route.snapshot.data['openLaunch']) {
       setTimeout(() => this.openLaunch(), 300)
     }
-  }
-
-  lastSyncLabel = (): string => {
-    const d = this.summary().lastSyncedAt
-    return new Date(d).toLocaleString('es-ES')
   }
 
   loadPage = (): void => {
@@ -186,6 +225,7 @@ export class TerraformComponent implements OnInit {
       ? wsRows.map((w, i) => ({
           id: String(w['id'] ?? `ws-${i}`),
           name: String(w['name'] ?? w['workspaceName'] ?? `workspace-${i}`),
+          folderId: String(w['folderId'] ?? inferFolderId(String(w['name'] ?? ''))),
           provider: (w['provider'] as CloudProvider) ?? 'AWS',
           hcl: this.hclForProvider((w['provider'] as CloudProvider) ?? 'AWS'),
           status: mapWorkspaceStatus(String(w['status'] ?? 'idle')),
@@ -193,28 +233,50 @@ export class TerraformComponent implements OnInit {
       : defaultDemoWorkspaces()
 
     this.runStore.setWorkspaces(dedupeWorkspaces(workspaces))
+    const launches = defaultTerraformLaunchDetails()
+    this.launchDetails.set(launches)
+    this.runStore.setLaunches(launchRecordsFromDetails(launches))
+    if (!this.selectedLaunchId()) this.selectedLaunchId.set(launches[0]?.id ?? null)
+
+    const activeProj = this.activeProject()
+    if (activeProj) {
+      const ids = activeProj.workspaceIds?.length
+        ? activeProj.workspaceIds
+        : [activeProj.workspaceId]
+      const target = ids.find((wid) => workspaces.some((w) => w.id === wid)) ?? activeProj.workspaceId
+      if (workspaces.some((w) => w.id === target)) this.runStore.selectWorkspace(target)
+    }
 
     const runs = demoRunsFromSummary(items)
-    if (runs.length) this.runStore.setRuns(runs)
+    if (runs.length) {
+      this.runStore.setRuns(
+        runs.map((r) => ({
+          ...r,
+          folderId: r.folderId ?? inferFolderId(r.workspaceName),
+        })),
+      )
+    }
   }
 
-  handleHeader = (label: string): void => {
-    if (label === 'Actualizar') {
-      this.loadPage()
-      return
-    }
-    if (label === 'Nuevo plan') {
-      this.demoActions.simulate('Terraform plan', 1400, 'Plan listo — 1 recurso por añadir').subscribe(() => {
-        const plan = 'Plan: 1 to add, 0 to change, 0 to destroy.\n  # aws_instance.web will be created'
-        this.runStore.setPlanOutput(plan)
-        this.runStore.appendTerminal(plan)
-        this.toast.success('Plan generado')
-      })
-      return
-    }
-    if (label === 'Lanzar instancia') {
-      this.openLaunch()
-    }
+  handleToggleFolder = (folderId: string): void => {
+    this.expandedFolders.update((set) => {
+      const next = new Set(set)
+      if (next.has(folderId)) next.delete(folderId)
+      else next.add(folderId)
+      return next
+    })
+  }
+
+  handleLaunchFromTree = (launch: TerraformLaunchRecord): void => {
+    this.selectedLaunchId.set(launch.id)
+    this.setHubTab('launches')
+    if (launch.workspaceId) this.selectWorkspace(launch.workspaceId)
+  }
+
+  handleLaunchSelect = (launchId: string): void => {
+    this.selectedLaunchId.set(launchId)
+    const launch = this.launchDetails().find((l) => l.id === launchId)
+    if (launch?.workspaceId) this.selectWorkspace(launch.workspaceId)
   }
 
   focusInspector = (): void => {
@@ -246,10 +308,224 @@ export class TerraformComponent implements OnInit {
     return HCL_TEMPLATE_AWS
   }
 
+  setHubTab = (tab: TerraformHubTabId): void => {
+    this.hubTab.set(tab)
+  }
+
+  selectProject = (id: string): void => {
+    this.activeProjectId.set(id)
+    const proj = this.projects().find((p) => p.id === id)
+    if (proj) {
+      const ids = proj.workspaceIds.length ? proj.workspaceIds : [proj.workspaceId]
+      const existing = this.runStore.workspaces()
+      const target = ids.find((wid) => existing.some((w) => w.id === wid)) ?? proj.workspaceId
+      this.selectWorkspace(target)
+      this.setHubTab('project')
+    }
+  }
+
   selectWorkspace = (id: string): void => {
     this.runStore.selectWorkspace(id)
+    const proj = findProjectByWorkspaceId(this.projects(), id)
+    if (proj) this.activeProjectId.set(proj.id)
     this.runStore.clearTerminal()
     this.runStore.appendTerminal('cloudops-terraform $ terraform workspace select ' + this.workspaceName())
+  }
+
+  selectProjectEnvironment = (workspaceId: string): void => {
+    this.selectWorkspace(workspaceId)
+    this.setHubTab('deploy')
+  }
+
+  openCreateProject = (): void => {
+    const dialogData: CreateProjectDialogData = { workspaces: this.runStore.workspaces() }
+    this.dialog
+      .open(TerraformCreateProjectDialogComponent, {
+        width: 'min(1040px, 96vw)',
+        maxWidth: '96vw',
+        maxHeight: '95vh',
+        panelClass: 'terraform-create-project-dialog-panel',
+        autoFocus: true,
+        data: dialogData,
+      })
+      .afterClosed()
+      .subscribe((result: CreateProjectDialogResult | undefined) => {
+        if (!result) return
+        this.applyCreateProjectResult(result)
+      })
+  }
+
+  private applyCreateProjectResult = (result: CreateProjectDialogResult): void => {
+    const id = `proj-${Date.now()}`
+    const slug = result.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+    const linkedWs = result.linkWorkspaceId
+      ? this.runStore.workspaces().find((w) => w.id === result.linkWorkspaceId)
+      : null
+    const sourceHcl = linkedWs?.hcl ?? this.hclForProvider(result.provider)
+
+    const envRows = result.environments.map((envId, index) => {
+      const preset = PROJECT_ENV_PRESETS.find((e) => e.id === envId)
+      const wsId =
+        index === 0 && linkedWs
+          ? linkedWs.id
+          : `ws-${id}-${envId}`
+      const wsName =
+        index === 0 && linkedWs
+          ? linkedWs.name
+          : `${slug}-${preset?.workspaceSuffix ?? envId}`
+      return {
+        id: envId,
+        label: preset?.label.toLowerCase() ?? envId,
+        workspace: wsName,
+        workspaceId: wsId,
+        status: 'DRAFT',
+      }
+    })
+
+    const workspaceIds = envRows.map((e) => e.workspaceId)
+    const primaryWsId = envRows[0]?.workspaceId ?? `ws-${id}-dev`
+    const complianceTag =
+      result.complianceTier !== 'standard' ? result.complianceTier : null
+    const tags = [...result.tags]
+    if (complianceTag && !tags.includes(complianceTag)) tags.push(complianceTag)
+    if (!tags.length) tags.push('nuevo')
+
+    const newProj: TerraformProject = {
+      id,
+      name: result.name,
+      folderId: result.folderId,
+      workspaceId: primaryWsId,
+      workspaceIds,
+      description: result.description,
+      providers: [result.provider],
+      stateBackend: result.stateBackend,
+      complianceTier: result.complianceTier,
+      environments: envRows,
+      modules: defaultModulesForProvider(result.provider),
+      automationsCount: 0,
+      deploymentsCount: 0,
+      lastDeploy: new Date().toISOString(),
+      savedAt: new Date().toISOString(),
+      status: 'draft',
+      tags: tags.length ? tags : ['nuevo'],
+    }
+
+    const existingIds = new Set(this.runStore.workspaces().map((w) => w.id))
+    const newWorkspaces: TerraformWorkspaceItem[] = envRows
+      .filter((env) => !existingIds.has(env.workspaceId))
+      .map((env) => ({
+        id: env.workspaceId,
+        name: env.workspace,
+        folderId: result.folderId,
+        provider: result.provider,
+        hcl: sourceHcl,
+        status: 'idle' as const,
+      }))
+
+    if (result.createStarterAutomation) {
+      const stagingEnv =
+        envRows.find((e) => e.id === 'staging') ?? envRows.find((e) => e.id === 'stg') ?? envRows[0]
+      const auto: TerraformAutomation = {
+        id: `auto-${id}`,
+        projectId: id,
+        projectName: result.name,
+        folderId: result.folderId,
+        name: 'Plan nocturno (staging)',
+        trigger: 'cron',
+        schedule: '0 3 * * *',
+        action: 'plan',
+        environment: stagingEnv?.label ?? 'staging',
+        enabled: true,
+        lastRun: new Date().toISOString(),
+        nextRun: 'Mañana 03:00',
+        status: 'SUCCESS',
+      }
+      this.automations.update((list) => [...list, auto])
+      newProj.automationsCount = 1
+    }
+
+    this.projects.update((list) => [...list, newProj])
+    if (newWorkspaces.length) {
+      this.runStore.setWorkspaces([...this.runStore.workspaces(), ...newWorkspaces])
+    }
+    this.activeProjectId.set(id)
+    this.selectWorkspace(primaryWsId)
+    this.expandedFolders.update((s) => new Set(s).add(result.folderId))
+    this.setHubTab('project')
+
+    const extras: string[] = []
+    if (result.createStarterAutomation) extras.push('automatización')
+    if (linkedWs) extras.push(`vinculado a ${linkedWs.name}`)
+    const extraMsg = extras.length ? ` · ${extras.join(' · ')}` : ''
+    this.toast.success(`Proyecto «${result.name}» creado con ${envRows.length} entorno(s)${extraMsg}`)
+  }
+
+  handleSaveProject = (): void => {
+    const proj = this.activeProject()
+    if (!proj) {
+      this.toast.info('Selecciona un proyecto para guardar')
+      return
+    }
+    this.demoActions.simulate('Guardar proyecto', 900, 'Estado y HCL persistidos').subscribe(() => {
+      this.projects.update((list) =>
+        list.map((p) =>
+          p.id === proj.id ? { ...p, savedAt: new Date().toISOString(), status: p.status === 'draft' ? 'healthy' : p.status } : p,
+        ),
+      )
+      this.toast.success(`Proyecto «${proj.name}» guardado`)
+    })
+  }
+
+  handleCreateAutomation = (): void => {
+    const proj = this.activeProject()
+    if (!proj) {
+      this.toast.info('Selecciona un proyecto primero')
+      return
+    }
+    const auto: TerraformAutomation = {
+      id: `auto-${Date.now()}`,
+      projectId: proj.id,
+      projectName: proj.name,
+      folderId: proj.folderId,
+      name: 'Plan programado',
+      trigger: 'cron',
+      schedule: '0 3 * * *',
+      action: 'plan',
+      environment: proj.environments[0]?.label ?? 'staging',
+      enabled: true,
+      lastRun: new Date().toISOString(),
+      nextRun: 'Mañana 03:00',
+      status: 'SUCCESS',
+    }
+    this.automations.update((list) => [...list, auto])
+    this.projects.update((list) =>
+      list.map((p) => (p.id === proj.id ? { ...p, automationsCount: p.automationsCount + 1 } : p)),
+    )
+    this.toast.success('Automatización creada')
+    this.setHubTab('automate')
+  }
+
+  handleToggleAutomation = (id: string): void => {
+    this.automations.update((list) =>
+      list.map((a) =>
+        a.id === id
+          ? { ...a, enabled: !a.enabled, status: !a.enabled ? 'SUCCESS' : 'DISABLED' }
+          : a,
+      ),
+    )
+  }
+
+  handleDeploymentSelect = (dep: TerraformDeploymentRecord): void => {
+    this.openRunDetail({
+      id: dep.id,
+      workspaceName: dep.projectName,
+      provider: 'AWS',
+      status: dep.status,
+      createdAt: dep.createdAt,
+    })
   }
 
   onEditorChange = (hcl: string): void => {
@@ -277,7 +553,7 @@ export class TerraformComponent implements OnInit {
   openLaunch = (): void => {
     this.dialog
       .open(LaunchInstanceModalComponent, {
-        width: '960px',
+        width: 'min(1040px, 96vw)',
         maxWidth: '95vw',
         maxHeight: '95vh',
         panelClass: 'launch-instance-dialog-panel',
@@ -285,10 +561,16 @@ export class TerraformComponent implements OnInit {
       })
       .afterClosed()
       .subscribe((v) => {
-        if (v?.applied) {
-          this.toast.success('Instancia aprovisionada — sincronizando inventario')
-          this.loadPage()
-        }
+        if (!v?.applied) return
+        const launch = v.launch as TerraformLaunchRecord | undefined
+        if (!launch) return
+        this.runStore.addLaunch(launch)
+        const detail = launchDetailFromRecord(launch)
+        this.launchDetails.update((list) => [detail, ...list])
+        this.selectedLaunchId.set(launch.id)
+        this.setHubTab('launches')
+        this.toast.success('Instancia aprovisionada — guardada en carpeta')
+        if (launch.workspaceId) this.selectWorkspace(launch.workspaceId)
       })
   }
 
@@ -398,20 +680,14 @@ export class TerraformComponent implements OnInit {
     })
   }
 
-  statePreview = (): string =>
-    `{
-  "version": 4,
-  "terraform_version": "1.7.0",
-  "serial": 12,
-  "lineage": "demo-workspace",
-  "resources": [
-    {
-      "type": "aws_instance",
-      "name": "web",
-      "provider": "provider[\\"registry.terraform.io/hashicorp/aws\\"]"
+  statePreview = (): string => {
+    const proj = this.activeProject()
+    const ws = this.runStore.activeWorkspace()
+    if (!proj) {
+      return buildStatePreview('terraform-cloud', 'sin-proyecto', ws?.name ?? 'default')
     }
-  ]
-}`
+    return buildStatePreview(proj.stateBackend, proj.name, ws?.name ?? proj.environments[0]?.workspace ?? 'default')
+  }
 
   private ensureRun$ = () => {
     const existing = this.runStore.activeRunId()
@@ -437,7 +713,7 @@ export class TerraformComponent implements OnInit {
     const startH = this.terminalHeight()
     const onMove = (e: MouseEvent): void => {
       const delta = startY - e.clientY
-      this.terminalHeight.set(Math.min(480, Math.max(120, startH + delta)))
+      this.terminalHeight.set(Math.min(560, Math.max(140, startH + delta)))
     }
     const onUp = (): void => {
       window.removeEventListener('mousemove', onMove)
@@ -455,6 +731,14 @@ const mapWorkspaceStatus = (raw: string): TerraformWorkspaceItem['status'] => {
   if (s.includes('FAIL') || s.includes('ERR')) return 'error'
   if (s.includes('RUN')) return 'applying'
   return 'idle'
+}
+
+const inferFolderId = (name: string): string => {
+  const n = name.toLowerCase()
+  if (n.includes('sec') || n.includes('scan')) return 'security'
+  if (n.includes('data') || n.includes('postgres') || n.includes('db')) return 'data'
+  if (n.includes('gcp') || n.includes('azure') || n.includes('infra')) return 'infra'
+  return 'apps'
 }
 
 const dedupeWorkspaces = (list: TerraformWorkspaceItem[]): TerraformWorkspaceItem[] => {

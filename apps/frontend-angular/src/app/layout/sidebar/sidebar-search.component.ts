@@ -35,8 +35,8 @@ import { SidebarService } from './sidebar.service'
       margin: 0.35rem 0.5rem 0.5rem;
       padding: 0.4rem 0.55rem;
       border-radius: 12px;
-      background: color-mix(in srgb, var(--sidebar-primary) 8%, #1a1d2e);
-      box-shadow: var(--app-shadow-xs);
+      background: color-mix(in srgb, var(--sidebar-primary) 8%, transparent);
+      box-shadow: none;
       border: none;
       mat-icon {
         font-size: 1rem;

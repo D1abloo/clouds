@@ -22,23 +22,40 @@ export interface TerraformProviderChip {
           <div>
             <h2>Centro de operaciones IaC</h2>
             <p class="tf-ops__meta">
-              Workspaces aislados · plan → revisión → apply
+              Proyectos guardados · despliegue · automatización
+              @if (activeProjectName) {
+                <span class="tf-ops__active">· {{ activeProjectName }}</span>
+              }
               @if (demoMode) {
                 <span class="tf-ops__demo">Demo</span>
               }
             </p>
           </div>
         </div>
-        <div class="tf-ops__kpis">
-          @for (k of kpis; track k.id) {
-            <div class="kpi" [class]="'kpi--' + k.tone">
-              <mat-icon>{{ k.icon }}</mat-icon>
-              <span class="kpi__val">{{ k.value }}</span>
-              <span class="kpi__lbl">{{ k.label }}</span>
-            </div>
-          }
-        </div>
       </header>
+
+      <div class="tf-ops__actions" aria-label="Acciones rápidas">
+        <button type="button" class="tf-ops__action" (click)="newProject.emit()">
+          <mat-icon>create_new_folder</mat-icon>
+          Nuevo proyecto
+        </button>
+        <button type="button" class="tf-ops__action" (click)="saveProject.emit()">
+          <mat-icon>save</mat-icon>
+          Guardar
+        </button>
+        <button type="button" class="tf-ops__action" (click)="openAutomate.emit()">
+          <mat-icon>schedule</mat-icon>
+          Automatizar
+        </button>
+        <button type="button" class="tf-ops__action" (click)="openLaunches.emit()">
+          <mat-icon>rocket_launch</mat-icon>
+          Lanzamientos
+        </button>
+        <button type="button" class="tf-ops__action tf-ops__action--primary" (click)="openDeploy.emit()">
+          <mat-icon>code</mat-icon>
+          Desplegar
+        </button>
+      </div>
 
       <div class="tf-ops__providers" aria-label="Estado de proveedores">
         @for (p of providers; track p.provider) {
@@ -66,17 +83,25 @@ export interface TerraformProviderChip {
     </section>
   `,
   styles: `
+    :host {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+
     .tf-ops {
       --tf: #844fba;
       --tf-soft: color-mix(in srgb, #844fba 12%, transparent);
-      padding: 1rem 1.15rem;
-      border-radius: var(--app-radius-lg);
-      background: var(--app-card);
+      width: 100%;
+      box-sizing: border-box;
+      padding: clamp(0.35rem, 1vw, 0.5rem) 0 clamp(0.45rem, 1.2vw, 0.6rem);
+      border-radius: 0;
+      background: transparent;
       border: none;
       outline: none;
       box-shadow: none;
       filter: none;
-      margin-bottom: 1rem;
+      margin: 0;
     }
     .tf-ops__head {
       display: flex;
@@ -84,7 +109,7 @@ export interface TerraformProviderChip {
       align-items: flex-start;
       justify-content: space-between;
       gap: 1rem;
-      margin-bottom: 0.85rem;
+      margin-bottom: 0.5rem;
     }
     .tf-ops__brand {
       display: flex;
@@ -111,6 +136,37 @@ export interface TerraformProviderChip {
       background: var(--tf-soft);
       color: var(--tf);
     }
+    .tf-ops__active {
+      font-weight: 600;
+      color: var(--tf);
+    }
+    .tf-ops__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
+    }
+    .tf-ops__action {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.4rem 0.7rem;
+      border: none;
+      border-radius: var(--app-radius-md);
+      background: var(--app-elevated);
+      font: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: inherit;
+      cursor: pointer;
+    }
+    .tf-ops__action mat-icon { font-size: 1rem; width: 1rem; height: 1rem; color: var(--app-text-muted); }
+    .tf-ops__action--primary {
+      background: color-mix(in srgb, #844fba 14%, var(--app-elevated));
+      color: #844fba;
+    }
+    .tf-ops__action--primary mat-icon { color: #844fba; }
+    .tf-ops__action:hover { background: color-mix(in srgb, #844fba 10%, var(--app-elevated)); }
     .tf-ops__kpis {
       display: flex;
       flex-wrap: wrap;
@@ -220,17 +276,15 @@ export class TerraformOverviewComponent {
   @Input({ required: true }) summary!: TerraformPageSummary
   @Input() demoMode = true
   @Input() providers: TerraformProviderChip[] = []
+  @Input() projectsCount = 0
+  @Input() automationsCount = 0
+  @Input() activeProjectName = ''
 
   readonly reviewPlans = output<void>()
+  readonly newProject = output<void>()
+  readonly saveProject = output<void>()
+  readonly openAutomate = output<void>()
+  readonly openDeploy = output<void>()
+  readonly openLaunches = output<void>()
 
-  get kpis(): { id: string; label: string; value: string; icon: string; tone: string }[] {
-    const s = this.summary
-    return [
-      { id: 'ws', label: 'Workspaces', value: String(s.workspaces), icon: 'folder', tone: 'default' },
-      { id: 'runs', label: 'Runs', value: String(s.runs), icon: 'play_circle', tone: 'default' },
-      { id: 'plans', label: 'Planes', value: String(s.plans), icon: 'description', tone: s.plans > 0 ? 'active' : 'default' },
-      { id: 'applies', label: 'Applies', value: String(s.applies), icon: 'check_circle', tone: 'default' },
-      { id: 'errors', label: 'Errores', value: String(s.errors), icon: 'error', tone: s.errors > 0 ? 'warn' : 'default' },
-    ]
-  }
 }

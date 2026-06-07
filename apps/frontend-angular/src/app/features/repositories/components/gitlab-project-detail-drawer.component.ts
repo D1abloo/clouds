@@ -170,7 +170,7 @@ import {
                 <button mat-flat-button class="gl-btn" type="button" (click)="deploy.emit(project)">
                   <mat-icon>rocket_launch</mat-icon> Desplegar proyecto
                 </button>
-                <button mat-stroked-button type="button" (click)="runDemo('Abrir en GitLab')">
+                <button mat-stroked-button type="button" (click)="openExternal.emit(project)">
                   <mat-icon>open_in_new</mat-icon> Abrir en GitLab
                 </button>
               </div>
@@ -677,6 +677,7 @@ export class GitlabProjectDetailDrawerComponent {
   readonly close = output<void>()
   readonly sync = output<string>()
   readonly deploy = output<GitlabProject>()
+  readonly openExternal = output<GitlabProject>()
   readonly viewDeploymentLogs = output<{ id: string }>()
 
   readonly gitlabVisibilityLabel = gitlabVisibilityLabel

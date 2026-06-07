@@ -12,7 +12,6 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
@@ -33,32 +32,7 @@ type VpsRow = VpsHost & {
   disk?: number
 }
 
-@Component({
-  selector: 'app-vps-add-dialog',
-  standalone: true,
-  imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, ReactiveFormsModule],
-  template: `
-    <h2 mat-dialog-title>Add VPS</h2>
-    <mat-dialog-content>
-      <mat-form-field appearance="outline" class="full"><mat-label>Name</mat-label><input matInput [formControl]="name" /></mat-form-field>
-      <mat-form-field appearance="outline" class="full"><mat-label>IP / Host</mat-label><input matInput [formControl]="host" /></mat-form-field>
-      <mat-form-field appearance="outline" class="full"><mat-label>SSH Port</mat-label><input matInput type="number" [formControl]="port" /></mat-form-field>
-      <mat-form-field appearance="outline" class="full"><mat-label>User</mat-label><input matInput [formControl]="user" /></mat-form-field>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close type="button">Cancel</button>
-      <button mat-flat-button color="primary" type="button" [mat-dialog-close]="form()">Add</button>
-    </mat-dialog-actions>
-  `,
-  styles: `.full { width: 100%; }`,
-})
-export class VpsAddDialogComponent {
-  readonly name = new FormControl('demo-vps-new', { nonNullable: true })
-  readonly host = new FormControl('203.0.113.10', { nonNullable: true })
-  readonly port = new FormControl(22, { nonNullable: true })
-  readonly user = new FormControl('ubuntu', { nonNullable: true })
-  form = () => ({ name: this.name.value, host: this.host.value, port: this.port.value, user: this.user.value })
-}
+import { VpsAddDialogComponent, type VpsAddDialogResult } from '../infrastructure/vps-add.dialog'
 
 @Component({
   selector: 'app-vps-command-dialog',
@@ -95,7 +69,6 @@ export class VpsCommandDialogComponent {
     ReactiveFormsModule,
     RouterLink,
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -125,20 +98,15 @@ export class VpsCommandDialogComponent {
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else {
-        <div class="summary-grid app-section-panel stagger-children">
-          <app-summary-card title="Total VPS" [value]="hosts().length" icon="dns" variant="elevated" />
-          <app-summary-card title="Connected" [value]="connected()" icon="link" variant="elevated" />
-          <app-summary-card title="Disconnected" [value]="disconnected()" icon="link_off" iconColor="warn" variant="elevated" />
-          <app-summary-card title="With Docker" [value]="withDocker()" icon="view_in_ar" variant="elevated" />
-          <app-summary-card title="With Kubernetes" [value]="withK8s()" icon="hub" variant="elevated" />
-          <app-summary-card title="Alerts" [value]="2" icon="warning" iconColor="warn" variant="elevated" />
-        </div>
-
         <div class="table-card">
         <mat-tab-group class="soft-tabs" animationDuration="280ms">
           <mat-tab label="Servers">
             <div class="tab-panel">
-              <mat-form-field appearance="outline"><mat-label>Search</mat-label><input matInput [formControl]="searchControl" /></mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Buscar servidores VPS</mat-label>
+                <input matInput [formControl]="searchControl" placeholder="Nombre o IP…" aria-label="Filtrar hosts VPS" />
+                <mat-hint>Filtra por nombre del host o dirección IP</mat-hint>
+              </mat-form-field>
               @if (filtered().length === 0) {
                 <app-empty-state title="No VPS hosts" description="Add a VPS or load demo data." />
               } @else {
@@ -235,10 +203,18 @@ export class VpsListComponent implements OnInit {
 
   handleHeader = (label: string): void => {
     if (label === 'Add VPS') {
-      this.dialog.open(VpsAddDialogComponent, { width: '400px' }).afterClosed().subscribe((v) => {
-        if (!v) return
-        this.demoActions.simulate(`Add VPS ${v.name}`, 800, 'VPS added (demo)').subscribe(() => this.load())
-      })
+      this.dialog
+        .open(VpsAddDialogComponent, {
+          width: '860px',
+          maxWidth: '96vw',
+          maxHeight: '92vh',
+          data: { existingNames: this.hosts().map((h) => h.name) },
+        })
+        .afterClosed()
+        .subscribe((payload: VpsAddDialogResult | undefined) => {
+          if (!payload) return
+          this.demoActions.simulate(`Add VPS ${payload.name}`, 900, 'VPS added (demo)').subscribe(() => this.load())
+        })
       return
     }
     this.demoActions.simulate('Validate all VPS', 1500).subscribe()

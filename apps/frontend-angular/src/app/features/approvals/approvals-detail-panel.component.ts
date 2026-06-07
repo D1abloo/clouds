@@ -656,21 +656,29 @@ type DetailTab = 'resumen' | 'cadena' | 'payload' | 'actividad'
     .apr-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.28rem;
-      padding: 0.38rem 0.65rem;
-      border: none;
+      justify-content: center;
+      gap: 0.4rem;
+      width: fit-content;
+      height: fit-content;
+      min-height: unset;
+      margin: 0;
+      padding: 0.42rem 0.55rem;
       border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
       font: inherit;
-      font-size: 0.68rem;
+      font-size: 0.76rem;
       font-weight: 600;
+      line-height: 1.25;
+      box-sizing: border-box;
       cursor: pointer;
     }
-    .apr-btn mat-icon { font-size: 0.9rem; width: 0.9rem; height: 0.9rem; }
-    .apr-btn--ghost { background: #f1f5f9; color: #475569; }
-    .apr-btn--ghost:hover { background: #e2e8f0; }
-    .apr-btn--danger { background: #fef2f2; color: #dc2626; }
+    .apr-btn mat-icon { display: block; margin: 0; font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
+    .apr-btn--ghost { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+    .apr-btn--ghost:hover { background: #f1f5f9; }
+    .apr-btn--danger { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
     .apr-btn--danger:hover { background: #fee2e2; }
-    .apr-btn--primary { background: #1e293b; color: #fff; }
+    .apr-btn--primary { background: #1e293b; border-color: #0f172a; color: #fff; }
     .apr-btn--primary:hover { background: #0f172a; }
 
     .apr-panel--empty {

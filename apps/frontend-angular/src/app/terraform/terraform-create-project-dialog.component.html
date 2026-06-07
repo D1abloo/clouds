@@ -1,0 +1,216 @@
+<div class="tf-new-proj">
+  <header class="tf-new-proj__header">
+    <div class="tf-new-proj__title">
+      <app-brand-logo logo="terraform" size="lg" />
+      <div>
+        <h2>Nuevo proyecto Terraform</h2>
+        <p>Agrupa workspaces, HCL, planes y automatizaciones en un solo proyecto.</p>
+      </div>
+    </div>
+    <button type="button" class="tf-new-proj__close" mat-dialog-close aria-label="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="tf-new-proj__body">
+    <form [formGroup]="form" class="tf-new-proj__form">
+      <section class="tf-new-proj__block">
+        <h3>Identidad</h3>
+        <label class="tf-field tf-field--wide">
+          <span>Nombre del proyecto</span>
+          <input class="tf-control tf-control--lg" formControlName="name" placeholder="API Gateway producción" />
+          <span class="tf-field__hint mono">ID: {{ projectSlug() }}</span>
+        </label>
+        <label class="tf-field tf-field--wide">
+          <span>Descripción</span>
+          <textarea class="tf-control" formControlName="description" rows="3" placeholder="Qué infraestructura gestiona este proyecto…"></textarea>
+        </label>
+        <label class="tf-field tf-field--wide">
+          <span>Tags (separados por coma)</span>
+          <input class="tf-control" formControlName="tags" placeholder="tier-1, team=platform, cost-center=eng" />
+        </label>
+      </section>
+
+      <section class="tf-new-proj__block">
+        <h3>Proveedor principal</h3>
+        <div class="tf-providers" role="radiogroup" aria-label="Proveedor cloud">
+          @for (p of providers; track p) {
+            <button
+              type="button"
+              class="tf-provider"
+              role="radio"
+              [attr.aria-checked]="formState().provider === p"
+              [class.tf-provider--on]="formState().provider === p"
+              (click)="selectProvider(p)"
+            >
+              <span class="tf-provider__mark" aria-hidden="true"></span>
+              <app-brand-logo [logo]="providerLogo(p)" size="xl" />
+              <span class="tf-provider__body">
+                <strong>{{ p }}</strong>
+                <span>{{ providerInfo(p).tagline }}</span>
+              </span>
+            </button>
+          }
+        </div>
+        <p class="tf-note">{{ providerInfo(formState().provider).modules }} · state recomendado: {{ suggestedBackendLabel() }}</p>
+      </section>
+
+      <section class="tf-new-proj__block">
+        <h3>Organización</h3>
+        <div class="tf-folders">
+          @for (folder of folders; track folder.id) {
+            <button
+              type="button"
+              class="tf-folder"
+              [class.tf-folder--on]="formState().folderId === folder.id"
+              (click)="selectFolder(folder.id)"
+            >
+              <mat-icon>{{ folder.icon }}</mat-icon>
+              <span>
+                <strong>{{ folder.label }}</strong>
+                <span class="mono">{{ folder.path }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="tf-new-proj__block">
+        <h3>Entornos iniciales</h3>
+        <p class="tf-note">Se creará un workspace Terraform por cada entorno seleccionado.</p>
+        <div class="tf-env-chips">
+          @for (env of envPresets; track env.id) {
+            <button
+              type="button"
+              class="tf-chip"
+              [class.tf-chip--on]="isEnvSelected(env.id)"
+              (click)="toggleEnv(env.id)"
+            >
+              {{ env.label }}
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="tf-new-proj__block">
+        <h3>Configuración avanzada</h3>
+        <div class="tf-grid">
+          <label class="tf-field">
+            <span>Backend de state</span>
+            <select class="tf-control" formControlName="stateBackend">
+              @for (b of availableBackends(); track b.id) {
+                <option [value]="b.id">{{ b.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="tf-field">
+            <span>Cumplimiento</span>
+            <select class="tf-control" formControlName="complianceTier">
+              @for (t of complianceTiers; track t.id) {
+                <option [value]="t.id">{{ t.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <label class="tf-check">
+          <input type="checkbox" formControlName="createStarterAutomation" />
+          <span>
+            <strong>Automatización inicial</strong>
+            <span class="tf-check__sub">Plan nocturno en staging (cron demo)</span>
+          </span>
+        </label>
+        <label class="tf-check">
+          <input type="checkbox" formControlName="linkExistingWorkspace" />
+          <span>
+            <strong>Vincular workspace existente</strong>
+            <span class="tf-check__sub">Reutilizar HCL ya presente en la carpeta</span>
+          </span>
+        </label>
+        @if (formState().linkExistingWorkspace) {
+          @if (folderWorkspaces().length) {
+            <label class="tf-field tf-field--wide">
+              <span>Workspace en «{{ selectedFolder()?.label }}»</span>
+              <select class="tf-control" formControlName="linkWorkspaceId">
+                @for (ws of folderWorkspaces(); track ws.id) {
+                  <option [value]="ws.id">{{ ws.name }} · {{ ws.provider }}</option>
+                }
+              </select>
+              <span class="tf-field__hint">El primer entorno usará este workspace; el resto copiará su HCL.</span>
+            </label>
+          } @else {
+            <p class="tf-note tf-note--warn">No hay workspaces en esta carpeta. Desactiva la vinculación o elige otra carpeta.</p>
+          }
+        }
+      </section>
+    </form>
+
+    <aside class="tf-new-proj__preview" aria-label="Vista previa del proyecto">
+      <h3>Vista previa</h3>
+      <div class="tf-preview-hero">
+        <app-brand-logo [logo]="providerLogo(formState().provider)" size="lg" />
+        <div>
+          <strong>{{ formState().name || 'Sin nombre' }}</strong>
+          <span class="mono">{{ selectedFolder()?.path }}</span>
+        </div>
+        <span class="tf-preview-hero__pct">{{ readinessPct() }}%</span>
+      </div>
+
+      <div class="tf-readiness">
+        <div class="tf-readiness__bar"><span [style.width.%]="readinessPct()"></span></div>
+        <ul>
+          @for (item of readinessItems(); track item.id) {
+            <li [class.tf-readiness__done]="item.done">
+              <mat-icon>{{ item.done ? 'check' : 'radio_button_unchecked' }}</mat-icon>
+              {{ item.label }}
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div class="tf-preview-group">
+        <h4>Workspaces</h4>
+        @if (previewWorkspaces().length) {
+          <ul class="tf-preview-ws">
+            @for (ws of previewWorkspaces(); track ws) {
+              <li class="mono">{{ ws }}</li>
+            }
+          </ul>
+        } @else {
+          <p class="tf-note">Selecciona al menos un entorno.</p>
+        }
+      </div>
+
+      <dl class="tf-preview-facts">
+        <div><dt>Proveedor</dt><dd>{{ formState().provider }}</dd></div>
+        <div><dt>State</dt><dd>{{ suggestedBackendLabel() }}</dd></div>
+        <div><dt>Entornos</dt><dd>{{ formState().environments.length }}</dd></div>
+        <div><dt>Cumplimiento</dt><dd>{{ complianceLabel() }}</dd></div>
+        <div><dt>Auto</dt><dd>{{ formState().createStarterAutomation ? 'Sí' : 'No' }}</dd></div>
+        <div><dt>Vinculado</dt><dd>{{ formState().linkExistingWorkspace && linkedWorkspace() ? linkedWorkspace()!.name : 'Nuevo' }}</dd></div>
+      </dl>
+
+      @if (parsedTags().length) {
+        <div class="tf-preview-tags">
+          @for (tag of parsedTags(); track tag) {
+            <span>{{ tag }}</span>
+          }
+        </div>
+      }
+
+      <p class="tf-preview-foot">
+        Al crear, el proyecto quedará en estado <strong>borrador</strong> hasta el primer guardado.
+      </p>
+    </aside>
+  </div>
+
+  <footer class="tf-new-proj__footer">
+    <span class="tf-new-proj__footer-hint">{{ readinessPct() }}% completado · {{ previewWorkspaces().length }} workspace(s)</span>
+    <div class="tf-new-proj__footer-actions">
+      <button type="button" class="tf-btn tf-btn--ghost" mat-dialog-close>Cancelar</button>
+      <button type="button" class="tf-btn tf-btn--primary" [disabled]="!canSubmit()" (click)="submit()">
+        <mat-icon>create_new_folder</mat-icon>
+        Crear proyecto
+      </button>
+    </div>
+  </footer>
+</div>

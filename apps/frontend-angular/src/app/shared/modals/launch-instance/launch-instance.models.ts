@@ -39,6 +39,8 @@ export interface LaunchInstanceFormState {
   tags: string
   gcpZone: string
   azureSubscription: string
+  folderId: string
+  targetWorkspaceId: string
 }
 
 export const DEFAULT_LAUNCH_FORM = (): LaunchInstanceFormState => ({
@@ -80,4 +82,6 @@ export const DEFAULT_LAUNCH_FORM = (): LaunchInstanceFormState => ({
   tags: 'env=production,team=platform',
   gcpZone: 'europe-west1-b',
   azureSubscription: 'CloudOps Production',
+  folderId: 'apps',
+  targetWorkspaceId: 'ws-aws-stg',
 })

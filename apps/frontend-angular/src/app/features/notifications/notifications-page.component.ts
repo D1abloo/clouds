@@ -12,13 +12,13 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
+import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { NotificationsService } from '../../core/services/notifications.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { NotificationItem } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
 
@@ -29,7 +29,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
     DatePipe,
     ReactiveFormsModule,
     PageHeaderComponent,
-    SummaryCardComponent,
+    NavIconComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -45,40 +45,47 @@ import { createPageLoader } from '../../core/utils/page-load.util'
   template: `
     <div class="page-container">
       <app-page-header
-        title="Notifications"
-        description="In-app alerts and channel configuration"
+        title="Notificaciones"
+        description="Alertas in-app y configuración de canales"
+        icon="notifications"
+        [demoMode]="true"
         [actions]="[
-          { label: 'Mark all read', icon: 'done_all', primary: true },
-          { label: 'Refresh', icon: 'refresh' },
+          { label: 'Marcar todas leídas', icon: 'done_all', primary: true },
+          { label: 'Actualizar', icon: 'refresh' },
         ]"
         (actionClick)="handleHeader($event)"
       />
 
-      <div class="summary-grid app-section-panel stagger-children page-section">
-        <app-summary-card title="Unread" [value]="unreadCount()" icon="mark_email_unread" variant="elevated" />
-        <app-summary-card title="Total" [value]="items().length" icon="inbox" variant="elevated" />
-        <app-summary-card title="Critical" [value]="criticalCount()" icon="error" iconColor="warn" variant="elevated" />
-        <app-summary-card title="Channels" [value]="5" icon="settings_ethernet" variant="elevated" />
+      <div class="notif-bar">
+        <app-nav-icon logo="grafana" size="md" />
+        <div>
+          <strong>Centro de notificaciones</strong>
+          <span>{{ unreadCount() }} sin leer · Email · Slack · Webhook · In-app</span>
+        </div>
       </div>
 
       <div class="table-card">
       <mat-tab-group class="soft-tabs" animationDuration="280ms">
-        <mat-tab label="Inbox">
+        <mat-tab label="Bandeja">
           <div class="tab-panel">
             <div class="filter-row">
-              <mat-form-field appearance="outline"><mat-label>Search</mat-label><input matInput [formControl]="searchControl" /></mat-form-field>
-              <mat-form-field appearance="outline"><mat-label>Status</mat-label>
+              <mat-form-field appearance="outline">
+                <mat-label>Buscar notificaciones</mat-label>
+                <input matInput [formControl]="searchControl" placeholder="Título o mensaje…" aria-label="Filtrar notificaciones" />
+                <mat-hint>Busca en el título y el cuerpo del aviso</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Estado</mat-label>
                 <mat-select [formControl]="readControl">
-                  <mat-option value="">All</mat-option>
-                  <mat-option value="unread">Unread</mat-option>
-                  <mat-option value="read">Read</mat-option>
+                  <mat-option value="">Todas</mat-option>
+                  <mat-option value="unread">No leídas</mat-option>
+                  <mat-option value="read">Leídas</mat-option>
                 </mat-select>
               </mat-form-field>
-              <mat-form-field appearance="outline"><mat-label>Severity</mat-label>
+              <mat-form-field appearance="outline"><mat-label>Severidad</mat-label>
                 <mat-select [formControl]="severityControl">
-                  <mat-option value="">All</mat-option>
-                  <mat-option value="critical">Critical</mat-option>
-                  <mat-option value="warning">Warning</mat-option>
+                  <mat-option value="">Todas</mat-option>
+                  <mat-option value="critical">Crítica</mat-option>
+                  <mat-option value="warning">Advertencia</mat-option>
                   <mat-option value="info">Info</mat-option>
                 </mat-select>
               </mat-form-field>
@@ -89,7 +96,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             } @else if (page.error()) {
               <app-error-state [message]="page.error()!" (retry)="load()" />
             } @else if (filtered().length === 0) {
-              <app-empty-state icon="notifications_none" title="No notifications" description="You're all caught up." />
+              <app-empty-state icon="notifications_none" title="Sin notificaciones" description="Estás al día." />
             } @else {
               <mat-list class="notification-list table-card">
                 @for (item of filtered(); track item.id) {
@@ -100,10 +107,10 @@ import { createPageLoader } from '../../core/utils/page-load.util'
                     <div matListItemMeta class="meta">
                       <span class="date">{{ item.createdAt | date: 'short' }}</span>
                       @if (!item.read) {
-                        <button mat-button type="button" (click)="handleMarkRead(item)">Mark read</button>
+                        <button mat-button type="button" (click)="handleMarkRead(item)">Marcar leída</button>
                       }
-                      <button mat-icon-button type="button" aria-label="Delete" (click)="handleDelete(item)"><mat-icon>delete</mat-icon></button>
-                      <button mat-icon-button type="button" aria-label="View resource" (click)="viewResource(item)"><mat-icon>open_in_new</mat-icon></button>
+                      <button mat-icon-button type="button" aria-label="Eliminar" (click)="handleDelete(item)"><mat-icon>delete</mat-icon></button>
+                      <button mat-icon-button type="button" aria-label="Ver recurso" (click)="viewResource(item)"><mat-icon>open_in_new</mat-icon></button>
                     </div>
                   </mat-list-item>
                 }
@@ -111,13 +118,14 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             }
           </div>
         </mat-tab>
-        <mat-tab label="Channels">
+        <mat-tab label="Canales">
           <div class="tab-panel channels">
-            <div class="channel-row"><span>In-app</span><mat-slide-toggle checked disabled /></div>
-            <div class="channel-row"><span>Email</span><mat-slide-toggle checked (change)="toggleChannel('email')" /></div>
-            <div class="channel-row"><span>Webhook</span><mat-slide-toggle (change)="toggleChannel('webhook')" /></div>
-            <div class="channel-row"><span>Slack (demo)</span><mat-slide-toggle checked (change)="toggleChannel('slack')" /></div>
-            <div class="channel-row"><span>Teams (demo)</span><mat-slide-toggle (change)="toggleChannel('teams')" /></div>
+            <p class="channels-lead">Enrutamiento de alertas, incidentes y cambios a canales externos.</p>
+            <div class="channel-row"><span><mat-icon>notifications</mat-icon> In-app</span><mat-slide-toggle checked disabled /></div>
+            <div class="channel-row"><span><mat-icon>email</mat-icon> Email</span><mat-slide-toggle checked (change)="toggleChannel('email')" /></div>
+            <div class="channel-row"><span><mat-icon>webhook</mat-icon> Webhook</span><mat-slide-toggle (change)="toggleChannel('webhook')" /></div>
+            <div class="channel-row"><span><mat-icon>tag</mat-icon> Slack (demo)</span><mat-slide-toggle checked (change)="toggleChannel('slack')" /></div>
+            <div class="channel-row"><span><mat-icon>groups</mat-icon> Teams (demo)</span><mat-slide-toggle (change)="toggleChannel('teams')" /></div>
           </div>
         </mat-tab>
       </mat-tab-group>
@@ -125,11 +133,20 @@ import { createPageLoader } from '../../core/utils/page-load.util'
     </div>
   `,
   styles: `
+    .notif-bar {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.65rem 0.85rem; margin-bottom: 0.85rem;
+      border-left: 3px solid #10b981; background: color-mix(in srgb, #10b981 5%, transparent);
+      strong { display: block; font-size: 0.82rem; }
+      span { font-size: 0.68rem; color: var(--app-text-muted); }
+    }
     .notification-list { padding: 0; }
     .unread { background: color-mix(in srgb, var(--app-accent) 8%, transparent); border-radius: var(--app-radius-sm); }
     .meta { display: flex; align-items: center; gap: 0.25rem; }
     .date { font-size: 0.75rem; color: var(--app-text-muted); }
-    .channels { max-width: 480px; padding: 0.5rem 1rem; }
+    .channels { max-width: 520px; padding: 0.5rem 1rem; }
+    .channels-lead { font-size: 0.82rem; color: var(--app-text-muted); margin: 0 0 0.75rem; }
+    .channel-row span { display: flex; align-items: center; gap: 0.35rem; mat-icon { font-size: 1rem; width: 1rem; height: 1rem; color: var(--app-text-muted); } }
     .channel-row {
       display: flex; justify-content: space-between; align-items: center;
       padding: 0.85rem 1rem; margin-bottom: 0.5rem;
@@ -142,7 +159,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
 export class NotificationsPageComponent implements OnInit {
   private readonly service = inject(NotificationsService)
   private readonly toast = inject(ToastService)
-  private readonly demoActions = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
 
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly readControl = new FormControl('', { nonNullable: true })
@@ -164,7 +181,6 @@ export class NotificationsPageComponent implements OnInit {
   })
 
   unreadCount = computed(() => this.items().filter((i) => !i.read).length)
-  criticalCount = computed(() => this.items().filter((i) => (i as { severity?: string }).severity === 'critical').length)
 
   ngOnInit(): void {
     this.load()
@@ -178,8 +194,12 @@ export class NotificationsPageComponent implements OnInit {
   }
 
   handleHeader = (label: string): void => {
-    if (label === 'Mark all read') {
-      this.demoActions.simulate('Mark all read', 500, 'All notifications marked as read').subscribe(() => this.load())
+    if (label === 'Marcar todas leídas') {
+      this.actions.runPageAction('notifications', 'mark-all-read', label, {
+        count: this.unreadCount(),
+        area: 'observability',
+      })
+      this.load()
       return
     }
     this.load()
@@ -187,22 +207,42 @@ export class NotificationsPageComponent implements OnInit {
 
   handleMarkRead = (item: NotificationItem): void => {
     this.service.markRead(item.id).subscribe({
-      next: () => this.load(),
-      error: () => this.demoActions.simulate('Mark read', 300).subscribe(() => this.load()),
+      next: () => {
+        this.actions.runPageAction('notifications', 'mark-read', 'Marcar leída', {
+          row: item as unknown as Record<string, unknown>,
+          area: 'observability',
+        })
+        this.load()
+      },
+      error: () => {
+        this.actions.runPageAction('notifications', 'mark-read', 'Marcar leída', {
+          row: item as unknown as Record<string, unknown>,
+          area: 'observability',
+        })
+        this.load()
+      },
     })
   }
 
   handleDelete = (item: NotificationItem): void => {
-    this.demoActions.simulate(`Delete notification`, 400, 'Notification removed').subscribe(() =>
-      this.items.update((list) => list.filter((i) => i.id !== item.id)),
-    )
+    this.actions.runPageAction('notifications', 'delete', 'Eliminar notificación', {
+      row: item as unknown as Record<string, unknown>,
+      area: 'observability',
+    })
+    this.items.update((list) => list.filter((i) => i.id !== item.id))
   }
 
   viewResource = (item: NotificationItem): void => {
-    this.demoActions.simulate(`Open resource for ${item.title}`, 300).subscribe()
+    this.actions.runPageAction('notifications', 'detail', item.title, {
+      row: item as unknown as Record<string, unknown>,
+      area: 'observability',
+    })
   }
 
   toggleChannel = (channel: string): void => {
-    this.demoActions.simulate(`Toggle ${channel} channel`, 300).subscribe()
+    this.actions.runPageAction('notifications', 'channel-toggle', `Canal ${channel}`, {
+      row: { channel },
+      area: 'observability',
+    })
   }
 }

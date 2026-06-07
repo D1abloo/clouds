@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
 import { MatMenuModule } from '@angular/material/menu'
 import { MatDividerModule } from '@angular/material/divider'
+import { AppLogoComponent } from '../../shared/components/app-logo/app-logo.component'
 import { SidebarService } from './sidebar.service'
 import { OrgSwitcherComponent } from './org-switcher.component'
 import {
@@ -35,6 +36,7 @@ import { AuthStore } from '../../core/stores/auth.store'
     SidebarNavGroupComponent,
     SidebarNavLeafComponent,
     SidebarSearchComponent,
+    AppLogoComponent,
   ],
   template: `
     <aside class="app-sidebar" [class.app-sidebar--collapsed]="collapsed()">
@@ -51,9 +53,7 @@ import { AuthStore } from '../../core/stores/auth.store'
 
       <div class="sidebar-top">
         <div class="sidebar-brand">
-          <div class="sidebar-brand__logo">
-            <mat-icon>cloud_queue</mat-icon>
-          </div>
+          <app-logo size="md" />
           @if (!collapsed()) {
             <div class="sidebar-brand__text">
               <strong>CloudOps</strong>
@@ -157,7 +157,7 @@ import { AuthStore } from '../../core/stores/auth.store'
       flex-shrink: 0;
       overflow: hidden;
       background: var(--sidebar-bg);
-      box-shadow: 4px 0 32px rgba(0, 0, 0, 0.22);
+      box-shadow: none;
       border: none;
       transition: width 0.28s ease;
     }
@@ -193,17 +193,6 @@ import { AuthStore } from '../../core/stores/auth.store'
       align-items: center;
       gap: 0.65rem;
       padding: 1rem 0.85rem 0.35rem;
-    }
-    .sidebar-brand__logo {
-      width: 38px;
-      height: 38px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #818cf8, #6366f1);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
-      mat-icon { color: #fff; font-size: 1.2rem; }
     }
     .sidebar-brand__text {
       strong { display: block; font-size: 0.92rem; color: var(--sidebar-text); }

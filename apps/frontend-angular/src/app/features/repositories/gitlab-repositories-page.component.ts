@@ -2,7 +2,6 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl } from '@angular/forms'
 import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { GitlabService } from '../../core/services/gitlab.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
@@ -17,22 +16,25 @@ import {
 import { GitlabProjectDetailDrawerComponent } from './components/gitlab-project-detail-drawer.component'
 import { GitlabSectionComponent } from './sections/gitlab-section.component'
 import { GitlabDeployDialogComponent } from './components/gitlab-deploy-dialog.component'
+import { GitlabAccountDialogComponent } from './components/gitlab-account-dialog.component'
 import { GithubLogsPanelComponent } from './components/github-logs-panel.component'
 import { REPOSITORIES_SECTION_META } from './repositories-section.config'
+import { RepositoriesActionService } from './repositories-action.service'
+import { RepositoriesCrossNavComponent } from './components/repositories-cross-nav.component'
 
 @Component({
   selector: 'app-gitlab-repositories-page',
   standalone: true,
   imports: [
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
     GitlabProjectDetailDrawerComponent,
     GitlabSectionComponent,
     GithubLogsPanelComponent,
+    RepositoriesCrossNavComponent,
   ],
   template: `
-    <div class="page-container page-container--gitlab">
+    <div class="page-container page-container--gitlab repo-module-page">
       <app-page-header
         [title]="meta.title"
         [description]="meta.description"
@@ -40,15 +42,11 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
         (actionClick)="handleHeader($event)"
       />
 
+      <app-repositories-cross-nav activeId="gitlab" />
+
       @if (loading()) {
         <app-loading-state message="Cargando GitLab…" />
       } @else {
-        <div class="summary-grid app-section-panel stagger-children">
-          @for (card of meta.summaryCards; track card.title) {
-            <app-summary-card [title]="card.title" [value]="metric(card.valueKey)" [icon]="card.icon" variant="elevated" />
-          }
-        </div>
-
         <app-gitlab-section
           [projects]="projects()"
           [groups]="groups()"
@@ -56,16 +54,16 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
           [demoMode]="demoMode()"
           [syncStatus]="syncStatus()"
           [projectControl]="projectControl"
-          (addAccount)="runDemo('Añadir cuenta GitLab')"
+          (addAccount)="openAddAccount()"
           (connectDemo)="connectDemo()"
           (validate)="validate()"
           (sync)="syncProjects()"
           (openDetail)="openDrawer($event)"
           (deploy)="openDeploy($event)"
-          (openExternal)="runDemo('Abrir en GitLab')"
-          (viewMrs)="runDemo('Ver merge requests')"
-          (viewPipelines)="runDemo('Ver pipelines')"
-          (createWebhook)="runDemo('Crear webhook GitLab')"
+          (openExternal)="repoActions.openGitlab($event)"
+          (viewMrs)="repoActions.viewGitlabMrs()"
+          (viewPipelines)="repoActions.viewGitlabPipelines()"
+          (createWebhook)="repoActions.createWebhook()"
           (viewLogs)="openGitlabLogs()"
         />
       }
@@ -79,6 +77,7 @@ import { REPOSITORIES_SECTION_META } from './repositories-section.config'
       (close)="closeDrawer()"
       (sync)="syncProjects()"
       (deploy)="openDeploy($event)"
+      (openExternal)="repoActions.openGitlab($event)"
       (viewDeploymentLogs)="viewDeploymentLogs($event)"
     />
 
@@ -94,6 +93,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   private readonly gitlab = inject(GitlabService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
+  readonly repoActions = inject(RepositoriesActionService)
 
   readonly meta = REPOSITORIES_SECTION_META.gitlab
   readonly projectControl = new FormControl<string>('', { nonNullable: true })
@@ -115,16 +115,6 @@ export class GitlabRepositoriesPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.connectDemo()
-  }
-
-  metric = (key: string): number => {
-    const map: Record<string, number> = {
-      gitlabProjectCount: this.projects().length,
-      gitlabPipelineCount: 4,
-      gitlabOpenMrs: CLIENT_DEMO_GITLAB_MRS.filter((m) => m['state'] === 'opened').length,
-      gitlabRunnerCount: 3,
-    }
-    return map[key] ?? 0
   }
 
   connectDemo = (): void => {
@@ -158,9 +148,50 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   syncProjects = (): void => {
     this.gitlab.syncProjects().subscribe({
       next: (r) => {
+        if (r.projects?.length) this.projects.set(r.projects)
         this.account.update((a) => (a ? { ...a, lastSyncAt: r.lastSyncAt } : a))
         this.runDemo('Sincronización GitLab', r.message)
       },
+    })
+  }
+
+  openAddAccount = (): void => {
+    const ref = this.dialog.open(GitlabAccountDialogComponent, {
+      width: '880px',
+      maxWidth: '96vw',
+      maxHeight: '92vh',
+    })
+    ref.afterClosed().subscribe((body) => {
+      if (!body) return
+      this.gitlab.createAccount(body).subscribe({
+        next: (acc) => {
+          this.account.set(acc)
+          this.demoMode.set(body.useDemoData)
+          if (body.syncOnConnect) {
+            this.gitlab
+              .syncProjects({
+                scopes: body.scopes,
+                projectScope: body.projectScope,
+                groupPath: body.groupPath,
+                accountType: body.accountType,
+              })
+              .subscribe({
+                next: (sync) => {
+                  if (sync.projects?.length) {
+                    this.projects.set(sync.projects)
+                    this.projectControl.setValue(sync.projects[0].id)
+                  }
+                  this.runDemo(
+                    'Cuenta GitLab añadida',
+                    `${body.label} · ${sync.synced} proyectos según permisos`,
+                  )
+                },
+              })
+          } else {
+            this.runDemo('Cuenta GitLab añadida', body.label)
+          }
+        },
+      })
     })
   }
 
@@ -206,19 +237,25 @@ export class GitlabRepositoriesPageComponent implements OnInit {
 
   openDeploy = (project: GitlabProject): void => {
     const ref = this.dialog.open(GitlabDeployDialogComponent, {
-      width: '440px',
-      data: { projectPath: project.fullPath, defaultBranch: project.defaultBranch },
+      width: '920px',
+      maxWidth: '96vw',
+      maxHeight: '92vh',
+      data: { project },
     })
     ref.afterClosed().subscribe((result) => {
       if (!result) return
-      this.runDemo(
-        'Despliegue GitLab',
-        `${project.name} → ${result.environment} @ ${result.targetType}`,
-      )
+      const summary = [
+        result.projectPath,
+        `${result.refType}:${result.branch}`,
+        result.environment,
+        result.strategy,
+        result.targetName,
+      ].join(' · ')
+      this.runDemo('Despliegue GitLab', summary)
       this.gitlab.deploymentLogs('gl-dep-demo').subscribe({
         next: (r) => {
           this.logsText.set(r.logs)
-          this.logsTitle.set(project.fullPath)
+          this.logsTitle.set(`${project.fullPath} → ${result.environment}`)
           this.logsOpen.set(true)
         },
       })
@@ -229,7 +266,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
     if (label.includes('Conectar demo')) this.connectDemo()
     else if (label.includes('Sincronizar')) this.syncProjects()
     else if (label.includes('Validar')) this.validate()
-    else if (label.includes('Añadir')) this.runDemo(label)
+    else if (label.includes('Añadir')) this.openAddAccount()
     else this.runDemo(label)
   }
 

@@ -88,6 +88,21 @@ export const cloudSectionTabs = (provider: string): AreaNavTab[] => {
   return branch?.children ?? []
 }
 
+/** Subpestañas visibles al estar dentro de /runbooks (catálogo y ejecuciones). */
+export const RUNBOOKS_SECTION_TABS: AreaNavTab[] = [
+  { id: 'catalog', label: 'Catálogo', route: '/runbooks', icon: 'auto_stories' },
+  {
+    id: 'executions',
+    label: 'Ejecuciones',
+    route: '/runbooks/executions',
+    icon: 'history',
+    badgeKey: 'runbooks-executions',
+  },
+]
+
+export const isRunbooksSectionPath = (path: string): boolean =>
+  path === '/runbooks' || path.startsWith('/runbooks/')
+
 const prefix =
   (...prefixes: string[]) =>
   (path: string): boolean =>
@@ -170,7 +185,8 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
       { id: 'jenkins', label: 'Jenkins', route: '/jenkins/jobs', logo: 'jenkins', badgeKey: 'jenkins' },
       { id: 'terraform', label: 'Terraform', route: '/terraform/workspaces', logo: 'terraform' },
       { id: 'deployments', label: 'Despliegues', route: '/deployments', icon: 'rocket_launch', badgeKey: 'deployments' },
-      { id: 'terminal', label: 'Terminal', route: '/terminal/active-sessions', icon: 'terminal' },
+      { id: 'active-sessions', label: 'Sesiones activas', route: '/terminal/active-sessions', icon: 'terminal' },
+      { id: 'history', label: 'Historial', route: '/terminal/history', icon: 'history' },
       { id: 'runbooks', label: 'Runbooks', route: '/runbooks', icon: 'auto_stories' },
       { id: 'scheduler', label: 'Programador', route: '/scheduler', icon: 'event_repeat', badgeKey: 'scheduler' },
       { id: 'catalog', label: 'Catálogo de servicios', route: '/service-catalog', icon: 'apps' },

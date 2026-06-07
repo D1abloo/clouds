@@ -1,0 +1,191 @@
+/* Botones de acción — alineados con sidebar (.nav-leaf) */
+.page-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: fit-content;
+  max-width: max-content;
+  height: fit-content;
+  min-height: unset;
+  margin: 0;
+  padding: 0.42rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  color: #475569;
+  white-space: nowrap;
+  box-sizing: border-box;
+  vertical-align: baseline;
+  appearance: none;
+  transition: background 0.12s, border-color 0.12s;
+
+  mat-icon,
+  .mat-icon {
+    display: block;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 0.85rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    line-height: 1;
+  }
+
+  &:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.page-action-btn--primary {
+  background: var(--app-accent, #4f46e5);
+  border-color: #4338ca;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: #4338ca;
+    border-color: #3730a3;
+  }
+}
+
+.page-action-btn--sm {
+  padding: 0.32rem 0.45rem;
+  font-size: 0.72rem;
+
+  mat-icon,
+  .mat-icon {
+    font-size: 0.78rem;
+    width: 0.78rem;
+    height: 0.78rem;
+  }
+}
+
+.page-header-premium__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: 0.35rem;
+  height: fit-content;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+
+  .page-action-btn {
+    flex-shrink: 0;
+  }
+
+  .mat-mdc-button-base {
+    --mdc-text-button-container-height: fit-content;
+    --mdc-outlined-button-container-height: fit-content;
+    --mdc-filled-button-container-height: fit-content;
+    --mdc-outlined-button-outline-width: 1px;
+    width: fit-content !important;
+    max-width: max-content !important;
+    min-height: unset !important;
+    height: fit-content !important;
+    margin: 0 !important;
+    padding: 0.42rem 0.55rem !important;
+    border-radius: 8px !important;
+    font-size: 0.76rem !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0;
+
+    .mat-icon {
+      display: block !important;
+      font-size: 0.85rem !important;
+      width: 0.85rem !important;
+      height: 0.85rem !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .mdc-button__label {
+      padding: 0;
+      line-height: 1.25;
+    }
+  }
+}
+
+.page-action-btn--slate {
+  background: #1e293b;
+  border-color: #0f172a;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: #0f172a;
+    border-color: #020617;
+  }
+}
+
+.dash-toolbar__right .page-action-btn,
+.dash-toolbar__custom-actions .page-action-btn {
+  flex-shrink: 0;
+}
+
+.hub-action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  height: fit-content;
+  min-height: unset;
+  margin: 0;
+  padding: 0.42rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 22%, #e2e8f0);
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.25;
+  box-shadow: none;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--app-accent) 14%, var(--app-card));
+  color: var(--app-accent);
+  cursor: pointer;
+  appearance: none;
+
+  mat-icon,
+  .mat-icon {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font-size: 0.85rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    line-height: 1;
+  }
+
+  &:hover {
+    transform: none;
+    box-shadow: none;
+    background: color-mix(in srgb, var(--app-accent) 10%, #fff);
+  }
+}
+
+[class*='__actions']:has(.page-action-btn),
+[class*='__actions']:has(.hub-action-chip) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-self: flex-start;
+  gap: 0.35rem;
+  height: fit-content;
+  min-height: 0;
+  padding: 0;
+}
+
+.hub-quick-actions {
+  gap: 0.35rem;
+}

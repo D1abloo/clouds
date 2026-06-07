@@ -52,8 +52,9 @@ import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.com
       <div class="table-card">
         <div class="table-toolbar">
           <mat-form-field appearance="outline" class="search-field">
-            <mat-label>Search accounts</mat-label>
-            <input matInput [formControl]="searchControl" aria-label="Filter accounts" />
+            <mat-label>Buscar cuentas cloud</mat-label>
+            <input matInput [formControl]="searchControl" placeholder="Nombre o ID de cuenta…" aria-label="Filtrar cuentas cloud" />
+            <mat-hint>Filtra por nombre visible o identificador de cuenta (account ID)</mat-hint>
             <mat-icon matPrefix>search</mat-icon>
           </mat-form-field>
           <button mat-flat-button color="primary" type="button" (click)="openAddAccountWizard()">

@@ -10,12 +10,10 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatCheckboxModule } from '@angular/material/checkbox'
 import { MatMenuModule } from '@angular/material/menu'
 import { MatTabsModule } from '@angular/material/tabs'
-import { ChartCardComponent } from '../../shared/ui/chart-card.component'
 import { MatDialog } from '@angular/material/dialog'
 import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
-import { SummaryCardComponent } from '../../shared/components/summary-card/summary-card.component'
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
@@ -35,7 +33,6 @@ import { createPageLoader } from '../../core/utils/page-load.util'
     ReactiveFormsModule,
     RouterLink,
     PageHeaderComponent,
-    SummaryCardComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -49,7 +46,6 @@ import { createPageLoader } from '../../core/utils/page-load.util'
     MatCheckboxModule,
     MatMenuModule,
     MatTabsModule,
-    ChartCardComponent,
   ],
   template: `
     <div class="page-container">
@@ -63,13 +59,6 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
-      <div class="summary-grid app-section-panel stagger-children">
-        <app-summary-card title="Total" [value]="instances().length" icon="dns" variant="elevated" iconColor="purple" />
-        <app-summary-card title="Running" [value]="running()" icon="play_circle" variant="elevated" iconColor="success" />
-        <app-summary-card title="Stopped" [value]="stopped()" icon="stop_circle" variant="elevated" iconColor="warn" />
-        <app-summary-card title="Providers" [value]="providerCount()" icon="cloud" variant="elevated" iconColor="cyan" />
-      </div>
-
       <div class="table-card">
         <mat-tab-group class="soft-tabs" animationDuration="260ms">
           <mat-tab label="Overview">
@@ -79,13 +68,16 @@ import { createPageLoader } from '../../core/utils/page-load.util'
                 <button type="button" class="hub-action-chip">Export CSV</button>
                 <button type="button" class="hub-action-chip">Launch instance</button>
               </div>
-              <app-chart-card title="By status" kind="donut" [data]="statusChart()" />
             </div>
           </mat-tab>
           <mat-tab label="All Instances">
             <div class="hub-tab-panel">
         <div class="filter-row">
-          <mat-form-field appearance="outline"><mat-label>Search</mat-label><input matInput [formControl]="searchControl" /></mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar instancias</mat-label>
+            <input matInput [formControl]="searchControl" placeholder="Nombre o región…" aria-label="Filtrar instancias" />
+            <mat-hint>Filtra por nombre de instancia o región cloud</mat-hint>
+          </mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Provider</mat-label>
             <mat-select [formControl]="providerControl">
               <mat-option value="">All</mat-option>
@@ -205,7 +197,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
           <mat-tab label="By Provider"><div class="hub-tab-panel"><p>AWS {{ byProvider('AWS') }} · GCP {{ byProvider('GCP') }} · Azure {{ byProvider('AZURE') }} · VPS {{ byProvider('VPS') }}</p></div></mat-tab>
           <mat-tab label="By Status"><div class="hub-tab-panel"><p>Running {{ running() }} · Stopped {{ stopped() }}</p></div></mat-tab>
           <mat-tab label="By Region"><div class="hub-tab-panel"><p>Top regions: us-east-1, eu-west-1, europe-west1 (demo)</p></div></mat-tab>
-          <mat-tab label="Metrics"><div class="hub-tab-panel"><app-chart-card title="CPU trend" kind="line" [data]="metricsChart()" /></div></mat-tab>
+          <mat-tab label="Metrics"><div class="hub-tab-panel"><p>Average CPU across fleet: 52% (demo)</p></div></mat-tab>
           <mat-tab label="Cost"><div class="hub-tab-panel"><p>Estimated monthly: {{ formatTotalCost() }}</p></div></mat-tab>
           <mat-tab label="Alerts"><div class="hub-tab-panel"><p>3 instances with open alerts (demo)</p></div></mat-tab>
           <mat-tab label="Audit"><div class="hub-tab-panel"><a routerLink="/audit">View audit log</a></div></mat-tab>
@@ -251,20 +243,6 @@ export class InstancesListComponent implements OnInit {
   readonly selected = signal<Set<string>>(new Set())
   readonly cols = ['select', 'name', 'provider', 'region', 'status', 'environment', 'type', 'cost', 'actions']
 
-  statusChart = () => [
-    { label: 'Running', value: this.running(), color: '#22c55e' },
-    { label: 'Stopped', value: this.stopped(), color: '#94a3b8' },
-    { label: 'Other', value: Math.max(0, this.instances().length - this.running() - this.stopped()), color: '#f59e0b' },
-  ]
-
-  metricsChart = () => [
-    { label: '00h', value: 42 },
-    { label: '06h', value: 55 },
-    { label: '12h', value: 61 },
-    { label: '18h', value: 48 },
-    { label: '24h', value: 52 },
-  ]
-
   byProvider = (p: string): number => this.instances().filter((i) => i.provider === p).length
 
   formatTotalCost = (): string => {
@@ -282,7 +260,6 @@ export class InstancesListComponent implements OnInit {
 
   running = computed(() => this.instances().filter((i) => i.status === 'RUNNING').length)
   stopped = computed(() => this.instances().filter((i) => i.status === 'STOPPED').length)
-  providerCount = computed(() => new Set(this.instances().map((i) => i.provider)).size)
 
   filtered = computed(() => {
     const term = (this.searchTerm() ?? '').toLowerCase()

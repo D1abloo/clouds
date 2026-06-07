@@ -1,3 +1,5 @@
+import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
+
 export type RepositoriesSectionId =
   | 'github'
   | 'gitlab'
@@ -6,6 +8,44 @@ export type RepositoriesSectionId =
   | 'commits'
   | 'pull-requests'
   | 'deployments'
+
+export type RepositoriesNavLink = {
+  id: RepositoriesSectionId
+  label: string
+  route: string
+  icon?: string
+  logo?: NavLogoKey
+}
+
+/** Navegación lateral coherente entre todas las subsecciones de Repositorios */
+export const REPOSITORIES_NAV_LINKS: RepositoriesNavLink[] = [
+  { id: 'github', label: 'GitHub', route: '/repositories/github', logo: 'github' },
+  { id: 'gitlab', label: 'GitLab', route: '/repositories/gitlab', logo: 'gitlab' },
+  { id: 'webhooks', label: 'Webhooks', route: '/repositories/webhooks', icon: 'webhook' },
+  { id: 'branches', label: 'Ramas', route: '/repositories/branches', icon: 'account_tree' },
+  { id: 'commits', label: 'Commits', route: '/repositories/commits', icon: 'history_edu' },
+  { id: 'pull-requests', label: 'Pull Requests', route: '/repositories/pull-requests', icon: 'merge' },
+  { id: 'deployments', label: 'Despliegues', route: '/repositories/deployments', icon: 'rocket_launch' },
+]
+
+export const repoRoute = (id: RepositoriesSectionId): string =>
+  REPOSITORIES_NAV_LINKS.find((l) => l.id === id)?.route ?? '/repositories/github'
+
+/** Secciones relacionadas mostradas como accesos rápidos por página */
+export const REPO_QUICK_LINK_SETS: Record<RepositoriesSectionId, RepositoriesSectionId[]> = {
+  github: ['pull-requests', 'webhooks', 'commits', 'branches', 'deployments', 'gitlab'],
+  gitlab: ['webhooks', 'commits', 'branches', 'deployments', 'github'],
+  webhooks: ['github', 'gitlab', 'commits', 'deployments'],
+  branches: ['commits', 'deployments', 'github', 'gitlab'],
+  commits: ['branches', 'deployments', 'pull-requests', 'webhooks'],
+  'pull-requests': ['commits', 'deployments', 'webhooks', 'github'],
+  deployments: ['commits', 'branches', 'webhooks', 'github', 'gitlab'],
+}
+
+export const repoQuickLinks = (current: RepositoriesSectionId): RepositoriesNavLink[] =>
+  (REPO_QUICK_LINK_SETS[current] ?? [])
+    .map((id) => REPOSITORIES_NAV_LINKS.find((l) => l.id === id))
+    .filter((l): l is RepositoriesNavLink => !!l)
 
 export type SectionHeaderAction = { label: string; icon?: string; primary?: boolean }
 
@@ -54,7 +94,8 @@ export const REPOSITORIES_SECTION_META: Record<RepositoriesSectionId, SectionMet
   },
   webhooks: {
     title: 'Webhooks',
-    description: 'Gestiona webhooks de GitHub, GitLab y despliegues externos.',
+    description:
+      'Gestiona entregas HTTP de GitHub, GitLab y despliegues externos: payloads firmados, reintentos, auditoría de errores y pruebas en caliente.',
     theme: 'webhooks',
     summaryCards: [
       { title: 'Total webhooks', valueKey: 'webhookTotal', icon: 'webhook' },
@@ -70,7 +111,7 @@ export const REPOSITORIES_SECTION_META: Record<RepositoriesSectionId, SectionMet
   branches: {
     title: 'Ramas',
     description:
-      'Consulta ramas sincronizadas de GitHub y GitLab, compara cambios y despliega versiones.',
+      'Inventario unificado de ramas GitHub y GitLab: protección, CI, estado de despliegue, comparación de diffs y despliegue por rama.',
     theme: 'branches',
     summaryCards: [
       { title: 'Ramas totales', valueKey: 'branchTotal', icon: 'account_tree' },
@@ -86,7 +127,7 @@ export const REPOSITORIES_SECTION_META: Record<RepositoriesSectionId, SectionMet
   commits: {
     title: 'Commits',
     description:
-      'Revisa commits recientes, estados de CI y cambios listos para despliegue.',
+      'Timeline unificado de commits GitHub y GitLab: diff, CI, reviews, etiquetas y despliegue por SHA con modales detallados.',
     theme: 'commits',
     summaryCards: [
       { title: 'Commits recientes', valueKey: 'commitTotal', icon: 'history' },
@@ -102,7 +143,7 @@ export const REPOSITORIES_SECTION_META: Record<RepositoriesSectionId, SectionMet
   'pull-requests': {
     title: 'Pull Requests',
     description:
-      'Gestiona Pull Requests de GitHub, revisiones, checks y previews de despliegue.',
+      'Pull Requests de GitHub con descripción, etiquetas, revisiones, checks CI, conflictos, fusionado y preview de despliegue.',
     theme: 'pull-requests',
     summaryCards: [
       { title: 'Abiertos', valueKey: 'prOpen', icon: 'merge' },
@@ -118,7 +159,7 @@ export const REPOSITORIES_SECTION_META: Record<RepositoriesSectionId, SectionMet
   deployments: {
     title: 'Despliegues',
     description:
-      'Lanza y supervisa despliegues desde GitHub, GitLab, Jenkins, Docker y Kubernetes.',
+      'Supervisa despliegues desde GitHub, GitLab, Jenkins, Docker y Kubernetes: logs en terminal, pipelines, destino, rollback y reintentos.',
     theme: 'deployments',
     summaryCards: [
       { title: 'Activos', valueKey: 'deployActive', icon: 'rocket_launch' },

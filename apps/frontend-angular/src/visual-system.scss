@@ -1,10 +1,10 @@
 /* CloudOps — reusable visual system (presentation layer) */
 
 .app-section-panel {
-  border-radius: var(--app-radius-lg);
-  background: var(--app-card);
-  box-shadow: var(--elev-2, var(--app-shadow-sm));
-  padding: 0.35rem 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
   margin-bottom: 1.35rem;
 }
 
@@ -98,12 +98,10 @@
   animation: slideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Hub action chips */
+/* Hub action chips — estilos base en page-action-btn.scss */
 .hub-action-chip {
-  transition: transform var(--motion-fast), box-shadow var(--motion-fast), background var(--motion-fast);
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--app-shadow-sm);
+    transform: none;
   }
 }
 

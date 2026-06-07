@@ -60,19 +60,15 @@ import type { NavIconTone } from './sidebar-nav.config'
       font-weight: 600;
       color: var(--sidebar-text-muted);
       border: none;
-      transition: background 0.22s ease, color 0.22s ease, transform 0.18s ease, box-shadow 0.22s ease;
+      transition: background 0.22s ease, color 0.22s ease;
     }
     .nav-item:hover {
       background: var(--sidebar-item-hover);
       color: var(--sidebar-text);
-      transform: translateX(3px);
-      box-shadow: var(--app-shadow-xs);
     }
     .nav-item--active {
       background: var(--sidebar-item-active);
       color: var(--sidebar-primary);
-      box-shadow: 0 4px 18px color-mix(in srgb, var(--sidebar-primary) 28%, transparent);
-      transform: translateX(2px);
     }
     .nav-item--collapsed {
       justify-content: center;

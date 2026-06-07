@@ -1,0 +1,74 @@
+/**
+ * Campos Material (outline/fill/select): borde único en el wrapper.
+ * Evita las líneas verticales del notch (leading / notch / trailing).
+ */
+
+.mat-mdc-form-field {
+  .mdc-notched-outline,
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    display: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .mdc-text-field--outlined .mdc-notched-outline {
+    display: none !important;
+  }
+
+  .mdc-line-ripple::before,
+  .mdc-line-ripple::after {
+    border-bottom-width: 0 !important;
+    opacity: 0 !important;
+  }
+}
+
+.mat-mdc-form-field-appearance-outline,
+.mat-mdc-form-field.mat-form-field-appearance-outline,
+.mat-form-field-appearance-outline.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    background: var(--app-elevated) !important;
+    border-radius: var(--app-radius-md) !important;
+    border: 1px solid color-mix(in srgb, var(--app-text-muted) 18%, transparent) !important;
+    box-shadow: var(--app-shadow-xs) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  &.mat-focused .mat-mdc-text-field-wrapper {
+    border-color: color-mix(in srgb, var(--app-accent) 42%, transparent) !important;
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--app-accent) 22%, transparent),
+      var(--app-shadow-sm) !important;
+  }
+
+  &:hover:not(.mat-focused):not(.mat-form-field-disabled) .mat-mdc-text-field-wrapper {
+    border-color: color-mix(in srgb, var(--app-text-muted) 30%, transparent) !important;
+  }
+}
+
+.mat-mdc-form-field-appearance-fill,
+.mat-mdc-form-field.mat-form-field-appearance-fill {
+  .mdc-line-ripple {
+    display: none !important;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    background: var(--app-elevated) !important;
+    border-radius: var(--app-radius-md) !important;
+    border: 1px solid color-mix(in srgb, var(--app-text-muted) 16%, transparent) !important;
+    box-shadow: var(--app-shadow-xs) !important;
+  }
+
+  &.mat-focused .mat-mdc-text-field-wrapper {
+    border-color: color-mix(in srgb, var(--app-accent) 42%, transparent) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 20%, transparent) !important;
+  }
+}
+
+.mat-mdc-form-field.mat-form-field-disabled .mat-mdc-text-field-wrapper {
+  opacity: 0.72;
+}

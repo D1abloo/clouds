@@ -97,10 +97,60 @@ export const CLIENT_DEMO_GITHUB_ACTIONS: Record<string, unknown>[] = [
 ]
 
 export const CLIENT_DEMO_GITHUB_PRS: Record<string, unknown>[] = [
-  { id: 'gh-pr-1', repoFullName: 'cloudops-org/cloudops-api', number: 128, title: 'feat: módulo GitHub', state: 'open', author: 'devops-lead', head: 'feature/github', base: 'main', draft: false, reviewers: ['ana.dev'], checks: 'success', conflicts: false },
-  { id: 'gh-pr-2', repoFullName: 'cloudops-org/cloudops-frontend', number: 89, title: 'ui: drawer repositorios', state: 'open', author: 'frontend-dev', head: 'ui/repos-drawer', base: 'main', draft: true, reviewers: [], checks: 'pending', conflicts: false },
-  { id: 'gh-pr-3', repoFullName: 'cloudops-org/terraform-modules', number: 42, title: 'fix: output vpc_id', state: 'merged', author: 'infra-bot', head: 'fix/vpc-output', base: 'main', draft: false, reviewers: ['carlos.ops'], checks: 'success', conflicts: false },
-  { id: 'gh-pr-4', repoFullName: 'cloudops-org/k8s-demo-app', number: 17, title: 'chore: bump chart', state: 'closed', author: 'release-bot', head: 'chore/chart-2', base: 'main', draft: false, reviewers: ['ana.dev'], checks: 'failed', conflicts: true },
+  {
+    id: 'gh-pr-1', repoFullName: 'cloudops-org/cloudops-api', number: 128,
+    title: 'feat: módulo GitHub con webhooks y despliegues',
+    state: 'open', author: 'devops-lead', head: 'feature/github', base: 'main',
+    draft: false, reviewers: ['ana.dev', 'carlos.ops'], checks: 'success', conflicts: false,
+    labels: ['enhancement', 'backend'], additions: 842, deletions: 120, commits: 6,
+    description: 'Integra catálogo GitHub, drawers de detalle y acciones demo para webhooks, PRs y despliegues.',
+    updatedAt: now(),
+  },
+  {
+    id: 'gh-pr-2', repoFullName: 'cloudops-org/cloudops-frontend', number: 89,
+    title: 'ui: drawer repositorios y timeline de commits',
+    state: 'open', author: 'frontend-dev', head: 'ui/repos-drawer', base: 'main',
+    draft: true, reviewers: [], checks: 'pending', conflicts: false,
+    labels: ['frontend', 'ui'], additions: 1240, deletions: 88, commits: 12,
+    description: 'Rediseño de secciones Commits, PRs y Despliegues con modales informativos.',
+    updatedAt: now(),
+  },
+  {
+    id: 'gh-pr-3', repoFullName: 'cloudops-org/terraform-modules', number: 42,
+    title: 'fix: output vpc_id en módulo network',
+    state: 'merged', author: 'infra-bot', head: 'fix/vpc-output', base: 'main',
+    draft: false, reviewers: ['carlos.ops'], checks: 'success', conflicts: false,
+    labels: ['terraform', 'bugfix'], additions: 24, deletions: 8, commits: 2,
+    description: 'Corrige referencia circular en outputs del módulo VPC.',
+    updatedAt: now(),
+  },
+  {
+    id: 'gh-pr-4', repoFullName: 'cloudops-org/k8s-demo-app', number: 17,
+    title: 'chore: bump chart Helm a 2.4.0',
+    state: 'closed', author: 'release-bot', head: 'chore/chart-2', base: 'main',
+    draft: false, reviewers: ['ana.dev'], checks: 'failed', conflicts: true,
+    labels: ['kubernetes', 'release'], additions: 56, deletions: 34, commits: 3,
+    description: 'Actualiza dependencias del chart; requiere resolver conflictos en values.yaml.',
+    updatedAt: now(),
+  },
+  {
+    id: 'gh-pr-5', repoFullName: 'cloudops-org/monitoring-stack', number: 31,
+    title: 'feat: alertas duplicadas — deduplicación',
+    state: 'open', author: 'sre-lead', head: 'feat/alert-dedup', base: 'main',
+    draft: false, reviewers: ['ana.dev'], checks: 'success', conflicts: false,
+    labels: ['monitoring', 'sre'], additions: 312, deletions: 45, commits: 4,
+    description: 'Añade reglas de deduplicación en Alertmanager y panel de revisión.',
+    updatedAt: now(),
+  },
+  {
+    id: 'gh-pr-6', repoFullName: 'cloudops-org/docker-nginx-app', number: 8,
+    title: 'fix: healthcheck en Dockerfile',
+    state: 'open', author: 'platform-dev', head: 'fix/healthcheck', base: 'main',
+    draft: false, reviewers: ['carlos.ops'], checks: 'failed', conflicts: false,
+    labels: ['docker'], additions: 18, deletions: 6, commits: 1,
+    description: 'Corrige intervalo de healthcheck; tests e2e fallan en staging.',
+    updatedAt: now(),
+  },
 ]
 
 export const CLIENT_DEMO_GITHUB_ISSUES: Record<string, unknown>[] = [
@@ -116,10 +166,12 @@ export const CLIENT_DEMO_WEBHOOKS: Record<string, unknown>[] = [
 ]
 
 export const CLIENT_DEMO_DEPLOYMENTS: Record<string, unknown>[] = [
-  { id: 'gh-dep-1', provider: 'github', repoFullName: 'cloudops-org/cloudops-api', branch: 'main', targetName: 'cluster-prod-01', targetType: 'kubernetes', status: 'success', createdAt: now(), commitSha: 'a1b2c3d' },
-  { id: 'gh-dep-2', provider: 'github', repoFullName: 'cloudops-org/cloudops-frontend', branch: 'develop', targetName: 'vps-prod-nginx-01', targetType: 'vps', status: 'running', createdAt: now(), commitSha: 'e4f5g6h' },
-  { id: 'gh-dep-3', provider: 'github', repoFullName: 'cloudops-org/docker-nginx-app', branch: 'main', targetName: 'docker-host-01', targetType: 'docker', status: 'success', createdAt: now(), commitSha: 'i7j8k9l' },
-  { id: 'gh-dep-4', provider: 'jenkins', repoFullName: 'jenkins/job/deploy-api', branch: 'main', targetName: 'jenkins-controller', targetType: 'jenkins', status: 'success', createdAt: now() },
+  { id: 'gh-dep-1', provider: 'github', repoFullName: 'cloudops-org/cloudops-api', branch: 'main', targetName: 'cluster-prod-01', targetType: 'kubernetes', environment: 'production', status: 'success', createdAt: now(), commitSha: 'gha1b2c3d4e5f600000000000000000000000000', commitMessage: 'feat(api): exponer métricas de despliegue en health endpoint', duration: '4m 12s', triggeredBy: 'devops-lead', strategy: 'rolling', version: 'v2.4.0', healthCheck: 'OK · 3/3 pods', previousVersion: 'v2.3.9', pipelineId: 'gh-run-8842', stages: ['build', 'test', 'scan', 'deploy'] },
+  { id: 'gh-dep-2', provider: 'github', repoFullName: 'cloudops-org/cloudops-frontend', branch: 'develop', targetName: 'vps-prod-nginx-01', targetType: 'vps', environment: 'staging', status: 'running', createdAt: now(), commitSha: 'ghb2c3d4e5f6a7800000000000000000000000008', commitMessage: 'ui: panel repositorios plano y navegación cruzada', duration: '2m 08s', triggeredBy: 'frontend-dev', strategy: 'blue-green', version: 'v2.4.0-rc.2', healthCheck: 'Pendiente…', pipelineId: 'gh-run-8845', stages: ['build', 'test', 'deploy'] },
+  { id: 'gh-dep-3', provider: 'github', repoFullName: 'cloudops-org/docker-nginx-app', branch: 'main', targetName: 'docker-host-01', targetType: 'docker', environment: 'production', status: 'success', createdAt: now(), commitSha: 'i7j8k9l0000000000000000000000000000000000', commitMessage: 'chore(docker): actualizar nginx base a 1.27', duration: '1m 45s', triggeredBy: 'platform-dev', strategy: 'recreate', version: 'v1.8.2', healthCheck: 'OK · container healthy', previousVersion: 'v1.8.1', pipelineId: 'gh-run-8831', stages: ['build', 'push', 'deploy'] },
+  { id: 'gh-dep-4', provider: 'jenkins', repoFullName: 'jenkins/job/deploy-api', branch: 'main', targetName: 'jenkins-controller', targetType: 'jenkins', environment: 'production', status: 'success', createdAt: now(), commitSha: 'a1b2c3d', commitMessage: 'ci: pipeline deploy-api con aprobación manual', duration: '6m 30s', triggeredBy: 'jenkins-bot', strategy: 'manual', version: 'build-442', healthCheck: 'OK', pipelineId: 'jenkins-442', stages: ['checkout', 'build', 'approve', 'deploy'] },
+  { id: 'gh-dep-5', provider: 'github', repoFullName: 'cloudops-org/k8s-demo-app', branch: 'main', targetName: 'cluster-staging', targetType: 'kubernetes', environment: 'staging', status: 'failed', createdAt: now(), commitSha: 'gh4failed00000000000000000000000000000000', commitMessage: 'fix(k8s): ajustar readiness probe del servicio demo', duration: '3m 22s', triggeredBy: 'release-bot', error: 'Helm upgrade timeout — readiness probe failed', strategy: 'rolling', version: 'v0.9.4', healthCheck: 'Falló · 0/2 pods ready', previousVersion: 'v0.9.3', pipelineId: 'gh-run-8839', stages: ['build', 'test', 'deploy'] },
+  { id: 'gh-dep-6', provider: 'github', repoFullName: 'cloudops-org/terraform-modules', branch: 'main', targetName: 'tf-cloud-workspace', targetType: 'terraform', environment: 'production', status: 'success', createdAt: now(), commitSha: 'tfmodules000000000000000000000000000000', commitMessage: 'feat(terraform): módulo EKS con node groups autoscaling', duration: '8m 01s', triggeredBy: 'infra-bot', strategy: 'plan-apply', version: 'v3.2.0', healthCheck: 'Plan apply OK', previousVersion: 'v3.1.4', pipelineId: 'gh-run-8820', stages: ['fmt', 'validate', 'plan', 'apply'] },
 ]
 
 export const buildClientGithubDemoState = (): GithubDemoConnectResult => {

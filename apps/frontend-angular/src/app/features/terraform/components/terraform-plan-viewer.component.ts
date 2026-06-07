@@ -35,9 +35,11 @@ import { MatButtonModule } from '@angular/material/button'
   `,
   styles: `
     .plan-viewer {
-      border-radius: var(--app-radius-lg);
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: var(--app-radius-md);
       overflow: hidden;
-      background: var(--app-card);
+      background: var(--app-elevated);
       border: none;
       outline: none;
       box-shadow: none;
@@ -47,8 +49,9 @@ import { MatButtonModule } from '@angular/material/button'
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem 1.25rem;
-      background: var(--app-surface);
+      padding: 0.75rem 0.9rem;
+      margin: 0;
+      background: transparent;
       h4 {
         margin: 0;
         display: flex;
@@ -62,8 +65,9 @@ import { MatButtonModule } from '@angular/material/button'
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
-      padding: 0.75rem 1.25rem;
-      background: color-mix(in srgb, var(--app-accent) 6%, var(--app-card));
+      padding: 0 0.9rem 0.65rem;
+      margin: 0;
+      background: transparent;
     }
     .plan-resource {
       display: flex;
@@ -84,8 +88,8 @@ import { MatButtonModule } from '@angular/material/button'
     }
     .plan-output {
       margin: 0;
-      padding: 1.25rem;
-      max-height: 280px;
+      padding: 0.85rem 0.9rem 1rem;
+      max-height: min(220px, 28vh);
       overflow: auto;
       font-size: 0.75rem;
       line-height: 1.55;

@@ -84,14 +84,14 @@ export const ROUTE_LABELS: Record<string, string> = {
   'audit/security-events': 'Eventos de seguridad',
   'audit/compliance-trail': 'Trail de cumplimiento',
   'audit/exports': 'Exportaciones',
-  'admin/users': 'Users',
+  'admin/users': 'Usuarios',
   'admin/roles': 'Roles',
   'admin/api-tokens': 'Tokens API',
   'admin/webhooks': 'Webhooks',
-  'admin/demo-mode': 'Demo Mode',
-  settings: 'Settings',
-  'settings/general': 'General Settings',
-  'ai-assistant': 'AI Assistant',
+  'admin/demo-mode': 'Modo demo',
+  settings: 'Configuración',
+  'settings/general': 'Configuración general',
+  'ai-assistant': 'Asistente IA',
 }
 
 export const resolveRouteLabel = (url: string): string => {

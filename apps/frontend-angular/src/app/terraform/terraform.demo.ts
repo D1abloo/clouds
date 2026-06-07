@@ -1,5 +1,6 @@
 import type { CloudProvider } from '../core/models/api.models'
 import type { TerraformRunItem, TerraformWorkspaceItem } from '../core/stores/terraform-run.store'
+export { defaultDemoLaunches, TERRAFORM_FOLDERS } from './terraform-folders'
 import { HCL_TEMPLATE_AWS, HCL_TEMPLATE_AZURE, HCL_TEMPLATE_GCP } from './terraform-hcl-templates'
 
 export interface TerraformPageSummary {
@@ -31,10 +32,12 @@ export const TERRAFORM_DEMO_SUMMARY: TerraformPageSummary = {
 }
 
 export const defaultDemoWorkspaces = (): TerraformWorkspaceItem[] => [
-  { id: 'ws-aws-prod', name: 'aws-production', provider: 'AWS', hcl: HCL_TEMPLATE_AWS, status: 'applied' },
-  { id: 'ws-aws-stg', name: 'aws-staging', provider: 'AWS', hcl: HCL_TEMPLATE_AWS, status: 'planned' },
-  { id: 'ws-gcp', name: 'gcp-analytics', provider: 'GCP', hcl: HCL_TEMPLATE_GCP, status: 'idle' },
-  { id: 'ws-azure', name: 'azure-core', provider: 'AZURE', hcl: HCL_TEMPLATE_AZURE, status: 'error' },
+  { id: 'ws-aws-prod', name: 'aws-production', folderId: 'apps', provider: 'AWS', hcl: HCL_TEMPLATE_AWS, status: 'applied' },
+  { id: 'ws-aws-stg', name: 'aws-staging', folderId: 'apps', provider: 'AWS', hcl: HCL_TEMPLATE_AWS, status: 'planned' },
+  { id: 'ws-gcp', name: 'gcp-analytics', folderId: 'infra', provider: 'GCP', hcl: HCL_TEMPLATE_GCP, status: 'idle' },
+  { id: 'ws-azure', name: 'azure-core', folderId: 'infra', provider: 'AZURE', hcl: HCL_TEMPLATE_AZURE, status: 'error' },
+  { id: 'ws-data-pg', name: 'postgres-ha', folderId: 'data', provider: 'AWS', hcl: HCL_TEMPLATE_AWS, status: 'applied' },
+  { id: 'ws-sec-scan', name: 'security-scan', folderId: 'security', provider: 'AWS', hcl: HCL_TEMPLATE_AWS, status: 'idle' },
 ]
 
 export const demoRunsFromSummary = (items: Record<string, unknown>[]): TerraformRunItem[] =>

@@ -14,7 +14,6 @@ import {
   NETWORK_CONFIG,
   SERVICE_CATALOG_CONFIG,
   STORAGE_CONFIG,
-  USERS_CONFIG,
   RUNBOOKS_CONFIG,
   SCHEDULER_CONFIG,
   CAPACITY_PLANNER_CONFIG,
@@ -26,6 +25,7 @@ import { SecurityCenterPageComponent } from '../security/security-center-page.co
 import { SecretsManagerPageComponent } from '../security/secrets-manager-page.component'
 import { CompliancePageComponent } from '../security/compliance-page.component'
 import { AccessControlPageComponent } from '../security/access-control-page.component'
+import { AdminUsersPageComponent } from '../admin/admin-users-page.component'
 
 @Component({
   selector: 'app-command-center',
@@ -175,12 +175,10 @@ export class AccessControlComponent {}
   selector: 'app-users-admin',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlatformModulePageComponent],
-  template: `<app-platform-module-page [config]="config" />`,
+  imports: [AdminUsersPageComponent],
+  template: `<app-admin-users-page />`,
 })
-export class UsersAdminComponent {
-  readonly config = USERS_CONFIG
-}
+export class UsersAdminComponent {}
 
 @Component({
   selector: 'app-runbooks',

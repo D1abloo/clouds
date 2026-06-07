@@ -80,21 +80,6 @@ type ApprovalsView = 'pending' | 'history' | 'policies'
         </div>
       </section>
 
-      <section class="apr-kpis">
-        @for (kpi of kpis(); track kpi.label) {
-          <article class="apr-kpi" [attr.data-tone]="kpi.tone">
-            <mat-icon>{{ kpi.icon }}</mat-icon>
-            <div>
-              <span>{{ kpi.label }}</span>
-              <strong>{{ kpi.value }}</strong>
-              @if (kpi.hint) {
-                <small>{{ kpi.hint }}</small>
-              }
-            </div>
-          </article>
-        }
-      </section>
-
       <div class="apr-bar">
         <nav class="apr-tabs" role="tablist" aria-label="Vistas de aprobaciones">
           <button
@@ -375,52 +360,6 @@ type ApprovalsView = 'pending' | 'history' | 'policies'
       color: #64748b;
     }
 
-    .apr-kpis {
-      flex-shrink: 0;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 0.5rem;
-    }
-    .apr-kpi {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.45rem;
-      padding: 0.55rem 0.65rem;
-      border-radius: 11px;
-      background: #f8fafc;
-    }
-    .apr-kpi mat-icon {
-      font-size: 1.1rem;
-      width: 1.1rem;
-      height: 1.1rem;
-      color: #64748b;
-      margin-top: 0.1rem;
-    }
-    .apr-kpi[data-tone='warn'] mat-icon { color: #d97706; }
-    .apr-kpi[data-tone='danger'] mat-icon { color: #dc2626; }
-    .apr-kpi[data-tone='success'] mat-icon { color: #059669; }
-    .apr-kpi span {
-      display: block;
-      font-size: 0.55rem;
-      font-weight: 650;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #94a3b8;
-    }
-    .apr-kpi strong {
-      display: block;
-      font-size: 1rem;
-      font-weight: 700;
-      color: #0f172a;
-      line-height: 1.2;
-    }
-    .apr-kpi small {
-      display: block;
-      margin-top: 0.08rem;
-      font-size: 0.58rem;
-      color: #64748b;
-    }
-
     .apr-bar {
       flex-shrink: 0;
       display: flex;
@@ -519,19 +458,26 @@ type ApprovalsView = 'pending' | 'history' | 'policies'
     .apr-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.3rem;
-      padding: 0.4rem 0.7rem;
-      border: none;
+      justify-content: center;
+      gap: 0.4rem;
+      width: fit-content;
+      height: fit-content;
+      min-height: unset;
+      margin: 0;
+      padding: 0.42rem 0.55rem;
       border-radius: 8px;
-      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      background: #fff;
       font: inherit;
-      font-size: 0.72rem;
+      font-size: 0.76rem;
       font-weight: 600;
-      color: #334155;
+      line-height: 1.25;
+      box-sizing: border-box;
+      color: #475569;
       cursor: pointer;
     }
-    .apr-btn mat-icon { font-size: 0.95rem; width: 0.95rem; height: 0.95rem; }
-    .apr-btn--primary { background: #1e293b; color: #fff; }
+    .apr-btn mat-icon { display: block; margin: 0; font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
+    .apr-btn--primary { background: #1e293b; border-color: #0f172a; color: #fff; }
 
     .apr-workspace {
       flex: 1;
@@ -749,12 +695,8 @@ type ApprovalsView = 'pending' | 'history' | 'policies'
 
     @media (max-width: 1100px) {
       .apr-intro { grid-template-columns: 1fr; }
-      .apr-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .apr-workspace { grid-template-columns: 1fr; }
       .apr-inspector { min-height: 24rem; }
-    }
-    @media (max-width: 640px) {
-      .apr-kpis { grid-template-columns: 1fr 1fr; }
     }
   `,
 })
@@ -785,34 +727,6 @@ export class ApprovalsPageComponent {
   ]
 
   readonly pendingCount = computed(() => this.requests().filter((r) => r.status === 'pending').length)
-
-  readonly kpis = computed(() => {
-    const all = this.requests()
-    const pending = all.filter((r) => r.status === 'pending')
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    const approvedToday = all.filter(
-      (r) => r.status === 'approved' && r.decidedAt && new Date(r.decidedAt) >= todayStart,
-    ).length
-    const rejected = all.filter((r) => r.status === 'rejected').length
-    const slaBreaches = pending.filter((r) => this.slaBreached(r)).length
-    const avgWait =
-      pending.length > 0
-        ? Math.round(
-            pending.reduce((acc, r) => acc + (Date.now() - new Date(r.requestedAt).getTime()), 0) /
-              pending.length /
-              60_000,
-          )
-        : 0
-
-    return [
-      { label: 'Pendientes', value: pending.length, icon: 'pending_actions', tone: 'warn', hint: `${slaBreaches} SLA vencido` },
-      { label: 'Aprobadas hoy', value: approvedToday, icon: 'check_circle', tone: 'success', hint: 'Últimas 24h' },
-      { label: 'Rechazadas', value: rejected, icon: 'cancel', tone: 'danger', hint: 'Historial reciente' },
-      { label: 'SLA breaches', value: slaBreaches, icon: 'timer_off', tone: slaBreaches ? 'danger' : 'success', hint: 'Requieren acción' },
-      { label: 'Espera media', value: `${avgWait} min`, icon: 'schedule', tone: 'default', hint: 'Cola pendiente' },
-    ]
-  })
 
   readonly filteredRequests = computed(() => {
     const q = this.searchTerm().trim().toLowerCase()

@@ -1,0 +1,181 @@
+/* Global flat UI — scoped to main app shell; overlays keep elevated surfaces */
+
+.layout-root {
+  /* Material cards */
+  mat-card.mat-mdc-card,
+  .mat-mdc-card {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Shared panel / chart wrappers */
+  .chart-card,
+  .panel-card,
+  .panel-card.surface-elevated {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    transition: none !important;
+
+    &:hover {
+      background: transparent !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+  }
+
+  .chart-card__accent,
+  .panel-card__accent,
+  .hub-card__accent,
+  .stack-card__accent,
+  .provider-card__accent,
+  .insight-card__accent,
+  .cloud-kpi__accent,
+  .hlth-kpi__accent {
+    display: none !important;
+  }
+
+  /* Metric stats grid (component + legacy) */
+  .metric-stat,
+  .metric-stats-grid .metric-stat {
+    padding: 0.5rem 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: none !important;
+
+    &:hover {
+      background: transparent !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+  }
+
+  .metric-stat__icon,
+  .metric-stat__icon[class*='tone-'] {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Infrastructure / repositories cards — flat background, keep row separators */
+  .infra-card,
+  .pr-card,
+  .account-card,
+  .widget-card,
+  .widget,
+  .section-hero,
+  .github-hero,
+  .gitlab-hero,
+  .prs-hero,
+  .section-hero--commits,
+  .section-hero--deploy {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    transition: none !important;
+
+    &:hover {
+      background: transparent !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+  }
+
+  .pr-card--conflict,
+  .pr-card--draft {
+    background: transparent !important;
+    border-left: none !important;
+  }
+
+  /* Dashboard / hub cards */
+  .hub-card,
+  .stack-card,
+  .provider-card,
+  .insight-card,
+  .stat,
+  .status-card,
+  .soft-panel,
+  .cloud-kpi,
+  .hlth-kpi,
+  .dash-kpi,
+  .platform-card {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+
+    &:hover {
+      background: transparent !important;
+      box-shadow: none !important;
+      transform: none !important;
+    }
+  }
+
+  .summary-pipeline .step,
+  .summary-pipeline .step.done,
+  .summary-pipeline .step.active {
+    background: transparent !important;
+  }
+
+  /* Table / data wrappers */
+  .table-card,
+  .surface-elevated,
+  .metrics-panel,
+  .app-section-panel,
+  .summary-grid {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+
+    &:hover {
+      box-shadow: none !important;
+    }
+  }
+
+  /* Chart wells stay readable without outer card chrome */
+  .chart-card__well {
+    background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+    border-radius: 0;
+  }
+
+  /* Sidebar shell — flat, no panel shadow */
+  .app-sidebar {
+    box-shadow: none !important;
+  }
+
+  .sidebar-brand__logo {
+    box-shadow: none !important;
+  }
+
+  .sidebar-search {
+    box-shadow: none !important;
+  }
+
+  .nav-item:hover,
+  .nav-item--active,
+  .nav-leaf--active,
+  .nav-group__head--active {
+    box-shadow: none !important;
+  }
+}
+
+/* Preserve elevated surfaces inside overlays (dialogs, menus, tooltips) */
+.cdk-overlay-container {
+  .mat-mdc-card {
+    background: var(--app-card) !important;
+    box-shadow: var(--app-shadow-sm) !important;
+    border-radius: var(--app-radius-lg) !important;
+  }
+}

@@ -88,16 +88,16 @@ export interface MetricStatItem {
       display: flex;
       flex-direction: column;
       gap: 0.2rem;
-      padding: 0.85rem 0.95rem;
-      border-radius: var(--app-radius-md);
-      background: color-mix(in srgb, var(--app-text) 2.5%, transparent);
+      padding: 0.5rem 0;
+      border-radius: 0;
+      background: transparent;
       min-width: 0;
-      transition: transform var(--motion-fast, 0.18s ease), background var(--motion-fast, 0.18s ease), box-shadow var(--motion-fast, 0.18s ease);
+      transition: none;
       animation: fadeIn 0.35s ease backwards;
       &:hover {
-        transform: translateY(-2px);
-        background: color-mix(in srgb, var(--app-accent) 5%, var(--app-card));
-        box-shadow: var(--app-shadow-sm);
+        transform: none;
+        background: transparent;
+        box-shadow: none;
       }
     }
     .metric-stat__top {
@@ -107,23 +107,24 @@ export interface MetricStatItem {
       margin-bottom: 0.15rem;
     }
     .metric-stat__icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
+      width: 28px;
+      height: 28px;
+      border-radius: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; }
+      background: transparent;
+      mat-icon { font-size: 1.1rem; width: 1.1rem; height: 1.1rem; opacity: 0.88; }
     }
-    .tone-primary { background: color-mix(in srgb, var(--app-accent) 14%, transparent); mat-icon { color: var(--app-accent); } }
-    .tone-success { background: color-mix(in srgb, var(--status-running) 16%, transparent); mat-icon { color: var(--status-running); } }
-    .tone-warning { background: color-mix(in srgb, var(--status-warning) 16%, transparent); mat-icon { color: var(--status-warning); } }
-    .tone-danger { background: color-mix(in srgb, var(--status-error) 16%, transparent); mat-icon { color: var(--status-error); } }
-    .tone-info { background: color-mix(in srgb, var(--status-info) 16%, transparent); mat-icon { color: var(--status-info); } }
-    .tone-purple { background: color-mix(in srgb, #a855f7 16%, transparent); mat-icon { color: #a855f7; } }
-    .tone-cyan { background: color-mix(in srgb, #22d3ee 16%, transparent); mat-icon { color: #22d3ee; } }
-    .tone-default { background: color-mix(in srgb, var(--app-text-muted) 12%, transparent); mat-icon { color: var(--app-text-muted); } }
+    .tone-primary mat-icon { color: var(--app-accent); }
+    .tone-success mat-icon { color: var(--status-running); }
+    .tone-warning mat-icon { color: var(--status-warning); }
+    .tone-danger mat-icon { color: var(--status-error); }
+    .tone-info mat-icon { color: var(--status-info); }
+    .tone-purple mat-icon { color: #a855f7; }
+    .tone-cyan mat-icon { color: #22d3ee; }
+    .tone-default mat-icon { color: var(--app-text-muted); }
     .metric-stat__label {
       font-size: 0.72rem;
       font-weight: 600;

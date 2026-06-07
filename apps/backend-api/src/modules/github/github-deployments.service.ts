@@ -3,6 +3,8 @@ import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
+import { IntegrationsService } from '../integrations/integrations.service'
+import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
 import { GithubDemoService } from './github-demo.service'
 import { mapDeployment } from './github-mappers'
 
@@ -14,6 +16,7 @@ export class GithubDeploymentsService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeGateway,
+    private readonly integrations: IntegrationsService,
   ) {}
 
   async listAll() {
@@ -59,6 +62,15 @@ export class GithubDeploymentsService {
         resourceId: repoId,
         metadata: body,
       }).catch(() => undefined)
+      this.scheduleDeployIntegrationEvents(
+        memRepo.fullName,
+        body.branch,
+        targetName,
+        body.targetType,
+        deployment.id,
+        userId,
+        false,
+      )
       return {
         queued: true,
         deployment,
@@ -74,6 +86,15 @@ export class GithubDeploymentsService {
           ...body,
           targetName,
         })
+        this.scheduleDeployIntegrationEvents(
+          memRepo.fullName,
+          body.branch,
+          targetName,
+          body.targetType,
+          deployment.id,
+          userId,
+          false,
+        )
         return {
           queued: true,
           deployment,
@@ -129,12 +150,69 @@ export class GithubDeploymentsService {
         'Despliegue completado',
         `${repo.fullName} desplegado en ${targetName}`,
       )
+      this.emitDeployIntegrationEvents(
+        repo.fullName,
+        body.branch,
+        targetName,
+        body.targetType,
+        deployment.id,
+        userId,
+        true,
+      )
     }, 1200)
     return {
       queued: true,
       deployment: mapped,
       message: `Despliegue de ${repo.name}@${body.branch} iniciado hacia ${body.targetType}`,
     }
+  }
+
+  private scheduleDeployIntegrationEvents(
+    repoFullName: string,
+    branch: string,
+    targetName: string,
+    targetType: string,
+    deploymentId: string,
+    userId: string,
+    success: boolean,
+  ) {
+    setTimeout(() => {
+      this.emitDeployIntegrationEvents(repoFullName, branch, targetName, targetType, deploymentId, userId, success)
+    }, 1200)
+  }
+
+  private emitDeployIntegrationEvents(
+    repoFullName: string,
+    branch: string,
+    targetName: string,
+    targetType: string,
+    deploymentId: string,
+    userId: string | undefined,
+    success: boolean,
+  ) {
+    const status = success ? 'success' : 'failed'
+    void this.integrations.emitPlatformEvent(
+      {
+        eventType: success ? PLATFORM_EVENTS.DEPLOY_SUCCESS : PLATFORM_EVENTS.DEPLOY_FAILED,
+        title: `GitHub deploy ${repoFullName}@${branch}`,
+        body: `${repoFullName} → ${targetName} (${targetType}): ${status}`,
+        severity: success ? 'info' : 'critical',
+        source: 'GitHub',
+        metadata: { deploymentId, repoFullName, branch, targetName, targetType, status },
+      },
+      userId,
+    )
+    void this.integrations.emitPlatformEvent(
+      {
+        eventType: PLATFORM_EVENTS.WORKFLOW_RUN,
+        title: `Workflow ${repoFullName}`,
+        body: `Deploy workflow ${status} for ${branch} → ${targetName}`,
+        severity: success ? 'info' : 'warning',
+        source: 'GitHub',
+        metadata: { deploymentId, repoFullName, branch, status },
+      },
+      userId,
+    )
   }
 
   async getLogs(deploymentId: string) {

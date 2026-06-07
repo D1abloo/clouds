@@ -31,7 +31,7 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'ai-assistant',
     loadComponent: () =>
       import('../../features/advanced/ai-assistant.component').then((m) => m.AiAssistantComponent),
-    data: { breadcrumb: 'AI Assistant' },
+    data: { breadcrumb: 'Asistente IA' },
   },
   { path: 'command-center', ...platform('CommandCenterComponent', 'Command Center') },
   { path: 'deployments', ...platform('DeploymentsComponent', 'Deployments') },
@@ -104,13 +104,20 @@ export const NAVIGATION_ROUTES: Routes = [
       ),
     data: { breadcrumb: 'Webhooks' },
   },
-  { path: 'admin/users', ...platform('UsersAdminComponent', 'Users') },
-  { path: 'admin/roles', ...hub('roles', 'Roles', 'Roles') },
+  { path: 'admin/users', ...platform('UsersAdminComponent', 'Usuarios') },
+  {
+    path: 'admin/roles',
+    loadComponent: () =>
+      import('../../features/admin/admin-roles-page.component').then((m) => m.AdminRolesPageComponent),
+    data: { breadcrumb: 'Roles' },
+  },
   {
     path: 'admin/demo-mode',
     loadComponent: () =>
-      import('../../features/settings/settings-page.component').then((m) => m.SettingsPageComponent),
-    data: { breadcrumb: 'Demo Mode', module: 'settings' },
+      import('../../features/admin/admin-demo-mode-page.component').then(
+        (m) => m.AdminDemoModePageComponent,
+      ),
+    data: { breadcrumb: 'Modo demo' },
   },
   {
     path: 'cloud/:provider/:section',
@@ -250,8 +257,10 @@ export const NAVIGATION_ROUTES: Routes = [
   {
     path: 'settings/:section',
     loadComponent: () =>
-      import('../../features/settings/settings-page.component').then((m) => m.SettingsPageComponent),
-    data: { breadcrumb: 'Settings', module: 'settings' },
+      import('../../features/admin/admin-settings-page.component').then(
+        (m) => m.AdminSettingsPageComponent,
+      ),
+    data: { breadcrumb: 'Configuración', module: 'settings' },
   },
   { path: 'accounts/aws', redirectTo: 'cloud/aws/overview', pathMatch: 'full' },
   { path: 'accounts/gcp', redirectTo: 'cloud/gcp/overview', pathMatch: 'full' },

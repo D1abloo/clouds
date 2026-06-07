@@ -59,11 +59,17 @@ export const SIDEBAR_NAV: SidebarNavSection[] = [
   },
   {
     id: 'observability',
-    label: 'Observability',
+    label: 'Observabilidad',
     items: [
-      { label: 'Billing', route: '/billing', icon: 'payments', tone: 'green' },
-      { label: 'Alerts', route: '/alerts', icon: 'warning_amber', tone: 'orange' },
-      { label: 'Notifications', route: '/notifications', icon: 'notifications', tone: 'pink' },
+      { label: 'Métricas', route: '/metrics/overview', icon: 'show_chart', tone: 'green' },
+      { label: 'Logs', route: '/logs', icon: 'receipt_long', tone: 'cyan' },
+      { label: 'Facturación', route: '/billing/overview', icon: 'payments', tone: 'green' },
+      { label: 'Optimizador costes', route: '/cost-optimizer', icon: 'trending_down', tone: 'green' },
+      { label: 'Alertas', route: '/alerts/active', icon: 'warning_amber', tone: 'orange' },
+      { label: 'Incidentes', route: '/incidents', icon: 'local_fire_department', tone: 'orange' },
+      { label: 'Notificaciones', route: '/notifications/all', icon: 'notifications', tone: 'pink' },
+      { label: 'Informes', route: '/reports', icon: 'summarize', tone: 'slate' },
+      { label: 'Gestión cambios', route: '/change-management', icon: 'published_with_changes', tone: 'indigo' },
     ],
   },
   {

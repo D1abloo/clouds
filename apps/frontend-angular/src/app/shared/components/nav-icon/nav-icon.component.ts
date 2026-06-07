@@ -3,7 +3,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { BrandLogoComponent } from '../brand-logo/brand-logo.component'
 import type { NavLogoKey } from '../../theme/nav-logo.types'
 
-export type NavIconSize = 'sm' | 'md' | 'lg'
+export type NavIconSize = 'sm' | 'md' | 'lg' | 'xl' | 'topo'
 
 @Component({
   selector: 'app-nav-icon',
