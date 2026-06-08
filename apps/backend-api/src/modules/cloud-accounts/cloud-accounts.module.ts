@@ -38,6 +38,7 @@ import { BillingSyncWorker } from './billing-sync.worker'
     AwsAdapterService,
     GcpAdapterService,
     AzureAdapterService,
+    SecretsVaultService,
   ],
 })
 export class CloudAccountsModule {}

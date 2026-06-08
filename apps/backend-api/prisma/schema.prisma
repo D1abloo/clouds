@@ -530,9 +530,14 @@ model InstanceTemplate {
 model GithubAccount {
   id              String             @id @default(uuid())
   label           String             @default("GitHub")
+  connectionName  String?            @map("connection_name")
   username        String
   tokenRef        String             @map("token_ref")
   status          String             @default("pending")
+  authType        String             @default("pat") @map("auth_type")
+  baseUrl         String?            @map("base_url")
+  syncFrequency   String             @default("manual") @map("sync_frequency")
+  lastError       String?            @map("last_error")
   avatarUrl       String?            @map("avatar_url")
   createdById     String?            @map("created_by_id")
   lastValidatedAt DateTime?          @map("last_validated_at")
@@ -543,6 +548,45 @@ model GithubAccount {
   webhooks        GithubWebhook[]
 
   @@map("github_accounts")
+}
+
+model GitlabAccount {
+  id              String          @id @default(uuid())
+  label           String          @default("GitLab")
+  connectionName  String?         @map("connection_name")
+  username        String
+  tokenRef        String          @map("token_ref")
+  status          String          @default("pending")
+  authType        String          @default("pat") @map("auth_type")
+  baseUrl         String          @default("https://gitlab.com") @map("base_url")
+  syncFrequency   String          @default("manual") @map("sync_frequency")
+  lastError       String?         @map("last_error")
+  avatarUrl       String?         @map("avatar_url")
+  createdById     String?         @map("created_by_id")
+  lastValidatedAt DateTime?       @map("last_validated_at")
+  lastSyncAt      DateTime?       @map("last_sync_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  projects        GitlabProject[]
+
+  @@map("gitlab_accounts")
+}
+
+model GitlabProject {
+  id                String        @id @default(uuid())
+  accountId         String        @map("account_id")
+  name              String
+  pathWithNamespace String        @map("path_with_namespace")
+  description       String?
+  defaultBranch     String        @default("main") @map("default_branch")
+  visibility        String        @default("private")
+  webUrl            String?       @map("web_url")
+  lastSyncAt        DateTime?     @map("last_sync_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  account           GitlabAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, pathWithNamespace])
+  @@map("gitlab_projects")
 }
 
 model GithubRepository {

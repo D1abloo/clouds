@@ -4,6 +4,7 @@ import { AuditService } from '../audit/audit.service'
 import { IntegrationsService } from '../integrations/integrations.service'
 import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
 import { CreateVpsDto } from './dto/create-vps.dto'
+import { ValidateVpsPreviewDto } from './dto/validate-vps-preview.dto'
 import { isDangerousCommand } from '../ssh/command-validator'
 
 @Injectable()
@@ -13,6 +14,25 @@ export class VpsService {
     private audit: AuditService,
     private integrations: IntegrationsService,
   ) {}
+
+  async validatePreview(dto: ValidateVpsPreviewDto, userId?: string) {
+    const host = dto.hostname?.trim()
+    if (!host) {
+      throw new BadRequestException('Hostname requerido')
+    }
+    const port = dto.port ?? 22
+    // Stub: formato válido; integración ssh2 + Vault en despliegue con claves reales
+    await this.audit.create({
+      userId,
+      action: 'vps.validate_preview',
+      resource: 'vps',
+      metadata: { hostname: host, port, username: dto.username },
+    })
+    return {
+      valid: true,
+      message: `Conexión SSH simulada correcta a ${dto.username}@${host}:${port}`,
+    }
+  }
 
   async create(dto: CreateVpsDto, userId?: string) {
     const vps = await this.prisma.vpsServer.create({

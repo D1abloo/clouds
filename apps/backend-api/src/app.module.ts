@@ -18,6 +18,7 @@ import { DockerDiscoveryModule } from './modules/docker-discovery/docker-discove
 import { KubernetesDiscoveryModule } from './modules/kubernetes-discovery/kubernetes-discovery.module'
 import { JenkinsModule } from './modules/jenkins/jenkins.module'
 import { GithubModule } from './modules/github/github.module'
+import { GitlabModule } from './modules/gitlab/gitlab.module'
 import { TerraformModule } from './modules/terraform/terraform.module'
 import { MetricsModule } from './modules/metrics/metrics.module'
 import { BillingModule } from './modules/billing/billing.module'
@@ -58,6 +59,7 @@ import { PublicModule } from './modules/public/public.module'
     KubernetesDiscoveryModule,
     JenkinsModule,
     GithubModule,
+    GitlabModule,
     TerraformModule,
     MetricsModule,
     BillingModule,

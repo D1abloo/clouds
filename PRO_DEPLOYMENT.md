@@ -17,12 +17,21 @@ INTEGRATIONS_LIVE=true
 
 ## Cloud accounts — conexión PRO
 
-- Modal **Conectar cuenta cloud**: formularios por proveedor (AWS/GCP/Azure + integraciones) sin modo demo.
-- Validación previa al guardar: `POST /api/v1/cloud-accounts/validate-preview` (credenciales reales vía adapters SDK).
-- Credenciales cifradas en vault (`SecretsVaultService`); audit: `cloud_account.create`, `validate_preview`, `validate_failed`, `sync_started`, `sync_completed`, `sync_failed`.
-- **Flujos internos**: botones «Añadir cuenta» / «Sin cuentas conectadas» abren `IntegrationConnectionService` (MatDialog) sin redirigir al sitio público.
-- **Guards**: `publicGuestGuard` en marketing (`/`, `/producto`, `/registro`); wildcard desconocido → `/dashboard`.
-- **Alias**: `/accounts` → `/cloud/aws/accounts`; `/admin/configuracion/integraciones/:provider/nueva` abre wizard y vuelve al módulo.
+- **Centro de integraciones**: `/settings/integrations` — tabla multi-cuenta (cloud, VPS, GitHub) con acciones sincronizar/editar.
+- **Asistente gráfico 6 pasos** (página admin): `/admin/configuracion/integraciones/:provider/conectar` y `/nueva` para `aws|gcp|azure|kubernetes|docker|…`.
+- **VPS / Bare metal**: `/admin/infraestructura/vps/nuevo` — SSH, validación `POST /api/v1/vps/validate-preview`, guardado en `VpsServer`.
+- Modal **Conectar cuenta** (empty states): `IntegrationConnectionService.openWizardDialog()` sin salir del panel.
+- Validación cloud: `POST /api/v1/cloud-accounts/validate-preview` (AWS/GCP/Azure vía adapters SDK).
+- Credenciales cifradas en vault (`SecretsVaultService`); audit: `cloud_account.create`, `validate_preview`, `vps.validate_preview`, `sync_*`.
+- **Métodos de credencial**:
+  - AWS: IAM Role (ARN), Access Key, OIDC
+  - GCP: Service Account JSON, Workload Identity
+  - Azure: App Registration (Client Secret), Managed Identity
+  - VPS: SSH (recomendado), agente (próximamente), registro manual
+  - Kubernetes: kubeconfig o Bearer Token
+  - Docker: TLS + endpoint o túnel SSH
+- **Guards**: `publicGuestGuard` en marketing; wildcard → `/dashboard` (nunca sitio público).
+- **Alias**: `/admin/configuracion/integraciones` → `/settings/integrations`; `/accounts` → `/cloud/aws/accounts`.
 
 
 ```bash
@@ -79,6 +88,26 @@ AUTH_URL=https://spendlyx.com
 ```
 
 Inicio OAuth (frontend): `GET /api/v1/auth/oauth/google` | `GET /api/v1/auth/oauth/github`
+
+## GitHub / GitLab — integración de repositorios PRO
+
+- **Hub**: `/settings/integrations` y `/admin/configuracion/integraciones`
+- **Wizard**: `/admin/configuracion/integraciones/github/conectar` | `.../gitlab/conectar`
+- **Detalle multi-cuenta**: `/repositories/github/:connectionId` | `/repositories/gitlab/:connectionId`
+- Tokens PAT cifrados con `SecretsVaultService` (`VAULT_ENCRYPTION_KEY` en `infra/.env`)
+- Validación previa: `POST /api/v1/github/accounts/validate-preview` | `POST /api/v1/gitlab/accounts/validate-preview`
+- Preview repos: `POST /api/v1/github/accounts/preview-repos` | `POST /api/v1/gitlab/accounts/preview-projects`
+- OAuth integración repositorios: muestra «Próximamente» si `GITHUB_CLIENT_ID` no está configurado; login OAuth sigue en `/login`
+
+Variables adicionales (opcionales para OAuth futuro de integraciones):
+
+```env
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GITLAB_CLIENT_ID=
+GITLAB_CLIENT_SECRET=
+VAULT_ENCRYPTION_KEY=
+```
 
 > **Nota:** La URL de callback de GitHub es `/api/v1/auth/oauth/callback/github`, no `/api/v1/auth/oauth/github` (esta última es solo el inicio del flujo).
 

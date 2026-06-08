@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, of } from 'rxjs'
+import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 import {
@@ -20,12 +21,79 @@ import {
 
 export type GitlabDemoState = ReturnType<typeof buildGitlabDemoBootstrap>
 
+export type { GitlabAccount, GitlabProject, GitlabGroup }
+
 @Injectable({ providedIn: 'root' })
 export class GitlabService {
+  private readonly api = inject(ApiClientService)
   private readonly pro = inject(ProModeService)
   private syncPermissions: GitlabSyncPermissionInput | null = null
 
   private allowDemo = (): boolean => allowsDemoDataFrom(this.pro)
+
+  accounts = (): Observable<{ items: GitlabAccount[] }> =>
+    this.allowDemo()
+      ? of({ items: buildGitlabDemoBootstrap().account ? [buildGitlabDemoBootstrap().account] : [] })
+      : this.api.get('gitlab/accounts')
+
+  validatePreview = (body: {
+    token: string
+    baseUrl?: string
+    authType?: string
+  }): Observable<{
+    valid: boolean
+    username: string | null
+    avatarUrl: string | null
+    scopes: string[]
+    repoCount: number
+    message: string
+  }> => this.api.post('gitlab/accounts/validate-preview', body)
+
+  previewProjects = (body: {
+    token: string
+    baseUrl?: string
+    excludeArchived?: boolean
+  }): Observable<{ items: Array<{ id: number; name: string; fullName: string; archived: boolean; description: string }> }> =>
+    this.api.post('gitlab/accounts/preview-projects', body)
+
+  getAccount = (id: string): Observable<{ account: GitlabAccount; projects: GitlabProject[] }> =>
+    this.api.get(`gitlab/accounts/${id}`)
+
+  createAccount = (body: {
+    label?: string
+    connectionName?: string
+    username?: string
+    token?: string
+    authType?: string
+    baseUrl?: string
+    syncFrequency?: string
+  }): Observable<GitlabAccount & { message: string }> => {
+    if (this.allowDemo()) {
+      return this.createAccountDemo(body as GitlabAccountFormResult)
+    }
+    return this.api.post('gitlab/accounts', body)
+  }
+
+  validateAccount = (id: string): Observable<{ valid: boolean; message: string; scopes?: string[]; repoCount?: number }> =>
+    this.allowDemo()
+      ? of({ valid: true, message: 'Token GitLab demo válido' })
+      : this.api.post(`gitlab/accounts/${id}/validate`, {})
+
+  syncAccount = (
+    id: string,
+    body?: { selectedProjectIds?: number[]; excludeArchived?: boolean },
+  ): Observable<{
+    synced: number
+    projects?: GitlabProject[]
+    lastSyncAt: string
+    message: string
+  }> =>
+    this.allowDemo()
+      ? this.syncProjects()
+      : this.api.post(`gitlab/accounts/${id}/sync`, body ?? {})
+
+  deleteAccount = (id: string): Observable<{ deleted: boolean; message: string }> =>
+    this.api.delete(`gitlab/accounts/${id}`)
 
   connectDemo = (): Observable<GitlabDemoState & { message: string }> => {
     if (!this.allowDemo()) {
@@ -45,7 +113,7 @@ export class GitlabService {
     })
   }
 
-  createAccount = (
+  private createAccountDemo = (
     body: GitlabAccountFormResult,
   ): Observable<GitlabAccount & { message: string }> => {
     this.syncPermissions = {
@@ -67,7 +135,7 @@ export class GitlabService {
   }
 
   projects = (): Observable<{ items: GitlabProject[] }> => {
-    if (!this.allowDemo()) return of({ items: [] })
+    if (!this.allowDemo()) return this.api.get('gitlab/projects')
     if (this.syncPermissions) {
       const { projects } = filterGitlabProjectsByPermissions(this.syncPermissions)
       return of({ items: projects.length ? projects : buildGitlabDemoBootstrap().projects })
@@ -133,14 +201,6 @@ export class GitlabService {
       message,
     })
   }
-
-  validateAccount = (): Observable<{ valid: boolean; message: string }> =>
-    of({
-      valid: this.allowDemo(),
-      message: this.allowDemo()
-        ? 'Token GitLab demo válido'
-        : 'Configuración requerida. Añade credenciales GitLab en Configuración.',
-    })
 
   deploymentLogs = (id: string): Observable<{ logs: string }> =>
     of({

@@ -3,6 +3,19 @@
 > Generado: 2026-06-09 (actualizado — formularios cloud PRO)
 > Recomendación final: **READY_FOR_PRO**
 
+## Asistentes gráficos cloud / VPS / K8s / Docker (2026-06-09)
+
+| Criterio | Estado |
+|----------|--------|
+| Hub `/settings/integrations` con cuentas conectadas | ✅ |
+| Wizard 6 pasos: proveedor → método → credenciales → validar → recursos → finalizar | ✅ |
+| Rutas `/admin/configuracion/integraciones/:provider/conectar` y `/nueva` | ✅ |
+| VPS wizard `/admin/infraestructura/vps/nuevo` | ✅ |
+| `POST /vps/validate-preview` stub + audit | ✅ |
+| Modal dialog vía `IntegrationConnectionService` (empty states) | ✅ |
+| UI 100 % español, sin datos demo en PRO | ✅ |
+| Tests `cloud-connection-wizard.spec.ts`, `integrations-hub.spec.ts` | ✅ |
+
 ## Corrección de flujos de conexión de cuentas (2026-06-09)
 
 | Criterio | Estado |
@@ -277,6 +290,19 @@ Variables VPS verificadas (enmascaradas): `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`
 | Módulos internos | Carga normal; empty state «Sin datos todavía» / «Cuando haya actividad, aparecerá aquí.» |
 | AWS / GCP / Azure | Empty state corto con CTA «Conectar {proveedor}» → cuentas del proveedor |
 | GitHub / GitLab / Jenkins | Empty state específico del proveedor con botón de conexión |
+
+## GitHub / GitLab — wizard de conexión (2026-06-09)
+
+| Elemento | Estado | Notas |
+|----------|--------|-------|
+| Hub integraciones | ✅ | `/settings/integrations` — tarjetas multi-cuenta |
+| Wizard GitHub | ✅ | 6 pasos, español, logos oficiales, PAT + Enterprise |
+| Wizard GitLab | ✅ | Misma UX, backend `gitlab` module |
+| Detalle conexión | ✅ | Tabs: Resumen, Repos/Proyectos, Ramas, PRs/MRs, Webhooks, etc. |
+| Tokens cifrados | ✅ | `SecretsVaultService` en create/sync |
+| Demo oculto PRO | ✅ | Sin `cloudops-org` / repos ficticios en PRO |
+| OAuth integración | ⚠️ | Toast «Próximamente»; PAT end-to-end operativo |
+| Audit | ✅ | `github.account.*`, `gitlab.account.*`, `validate_preview` |
 | Datos opcionales (métricas, instancias, explorador…) | Página visible + tarjeta CTA opcional, sin bloqueo pantalla completa |
 | Asistente IA | Inline «Asistente no disponible» + «Configurar IA» (no mensaje cloud genérico) |
 | Sidebar | Sin bloqueo de secciones por falta de integraciones |

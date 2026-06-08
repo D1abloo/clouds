@@ -7,9 +7,13 @@ export type DeployTargetType = 'instance' | 'vps' | 'docker' | 'kubernetes'
 export interface GithubAccount {
   id: string
   label: string
+  connectionName?: string
   username: string
   status: string
   statusLabel?: string
+  authType?: string
+  baseUrl?: string | null
+  lastError?: string | null
   organization?: string
   accountType?: string
   accountTypeLabel?: string
@@ -17,6 +21,7 @@ export interface GithubAccount {
   lastValidatedAt?: string | null
   lastSyncAt?: string | null
   createdAt: string
+  repoCount?: number
   demoMode?: boolean
 }
 
@@ -68,6 +73,29 @@ export class GithubService {
   accounts = (): Observable<{ items: GithubAccount[] }> =>
     this.api.get('github/accounts')
 
+  validatePreview = (body: {
+    token: string
+    baseUrl?: string
+    authType?: string
+  }): Observable<{
+    valid: boolean
+    username: string | null
+    avatarUrl: string | null
+    scopes: string[]
+    repoCount: number
+    message: string
+  }> => this.api.post('github/accounts/validate-preview', body)
+
+  previewRepos = (body: {
+    token: string
+    baseUrl?: string
+    excludeArchived?: boolean
+  }): Observable<{ items: Array<{ id: number; name: string; fullName: string; archived: boolean; description: string }> }> =>
+    this.api.post('github/accounts/preview-repos', body)
+
+  getAccount = (id: string): Observable<{ account: GithubAccount; repositories: GithubRepo[] }> =>
+    this.api.get(`github/accounts/${id}`)
+
   createAccount = (body: {
     label?: string
     username?: string
@@ -98,6 +126,8 @@ export class GithubService {
       repoScope?: string
       organization?: string
       accountType?: string
+      selectedRepoIds?: number[]
+      excludeArchived?: boolean
     },
   ): Observable<{
     synced: number

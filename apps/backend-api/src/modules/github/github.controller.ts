@@ -53,6 +53,21 @@ export class GithubController {
     return this.accounts.list()
   }
 
+  @Post('accounts/validate-preview')
+  @ApiOperation({ summary: 'Validar token GitHub antes de guardar' })
+  validatePreview(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: { token: string; baseUrl?: string; authType?: string },
+  ) {
+    return this.accounts.validatePreview(user.sub, body)
+  }
+
+  @Post('accounts/preview-repos')
+  @ApiOperation({ summary: 'Listar repos remotos antes de guardar cuenta' })
+  previewRepos(@Body() body: { token: string; baseUrl?: string; excludeArchived?: boolean }) {
+    return this.accounts.previewRepos(body)
+  }
+
   @Post('accounts')
   createAccount(
     @CurrentUser() user: JwtPayload,
@@ -80,6 +95,12 @@ export class GithubController {
     return this.accounts.create(user.sub, body)
   }
 
+  @Get('accounts/:id')
+  @ApiOperation({ summary: 'Detalle de cuenta GitHub' })
+  getAccount(@Param('id') id: string) {
+    return this.accounts.getOne(id)
+  }
+
   @Post('accounts/:id/validate')
   validateAccount(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.accounts.validate(user.sub, id)
@@ -95,6 +116,8 @@ export class GithubController {
       repoScope?: string
       organization?: string
       accountType?: string
+      selectedRepoIds?: number[]
+      excludeArchived?: boolean
     },
   ) {
     return this.accounts.sync(user.sub, id, body)

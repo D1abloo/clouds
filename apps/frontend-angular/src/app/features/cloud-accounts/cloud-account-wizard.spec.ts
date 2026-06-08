@@ -2,6 +2,7 @@ import {
   AWS_ACCOUNT_ID_PATTERN,
   CLOUD_PROVIDER_CARDS,
   CLOUD_WIZARD_STEPS,
+  FULL_WIZARD_STEPS,
   WIZARD_SUBTITLE,
   credentialTypeLabel,
   maskSecret,
@@ -53,6 +54,7 @@ const baseForm = (): Record<string, unknown> => ({
 describe('cloud-account-wizard.config', () => {
   it('no incluye texto demo en pasos ni subtítulo', () => {
     expect(WIZARD_SUBTITLE.toLowerCase()).not.toContain('demo')
+    expect(FULL_WIZARD_STEPS).toHaveSize(6)
     expect(CLOUD_WIZARD_STEPS.map((s) => s.label).join(' ').toLowerCase()).not.toContain('demo')
     for (const card of CLOUD_PROVIDER_CARDS) {
       const blob = JSON.stringify(card).toLowerCase()

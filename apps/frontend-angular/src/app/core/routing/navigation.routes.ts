@@ -171,6 +171,22 @@ export const NAVIGATION_ROUTES: Routes = [
     data: { breadcrumb: 'Kubernetes', module: 'kubernetes' },
   },
   {
+    path: 'repositories/github/:connectionId',
+    loadComponent: () =>
+      import('../../features/repositories/integrations/repository-connection-detail.component').then(
+        (m) => m.RepositoryConnectionDetailComponent,
+      ),
+    data: { breadcrumb: 'Cuenta GitHub', module: 'repositories' },
+  },
+  {
+    path: 'repositories/gitlab/:connectionId',
+    loadComponent: () =>
+      import('../../features/repositories/integrations/repository-connection-detail.component').then(
+        (m) => m.RepositoryConnectionDetailComponent,
+      ),
+    data: { breadcrumb: 'Cuenta GitLab', module: 'repositories' },
+  },
+  {
     path: 'repositories/github',
     loadComponent: () =>
       import('../../features/repositories/github-repositories-page.component').then(
@@ -276,14 +292,53 @@ export const NAVIGATION_ROUTES: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'admin/configuracion/integraciones/github/conectar',
+    loadComponent: () =>
+      import('../../features/repositories/integrations/repository-connection-wizard.component').then(
+        (m) => m.RepositoryConnectionWizardComponent,
+      ),
+    data: { breadcrumb: 'Conectar GitHub', provider: 'github', module: 'settings' },
+  },
+  {
+    path: 'admin/configuracion/integraciones/gitlab/conectar',
+    loadComponent: () =>
+      import('../../features/repositories/integrations/repository-connection-wizard.component').then(
+        (m) => m.RepositoryConnectionWizardComponent,
+      ),
+    data: { breadcrumb: 'Conectar GitLab', provider: 'gitlab', module: 'settings' },
+  },
+  {
     path: 'admin/configuracion/integraciones/:provider/nueva',
     loadComponent: () =>
-      import('../../features/integrations/integration-connect-page.component').then(
-        (m) => m.IntegrationConnectPageComponent,
+      import('../../features/cloud-accounts/cloud-connection-wizard-page.component').then(
+        (m) => m.CloudConnectionWizardPageComponent,
+      ),
+    data: { breadcrumb: 'Nueva integración' },
+  },
+  {
+    path: 'admin/configuracion/integraciones/:provider/conectar',
+    loadComponent: () =>
+      import('../../features/cloud-accounts/cloud-connection-wizard-page.component').then(
+        (m) => m.CloudConnectionWizardPageComponent,
       ),
     data: { breadcrumb: 'Conectar integración' },
   },
-  { path: 'settings/integrations', redirectTo: 'settings/general', pathMatch: 'full' },
+  {
+    path: 'admin/infraestructura/vps/nuevo',
+    loadComponent: () =>
+      import('../../features/infrastructure/vps-connection-wizard-page.component').then(
+        (m) => m.VpsConnectionWizardPageComponent,
+      ),
+    data: { breadcrumb: 'Nuevo servidor VPS' },
+  },
+  {
+    path: 'settings/integrations',
+    loadComponent: () =>
+      import('../../features/integrations/integrations-hub-page.component').then(
+        (m) => m.IntegrationsHubPageComponent,
+      ),
+    data: { breadcrumb: 'Integraciones', module: 'settings' },
+  },
   { path: 'cloud/aws', redirectTo: 'cloud/aws/overview', pathMatch: 'full' },
   { path: 'cloud/gcp', redirectTo: 'cloud/gcp/overview', pathMatch: 'full' },
   { path: 'cloud/azure', redirectTo: 'cloud/azure/overview', pathMatch: 'full' },

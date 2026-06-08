@@ -15,9 +15,8 @@ import {
 } from '../../core/services/github.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
-import { catchError, map, of, switchMap, type Observable } from 'rxjs'
-import { GithubAccountDialogComponent } from './components/github-account-dialog.component'
-import { githubSyncPermissionsPayload } from './utils/github-sync-permissions.util'
+import { catchError, map, of, type Observable } from 'rxjs'
+import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
 import { buildGithubInventoryFallback } from './utils/github-inventory-fallback'
 import {
   buildClientGithubDemoState,
@@ -113,6 +112,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
   private readonly pro = inject(ProModeService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
+  private readonly connections = inject(IntegrationConnectionService)
   readonly repoActions = inject(RepositoriesActionService)
 
   readonly meta = REPOSITORIES_SECTION_META.github
@@ -272,74 +272,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
   }
 
   openAddAccount = (): void => {
-    const ref = this.dialog.open(GithubAccountDialogComponent, {
-      width: '920px',
-      maxWidth: '96vw',
-      maxHeight: '92vh',
-      autoFocus: 'first-tabbable',
-    })
-    ref.afterClosed().subscribe((body) => {
-      if (!body) return
-      this.github
-        .createAccount({
-          label: body.label,
-          username: body.username,
-          token: body.token,
-          organization: body.organization,
-          accountType: body.accountType,
-          authMethod: body.authMethod,
-          scopes: body.scopes,
-          environment: body.environment,
-          autoSync: body.autoSync,
-          syncInterval: body.syncInterval,
-          repoScope: body.repoScope,
-          webhookUrl: body.webhookUrl,
-          webhookSecret: body.webhookSecret,
-          webhookEvents: body.webhookEvents,
-          description: body.description,
-          contactEmail: body.contactEmail,
-          useDemoData: false,
-        })
-        .pipe(
-          switchMap((created) => {
-            const afterValidate = body.validateBeforeSave
-              ? this.github.validateAccount(created.id).pipe(map(() => created))
-              : of(created)
-            return afterValidate.pipe(
-              switchMap((acc) =>
-                body.syncOnConnect
-                  ? this.github
-                      .syncAccount(acc.id, githubSyncPermissionsPayload(body))
-                      .pipe(map((sync) => ({ acc, sync })))
-                  : of({ acc, sync: null }),
-              ),
-            )
-          }),
-        )
-        .subscribe({
-          next: ({ acc, sync }) => {
-            this.accounts.update((list) => {
-              const rest = list.filter((a) => a.id !== acc.id)
-              return [acc, ...rest]
-            })
-            if (sync?.repos?.length) {
-              this.repos.set(sync.repos)
-              this.repoControl.setValue(sync.repos[0].id)
-            } else if (sync) {
-              this.runDemo('Sync GitHub', sync.message)
-            }
-            this.runDemo(
-              'Cuenta GitHub añadida',
-              sync
-                ? `${body.label} · ${sync.synced} repos según permisos`
-                : `${body.label} · ${body.authMethod}`,
-            )
-            if (body.syncOnConnect && sync && !sync.repos?.length) {
-              this.handleSync()
-            }
-          },
-        })
-    })
+    this.connections.openGithub().subscribe()
   }
 
   handleQuickConnect = (): void => {

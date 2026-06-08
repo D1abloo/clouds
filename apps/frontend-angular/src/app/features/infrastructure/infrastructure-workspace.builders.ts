@@ -59,7 +59,9 @@ export const buildDockerWorkspace = (data: Record<string, unknown>): InfraWorksp
       'Motor de contenedores multi-host: runtime, imágenes, redes overlay, volúmenes persistentes, healthchecks y acciones en caliente sobre VPS y bare metal.',
     lastSync: 'hace 1 min',
     headerActions: [
-      { label: 'Iniciar contenedor', icon: 'play_arrow', primary: true },
+      ...(hosts.length === 0
+        ? [{ label: 'Conectar host Docker', icon: 'add_link', primary: true as const }]
+        : [{ label: 'Iniciar contenedor', icon: 'play_arrow', primary: true as const }]),
       { label: 'Actualizar inventario', icon: 'refresh' },
       { label: 'Ejecutar prune', icon: 'cleaning_services' },
     ],
@@ -133,7 +135,9 @@ export const buildKubernetesWorkspace = (data: Record<string, unknown>): InfraWo
       'Orquestación multi-cluster: pods, deployments, services, eventos del plano de control, cuotas por namespace y acciones de escalado rolling.',
     lastSync: 'hace 1 min',
     headerActions: [
-      { label: 'Escalar deployment', icon: 'unfold_more', primary: true },
+      ...(clusters.length === 0
+        ? [{ label: 'Conectar cluster', icon: 'add_link', primary: true as const }]
+        : [{ label: 'Escalar deployment', icon: 'unfold_more', primary: true as const }]),
       { label: 'Actualizar clusters', icon: 'refresh' },
       { label: 'Aplicar manifiesto', icon: 'upload_file' },
     ],

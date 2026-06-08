@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
 import { AppModeService } from '../../common/config/app-mode.service'
+import { SecretsVaultService } from '../cloud-accounts/secrets-vault.service'
 import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubDemoService } from './github-demo.service'
-import { mapAccount, mapDemoAccountProfile, isDemoGithubAccount } from './github-mappers'
+import { GithubApiClient } from './github-api.client'
+import { mapAccount, mapDemoAccountProfile, isDemoGithubAccount, mapRepo } from './github-mappers'
 import { DEMO_GITHUB_ACCOUNT_ID, DEMO_GITHUB_REPOS } from './github-demo.data'
 
 @Injectable()
@@ -18,10 +20,14 @@ export class GithubAccountsService {
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeGateway,
     private readonly mode: AppModeService,
+    private readonly vault: SecretsVaultService,
+    private readonly githubApi: GithubApiClient,
   ) {}
 
+  private isProLive = (): boolean => this.mode.isProMode() && !this.mode.canUseDemoFallback()
+
   async list() {
-    if (this.mode.isProMode() && !this.mode.canUseDemoFallback()) {
+    if (this.isProLive()) {
       const items = await this.prisma.githubAccount.findMany({ orderBy: { createdAt: 'desc' } })
       const liveAccounts = items.filter((a) => !isDemoGithubAccount(a))
       if (!liveAccounts.length) {
@@ -30,7 +36,13 @@ export class GithubAccountsService {
           demoMode: false,
         }
       }
-      return { items: liveAccounts.map(mapAccount), demoMode: false, proMode: true }
+      const mapped = await Promise.all(
+        liveAccounts.map(async (a) => {
+          const repoCount = await this.prisma.githubRepository.count({ where: { accountId: a.id } })
+          return { ...mapAccount(a), repoCount, connectionName: a.connectionName ?? a.label }
+        }),
+      )
+      return { items: mapped, demoMode: false, proMode: true }
     }
 
     if (!this.demo.isDbReady() || !this.demo.isSessionActive()) {
@@ -81,6 +93,47 @@ export class GithubAccountsService {
     }
   }
 
+  async validatePreview(
+    userId: string,
+    body: { token: string; baseUrl?: string; authType?: string },
+  ) {
+    const token = body.token?.trim()
+    if (!token) throw new BadRequestException('Token GitHub obligatorio')
+    const result = await this.githubApi.validateToken(token, body.baseUrl)
+    await this.audit.create({
+      userId,
+      action: result.valid ? 'github.validate_preview' : 'github.validate_preview_failed',
+      resource: 'github',
+      metadata: { scopes: result.scopes, repoCount: result.repoCount },
+    })
+    return {
+      valid: result.valid,
+      username: result.user?.login ?? null,
+      avatarUrl: result.user?.avatar_url ?? null,
+      scopes: result.scopes,
+      repoCount: result.repoCount,
+      message: result.valid
+        ? `Conexión válida · ${result.repoCount} repositorios accesibles`
+        : result.error ?? 'Token inválido',
+    }
+  }
+
+  async previewRepos(body: { token: string; baseUrl?: string; excludeArchived?: boolean }) {
+    const token = body.token?.trim()
+    if (!token) throw new BadRequestException('Token GitHub obligatorio')
+    let repos = await this.githubApi.listAllRepos(token, body.baseUrl)
+    if (body.excludeArchived !== false) repos = repos.filter((r) => !r.archived)
+    return {
+      items: repos.map((r) => ({
+        id: r.id,
+        name: r.name,
+        fullName: r.full_name,
+        archived: r.archived,
+        description: r.description ?? '',
+      })),
+    }
+  }
+
   async create(
     userId: string,
     body: {
@@ -103,6 +156,9 @@ export class GithubAccountsService {
       useDemoData?: boolean
     },
   ) {
+    if (this.isProLive()) {
+      return this.createPro(userId, body)
+    }
     const accountMeta = {
       organization: body.organization,
       accountType: body.accountType,
@@ -173,6 +229,9 @@ export class GithubAccountsService {
   }
 
   async validate(userId: string, accountId: string) {
+    if (this.isProLive() && accountId !== DEMO_GITHUB_ACCOUNT_ID) {
+      return this.validatePro(userId, accountId)
+    }
     if (!this.demo.isDbReady() || accountId === DEMO_GITHUB_ACCOUNT_ID) {
       const account = mapDemoAccountProfile()
       await this.recordDemoEvents(userId, 'github.account.validate', 'Conexión demo validada')
@@ -200,8 +259,13 @@ export class GithubAccountsService {
       repoScope?: string
       organization?: string
       accountType?: string
+      selectedRepoIds?: number[]
+      excludeArchived?: boolean
     },
   ) {
+    if (this.isProLive() && accountId !== DEMO_GITHUB_ACCOUNT_ID) {
+      return this.syncPro(userId, accountId, body)
+    }
     const perms = {
       scopes: body?.scopes,
       repoScope: body?.repoScope,
@@ -409,6 +473,170 @@ export class GithubAccountsService {
 
   async legacyDisconnect(userId: string) {
     return this.remove(userId, DEMO_GITHUB_ACCOUNT_ID)
+  }
+
+  async getOne(accountId: string) {
+    const account = await this.findOrThrow(accountId)
+    const repoCount = await this.prisma.githubRepository.count({ where: { accountId } })
+    const repos = await this.prisma.githubRepository.findMany({
+      where: { accountId },
+      orderBy: { lastSyncAt: 'desc' },
+    })
+    return {
+      account: { ...mapAccount(account), repoCount, connectionName: account.connectionName ?? account.label },
+      repositories: repos.map(mapRepo),
+    }
+  }
+
+  private async createPro(
+    userId: string,
+    body: {
+      label?: string
+      connectionName?: string
+      username?: string
+      token?: string
+      authType?: string
+      baseUrl?: string
+      syncFrequency?: string
+    },
+  ) {
+    const token = body.token?.trim()
+    if (!token) throw new BadRequestException('Token GitHub obligatorio')
+    const preview = await this.githubApi.validateToken(token, body.baseUrl)
+    if (!preview.valid || !preview.user) {
+      throw new BadRequestException(preview.error ?? 'No se pudo validar el token GitHub')
+    }
+    const tokenRef = this.vault.storeSecrets({ token })
+    const account = await this.prisma.githubAccount.create({
+      data: {
+        label: body.label?.trim() || 'GitHub',
+        connectionName: body.connectionName?.trim() || body.label?.trim() || 'GitHub',
+        username: body.username?.trim() || preview.user.login,
+        tokenRef,
+        status: 'connected',
+        authType: body.authType?.trim() || 'pat',
+        baseUrl: body.baseUrl?.trim() || null,
+        syncFrequency: body.syncFrequency?.trim() || 'manual',
+        avatarUrl: preview.user.avatar_url,
+        createdById: userId,
+        lastValidatedAt: new Date(),
+      },
+    })
+    await this.audit.create({
+      userId,
+      action: 'github.account.create',
+      resource: 'github',
+      resourceId: account.id,
+      metadata: { username: account.username, authType: account.authType },
+    })
+    return { ...mapAccount(account), connectionName: account.connectionName ?? account.label, message: 'Cuenta GitHub añadida' }
+  }
+
+  private async validatePro(userId: string, accountId: string) {
+    const account = await this.findOrThrow(accountId)
+    const token = this.readToken(account.tokenRef)
+    const result = await this.githubApi.validateToken(token, account.baseUrl)
+    const updated = await this.prisma.githubAccount.update({
+      where: { id: accountId },
+      data: {
+        status: result.valid ? 'connected' : 'invalid',
+        lastValidatedAt: new Date(),
+        lastError: result.valid ? null : result.error ?? 'Token inválido',
+        avatarUrl: result.user?.avatar_url ?? account.avatarUrl,
+        username: result.user?.login ?? account.username,
+      },
+    })
+    const repoCount = await this.prisma.githubRepository.count({ where: { accountId } })
+    await this.audit.create({
+      userId,
+      action: 'github.account.validate',
+      resource: 'github',
+      resourceId: accountId,
+      metadata: { valid: result.valid, scopes: result.scopes, repoCount: result.repoCount },
+    })
+    return {
+      valid: result.valid,
+      account: { ...mapAccount(updated), repoCount, connectionName: updated.connectionName ?? updated.label },
+      scopes: result.scopes,
+      repoCount: result.repoCount,
+      message: result.valid ? 'Conexión validada correctamente' : result.error ?? 'Token inválido',
+    }
+  }
+
+  private async syncPro(
+    userId: string,
+    accountId: string,
+    body?: { selectedRepoIds?: number[]; excludeArchived?: boolean },
+  ) {
+    const account = await this.findOrThrow(accountId)
+    if (account.status !== 'connected') await this.validatePro(userId, accountId)
+    const token = this.readToken(account.tokenRef)
+    let repos = await this.githubApi.listAllRepos(token, account.baseUrl)
+    if (body?.excludeArchived !== false) repos = repos.filter((r) => !r.archived)
+    if (body?.selectedRepoIds?.length) {
+      const selected = new Set(body.selectedRepoIds)
+      repos = repos.filter((r) => selected.has(r.id))
+    }
+    let synced = 0
+    for (const repo of repos) {
+      await this.prisma.githubRepository.upsert({
+        where: { accountId_fullName: { accountId, fullName: repo.full_name } },
+        create: {
+          id: `gh-repo-${repo.id}`,
+          accountId,
+          name: repo.name,
+          fullName: repo.full_name,
+          description: repo.description,
+          defaultBranch: repo.default_branch || 'main',
+          language: repo.language,
+          stars: repo.stargazers_count,
+          visibility: repo.private ? 'private' : 'public',
+          htmlUrl: repo.html_url,
+          lastSyncAt: new Date(),
+        },
+        update: {
+          description: repo.description,
+          stars: repo.stargazers_count,
+          language: repo.language,
+          lastSyncAt: new Date(),
+        },
+      })
+      synced++
+    }
+    const updated = await this.prisma.githubAccount.update({
+      where: { id: accountId },
+      data: { lastSyncAt: new Date(), status: 'connected', lastError: null },
+    })
+    await this.audit.create({
+      userId,
+      action: 'github.account.sync',
+      resource: 'github',
+      resourceId: accountId,
+      metadata: { synced },
+    })
+    await this.notifications.create(
+      userId,
+      'in_app',
+      'Sincronización GitHub',
+      `${synced} repositorios sincronizados para ${account.username}.`,
+    )
+    this.realtime.emitGithubSynced({ accountId, repoCount: synced })
+    const items = await this.prisma.githubRepository.findMany({ where: { accountId } })
+    return {
+      synced,
+      repos: items.map(mapRepo),
+      account: { ...mapAccount(updated), repoCount: synced, connectionName: updated.connectionName ?? updated.label },
+      lastSyncAt: updated.lastSyncAt?.toISOString(),
+      message: `${synced} repositorios sincronizados`,
+    }
+  }
+
+  private readToken = (tokenRef: string): string => {
+    if (this.vault.readSecrets(tokenRef).token) {
+      return this.vault.readSecrets(tokenRef).token
+    }
+    if (this.demo.isDemoToken(tokenRef)) throw new BadRequestException('Token demo no permitido en PRO')
+    return tokenRef
   }
 
   private async recordDemoEvents(

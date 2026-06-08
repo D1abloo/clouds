@@ -1,7 +1,17 @@
 import type { CloudProvider } from '../../core/models/api.models'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
-export type WizardStep = 'provider' | 'credentials' | 'review'
+export type WizardStep = 'provider' | 'method' | 'credentials' | 'validate' | 'resources' | 'finish'
+
+/** Pasos del asistente gráfico (6 pasos SaaS) */
+export const FULL_WIZARD_STEPS: { id: WizardStep; label: string }[] = [
+  { id: 'provider', label: 'Proveedor' },
+  { id: 'method', label: 'Método' },
+  { id: 'credentials', label: 'Credenciales' },
+  { id: 'validate', label: 'Validación' },
+  { id: 'resources', label: 'Recursos' },
+  { id: 'finish', label: 'Finalizar' },
+]
 
 /** Proveedores soportados en el asistente de conexión */
 export type ConnectionProviderId =
@@ -36,11 +46,161 @@ export interface CloudProviderWizardCard {
   defaultRegion?: string
 }
 
-export const CLOUD_WIZARD_STEPS: { id: WizardStep; label: string }[] = [
-  { id: 'provider', label: 'Proveedor' },
-  { id: 'credentials', label: 'Conexión' },
-  { id: 'review', label: 'Revisión' },
-]
+export const CLOUD_WIZARD_STEPS = FULL_WIZARD_STEPS
+
+export interface ConnectionMethodCard {
+  id: string
+  label: string
+  description: string
+  icon: string
+  recommended?: boolean
+  comingSoon?: boolean
+}
+
+export interface ResourceSyncOption {
+  id: string
+  label: string
+  description: string
+  defaultSelected: boolean
+}
+
+export const PROVIDER_ALIAS_MAP: Record<string, ConnectionProviderId> = {
+  aws: 'AWS',
+  gcp: 'GCP',
+  azure: 'AZURE',
+  digitalocean: 'DIGITALOCEAN',
+  hetzner: 'HETZNER',
+  linode: 'LINODE',
+  ovh: 'OVH',
+  cloudflare: 'CLOUDFLARE',
+  kubernetes: 'KUBERNETES',
+  k8s: 'KUBERNETES',
+  docker: 'DOCKER',
+  github: 'GITHUB',
+  gitlab: 'GITLAB',
+  jenkins: 'JENKINS',
+  terraform: 'TERRAFORM',
+  vps: 'DIGITALOCEAN',
+}
+
+export const resolveProviderAlias = (alias: string): ConnectionProviderId | null =>
+  PROVIDER_ALIAS_MAP[alias.trim().toLowerCase()] ?? null
+
+export const wizardRouteForAlias = (alias: string): string => {
+  const key = alias.trim().toLowerCase()
+  if (key === 'vps' || key === 'baremetal' || key === 'bare-metal') {
+    return '/admin/infraestructura/vps/nuevo'
+  }
+  return `/admin/configuracion/integraciones/${key}/conectar`
+}
+
+export const connectionMethodsFor = (provider: ConnectionProviderId): ConnectionMethodCard[] => {
+  const methods: Partial<Record<ConnectionProviderId, ConnectionMethodCard[]>> = {
+    AWS: [
+      { id: 'iam_role', label: 'IAM Role (ARN)', description: 'Assume-role cross-account — recomendado para producción', icon: 'verified_user', recommended: true },
+      { id: 'access_key', label: 'Access Key + Secret', description: 'Claves IAM con permisos de lectura/operación', icon: 'vpn_key' },
+      { id: 'oidc', label: 'OIDC / SSO', description: 'Federación con proveedor de identidad', icon: 'account_tree' },
+    ],
+    GCP: [
+      { id: 'service_account', label: 'Service Account (JSON)', description: 'JSON descargado desde IAM — método recomendado', icon: 'description', recommended: true },
+      { id: 'workload_identity', label: 'Workload Identity', description: 'OIDC en GKE o Cloud Run', icon: 'cloud' },
+    ],
+    AZURE: [
+      { id: 'client_secret', label: 'App Registration', description: 'Client ID + Secret de aplicación registrada', icon: 'app_registration', recommended: true },
+      { id: 'managed_identity', label: 'Managed Identity', description: 'Identidad administrada en Azure', icon: 'badge' },
+    ],
+    DIGITALOCEAN: [{ id: 'api_token', label: 'Personal Access Token', description: 'Token del panel DigitalOcean', icon: 'token', recommended: true }],
+    HETZNER: [{ id: 'api_token', label: 'API Token', description: 'Token Hetzner Cloud Console', icon: 'token', recommended: true }],
+    LINODE: [{ id: 'api_token', label: 'Personal Access Token', description: 'Token Linode API v4', icon: 'token', recommended: true }],
+    OVH: [{ id: 'ovh_keys', label: 'Application + Consumer Keys', description: 'Par de claves API OVH', icon: 'key', recommended: true }],
+    CLOUDFLARE: [
+      { id: 'api_token', label: 'API Token', description: 'Token con permisos de zona', icon: 'token', recommended: true },
+      { id: 'global_key', label: 'Global API Key', description: 'Global Key + email de cuenta', icon: 'mail' },
+    ],
+    KUBERNETES: [
+      { id: 'kubeconfig', label: 'Kubeconfig', description: 'Archivo kubeconfig o pegado YAML', icon: 'upload_file', recommended: true },
+      { id: 'bearer_token', label: 'Bearer Token', description: 'URL del API server + token de service account', icon: 'vpn_key' },
+    ],
+    DOCKER: [
+      { id: 'tls', label: 'TLS + Endpoint', description: 'Docker Engine expuesto con certificados TLS', icon: 'lock', recommended: true },
+      { id: 'ssh_tunnel', label: 'SSH + socket remoto', description: 'Túnel SSH al socket Docker local', icon: 'terminal' },
+    ],
+    GITHUB: [
+      { id: 'pat', label: 'Personal Access Token', description: 'PAT con scopes repo y read:org', icon: 'vpn_key', recommended: true },
+      { id: 'github_app', label: 'GitHub App', description: 'Instalación de GitHub App', icon: 'apps', comingSoon: true },
+    ],
+    GITLAB: [
+      { id: 'pat', label: 'Personal Access Token', description: 'PAT con scope api', icon: 'vpn_key', recommended: true },
+      { id: 'oauth', label: 'OAuth', description: 'Flujo OAuth GitLab', icon: 'login', comingSoon: true },
+    ],
+    JENKINS: [{ id: 'api_token', label: 'Usuario + API Token', description: 'Credencial REST API Jenkins', icon: 'token', recommended: true }],
+    TERRAFORM: [{ id: 'api_token', label: 'API Token', description: 'Token Terraform Cloud / Enterprise', icon: 'token', recommended: true }],
+  }
+  return methods[provider] ?? []
+}
+
+export const resourceSyncOptionsFor = (provider: ConnectionProviderId): ResourceSyncOption[] => {
+  const map: Partial<Record<ConnectionProviderId, ResourceSyncOption[]>> = {
+    AWS: [
+      { id: 'ec2', label: 'EC2 / Instancias', description: 'Instancias, tipos y estados', defaultSelected: true },
+      { id: 'vpc', label: 'VPC / Redes', description: 'VPCs, subnets y gateways', defaultSelected: true },
+      { id: 'sg', label: 'Security Groups', description: 'Grupos de seguridad y reglas', defaultSelected: true },
+      { id: 'cloudwatch', label: 'CloudWatch', description: 'Métricas y alarmas', defaultSelected: false },
+      { id: 'cost', label: 'Cost Explorer', description: 'Costes y facturación', defaultSelected: true },
+    ],
+    GCP: [
+      { id: 'compute', label: 'Compute Engine', description: 'VMs y plantillas', defaultSelected: true },
+      { id: 'vpc', label: 'VPC / Redes', description: 'Redes y subredes', defaultSelected: true },
+      { id: 'monitoring', label: 'Cloud Monitoring', description: 'Métricas y SLIs', defaultSelected: false },
+      { id: 'billing', label: 'Facturación', description: 'Costes por proyecto', defaultSelected: true },
+    ],
+    AZURE: [
+      { id: 'vms', label: 'Máquinas virtuales', description: 'VMs y scale sets', defaultSelected: true },
+      { id: 'vnets', label: 'VNets', description: 'Redes virtuales y subnets', defaultSelected: true },
+      { id: 'monitor', label: 'Azure Monitor', description: 'Métricas y diagnósticos', defaultSelected: false },
+      { id: 'cost', label: 'Cost Management', description: 'Costes por suscripción', defaultSelected: true },
+    ],
+    KUBERNETES: [
+      { id: 'pods', label: 'Pods', description: 'Pods y contenedores', defaultSelected: true },
+      { id: 'deployments', label: 'Deployments', description: 'Despliegues y réplicas', defaultSelected: true },
+      { id: 'services', label: 'Services', description: 'Servicios ClusterIP/LoadBalancer', defaultSelected: true },
+      { id: 'namespaces', label: 'Namespaces', description: 'Namespaces y cuotas', defaultSelected: false },
+    ],
+    DOCKER: [
+      { id: 'containers', label: 'Contenedores', description: 'Contenedores en ejecución', defaultSelected: true },
+      { id: 'images', label: 'Imágenes', description: 'Imágenes locales', defaultSelected: true },
+      { id: 'networks', label: 'Redes', description: 'Redes Docker', defaultSelected: false },
+      { id: 'volumes', label: 'Volúmenes', description: 'Volúmenes persistentes', defaultSelected: false },
+    ],
+    DIGITALOCEAN: [
+      { id: 'droplets', label: 'Droplets', description: 'Servidores cloud', defaultSelected: true },
+      { id: 'vpc', label: 'VPC', description: 'Redes privadas', defaultSelected: true },
+    ],
+    HETZNER: [
+      { id: 'servers', label: 'Servidores', description: 'Cloud servers', defaultSelected: true },
+      { id: 'networks', label: 'Redes', description: 'Private networks', defaultSelected: true },
+    ],
+    LINODE: [{ id: 'linodes', label: 'Linodes', description: 'Instancias Linode', defaultSelected: true }],
+    OVH: [{ id: 'instances', label: 'Instancias Public Cloud', description: 'Instancias OVH', defaultSelected: true }],
+  }
+  return map[provider] ?? [{ id: 'inventory', label: 'Inventario básico', description: 'Recursos detectados por la API', defaultSelected: true }]
+}
+
+export const defaultSelectedResources = (provider: ConnectionProviderId): string[] =>
+  resourceSyncOptionsFor(provider).filter((o) => o.defaultSelected).map((o) => o.id)
+
+export const integrationStatusLabel = (status: string): string => {
+  const map: Record<string, string> = {
+    connected: 'Conectada',
+    idle: 'Conectada',
+    syncing: 'Sincronizando',
+    sync: 'Sincronizando',
+    error: 'Error',
+    pending: 'Pendiente',
+    disconnected: 'Pendiente',
+  }
+  return map[status.toLowerCase()] ?? 'Pendiente'
+}
 
 export const WIZARD_SUBTITLE =
   'Configura las credenciales, permisos y alcance de sincronización para conectar tu proveedor cloud en modo PRO.'

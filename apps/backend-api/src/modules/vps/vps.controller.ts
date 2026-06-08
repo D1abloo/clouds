@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { VpsService } from './vps.service'
 import { CreateVpsDto, ExecuteCommandDto } from './dto/create-vps.dto'
+import { ValidateVpsPreviewDto } from './dto/validate-vps-preview.dto'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('VPS')
@@ -9,6 +10,12 @@ import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.de
 @Controller('vps')
 export class VpsController {
   constructor(private service: VpsService) {}
+
+  @Post('validate-preview')
+  @ApiOperation({ summary: 'Validate VPS SSH connection before saving' })
+  validatePreview(@Body() dto: ValidateVpsPreviewDto, @CurrentUser() user: JwtPayload) {
+    return this.service.validatePreview(dto, user.sub)
+  }
 
   @Post()
   create(@Body() dto: CreateVpsDto, @CurrentUser() user: JwtPayload) {

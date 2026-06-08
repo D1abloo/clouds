@@ -18,7 +18,7 @@ import {
 import { GitlabProjectDetailDrawerComponent } from './components/gitlab-project-detail-drawer.component'
 import { GitlabSectionComponent } from './sections/gitlab-section.component'
 import { GitlabDeployDialogComponent } from './components/gitlab-deploy-dialog.component'
-import { GitlabAccountDialogComponent } from './components/gitlab-account-dialog.component'
+import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
 import { GithubLogsPanelComponent } from './components/github-logs-panel.component'
 import { REPOSITORIES_SECTION_META } from './repositories-section.config'
 import { RepositoriesActionService } from './repositories-action.service'
@@ -96,6 +96,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   private readonly pro = inject(ProModeService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
+  private readonly connections = inject(IntegrationConnectionService)
   readonly repoActions = inject(RepositoriesActionService)
 
   readonly meta = REPOSITORIES_SECTION_META.gitlab
@@ -168,7 +169,9 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   }
 
   validate = (): void => {
-    this.gitlab.validateAccount().subscribe({
+    const id = this.account()?.id
+    if (!id) return
+    this.gitlab.validateAccount(id).subscribe({
       next: (r) => this.runDemo('Validación GitLab', r.message),
     })
   }
@@ -184,43 +187,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   }
 
   openAddAccount = (): void => {
-    const ref = this.dialog.open(GitlabAccountDialogComponent, {
-      width: '880px',
-      maxWidth: '96vw',
-      maxHeight: '92vh',
-    })
-    ref.afterClosed().subscribe((body) => {
-      if (!body) return
-      this.gitlab.createAccount(body).subscribe({
-        next: (acc) => {
-          this.account.set(acc)
-          this.demoMode.set(body.useDemoData)
-          if (body.syncOnConnect) {
-            this.gitlab
-              .syncProjects({
-                scopes: body.scopes,
-                projectScope: body.projectScope,
-                groupPath: body.groupPath,
-                accountType: body.accountType,
-              })
-              .subscribe({
-                next: (sync) => {
-                  if (sync.projects?.length) {
-                    this.projects.set(sync.projects)
-                    this.projectControl.setValue(sync.projects[0].id)
-                  }
-                  this.runDemo(
-                    'Cuenta GitLab añadida',
-                    `${body.label} · ${sync.synced} proyectos según permisos`,
-                  )
-                },
-              })
-          } else {
-            this.runDemo('Cuenta GitLab añadida', body.label)
-          }
-        },
-      })
-    })
+    this.connections.openGitlab().subscribe()
   }
 
   openDrawer = (project: GitlabProject): void => {

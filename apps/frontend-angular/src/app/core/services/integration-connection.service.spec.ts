@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing'
 import { MatDialog } from '@angular/material/dialog'
+import { Router } from '@angular/router'
 import { of } from 'rxjs'
 import { IntegrationConnectionService } from './integration-connection.service'
 import {
@@ -11,24 +12,52 @@ import { isInternalAdminRoute, resolveConnectionCopy } from '../routing/module-r
 describe('IntegrationConnectionService', () => {
   let service: IntegrationConnectionService
   const openSpy = jasmine.createSpy('open').and.returnValue({ afterClosed: () => of(null) })
+  const navigateSpy = jasmine.createSpy('navigateByUrl').and.returnValue(Promise.resolve(true))
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         IntegrationConnectionService,
         { provide: MatDialog, useValue: { open: openSpy } },
+        { provide: Router, useValue: { navigateByUrl: navigateSpy } },
       ],
     })
     service = TestBed.inject(IntegrationConnectionService)
     openSpy.calls.reset()
+    navigateSpy.calls.reset()
   })
 
-  it('openForModuleId abre modal sin rutas públicas', () => {
-    for (const id of ['aws', 'gcp', 'azure', 'github', 'gitlab', 'jenkins', 'vps', 'docker', 'kubernetes']) {
-      service.openForModuleId(id).subscribe()
-      expect(openSpy).toHaveBeenCalled()
-      openSpy.calls.reset()
-    }
+  it('openGithub navega al wizard interno sin dialog', () => {
+    service.openGithub().subscribe()
+    expect(navigateSpy).toHaveBeenCalledWith('/admin/configuracion/integraciones/github/conectar')
+    expect(openSpy).not.toHaveBeenCalled()
+  })
+
+  it('openGitlab navega al wizard interno sin dialog', () => {
+    service.openGitlab().subscribe()
+    expect(navigateSpy).toHaveBeenCalledWith('/admin/configuracion/integraciones/gitlab/conectar')
+    expect(openSpy).not.toHaveBeenCalled()
+  })
+
+  it('navigateToWizard usa rutas internas cloud y VPS', () => {
+    service.navigateToWizard('aws')
+    expect(navigateSpy).toHaveBeenCalledWith('/admin/configuracion/integraciones/aws/conectar')
+    service.navigateToWizard('vps')
+    expect(navigateSpy).toHaveBeenCalledWith('/admin/infraestructura/vps/nuevo')
+  })
+
+  it('openForModuleId abre modal cloud o navega repos sin rutas públicas', () => {
+    service.openForModuleId('aws').subscribe()
+    expect(openSpy).toHaveBeenCalled()
+    openSpy.calls.reset()
+    service.openForModuleId('github').subscribe()
+    expect(navigateSpy).toHaveBeenCalledWith('/admin/configuracion/integraciones/github/conectar')
+    expect(openSpy).not.toHaveBeenCalled()
+  })
+
+  it('openForProviderAlias navega al wizard de página para cloud', () => {
+    service.openForProviderAlias('gcp').subscribe()
+    expect(navigateSpy).toHaveBeenCalledWith('/admin/configuracion/integraciones/gcp/conectar')
   })
 
   it('fallbackRouteForAlias devuelve rutas internas del panel', () => {

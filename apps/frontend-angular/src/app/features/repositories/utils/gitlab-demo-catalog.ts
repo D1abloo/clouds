@@ -3,10 +3,16 @@ const now = () => new Date().toISOString()
 export type GitlabAccount = {
   id: string
   label: string
+  connectionName?: string
   username: string
   status: string
   statusLabel: string
+  authType?: string
+  baseUrl?: string
+  lastError?: string | null
   lastSyncAt: string
+  repoCount?: number
+  avatarUrl?: string | null
   demoMode: boolean
 }
 

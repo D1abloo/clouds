@@ -1,0 +1,187 @@
+<div class="repo-wizard cloud-wizard">
+  <app-page-header
+    title="Conectar repositorio"
+    description="Asistente para vincular GitHub o GitLab con credenciales seguras, validación en vivo y selección de repos."
+  />
+
+  <nav class="cloud-wizard__steps" aria-label="Pasos del asistente">
+    @for (s of steps; track s.id; let i = $index) {
+      <button
+        type="button"
+        class="wizard-step"
+        [class.wizard-step--active]="step() === s.id"
+        [class.wizard-step--done]="stepIndex() > i"
+        [disabled]="!canGoToStep(s.id)"
+        (click)="goToStep(s.id)"
+      >
+        <span class="wizard-step__num">{{ i + 1 }}</span>
+        <span class="wizard-step__label">{{ s.label }}</span>
+      </button>
+    }
+  </nav>
+
+  @if (step() === 'provider') {
+    <section class="provider-step">
+      <h3>Seleccionar proveedor</h3>
+      <div class="provider-grid">
+        @for (card of providerCards; track card.id) {
+          <button
+            type="button"
+            class="provider-card"
+            [class]="card.toneClass"
+            [class.provider-card--selected]="provider() === card.id"
+            (click)="selectProvider(card.id)"
+          >
+            <div class="provider-card__head">
+              <app-brand-logo [logo]="card.logo" size="lg" />
+              <h4>{{ card.name }}</h4>
+            </div>
+            <p class="provider-card__desc">{{ card.description }}</p>
+          </button>
+        }
+      </div>
+    </section>
+  }
+
+  @if (step() === 'method') {
+    <section>
+      <h3>Método de conexión · {{ providerLabel() }}</h3>
+      <div class="method-grid">
+        @for (m of methodCards; track m.id) {
+          <button
+            type="button"
+            class="method-card"
+            [class.method-card--selected]="authMethod() === m.id"
+            (click)="selectMethod(m.id)"
+          >
+            @if (m.recommended) {
+              <span class="method-card__badge">Recomendado</span>
+            }
+            <mat-icon>{{ m.icon }}</mat-icon>
+            <strong>{{ m.title }}</strong>
+            <p>{{ m.description }}</p>
+          </button>
+        }
+      </div>
+    </section>
+  }
+
+  @if (step() === 'credentials') {
+    <section class="credentials-step">
+      <h3>Credenciales · {{ providerLabel() }}</h3>
+      @if (authMethod() === 'oauth') {
+        <p>OAuth permite autorizar sin pegar tokens. Requiere variables GITHUB_CLIENT_ID / GITLAB_CLIENT_ID en el servidor.</p>
+        <button mat-flat-button color="primary" type="button" (click)="handleOAuth()">
+          <mat-icon>login</mat-icon> Conectar con OAuth
+        </button>
+        @if (!oauthAvailable()) {
+          <p class="repo-wizard__subtitle">OAuth no configurado — usa token PAT.</p>
+        }
+      } @else {
+        <form [formGroup]="form" class="form-grid">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Nombre de la conexión</mat-label>
+            <input matInput formControlName="connectionName" placeholder="Ej. Producción EU" />
+          </mat-form-field>
+          @if (authMethod() === 'enterprise') {
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>URL base</mat-label>
+              <input matInput formControlName="baseUrl" placeholder="https://github.example.com" />
+            </mat-form-field>
+          }
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Token personal (PAT)</mat-label>
+            <input matInput formControlName="token" type="password" autocomplete="off" />
+            <mat-hint>Se cifra antes de guardarse. Nunca se muestra de nuevo.</mat-hint>
+          </mat-form-field>
+        </form>
+      }
+    </section>
+  }
+
+  @if (step() === 'validate') {
+    <section>
+      <h3>Validar conexión</h3>
+      @if (validating()) {
+        <mat-spinner diameter="36" aria-label="Validando" />
+      } @else if (validation()) {
+        <div class="validate-panel">
+          <div class="validate-panel__row">
+            <mat-icon [color]="validation()!.valid ? 'primary' : 'warn'">{{ validation()!.valid ? 'check_circle' : 'error' }}</mat-icon>
+            <strong>{{ validation()!.message }}</strong>
+          </div>
+          @if (validation()!.username) {
+            <div>Cuenta: {{ validation()!.username }}</div>
+          }
+          @if (validation()!.scopes.length) {
+            <div>Scopes: {{ validation()!.scopes.join(', ') }}</div>
+          }
+          <div>Repositorios accesibles: {{ validation()!.repoCount }}</div>
+        </div>
+      } @else {
+        <p>Pulsa «Siguiente» en credenciales para validar el token contra la API.</p>
+        <button mat-stroked-button type="button" (click)="runValidatePreview()">Validar ahora</button>
+      }
+    </section>
+  }
+
+  @if (step() === 'repos') {
+    <section>
+      <h3>Seleccionar repositorios</h3>
+      <div class="wizard-actions" style="border: none; padding-top: 0;">
+        <mat-checkbox [checked]="selectedRepoIds().size === remoteRepos().length" (change)="toggleSelectAll($event.checked)">
+          Seleccionar todos
+        </mat-checkbox>
+        <mat-checkbox [checked]="excludeArchived()" (change)="excludeArchived.set($event.checked)">
+          Excluir archivados
+        </mat-checkbox>
+      </div>
+      <div class="repo-select-list">
+        @for (repo of remoteRepos(); track repo.id) {
+          @if (!excludeArchived() || !repo.archived) {
+            <label class="repo-select-item">
+              <mat-checkbox
+                [checked]="selectedRepoIds().has(repo.id)"
+                (change)="toggleRepo(repo.id, $event.checked)"
+              />
+              <span>
+                <strong>{{ repo.fullName }}</strong>
+                @if (repo.description) {
+                  <div class="repo-wizard__subtitle">{{ repo.description }}</div>
+                }
+              </span>
+            </label>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  @if (step() === 'success') {
+    <section class="success-panel">
+      <mat-icon>celebration</mat-icon>
+      <h3>Cuenta conectada correctamente</h3>
+      <p>La sincronización inicial ha finalizado. Puedes ver detalle, webhooks y despliegues desde el panel.</p>
+      <button mat-flat-button color="primary" type="button" (click)="finish()">Ver conexión</button>
+      <button mat-button type="button" routerLink="/settings/integrations">Ir al hub de integraciones</button>
+    </section>
+  }
+
+  @if (step() !== 'success') {
+    <div class="wizard-actions">
+      <button mat-button type="button" routerLink="/settings/integrations">Cancelar</button>
+      <div>
+        @if (stepIndex() > 0) {
+          <button mat-button type="button" (click)="handleBack()">Atrás</button>
+        }
+        <button mat-flat-button color="primary" type="button" [disabled]="saving() || validating()" (click)="handleNext()">
+          @if (saving()) {
+            <mat-spinner diameter="18" />
+          } @else {
+            {{ step() === 'repos' ? 'Conectar y sincronizar' : 'Siguiente' }}
+          }
+        </button>
+      </div>
+    </div>
+  }
+</div>

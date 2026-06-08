@@ -11,6 +11,7 @@ import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { mergeKubernetesPageData } from '../infrastructure/infrastructure.demo'
 import { InfrastructureActionService } from '../infrastructure/infrastructure-action.service'
+import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
 import { InfrastructureWorkspaceComponent } from '../infrastructure/infrastructure-workspace.component'
 import { buildKubernetesWorkspace } from '../infrastructure/infrastructure-workspace.builders'
 
@@ -40,6 +41,7 @@ export class KubernetesPageComponent implements OnInit {
   private readonly toast = inject(ToastService)
   private readonly route = inject(ActivatedRoute)
   private readonly destroyRef = inject(DestroyRef)
+  private readonly connections = inject(IntegrationConnectionService)
 
   readonly page = createPageLoader(true)
   readonly tabIndex = signal(0)
@@ -64,6 +66,10 @@ export class KubernetesPageComponent implements OnInit {
   }
 
   handleHeader = (label: string): void => {
+    if (label === 'Conectar cluster') {
+      this.connections.openKubernetes({ preferDialog: true }).subscribe()
+      return
+    }
     if (label === 'Actualizar clusters') {
       this.infraActions.runModuleHeaderAction(label, this.actionCtx, () => this.runDiscovery())
       return

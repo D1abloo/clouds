@@ -11,12 +11,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, RouterLink } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import { MatDialog } from '@angular/material/dialog'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
-import { CloudAccountFormDialogComponent } from '../cloud-accounts/cloud-account-form-dialog.component'
+import {
+  IntegrationConnectionService,
+  type VpsProviderId,
+} from '../../core/services/integration-connection.service'
 import {
   buildVpsSnapshot,
   fmtUsd,
@@ -356,7 +358,7 @@ import {
 export class VpsProviderPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly destroyRef = inject(DestroyRef)
-  private readonly dialog = inject(MatDialog)
+  private readonly connections = inject(IntegrationConnectionService)
   private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
 
@@ -383,16 +385,11 @@ export class VpsProviderPageComponent implements OnInit {
   }
 
   handleConnectAccount = (): void => {
-    this.dialog
-      .open(CloudAccountFormDialogComponent, {
-        width: '760px',
-        maxWidth: '95vw',
-        panelClass: 'cloud-account-wizard-panel',
-        data: { suggestedProvider: this.cfg().connectionId },
-      })
-      .afterClosed()
+    this.connections
+      .openVpsProvider(this.cfg().connectionId as VpsProviderId, { preferDialog: true })
       .subscribe((res) => {
-        if (res?.created) this.toast.success('Cuenta conectada correctamente')
-      })
+      const r = res as { created?: boolean } | null
+      if (r?.created) this.toast.success('Cuenta conectada correctamente')
+    })
   }
 }

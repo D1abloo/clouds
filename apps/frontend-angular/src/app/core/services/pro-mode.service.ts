@@ -26,6 +26,7 @@ export class ProModeService {
   readonly demoMode = computed(() => this.status()?.demoMode ?? environment.demoMode)
   readonly showDemoLogin = computed(() => this.demoMode())
   readonly databaseConnected = computed(() => this.status()?.database?.connected ?? false)
+  readonly oauthGithubEnabled = computed(() => this.status()?.oauth?.github ?? false)
 
   loadStatus = (): void => {
     this.api

@@ -1,0 +1,109 @@
+@import '../../../features/cloud-accounts/cloud-account-form-dialog.component.scss';
+
+.repo-wizard {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+}
+
+.repo-wizard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.repo-wizard__title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.repo-wizard__subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--app-text-muted);
+  font-size: 0.88rem;
+  max-width: 620px;
+}
+
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.method-card {
+  position: relative;
+  text-align: left;
+  padding: 1rem;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-md, 8px);
+  background: var(--app-surface);
+  cursor: pointer;
+}
+
+.method-card--selected {
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
+}
+
+.method-card__badge {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--app-accent);
+}
+
+.validate-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-md, 8px);
+  background: var(--app-surface-elevated, var(--app-surface));
+}
+
+.validate-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.repo-select-list {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: var(--app-radius-md, 8px);
+}
+
+.repo-select-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--app-border-subtle);
+}
+
+.success-panel {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.success-panel mat-icon {
+  font-size: 3rem;
+  width: 3rem;
+  height: 3rem;
+  color: var(--status-running);
+}
+
+.wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-border-subtle);
+}

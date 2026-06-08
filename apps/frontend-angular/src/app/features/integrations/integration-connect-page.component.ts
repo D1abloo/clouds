@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
-import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
+import { providerConnectRoute } from '../repositories/integrations/repository-connection-wizard.config'
 
 @Component({
   selector: 'app-integration-connect-page',
@@ -25,14 +25,13 @@ import { IntegrationConnectionService } from '../../core/services/integration-co
 export class IntegrationConnectPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly router = inject(Router)
-  private readonly connections = inject(IntegrationConnectionService)
 
   ngOnInit(): void {
-    const provider = this.route.snapshot.paramMap.get('provider') ?? ''
-    const fallback = this.connections.fallbackRouteForAlias(provider)
-
-    this.connections.openForProviderAlias(provider).subscribe(() => {
-      void this.router.navigateByUrl(fallback)
-    })
+    const provider = (this.route.snapshot.paramMap.get('provider') ?? '').toLowerCase()
+    if (provider === 'github' || provider === 'gitlab') {
+      void this.router.navigateByUrl(providerConnectRoute(provider))
+      return
+    }
+    void this.router.navigateByUrl('/settings/integrations')
   }
 }

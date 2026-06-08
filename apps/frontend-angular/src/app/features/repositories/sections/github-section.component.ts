@@ -65,9 +65,11 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
             <button mat-flat-button color="primary" type="button" (click)="addAccount.emit()">
               <mat-icon>person_add</mat-icon> Añadir cuenta
             </button>
+            @if (demoMode) {
             <button mat-stroked-button type="button" (click)="connectDemo.emit()">
               <mat-icon>science</mat-icon> Demo
             </button>
+            }
             <button mat-stroked-button type="button" (click)="validate.emit()">
               <mat-icon>verified</mat-icon> Validar
             </button>
