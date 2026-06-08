@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { CreateCloudAccountDto } from './dto/create-cloud-account.dto'
@@ -15,6 +16,7 @@ export class CloudAccountsService {
     private registry: CloudAdapterRegistry,
     private sync: CloudSyncService,
     private vault: SecretsVaultService,
+    private config: ConfigService,
   ) {}
 
   async getDefaultProject() {
@@ -24,10 +26,11 @@ export class CloudAccountsService {
   }
 
   async create(dto: CreateCloudAccountDto, userId?: string) {
+    const proMode = this.config.get<string>('DEMO_MODE', 'false') !== 'true'
     const creds = dto.credentials ?? {}
     const secretPayload: Record<string, string> = {
-      credentialType: creds.credentialType ?? 'demo',
-      demoMode: creds.demoMode ?? 'true',
+      credentialType: creds.credentialType ?? (proMode ? 'access_key' : 'demo'),
+      demoMode: creds.demoMode ?? (proMode ? 'false' : 'true'),
       roleArn: creds.roleArn ?? '',
       externalId: creds.externalId ?? '',
       accessKeyId: creds.accessKeyId ?? '',
@@ -51,7 +54,7 @@ export class CloudAccountsService {
         credentials: {
           create: [
             {
-              credentialType: creds.credentialType ?? 'demo',
+              credentialType: creds.credentialType ?? (proMode ? 'access_key' : 'demo'),
               secretRef: this.vault.storeSecrets(secretPayload),
             },
           ],

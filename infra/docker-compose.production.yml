@@ -1,0 +1,24 @@
+# Producción PRO — sin demo, sin puertos DB expuestos
+# Uso: docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --build
+
+services:
+  postgres:
+    ports: []
+
+  redis:
+    ports: []
+
+  backend-api:
+    environment:
+      NODE_ENV: production
+      DEMO_MODE: "false"
+      PRO_MODE: "true"
+      AUTO_DEMO_SEED: "false"
+      INTEGRATIONS_LIVE: "true"
+      LOG_LEVEL: info
+    env_file:
+      - .env
+
+  frontend:
+    ports:
+      - "80:80"

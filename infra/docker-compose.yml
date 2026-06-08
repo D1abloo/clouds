@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: cloudops
       POSTGRES_USER: cloudops
-      POSTGRES_PASSWORD: cloudops_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cloudops_dev_password}
     ports:
       - "5432:5432"
     volumes:
@@ -39,7 +39,7 @@ services:
       API_PORT: 3000
       DEMO_MODE: "true"
       AUTO_DEMO_SEED: "true"
-      DATABASE_URL: postgresql://cloudops:cloudops_dev_password@postgres:5432/cloudops
+      DATABASE_URL: postgresql://cloudops:${POSTGRES_PASSWORD:-cloudops_dev_password}@postgres:5432/cloudops
       REDIS_URL: redis://redis:6379
       JWT_SECRET: change_me_in_production_use_long_random_string
       JWT_EXPIRES_IN: 1d
