@@ -185,8 +185,8 @@ const nowTime = (): string =>
 
         @if (filtered().length === 0) {
           <app-empty-state
-            [title]="resources.length ? 'Sin resultados' : emptyCopy().title"
-            [description]="resources.length ? 'Prueba con otros filtros o términos de búsqueda.' : emptyCopy().message"
+            [title]="resources.length ? 'Sin resultados' : emptyCopy.title"
+            [description]="resources.length ? 'Prueba con otros filtros o términos de búsqueda.' : emptyCopy.message"
             icon="search_off"
           />
         } @else {
