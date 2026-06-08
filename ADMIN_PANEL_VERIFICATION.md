@@ -283,6 +283,71 @@ Fuente de verdad: `apps/frontend-angular/src/app/core/routing/module-requirement
 | Integraciones | Empty state corto: «Sin cuentas conectadas» + «Añadir cuenta» / «Conectar cuenta» |
 | Español | «Marcar como leído», «Marcar todas como leídas», «No tienes notificaciones nuevas» |
 
+## Verificación VPS — últimos 4 prompts (2026-06-09)
+
+Script automatizado: `bash scripts/verify-pro-vps.sh` (target: `https://spendlyx.com`).
+
+### Prompt 1 — UX sidebar, header y notificaciones
+
+| Check | VPS |
+|-------|-----|
+| `demoMode=false`, `proMode=true`, `appEnv=production` | ✅ |
+| Sin botón «Entrar en modo demo» en login | ✅ |
+| Sin `Staging Env` / `WebSocket offline` en bundle | ✅ |
+| Sin selector org / entorno en sidebar | ✅ |
+| API `notifications/unread-summary` requiere JWT | ✅ 401 |
+| Contenedores Docker healthy | ✅ |
+
+### Prompt 2 — Demo eliminado + formularios cloud PRO
+
+| Check | VPS |
+|-------|-----|
+| Bundle sin «Puedes usar modo demo» / «sin credenciales reales» | ✅ |
+| Modal «Conectar cuenta cloud» presente (`chunk-NZRCQGOR.js`) | ✅ |
+| Tests `cloud-account-wizard.spec.ts` | ✅ |
+| Tests backend `cloud-accounts` | ✅ 17 passed |
+
+### Prompt 3 — Estados por módulo (sin bloqueador global)
+
+| Check | VPS / repo |
+|-------|------------|
+| Tests `module-requirements.spec.ts` | ✅ 7 passed |
+| Sin mensaje genérico largo en bundle | ✅ |
+| «Sin datos todavía» en chunks lazy | ✅ |
+| Asistente IA: copy inline específico | ✅ (spec) |
+
+### Prompt 4 — Accesos rápidos / favoritos por usuario
+
+| Check | VPS / repo |
+|-------|------------|
+| Clave `cloudops_sidebar_favorites_{userId}` en bundle | ✅ |
+| «Acceso rápido» / «Añadir a acceso rápido» en bundle | ✅ |
+| Tests `sidebar.service.spec.ts` (persistencia tras logout) | ✅ 5 passed |
+
+### Builds y tests (repo)
+
+| Suite | Resultado |
+|-------|-----------|
+| `npm run build -w apps/frontend-angular -- --configuration=production` | ✅ |
+| `npm run build -w apps/backend-api` | ✅ |
+| `npm test -w apps/backend-api` | ✅ 17 tests |
+| Frontend specs (sidebar, module-requirements, cloud-wizard) | ✅ 20 tests |
+
+### Comando en VPS
+
+```bash
+# Desde máquina local contra producción
+bash scripts/verify-pro-vps.sh
+
+# Re-despliegue completo
+npm run deploy:spendlyx
+```
+
+### Avisos menores
+
+- «Modo demo» permanece en ruta `/admin/demo-mode` (oculta del sidebar PRO).
+- Favoritos persisten en `localStorage` por usuario (mismo navegador); sync multi-dispositivo pendiente de API.
+
 ## Cómo pasar a PRO
 
 ```bash

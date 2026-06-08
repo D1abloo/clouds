@@ -229,6 +229,16 @@ Configuración en `settings`: `nombre_app=Spendlyx`, `modo=PRO`, `dominio=https:
 | Header | Sin badge PRO ni indicador WebSocket |
 | Integraciones | Empty state corto: «Sin cuentas conectadas» + «Añadir cuenta» |
 
+## Verificación post-despliegue (VPS)
+
+Tras `npm run deploy:spendlyx`, validar producción:
+
+```bash
+bash scripts/verify-pro-vps.sh
+```
+
+Comprueba: estado PRO en `platform/status`, login sin demo, bundle sin strings prohibidos, API notificaciones protegida y health. Detalle completo en `ADMIN_PANEL_VERIFICATION.md` → sección «Verificación VPS — últimos 4 prompts».
+
 ## Rollback a demo
 
 ```bash
