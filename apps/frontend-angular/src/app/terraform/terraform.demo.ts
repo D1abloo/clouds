@@ -51,6 +51,19 @@ export const demoRunsFromSummary = (items: Record<string, unknown>[]): Terraform
       createdAt: String(r['createdAt'] ?? new Date().toISOString()),
     }))
 
+export const emptyTerraformSummary = (): TerraformPageSummary => ({
+  workspaces: 0,
+  runs: 0,
+  plans: 0,
+  applies: 0,
+  errors: 0,
+  lastSyncedAt: new Date().toISOString(),
+  items: [],
+})
+
+export const hasTerraformLiveData = (summary: TerraformPageSummary): boolean =>
+  summary.workspaces > 0 || summary.items.length > 0
+
 export const mergeTerraformSummary = (raw: Record<string, unknown>): TerraformPageSummary => ({
   workspaces: Number(raw['workspaces'] ?? TERRAFORM_DEMO_SUMMARY.workspaces),
   runs: Number(raw['runs'] ?? TERRAFORM_DEMO_SUMMARY.runs),
@@ -61,4 +74,15 @@ export const mergeTerraformSummary = (raw: Record<string, unknown>): TerraformPa
   items: (raw['items'] as Record<string, unknown>[])?.length
     ? (raw['items'] as Record<string, unknown>[])
     : TERRAFORM_DEMO_SUMMARY.items,
+})
+
+/** PRO: solo datos devueltos por la API, sin relleno demo. */
+export const mergeTerraformSummaryPro = (raw: Record<string, unknown>): TerraformPageSummary => ({
+  workspaces: Number(raw['workspaces'] ?? 0),
+  runs: Number(raw['runs'] ?? 0),
+  plans: Number(raw['plans'] ?? 0),
+  applies: Number(raw['applies'] ?? 0),
+  errors: Number(raw['errors'] ?? 0),
+  lastSyncedAt: String(raw['lastSyncedAt'] ?? new Date().toISOString()),
+  items: (raw['items'] as Record<string, unknown>[]) ?? [],
 })

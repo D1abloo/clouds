@@ -78,5 +78,5 @@ export class InventoryService {
   }
 
   private mergeJenkins = (data: Record<string, unknown>): Record<string, unknown> =>
-    normalizeJenkinsInventory(data) as unknown as Record<string, unknown>
+    normalizeJenkinsInventory(data, allowsDemoDataFrom(this.pro)) as unknown as Record<string, unknown>
 }

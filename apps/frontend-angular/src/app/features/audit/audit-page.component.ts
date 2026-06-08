@@ -10,7 +10,10 @@ import { ActivatedRoute } from '@angular/router'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { AuditService } from '../../core/services/audit.service'
 import { ToastService } from '../../core/services/toast.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { createPageLoader } from '../../core/utils/page-load.util'
+import type { AuditLog } from '../../core/models/api.models'
 import {
   AUDIT_ACCENT,
   AUDIT_ACCENT_BORDER,
@@ -35,6 +38,19 @@ import { AuditComplianceTrailDetailDialogComponent } from './audit-compliance-tr
 import { AuditExportDetailDialogComponent } from './audit-export-detail-dialog.component'
 
 type AuditView = 'activity' | 'security' | 'compliance' | 'exports'
+
+const mapAuditLogToEntry = (log: AuditLog): AuditActivityEntry => ({
+  id: log.id,
+  action: log.action,
+  resource: log.resource,
+  userId: log.userId,
+  ipAddress: log.ipAddress,
+  createdAt: log.createdAt,
+  category: 'actividad',
+  module: log.resource,
+  status: 'completed',
+  description: `${log.action} · ${log.resource}`,
+})
 
 @Component({
   selector: 'app-audit-page',
@@ -261,13 +277,14 @@ export class AuditPageComponent implements OnInit {
   private readonly toast = inject(ToastService)
   private readonly route = inject(ActivatedRoute)
   private readonly dialog = inject(MatDialog)
+  private readonly pro = inject(ProModeService)
 
   readonly severityControl = new FormControl('', { nonNullable: true })
   readonly page = createPageLoader(true)
-  readonly activities = signal<AuditActivityEntry[]>(defaultAuditActivities())
-  readonly securityEvents = signal(defaultSecurityEvents())
-  readonly complianceTrail = signal(defaultComplianceTrail())
-  readonly exports = signal(defaultAuditExports())
+  readonly activities = signal<AuditActivityEntry[]>([])
+  readonly securityEvents = signal<SecurityEvent[]>([])
+  readonly complianceTrail = signal<ComplianceTrailEntry[]>([])
+  readonly exports = signal<AuditExport[]>([])
   readonly view = signal<AuditView>('activity')
 
   readonly severityLabel = auditSeverityLabel
@@ -300,12 +317,20 @@ export class AuditPageComponent implements OnInit {
     if (section === 'security-events') this.view.set('security')
     else if (section === 'compliance-trail') this.view.set('compliance')
     else if (section === 'exports') this.view.set('exports')
+    if (allowsDemoDataFrom(this.pro)) {
+      this.activities.set(defaultAuditActivities())
+      this.securityEvents.set(defaultSecurityEvents())
+      this.complianceTrail.set(defaultComplianceTrail())
+      this.exports.set(defaultAuditExports())
+    }
     this.load()
   }
 
   load = (): void => {
     this.page.run(this.service.list(), {
-      onSuccess: () => { /* demo enriquecido ya cargado */ },
+      onSuccess: (logs) => {
+        this.activities.set(logs.map(mapAuditLogToEntry))
+      },
       errorMessage: 'Error al cargar el registro de auditoría',
     })
   }

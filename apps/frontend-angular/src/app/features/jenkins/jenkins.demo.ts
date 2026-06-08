@@ -4,7 +4,9 @@ import type {
   JenkinsAgent,
   JenkinsBuild,
   JenkinsInventory,
+  JenkinsFolder,
   JenkinsJob,
+  JenkinsPlugin,
   JenkinsQueueItem,
   JenkinsServer,
   JenkinsStage,
@@ -433,10 +435,84 @@ export const demoJenkinsInventory = (): JenkinsInventory => {
   }
 }
 
-export const normalizeJenkinsInventory = (raw: Record<string, unknown>): JenkinsInventory => {
-  const demo = demoJenkinsInventory()
+export const emptyJenkinsInventory = (): JenkinsInventory => ({
+  demoMode: false,
+  serverCount: 0,
+  jobCount: 0,
+  buildsRunning: 0,
+  buildsSuccess: 0,
+  buildsFailed: 0,
+  queueSize: 0,
+  executorBusy: 0,
+  executorTotal: 0,
+  diskUsagePercent: 0,
+  version: '—',
+  servers: [],
+  agents: [],
+  queue: [],
+  folders: [],
+  jobItems: [],
+  builds: [],
+  logsByJob: {},
+  plugins: [],
+})
+
+export const normalizeJenkinsInventory = (
+  raw: Record<string, unknown>,
+  allowDemo = true,
+): JenkinsInventory => {
   const items = raw['jobItems'] as Record<string, unknown>[] | undefined
-  if ((items?.length ?? 0) === 0) return demo
+  if ((items?.length ?? 0) === 0) {
+    return allowDemo ? demoJenkinsInventory() : emptyJenkinsInventory()
+  }
+
+  if (!allowDemo) {
+    const jobItems: JenkinsJob[] = (items ?? []).map((row) => ({
+      name: String(row['name'] ?? ''),
+      folder: String(row['folder'] ?? '/'),
+      server: String(row['server'] ?? '—'),
+      serverId: String(row['serverId'] ?? ''),
+      type: (row['type'] as JenkinsJob['type']) ?? 'pipeline',
+      status: String(row['status'] ?? 'UNKNOWN'),
+      health: (row['health'] as JenkinsJob['health']) ?? 'cloudy',
+      lastRun: String(row['lastRun'] ?? '—'),
+      duration: String(row['duration'] ?? '—'),
+      branch: String(row['branch'] ?? 'main'),
+      buildNum: Number(row['buildNum'] ?? 0),
+      description: String(row['description'] ?? ''),
+      scm: (row['scm'] as JenkinsJob['scm']) ?? {
+        type: 'git',
+        url: '',
+        branch: 'main',
+        commit: '',
+        author: '',
+      },
+      upstream: [],
+      downstream: [],
+      parameters: [],
+      stages: [],
+      artifacts: [],
+      tests: { total: 0, passed: 0, failed: 0, skipped: 0, duration: '—' },
+      triggers: [],
+    }))
+    return {
+      ...emptyJenkinsInventory(),
+      ...raw,
+      demoMode: false,
+      serverCount: Number(raw['serverCount'] ?? 0),
+      jobCount: jobItems.length,
+      jobItems,
+      servers: (raw['servers'] as JenkinsServer[]) ?? [],
+      agents: (raw['agents'] as JenkinsAgent[]) ?? [],
+      queue: (raw['queue'] as JenkinsQueueItem[]) ?? [],
+      folders: (raw['folders'] as JenkinsFolder[]) ?? [],
+      builds: (raw['builds'] as JenkinsBuild[]) ?? [],
+      logsByJob: (raw['logsByJob'] as Record<string, string>) ?? {},
+      plugins: (raw['plugins'] as JenkinsPlugin[]) ?? [],
+    }
+  }
+
+  const demo = demoJenkinsInventory()
 
   const byName = new Map(demo.jobItems.map((j) => [j.name, j]))
   const mergedJobs: JenkinsJob[] = (items ?? []).map((row) => {

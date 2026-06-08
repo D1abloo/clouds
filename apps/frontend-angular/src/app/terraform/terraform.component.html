@@ -1,6 +1,8 @@
 <div class="page-container tf-page tf-page--flat tf-page--fullscreen tf-page--in-layout animate-fade-in">
   @if (loading()) {
     <app-loading-state message="Cargando proyectos y workspaces…" />
+  } @else if (requiresTerraformConfig()) {
+    <app-connection-required module="Terraform" />
   } @else {
     <div
       class="tf-body tf-body--fill tf-body--studio"

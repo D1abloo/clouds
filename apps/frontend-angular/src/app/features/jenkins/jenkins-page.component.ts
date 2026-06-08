@@ -26,6 +26,9 @@ import {
   JenkinsCreateJobDialogComponent,
 } from './jenkins-create-job-dialog.component'
 import { jobToRow, normalizeJenkinsInventory } from './jenkins.demo'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
+import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
 import type { JenkinsBuild, JenkinsInventory, JenkinsJob } from './jenkins.models'
 import { jenkinsSectionToTab } from './jenkins.models'
 
@@ -39,6 +42,7 @@ import { jenkinsSectionToTab } from './jenkins.models'
     JenkinsOverviewComponent,
     JenkinsSidebarComponent,
     JenkinsJobWorkspaceComponent,
+    ConnectionRequiredComponent,
   ],
   template: `
     <div class="page-container jenkins-page">
@@ -58,6 +62,8 @@ import { jenkinsSectionToTab } from './jenkins.models'
         <app-loading-state />
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
+      } @else if (requiresJenkinsConfig()) {
+        <app-connection-required module="Jenkins" />
       } @else if (inventory()) {
         @let inv = inventory()!;
         <app-jenkins-overview
@@ -122,6 +128,7 @@ import { jenkinsSectionToTab } from './jenkins.models'
 })
 export class JenkinsPageComponent implements OnInit {
   private readonly inventorySvc = inject(InventoryService)
+  private readonly pro = inject(ProModeService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   private readonly route = inject(ActivatedRoute)
@@ -200,10 +207,16 @@ export class JenkinsPageComponent implements OnInit {
     this.workspaceTab.set(1)
   }
 
+  requiresJenkinsConfig = (): boolean => {
+    const inv = this.inventory()
+    return this.pro.proMode() && inv !== null && inv.jobItems.length === 0
+  }
+
   load = (): void => {
+    const allowDemo = allowsDemoDataFrom(this.pro)
     this.page.run(this.inventorySvc.jenkins(), {
       onSuccess: (d) => {
-        const inv = normalizeJenkinsInventory(d)
+        const inv = normalizeJenkinsInventory(d, allowDemo)
         this.inventory.set(inv)
         const jobs = inv.jobItems
         if (jobs.length > 0 && !this.selectedJob()) {

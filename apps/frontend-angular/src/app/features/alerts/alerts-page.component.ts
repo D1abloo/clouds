@@ -21,6 +21,8 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 import { AlertsService } from '../../core/services/alerts.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ToastService } from '../../core/services/toast.service'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { AlertItem } from '../../core/models/api.models'
@@ -136,17 +138,19 @@ export class AlertRuleDialogComponent {
         (actionClick)="handleHeader($event)"
       />
 
-      <div class="alerts-bar">
-        <app-nav-icon logo="prometheus" size="md" />
-        <div>
-          <strong>Alertmanager · Prometheus</strong>
-          <span>3 activas · 8 reglas · enrutamiento Slack + PagerDuty</span>
+      @if (showDemoExtras()) {
+        <div class="alerts-bar">
+          <app-nav-icon logo="prometheus" size="md" />
+          <div>
+            <strong>Alertmanager · Prometheus</strong>
+            <span>3 activas · 8 reglas · enrutamiento Slack + PagerDuty</span>
+          </div>
+          <div class="alerts-bar__logos">
+            <app-nav-icon logo="grafana" size="sm" />
+            <app-nav-icon logo="kubernetes" size="sm" />
+          </div>
         </div>
-        <div class="alerts-bar__logos">
-          <app-nav-icon logo="grafana" size="sm" />
-          <app-nav-icon logo="kubernetes" size="sm" />
-        </div>
-      </div>
+      }
 
       <div class="table-card">
       <mat-tab-group
@@ -217,6 +221,9 @@ export class AlertRuleDialogComponent {
 
         <mat-tab label="Historial">
           <div class="tab-panel">
+            @if (history().length === 0) {
+              <app-empty-state icon="history" title="Sin datos todavía" description="Conecta una integración de monitorización para ver el historial de alertas." />
+            } @else {
             <div class="data-table-wrap">
               <table class="premium-table table-row-hover">
                 <thead>
@@ -225,7 +232,7 @@ export class AlertRuleDialogComponent {
                   </tr>
                 </thead>
                 <tbody>
-                  @for (row of history; track row.id) {
+                  @for (row of history(); track row.id) {
                     <tr>
                       <td><span class="severity-pill severity-pill--{{ row.severity }}">{{ row.severity }}</span></td>
                       <td>{{ row.title }}</td>
@@ -238,18 +245,22 @@ export class AlertRuleDialogComponent {
                 </tbody>
               </table>
             </div>
+            }
           </div>
         </mat-tab>
 
         <mat-tab label="Reglas">
           <div class="tab-panel">
+            @if (rules().length === 0) {
+              <app-empty-state icon="rule" title="Configuración requerida" description="Conecta Prometheus o Alertmanager en Configuración para gestionar reglas." />
+            } @else {
             <div class="data-table-wrap">
               <table class="premium-table table-row-hover">
                 <thead>
                   <tr><th>Nombre</th><th>Métrica</th><th>Umbral</th><th>Severidad</th><th>Canales</th><th>Estado</th><th></th></tr>
                 </thead>
                 <tbody>
-                  @for (row of rules; track row.id) {
+                  @for (row of rules(); track row.id) {
                     <tr>
                       <td>{{ row.name }}</td>
                       <td class="mono">{{ row.metric }}</td>
@@ -263,19 +274,20 @@ export class AlertRuleDialogComponent {
                 </tbody>
               </table>
             </div>
+            }
           </div>
         </mat-tab>
 
         <mat-tab label="Silenciadas">
           <div class="tab-panel">
-            @if (silenced.length === 0) {
+            @if (silenced().length === 0) {
               <app-empty-state title="Sin alertas silenciadas" icon="notifications" />
             } @else {
               <div class="data-table-wrap">
                 <table class="premium-table table-row-hover">
                   <thead><tr><th>Alerta</th><th>Silenciada por</th><th>Hasta</th><th>Motivo</th><th></th></tr></thead>
                   <tbody>
-                    @for (row of silenced; track row.id) {
+                    @for (row of silenced(); track row.id) {
                       <tr>
                         <td>{{ row.title }}</td>
                         <td>{{ row.silencedBy }}</td>
@@ -293,11 +305,14 @@ export class AlertRuleDialogComponent {
 
         <mat-tab label="Notificaciones">
           <div class="tab-panel">
+            @if (notificationRoutes().length === 0) {
+              <app-empty-state icon="notifications" title="Sin datos todavía" description="Configura canales de notificación en Configuración." />
+            } @else {
             <div class="data-table-wrap">
               <table class="premium-table table-row-hover">
                 <thead><tr><th>Canal</th><th>Destino</th><th>Severidades</th><th>Estado</th><th></th></tr></thead>
                 <tbody>
-                  @for (row of notificationRoutes; track row.id) {
+                  @for (row of notificationRoutes(); track row.id) {
                     <tr>
                       <td>{{ row.channel }}</td>
                       <td>{{ row.destination }}</td>
@@ -309,6 +324,7 @@ export class AlertRuleDialogComponent {
                 </tbody>
               </table>
             </div>
+            }
           </div>
         </mat-tab>
       </mat-tab-group>
@@ -354,6 +370,7 @@ export class AlertRuleDialogComponent {
 })
 export class AlertsPageComponent implements OnInit {
   private readonly service = inject(AlertsService)
+  private readonly pro = inject(ProModeService)
   private readonly toast = inject(ToastService)
   private readonly actions = inject(PlatformActionService)
   private readonly dialog = inject(MatDialog)
@@ -370,10 +387,12 @@ export class AlertsPageComponent implements OnInit {
   readonly selectedRule = signal<object | null>(null)
   readonly cols = ['severity', 'title', 'resource', 'status', 'createdAt', 'actions']
 
-  readonly history = ALERTS_HISTORY
-  readonly rules = ALERTS_RULES
-  readonly silenced = ALERTS_SILENCED
-  readonly notificationRoutes = ALERTS_NOTIFICATIONS
+  readonly showDemoExtras = (): boolean => allowsDemoDataFrom(this.pro)
+
+  readonly history = computed(() => (this.showDemoExtras() ? ALERTS_HISTORY : []))
+  readonly rules = computed(() => (this.showDemoExtras() ? ALERTS_RULES : []))
+  readonly silenced = computed(() => (this.showDemoExtras() ? ALERTS_SILENCED : []))
+  readonly notificationRoutes = computed(() => (this.showDemoExtras() ? ALERTS_NOTIFICATIONS : []))
 
   private readonly searchTerm = toSignal(
     this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')),
