@@ -1,0 +1,28 @@
+---
+description: Desplegar automáticamente en spendlyx.com tras cambios de código
+alwaysApply: true
+---
+
+# Auto-deploy Spendlyx PRO
+
+Tras **cualquier cambio de código** que afecte producción (frontend, backend, infra Docker, nginx, scripts de deploy):
+
+1. Commit y push a la rama activa (por defecto `pro-clean-cutover`).
+2. Ejecutar despliegue en el servidor:
+
+```bash
+chmod +x scripts/deploy-spendlyx.sh
+./scripts/deploy-spendlyx.sh
+```
+
+Variables opcionales: `BRANCH`, `REMOTE_HOST`, `REMOTE_DIR`.
+
+3. Verificar:
+
+```bash
+curl -s https://spendlyx.com/api/v1/platform/status
+```
+
+No omitir el deploy salvo que el usuario lo pida explícitamente. No commitear secretos (`infra/.env`, `infra/certs/`, `certificado/`).
+
+Dominio producción: https://spendlyx.com
