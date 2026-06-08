@@ -2,14 +2,20 @@ import { Routes } from '@angular/router'
 import { authGuard, guestGuard } from './core/guards/auth.guard'
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component'
 import { NAVIGATION_ROUTES } from './core/routing/navigation.routes'
+import { PUBLIC_ROUTES } from './features/public/public.routes'
 
 export const routes: Routes = [
+  ...PUBLIC_ROUTES,
+  {
+    path: 'login/oauth/callback',
+    loadComponent: () =>
+      import('./features/login/oauth-callback.component').then((m) => m.OAuthCallbackComponent),
+  },
   {
     path: 'login',
     loadComponent: () =>
       import('./features/login/login.component').then((m) => m.LoginComponent),
     canActivate: [guestGuard],
-    data: { breadcrumb: 'Login' },
   },
   {
     path: '',
@@ -20,9 +26,7 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then(
-            (m) => m.DashboardComponent,
-          ),
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
         data: { breadcrumb: 'Dashboard' },
       },
       ...NAVIGATION_ROUTES,
@@ -44,5 +48,5 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: '' },
 ]

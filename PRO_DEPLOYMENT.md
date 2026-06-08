@@ -72,6 +72,36 @@ AUTH_URL=https://spendlyx.com
 
 Inicio OAuth (frontend): `GET /api/v1/auth/oauth/google` | `GET /api/v1/auth/oauth/github`
 
+## SMTP (registro y contacto)
+
+Correos transaccionales desde `info@spendlyx.com` vía Ionos. Variables en `infra/.env`:
+
+```env
+SMTP_HOST=smtp.ionos.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=info@spendlyx.com
+SMTP_PASSWORD=
+SMTP_FROM="Spendlyx <info@spendlyx.com>"
+CONTACT_INBOX=info@spendlyx.com
+```
+
+Alternativa SSL: `SMTP_PORT=465`, `SMTP_SECURE=true`.
+
+Sincronizar credenciales locales al VPS (sin commitear secretos):
+
+```bash
+./scripts/sync-spendlyx-env.sh
+```
+
+Tras cambios SMTP, reconstruir backend:
+
+```bash
+npm run deploy:spendlyx
+```
+
+Flujo: registro público → token verificación 24 h → login bloqueado hasta verificar. Ver `PUBLIC_FRONTEND.md`.
+
 ## Despliegue VPS (rsync + Docker)
 
 Desde el workspace local (rama `pro-live-cutover`):

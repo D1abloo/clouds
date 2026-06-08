@@ -27,6 +27,7 @@
     "demo:reset": "bash scripts/demo-reset.sh",
     "docker:up": "bash scripts/docker-up.sh",
     "deploy:spendlyx": "bash scripts/deploy-spendlyx.sh",
+    "provision:spendlyx-users": "bash scripts/provision-spendlyx-users.sh",
     "github:demo:verify": "npm run github:demo:verify -w apps/backend-api",
     "github:demo:test": "npm run github:demo:test -w apps/backend-api",
     "github:demo:setup": "bash scripts/github-demo-setup.sh"

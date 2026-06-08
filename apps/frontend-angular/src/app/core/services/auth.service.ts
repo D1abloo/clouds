@@ -32,6 +32,12 @@ export class AuthService {
       message?: string
     }>(`auth/oauth/${provider}`)
 
+  completeOAuth = (accessToken: string, user: AuthUser): void => {
+    localStorage.setItem(TOKEN_KEY, accessToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    this.userSignal.set(user)
+  }
+
   logout = (): void => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)

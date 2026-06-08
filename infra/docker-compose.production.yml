@@ -17,6 +17,7 @@ services:
       AUTO_DEMO_SEED: "false"
       INTEGRATIONS_LIVE: "true"
       LOG_LEVEL: info
+      CONTACT_INBOX: info@spendlyx.com
     env_file:
       - .env
 

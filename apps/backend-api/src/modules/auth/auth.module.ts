@@ -7,6 +7,8 @@ import { AuthController } from './auth.controller'
 import { JwtStrategy } from './jwt.strategy'
 import { AuditModule } from '../audit/audit.module'
 
+import { EmailVerificationService } from './email-verification.service'
+
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -21,7 +23,7 @@ import { AuditModule } from '../audit/audit.module'
     AuditModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, EmailVerificationService],
+  exports: [AuthService, EmailVerificationService],
 })
 export class AuthModule {}

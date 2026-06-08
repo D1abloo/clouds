@@ -47,21 +47,56 @@ enum MembershipRole {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  name         String?
-  isActive     Boolean    @default(true) @map("is_active")
-  mfaEnabled   Boolean    @default(false) @map("mfa_enabled")
-  mfaSecretRef String?    @map("mfa_secret_ref")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  deletedAt    DateTime?  @map("deleted_at")
-  userRoles    UserRole[]
-  memberships  Membership[]
-  auditLogs    AuditLog[]
+  id              String     @id @default(uuid())
+  email           String     @unique
+  passwordHash    String     @map("password_hash")
+  name            String?
+  firstName       String?    @map("first_name")
+  lastName        String?    @map("last_name")
+  company         String?
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  marketingConsent Boolean   @default(false) @map("marketing_consent")
+  isActive        Boolean    @default(true) @map("is_active")
+  mfaEnabled      Boolean    @default(false) @map("mfa_enabled")
+  mfaSecretRef    String?    @map("mfa_secret_ref")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  deletedAt       DateTime?  @map("deleted_at")
+  userRoles       UserRole[]
+  memberships     Membership[]
+  auditLogs       AuditLog[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("email_verification_tokens")
+}
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  reason    String
+  message   String
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("contact_messages")
 }
 
 model Organization {

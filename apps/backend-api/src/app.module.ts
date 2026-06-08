@@ -35,6 +35,8 @@ import { KubernetesApiModule } from './modules/kubernetes/kubernetes.module'
 import { AppModeModule } from './common/config/app-mode.module'
 import { OrganizationScopeModule } from './common/organization/organization-scope.module'
 import { PlatformModule } from './modules/platform/platform.module'
+import { EmailModule } from './modules/email/email.module'
+import { PublicModule } from './modules/public/public.module'
 
 @Module({
   imports: [
@@ -71,6 +73,8 @@ import { PlatformModule } from './modules/platform/platform.module'
     CommandCenterModule,
     IntegrationsModule,
     PlatformModule,
+    EmailModule,
+    PublicModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Req, Ip, Get, Param, Query } from '@nestjs/common'
+import { Controller, Post, Body, Req, Ip, Get, Param, Query, Res } from '@nestjs/common'
 import { ApiTags, ApiOperation } from '@nestjs/swagger'
 import { ConfigService } from '@nestjs/config'
+import type { Response } from 'express'
 import { AuthService } from './auth.service'
 import { LoginDto, RegisterDto } from './dto/login.dto'
 import { MfaSetupDto } from './dto/mfa.dto'
@@ -57,10 +58,11 @@ export class AuthController {
     )
 
     if (proMode && clientId) {
+      const redirectUri = `${callbackBase.replace(/\/$/, '')}/${normalized}`
       const redirectUrl =
         normalized === 'google'
-          ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(`${callbackBase}/google`)}&response_type=code&scope=openid%20email%20profile`
-          : `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(`${callbackBase}/github`)}&scope=read:user%20user:email`
+          ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent('openid email profile')}&access_type=online&prompt=select_account`
+          : `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user%20user:email`
       return { redirectUrl, demoMode: false, proMode: true }
     }
 
@@ -83,15 +85,31 @@ export class AuthController {
   @Public()
   @Get('oauth/callback/:provider')
   @ApiOperation({ summary: 'OAuth callback — intercambio code → sesión JWT' })
-  oauthCallback(
+  async oauthCallback(
     @Param('provider') provider: string,
     @Query('code') code: string,
     @Query('error') oauthError: string,
     @Ip() ip: string,
+    @Res() res: Response,
   ) {
+    const authUrl = this.config.get<string>('AUTH_URL', 'http://localhost:4200').replace(/\/$/, '')
+
     if (oauthError) {
-      return { error: oauthError, message: 'OAuth cancelado o denegado' }
+      return res.redirect(`${authUrl}/login?oauth_error=${encodeURIComponent(oauthError)}`)
     }
-    return this.authService.oauthCallback(provider, code, ip)
+
+    try {
+      const session = await this.authService.oauthCallback(provider, code, ip)
+      const userJson = encodeURIComponent(JSON.stringify(session.user))
+      return res.redirect(
+        `${authUrl}/login/oauth/callback#token=${encodeURIComponent(session.accessToken)}&user=${userJson}`,
+      )
+    } catch (err) {
+      const message =
+        err instanceof Error && 'message' in err
+          ? String((err as { message?: string }).message ?? 'oauth_failed')
+          : 'oauth_failed'
+      return res.redirect(`${authUrl}/login?oauth_error=${encodeURIComponent(message)}`)
+    }
   }
 }
