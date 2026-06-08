@@ -1,10 +1,12 @@
 import { Routes } from '@angular/router'
+import { publicGuestGuard } from '../../core/guards/auth.guard'
 
 export const PUBLIC_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
       import('./public-layout.component').then((m) => m.PublicLayoutComponent),
+    canActivate: [publicGuestGuard],
     children: [
       {
         path: '',
@@ -61,22 +63,27 @@ export const PUBLIC_ROUTES: Routes = [
   {
     path: 'registro',
     loadComponent: () => import('./register-page.component').then((m) => m.RegisterPageComponent),
+    canActivate: [publicGuestGuard],
     data: { seo: { title: 'Crear cuenta | Spendlyx', description: 'Crea tu cuenta de Spendlyx.', path: '/registro' } },
   },
   {
     path: 'verificar-email',
     loadComponent: () => import('./verify-email-page.component').then((m) => m.VerifyEmailPageComponent),
+    canActivate: [publicGuestGuard],
   },
   {
     path: 'verificar-email/enviado',
     loadComponent: () => import('./verify-email-sent-page.component').then((m) => m.VerifyEmailSentPageComponent),
+    canActivate: [publicGuestGuard],
   },
   {
     path: 'verificar-email/error',
     loadComponent: () => import('./verify-email-error-page.component').then((m) => m.VerifyEmailErrorPageComponent),
+    canActivate: [publicGuestGuard],
   },
   {
     path: 'reenviar-verificacion',
     loadComponent: () => import('./resend-verification-page.component').then((m) => m.ResendVerificationPageComponent),
+    canActivate: [publicGuestGuard],
   },
 ]

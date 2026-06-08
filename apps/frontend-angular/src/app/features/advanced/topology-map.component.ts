@@ -11,7 +11,7 @@ import {
   ElementRef,
   effect,
 } from '@angular/core'
-import { Router, RouterLink } from '@angular/router'
+import { Router } from '@angular/router'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatSelectModule } from '@angular/material/select'
@@ -26,6 +26,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountsStore } from '../../core/stores/cloud-accounts.store'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
@@ -86,7 +87,6 @@ import {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    RouterLink,
     DecimalPipe,
     ReactiveFormsModule,
     PageHeaderComponent,
@@ -314,7 +314,14 @@ import {
               <div class="topology-empty" role="status">
                 <mat-icon>cloud_off</mat-icon>
                 <p>Sin datos todavía. Conecta una cuenta cloud para visualizar la topología.</p>
-                <a class="topology-empty__cta" routerLink="/cloud/aws/accounts">Conectar nube</a>
+                <button
+                  type="button"
+                  class="topology-empty__cta"
+                  aria-label="Conectar nube"
+                  (click)="handleConnectCloud()"
+                >
+                  Conectar nube
+                </button>
               </div>
             } @else if (!scopedLayout()) {
               <div class="topology-empty" role="status">
@@ -899,10 +906,14 @@ import {
     }
     .topology-empty__cta {
       margin-top: 0.5rem;
+      padding: 0;
+      border: none;
+      background: transparent;
       font-size: 0.82rem;
       font-weight: 700;
       color: #0284c7;
-      text-decoration: none;
+      cursor: pointer;
+      text-decoration: underline;
     }
 
     .topology-canvas {
@@ -1338,6 +1349,7 @@ export class TopologyMapComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly vpsSvc = inject(VpsService)
   private readonly dialog = inject(MatDialog)
   private readonly router = inject(Router)
+  private readonly connections = inject(IntegrationConnectionService)
 
   @ViewChild('canvasShell') private canvasShell?: ElementRef<HTMLElement>
 
@@ -1647,6 +1659,10 @@ export class TopologyMapComponent implements OnInit, AfterViewInit, OnDestroy {
 
   resetZoom = (): void => {
     this.userZoom.set(1)
+  }
+
+  handleConnectCloud = (): void => {
+    this.connections.openDataSource().subscribe()
   }
 
   handleFitView = (): void => {

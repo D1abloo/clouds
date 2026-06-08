@@ -1,5 +1,6 @@
 import {
   AI_UNAVAILABLE_COPY,
+  DATA_SOURCE_COPY,
   EXTERNAL_CONNECTION_COPY,
   INTERNAL_EMPTY_MESSAGE,
   INTERNAL_EMPTY_TITLE,
@@ -117,6 +118,7 @@ export const resolveConnectionCopy = (key: string): ExternalConnectionCopy => {
   const id = resolveModuleId(key)
   const req = MODULE_REQUIREMENTS[id]
   if (req?.kind === 'ai') return AI_UNAVAILABLE_COPY
+  if (req?.kind === 'data-dependent' || req?.showOptionalCloudCta) return DATA_SOURCE_COPY
   if (req?.provider) return EXTERNAL_CONNECTION_COPY[req.provider]
   return {
     title: INTERNAL_EMPTY_TITLE,
@@ -124,6 +126,27 @@ export const resolveConnectionCopy = (key: string): ExternalConnectionCopy => {
     actionLabel: 'Ir a Configuración',
     actionRoute: '/settings/general',
   }
+}
+
+/** Rutas internas del panel — nunca marketing público. */
+export const isInternalAdminRoute = (route: string): boolean => {
+  const path = normalizePath(route)
+  if (!path || path === '/') return false
+  const publicPrefixes = [
+    '/producto',
+    '/casos-de-uso',
+    '/docs',
+    '/planes',
+    '/contacto',
+    '/privacidad',
+    '/cookies',
+    '/terminos',
+    '/aviso-legal',
+    '/registro',
+    '/verificar-email',
+    '/reenviar-verificacion',
+  ]
+  return !publicPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
 }
 
 export const shouldShowOptionalCloudCta = (key: string): boolean =>

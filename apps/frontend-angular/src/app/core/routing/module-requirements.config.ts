@@ -1,4 +1,15 @@
-export type ExternalProvider = 'aws' | 'gcp' | 'azure' | 'jenkins' | 'github' | 'gitlab'
+export type ExternalProvider =
+  | 'aws'
+  | 'gcp'
+  | 'azure'
+  | 'jenkins'
+  | 'github'
+  | 'gitlab'
+  | 'vps'
+  | 'docker'
+  | 'kubernetes'
+  | 'terraform'
+  | 'repository'
 
 export type ModuleRequirementKind = 'internal' | 'external' | 'data-dependent' | 'ai'
 
@@ -24,40 +35,70 @@ export const INTERNAL_EMPTY_MESSAGE = 'Cuando haya actividad, aparecerá aquí.'
 
 export const EXTERNAL_CONNECTION_COPY: Record<ExternalProvider, ExternalConnectionCopy> = {
   aws: {
-    title: 'Sin cuenta AWS',
-    description: 'Conecta credenciales IAM para sincronizar recursos, instancias y costes.',
-    actionLabel: 'Conectar AWS',
+    title: 'Sin cuentas AWS conectadas',
+    description: 'Añade credenciales IAM para sincronizar recursos, instancias y costes.',
+    actionLabel: 'Añadir cuenta AWS',
     actionRoute: '/cloud/aws/accounts',
   },
   gcp: {
-    title: 'Sin proyecto GCP',
+    title: 'Sin proyectos GCP conectados',
     description: 'Añade un proyecto con credenciales de servicio para empezar.',
-    actionLabel: 'Conectar GCP',
+    actionLabel: 'Añadir cuenta GCP',
     actionRoute: '/cloud/gcp/accounts',
   },
   azure: {
-    title: 'Sin suscripción Azure',
+    title: 'Sin suscripciones Azure conectadas',
     description: 'Configura una aplicación registrada para sincronizar recursos.',
-    actionLabel: 'Conectar Azure',
+    actionLabel: 'Añadir cuenta Azure',
     actionRoute: '/cloud/azure/accounts',
   },
   github: {
-    title: 'Sin cuenta GitHub',
+    title: 'Sin cuenta GitHub conectada',
     description: 'Conecta tu organización o usuario para ver repositorios y despliegues.',
-    actionLabel: 'Conectar GitHub',
+    actionLabel: 'Añadir cuenta GitHub',
     actionRoute: '/repositories/github',
   },
   gitlab: {
-    title: 'Sin cuenta GitLab',
+    title: 'Sin cuenta GitLab conectada',
     description: 'Añade un token de acceso para sincronizar proyectos y pipelines.',
-    actionLabel: 'Conectar GitLab',
+    actionLabel: 'Añadir cuenta GitLab',
     actionRoute: '/repositories/gitlab',
   },
   jenkins: {
-    title: 'Sin controlador Jenkins',
+    title: 'Sin controlador Jenkins conectado',
     description: 'Registra la URL y credenciales del servidor CI/CD.',
     actionLabel: 'Configurar Jenkins',
     actionRoute: '/jenkins/jobs',
+  },
+  vps: {
+    title: 'Sin proveedores VPS conectados',
+    description: 'Conecta DigitalOcean, Hetzner, Linode u OVH para gestionar tus servidores.',
+    actionLabel: 'Conectar VPS',
+    actionRoute: '/vps/digitalocean/accounts',
+  },
+  docker: {
+    title: 'Sin motores Docker conectados',
+    description: 'Registra el endpoint del daemon Docker o del orquestador para inventariar contenedores.',
+    actionLabel: 'Conectar Docker',
+    actionRoute: '/docker/containers',
+  },
+  kubernetes: {
+    title: 'Sin clústeres Kubernetes conectados',
+    description: 'Añade el kubeconfig o credenciales del clúster para ver pods, servicios e ingress.',
+    actionLabel: 'Conectar Kubernetes',
+    actionRoute: '/kubernetes/pods',
+  },
+  terraform: {
+    title: 'Sin backend Terraform configurado',
+    description: 'Conecta un proveedor cloud y configura el backend remoto para workspaces y despliegues.',
+    actionLabel: 'Configurar Terraform',
+    actionRoute: '/terraform/workspaces',
+  },
+  repository: {
+    title: 'Sin repositorios conectados',
+    description: 'Conecta GitHub o GitLab para ver ramas, commits y pull requests.',
+    actionLabel: 'Conectar repositorio',
+    actionRoute: '/repositories/github',
   },
 }
 
@@ -68,10 +109,17 @@ export const AI_UNAVAILABLE_COPY: ExternalConnectionCopy = {
   actionRoute: '/settings/general',
 }
 
+export const DATA_SOURCE_COPY: ExternalConnectionCopy = {
+  title: 'Sin fuente de datos conectada',
+  description: 'Conecta AWS, GCP o Azure para obtener métricas, logs y costes en vivo.',
+  actionLabel: 'Conectar fuente',
+  actionRoute: '/cloud/aws/accounts',
+}
+
 export const OPTIONAL_CLOUD_CTA: ExternalConnectionCopy = {
   title: 'Conecta una nube',
   description: 'Añade AWS, GCP o Azure para poblar este módulo con datos en vivo.',
-  actionLabel: 'Ir a Nubes',
+  actionLabel: 'Conectar fuente',
   actionRoute: '/cloud/aws/accounts',
 }
 
@@ -101,16 +149,16 @@ export const MODULE_REQUIREMENTS: Record<string, ModuleRequirement> = {
     kind: 'data-dependent',
     showOptionalCloudCta: true,
   },
-  vps: { id: 'vps', requiresExternalConnection: false, kind: 'internal' },
-  docker: { id: 'docker', requiresExternalConnection: false, kind: 'internal' },
-  kubernetes: { id: 'kubernetes', requiresExternalConnection: false, kind: 'internal' },
-  network: { id: 'network', requiresExternalConnection: false, kind: 'internal' },
-  storage: { id: 'storage', requiresExternalConnection: false, kind: 'internal' },
-  backups: { id: 'backups', requiresExternalConnection: false, kind: 'internal' },
+  vps: { id: 'vps', requiresExternalConnection: true, kind: 'external', provider: 'vps' },
+  docker: { id: 'docker', requiresExternalConnection: true, kind: 'external', provider: 'docker' },
+  kubernetes: { id: 'kubernetes', requiresExternalConnection: true, kind: 'external', provider: 'kubernetes' },
+  network: { id: 'network', requiresExternalConnection: true, kind: 'external', provider: 'aws' },
+  storage: { id: 'storage', requiresExternalConnection: true, kind: 'external', provider: 'aws' },
+  backups: { id: 'backups', requiresExternalConnection: true, kind: 'external', provider: 'aws' },
   'capacity-planner': { id: 'capacity-planner', requiresExternalConnection: false, kind: 'internal' },
   jenkins: { id: 'jenkins', requiresExternalConnection: true, kind: 'external', provider: 'jenkins' },
-  terraform: { id: 'terraform', requiresExternalConnection: false, kind: 'internal' },
-  deployments: { id: 'deployments', requiresExternalConnection: false, kind: 'internal' },
+  terraform: { id: 'terraform', requiresExternalConnection: true, kind: 'external', provider: 'terraform' },
+  deployments: { id: 'deployments', requiresExternalConnection: true, kind: 'external', provider: 'repository' },
   'active-sessions': { id: 'active-sessions', requiresExternalConnection: false, kind: 'internal' },
   history: { id: 'history', requiresExternalConnection: false, kind: 'internal' },
   runbooks: { id: 'runbooks', requiresExternalConnection: false, kind: 'internal' },
@@ -120,23 +168,33 @@ export const MODULE_REQUIREMENTS: Record<string, ModuleRequirement> = {
   github: { id: 'github', requiresExternalConnection: true, kind: 'external', provider: 'github' },
   gitlab: { id: 'gitlab', requiresExternalConnection: true, kind: 'external', provider: 'gitlab' },
   webhooks: { id: 'webhooks', requiresExternalConnection: false, kind: 'internal' },
-  branches: { id: 'branches', requiresExternalConnection: false, kind: 'internal' },
-  commits: { id: 'commits', requiresExternalConnection: false, kind: 'internal' },
-  'pull-requests': { id: 'pull-requests', requiresExternalConnection: false, kind: 'internal' },
+  branches: { id: 'branches', requiresExternalConnection: true, kind: 'external', provider: 'repository' },
+  commits: { id: 'commits', requiresExternalConnection: true, kind: 'external', provider: 'repository' },
+  'pull-requests': { id: 'pull-requests', requiresExternalConnection: true, kind: 'external', provider: 'repository' },
   metrics: {
     id: 'metrics',
     requiresExternalConnection: false,
     kind: 'data-dependent',
     showOptionalCloudCta: true,
   },
-  logs: { id: 'logs', requiresExternalConnection: false, kind: 'internal' },
+  logs: {
+    id: 'logs',
+    requiresExternalConnection: false,
+    kind: 'data-dependent',
+    showOptionalCloudCta: true,
+  },
   billing: {
     id: 'billing',
     requiresExternalConnection: false,
     kind: 'data-dependent',
     showOptionalCloudCta: true,
   },
-  'cost-optimizer': { id: 'cost-optimizer', requiresExternalConnection: false, kind: 'internal' },
+  'cost-optimizer': {
+    id: 'cost-optimizer',
+    requiresExternalConnection: false,
+    kind: 'data-dependent',
+    showOptionalCloudCta: true,
+  },
   alerts: { id: 'alerts', requiresExternalConnection: false, kind: 'internal' },
   incidents: { id: 'incidents', requiresExternalConnection: false, kind: 'internal' },
   notifications: { id: 'notifications', requiresExternalConnection: false, kind: 'internal' },
@@ -181,4 +239,7 @@ export const MODULE_LABEL_TO_ID: Record<string, string> = {
   Azure: 'azure',
   GitHub: 'github',
   GitLab: 'gitlab',
+  Docker: 'docker',
+  Kubernetes: 'kubernetes',
+  VPS: 'vps',
 }

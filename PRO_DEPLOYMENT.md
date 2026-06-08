@@ -20,6 +20,9 @@ INTEGRATIONS_LIVE=true
 - Modal **Conectar cuenta cloud**: formularios por proveedor (AWS/GCP/Azure + integraciones) sin modo demo.
 - Validación previa al guardar: `POST /api/v1/cloud-accounts/validate-preview` (credenciales reales vía adapters SDK).
 - Credenciales cifradas en vault (`SecretsVaultService`); audit: `cloud_account.create`, `validate_preview`, `validate_failed`, `sync_started`, `sync_completed`, `sync_failed`.
+- **Flujos internos**: botones «Añadir cuenta» / «Sin cuentas conectadas» abren `IntegrationConnectionService` (MatDialog) sin redirigir al sitio público.
+- **Guards**: `publicGuestGuard` en marketing (`/`, `/producto`, `/registro`); wildcard desconocido → `/dashboard`.
+- **Alias**: `/accounts` → `/cloud/aws/accounts`; `/admin/configuracion/integraciones/:provider/nueva` abre wizard y vuelve al módulo.
 
 
 ```bash

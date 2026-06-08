@@ -1,14 +1,14 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core'
-import { RouterLink } from '@angular/router'
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
+import { IntegrationConnectionService } from '../../../core/services/integration-connection.service'
 import { optionalCloudCtaCopy } from '../../../core/routing/module-requirements.util'
 
 @Component({
   selector: 'app-module-optional-cta',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [MatButtonModule, MatIconModule],
   template: `
     <aside class="mod-cta" role="note" aria-label="Conexión opcional">
       <mat-icon aria-hidden="true">cloud_queue</mat-icon>
@@ -16,7 +16,15 @@ import { optionalCloudCtaCopy } from '../../../core/routing/module-requirements.
         <strong>{{ title() }}</strong>
         <p>{{ description() }}</p>
       </div>
-      <a mat-stroked-button color="primary" [routerLink]="actionRoute()">{{ actionLabel() }}</a>
+      <button
+        mat-stroked-button
+        color="primary"
+        type="button"
+        [attr.aria-label]="actionLabel()"
+        (click)="handleConnect()"
+      >
+        {{ actionLabel() }}
+      </button>
     </aside>
   `,
   styles: `
@@ -40,10 +48,15 @@ import { optionalCloudCtaCopy } from '../../../core/routing/module-requirements.
   `,
 })
 export class ModuleOptionalCtaComponent {
+  private readonly connections = inject(IntegrationConnectionService)
   private readonly defaults = optionalCloudCtaCopy()
 
   readonly title = input(this.defaults.title)
   readonly description = input(this.defaults.description)
   readonly actionLabel = input(this.defaults.actionLabel)
   readonly actionRoute = input(this.defaults.actionRoute)
+
+  handleConnect = (): void => {
+    this.connections.openDataSource().subscribe()
+  }
 }

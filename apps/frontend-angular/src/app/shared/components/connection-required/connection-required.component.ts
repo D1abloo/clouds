@@ -1,14 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core'
-import { RouterLink } from '@angular/router'
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
+import { IntegrationConnectionService } from '../../../core/services/integration-connection.service'
 import { resolveConnectionCopy } from '../../../core/routing/module-requirements.util'
 
 @Component({
   selector: 'app-connection-required',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [MatButtonModule, MatIconModule],
   template: `
     <div
       class="conn-req animate-fade-in"
@@ -22,9 +22,15 @@ import { resolveConnectionCopy } from '../../../core/routing/module-requirements
       <h2>{{ displayTitle() }}</h2>
       <p class="conn-req__lead">{{ displayDescription() }}</p>
       <div class="conn-req__actions">
-        <a mat-flat-button color="primary" [routerLink]="displayActionRoute()">
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          [attr.aria-label]="displayActionLabel()"
+          (click)="handleConnect()"
+        >
           {{ displayActionLabel() }}
-        </a>
+        </button>
       </div>
     </div>
   `,
@@ -77,6 +83,8 @@ import { resolveConnectionCopy } from '../../../core/routing/module-requirements
   `,
 })
 export class ConnectionRequiredComponent {
+  private readonly connections = inject(IntegrationConnectionService)
+
   readonly moduleId = input<string>('')
   /** @deprecated use moduleId */
   readonly module = input<string>('')
@@ -99,4 +107,8 @@ export class ConnectionRequiredComponent {
   readonly displayDescription = computed(() => this.description() || this.resolvedCopy().description)
   readonly displayActionLabel = computed(() => this.actionLabel() || this.resolvedCopy().actionLabel)
   readonly displayActionRoute = computed(() => this.actionRoute() || this.resolvedCopy().actionRoute)
+
+  handleConnect = (): void => {
+    this.connections.openForModuleId(this.resolvedKey()).subscribe()
+  }
 }

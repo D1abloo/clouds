@@ -3,6 +3,19 @@
 > Generado: 2026-06-09 (actualizado — formularios cloud PRO)
 > Recomendación final: **READY_FOR_PRO**
 
+## Corrección de flujos de conexión de cuentas (2026-06-09)
+
+| Criterio | Estado |
+|----------|--------|
+| `publicGuestGuard` en rutas públicas y `/registro` | ✅ |
+| Wildcard `**` redirige a `/dashboard` (no marketing `/`) | ✅ |
+| `IntegrationConnectionService` abre modales sin salir del panel | ✅ |
+| `connection-required` y `module-optional-cta` usan click → modal | ✅ |
+| Rutas `/accounts` y `/admin/configuracion/integraciones/*` | ✅ |
+| `?connect=` en páginas cloud abre wizard en sitio | ✅ |
+| Copy español por módulo (AWS, GCP, VPS, repos, etc.) | ✅ |
+| Tests `integration-connection.service.spec.ts` + `auth.guard.spec.ts` | ✅ |
+
 ## Limpieza demo y formularios cloud (2026-06-09)
 
 | Criterio | Estado |

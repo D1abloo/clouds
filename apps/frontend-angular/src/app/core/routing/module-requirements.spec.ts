@@ -6,6 +6,7 @@ import {
   DEPRECATED_GENERIC_INTEGRATION_MSG,
   getExternalConnectionCopy,
   getInternalEmptyCopy,
+  isInternalAdminRoute,
   requiresExternalConnection,
   resolveConnectionCopy,
   resolveModuleId,
@@ -21,8 +22,26 @@ describe('module-requirements', () => {
     }
   })
 
-  it('bloquea solo proveedores externos sin datos en vivo', () => {
-    for (const id of ['aws', 'gcp', 'azure', 'github', 'gitlab', 'jenkins']) {
+  it('bloquea proveedores externos e infra sin datos en vivo', () => {
+    for (const id of [
+      'aws',
+      'gcp',
+      'azure',
+      'github',
+      'gitlab',
+      'jenkins',
+      'vps',
+      'docker',
+      'kubernetes',
+      'terraform',
+      'network',
+      'storage',
+      'backups',
+      'branches',
+      'commits',
+      'pull-requests',
+      'deployments',
+    ]) {
       expect(requiresExternalConnection(id)).toBe(true)
       expect(shouldBlockForMissingConnection(id)).toBe(true)
       expect(shouldBlockForMissingConnection(id, true)).toBe(false)
@@ -38,9 +57,18 @@ describe('module-requirements', () => {
 
   it('expone copy corto por proveedor externo', () => {
     const aws = getExternalConnectionCopy('aws')
-    expect(aws.actionLabel).toBe('Conectar AWS')
+    expect(aws.actionLabel).toBe('Añadir cuenta AWS')
+    expect(aws.title).toContain('AWS')
     expect(aws.description).not.toContain(DEPRECATED_GENERIC_INTEGRATION_MSG)
     expect(resolveConnectionCopy('github').actionRoute).toBe('/repositories/github')
+    expect(resolveConnectionCopy('metrics').actionLabel).toBe('Conectar fuente')
+  })
+
+  it('acciones de conexión apuntan solo a rutas internas', () => {
+    for (const provider of Object.keys(EXTERNAL_CONNECTION_COPY) as Array<keyof typeof EXTERNAL_CONNECTION_COPY>) {
+      const copy = EXTERNAL_CONNECTION_COPY[provider]
+      expect(isInternalAdminRoute(copy.actionRoute)).toBe(true)
+    }
   })
 
   it('usa empty state interno por defecto', () => {

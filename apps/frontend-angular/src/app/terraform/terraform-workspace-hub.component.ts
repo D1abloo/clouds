@@ -1,11 +1,11 @@
 import { DatePipe } from '@angular/common'
-import { Component, Input, output } from '@angular/core'
+import { Component, inject, Input, output } from '@angular/core'
 import type { CloudProvider } from '../core/models/api.models'
 import type { TerraformWorkspaceItem } from '../core/stores/terraform-run.store'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatSlideToggleModule } from '@angular/material/slide-toggle'
-import { RouterLink } from '@angular/router'
+import { IntegrationConnectionService } from '../core/services/integration-connection.service'
 import { StatusBadgeComponent } from '../shared/components/status-badge/status-badge.component'
 import { TerraformEditorComponent } from './terraform-editor/terraform-editor.component'
 import { TerraformPlanViewerComponent } from '../features/terraform/components/terraform-plan-viewer.component'
@@ -27,7 +27,6 @@ import type { TerraformLaunchDetail } from './terraform-launches.demo'
   standalone: true,
   imports: [
     DatePipe,
-    RouterLink,
     MatButtonModule,
     MatIconModule,
     MatSlideToggleModule,
@@ -59,7 +58,9 @@ import type { TerraformLaunchDetail } from './terraform-launches.demo'
               <div class="hub-deploy__alert" role="alert">
                 <mat-icon>link_off</mat-icon>
                 <span>Conecta una cuenta cloud para ejecutar init / plan / apply.</span>
-                <a routerLink="/accounts/aws">Ir a cuentas</a>
+                <button type="button" class="hub-deploy__link" (click)="handleConnectCloud()">
+                  Conectar cuenta cloud
+                </button>
               </div>
             }
 
@@ -533,10 +534,15 @@ import type { TerraformLaunchDetail } from './terraform-launches.demo'
       background: color-mix(in srgb, #f59e0b 12%, var(--app-elevated));
       flex-shrink: 0;
     }
-    .hub-deploy__alert a {
+    .hub-deploy__link {
       margin-left: auto;
+      padding: 0;
+      border: none;
+      background: transparent;
       font-weight: 700;
       color: #844fba;
+      cursor: pointer;
+      text-decoration: underline;
     }
     .hub-deploy__hero {
       display: flex;
@@ -1271,6 +1277,8 @@ import type { TerraformLaunchDetail } from './terraform-launches.demo'
   `,
 })
 export class TerraformWorkspaceHubComponent {
+  private readonly connections = inject(IntegrationConnectionService)
+
   @Input() activeTab: TerraformHubTabId = 'deploy'
   @Input() activeProject: TerraformProject | null = null
   @Input() automations: TerraformAutomation[] = []
@@ -1318,6 +1326,10 @@ export class TerraformWorkspaceHubComponent {
   readonly triggerLabel = triggerLabel
   readonly stateBackendLabel = stateBackendLabel
   readonly complianceTierLabel = complianceTierLabel
+
+  handleConnectCloud = (): void => {
+    this.connections.openCloudProvider(this.workspaceProvider).subscribe()
+  }
 
   lineClass = (line: string): string => this.lineClassFn(line)
 

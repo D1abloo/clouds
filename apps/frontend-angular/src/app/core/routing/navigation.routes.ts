@@ -264,9 +264,24 @@ export const NAVIGATION_ROUTES: Routes = [
       ),
     data: { breadcrumb: 'Configuración', module: 'settings' },
   },
-  { path: 'accounts/aws', redirectTo: 'cloud/aws/overview', pathMatch: 'full' },
-  { path: 'accounts/gcp', redirectTo: 'cloud/gcp/overview', pathMatch: 'full' },
-  { path: 'accounts/azure', redirectTo: 'cloud/azure/overview', pathMatch: 'full' },
+  { path: 'accounts', redirectTo: 'cloud/aws/accounts', pathMatch: 'full' },
+  { path: 'accounts/aws', redirectTo: 'cloud/aws/accounts', pathMatch: 'full' },
+  { path: 'accounts/gcp', redirectTo: 'cloud/gcp/accounts', pathMatch: 'full' },
+  { path: 'accounts/azure', redirectTo: 'cloud/azure/accounts', pathMatch: 'full' },
+  {
+    path: 'admin/configuracion/integraciones',
+    redirectTo: 'settings/integrations',
+    pathMatch: 'full',
+  },
+  {
+    path: 'admin/configuracion/integraciones/:provider/nueva',
+    loadComponent: () =>
+      import('../../features/integrations/integration-connect-page.component').then(
+        (m) => m.IntegrationConnectPageComponent,
+      ),
+    data: { breadcrumb: 'Conectar integración' },
+  },
+  { path: 'settings/integrations', redirectTo: 'settings/general', pathMatch: 'full' },
   { path: 'cloud/aws', redirectTo: 'cloud/aws/overview', pathMatch: 'full' },
   { path: 'cloud/gcp', redirectTo: 'cloud/gcp/overview', pathMatch: 'full' },
   { path: 'cloud/azure', redirectTo: 'cloud/azure/overview', pathMatch: 'full' },

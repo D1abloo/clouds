@@ -34,6 +34,7 @@ import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from '../cloud-accounts/cloud-account-form-dialog.component'
+import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
 import { LaunchInstanceDialogComponent } from '../cloud-accounts/launch-instance-dialog.component'
 import type { Instance } from '../../core/models/api.models'
 import {
@@ -2074,6 +2075,7 @@ export class CloudProviderPageComponent implements OnInit {
   private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly connections = inject(IntegrationConnectionService)
   private readonly destroyRef = inject(DestroyRef)
 
   readonly fmtUsd = fmtUsd
@@ -2395,6 +2397,10 @@ export class CloudProviderPageComponent implements OnInit {
       }
       this.section.set(cloudSectionFromSlug(params.get('section')))
     })
+    const connect = this.route.snapshot.queryParamMap.get('connect')?.trim().toLowerCase()
+    if (connect) {
+      this.connections.openForProviderAlias(connect).subscribe()
+    }
     this.load()
   }
 

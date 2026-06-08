@@ -33,9 +33,9 @@ export const SIDEBAR_NAV: SidebarNavSection[] = [
     id: 'clouds',
     label: 'Clouds',
     items: [
-      { label: 'AWS', route: '/accounts/aws', icon: 'cloud', brand: 'aws' },
-      { label: 'GCP', route: '/accounts/gcp', icon: 'cloud', brand: 'gcp' },
-      { label: 'Azure', route: '/accounts/azure', icon: 'cloud', brand: 'azure' },
+      { label: 'AWS', route: '/cloud/aws/overview', icon: 'cloud', brand: 'aws' },
+      { label: 'GCP', route: '/cloud/gcp/overview', icon: 'cloud', brand: 'gcp' },
+      { label: 'Azure', route: '/cloud/azure/overview', icon: 'cloud', brand: 'azure' },
     ],
   },
   {
