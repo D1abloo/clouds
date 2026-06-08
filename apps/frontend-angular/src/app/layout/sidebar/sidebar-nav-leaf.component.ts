@@ -35,7 +35,7 @@ import { SidebarService } from './sidebar.service'
           class="nav-leaf__star"
           [class.nav-leaf__star--on]="isFavorite()"
           (click)="handleFavorite($event)"
-          [attr.aria-label]="isFavorite() ? 'Remove favorite' : 'Add favorite'"
+          [attr.aria-label]="isFavorite() ? 'Quitar de acceso rápido' : 'Añadir a acceso rápido'"
         >
           <mat-icon>{{ isFavorite() ? 'star' : 'star_border' }}</mat-icon>
         </button>

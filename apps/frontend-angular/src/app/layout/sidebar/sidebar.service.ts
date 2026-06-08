@@ -1,15 +1,18 @@
-import { Injectable, signal, effect, computed } from '@angular/core'
+import { Injectable, signal, effect, computed, inject } from '@angular/core'
 import { DEFAULT_FAVORITES } from './sidebar-tree.config'
 import {
   SIDEBAR_MAIN_MODULES,
   resolveAreaFromPath,
   CLOUD_SIDEBAR_BRANCHES,
 } from '../../core/routing/area-nav.config'
+import { AuthService } from '../../core/services/auth.service'
 
 const COLLAPSED_KEY = 'cloudops_sidebar_collapsed'
 const EXPANDED_KEY = 'cloudops_sidebar_expanded'
-const FAVORITES_KEY = 'cloudops_sidebar_favorites'
+const LEGACY_FAVORITES_KEY = 'cloudops_sidebar_favorites'
 const EXPANDED_MIGRATION_KEY = 'cloudops_sidebar_expanded_v2'
+
+const favoritesKeyForUser = (userId: string): string => `cloudops_sidebar_favorites_${userId}`
 
 const CLOUD_BRANCH_IDS = CLOUD_SIDEBAR_BRANCHES.map((b) => b.id)
 const MODULE_IDS = SIDEBAR_MAIN_MODULES.map((m) => m.id)
@@ -28,17 +31,45 @@ const readExpanded = (): Record<string, boolean> => {
   }
 }
 
-const readFavorites = (): string[] => {
+const parseFavorites = (raw: string): string[] | null => {
   try {
-    const raw = readStorage(FAVORITES_KEY)
-    return raw ? (JSON.parse(raw) as string[]) : [...DEFAULT_FAVORITES]
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return null
+    return parsed.filter((r): r is string => typeof r === 'string')
   } catch {
-    return [...DEFAULT_FAVORITES]
+    return null
   }
+}
+
+const readFavoritesForUser = (userId: string): string[] => {
+  const userKey = favoritesKeyForUser(userId)
+  const userRaw = readStorage(userKey)
+  if (userRaw !== null) {
+    return parseFavorites(userRaw) ?? [...DEFAULT_FAVORITES]
+  }
+
+  const legacyRaw = readStorage(LEGACY_FAVORITES_KEY)
+  if (legacyRaw !== null) {
+    const legacy = parseFavorites(legacyRaw)
+    if (legacy) {
+      localStorage.setItem(userKey, JSON.stringify(legacy))
+      return legacy
+    }
+  }
+
+  return [...DEFAULT_FAVORITES]
+}
+
+const writeFavoritesForUser = (userId: string, routes: string[]): void => {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(favoritesKeyForUser(userId), JSON.stringify(routes))
 }
 
 @Injectable({ providedIn: 'root' })
 export class SidebarService {
+  private readonly auth = inject(AuthService)
+  private activeUserId: string | null = null
+
   private readonly _collapsed = signal<boolean>(readStorage(COLLAPSED_KEY) === 'true')
   readonly collapsed = this._collapsed.asReadonly()
 
@@ -48,7 +79,7 @@ export class SidebarService {
   private readonly _expanded = signal<Record<string, boolean>>(readExpanded())
   readonly expanded = this._expanded.asReadonly()
 
-  private readonly _favorites = signal<string[]>(readFavorites())
+  private readonly _favorites = signal<string[]>([])
   readonly favorites = this._favorites.asReadonly()
 
   readonly showFavoritesOnly = computed(() => false)
@@ -60,14 +91,41 @@ export class SidebarService {
       this._expanded.set({})
     }
 
+    const initialUserId = this.auth.user()?.id ?? null
+    if (initialUserId) {
+      this._favorites.set(readFavoritesForUser(initialUserId))
+      this.activeUserId = initialUserId
+    } else {
+      this._favorites.set([...DEFAULT_FAVORITES])
+    }
+
+    effect(() => {
+      const userId = this.auth.user()?.id ?? null
+
+      if (this.activeUserId !== null && this.activeUserId !== userId) {
+        writeFavoritesForUser(this.activeUserId, this._favorites())
+      }
+
+      if (userId !== null && userId !== this.activeUserId) {
+        this._favorites.set(readFavoritesForUser(userId))
+      }
+
+      this.activeUserId = userId
+    })
+
+    effect(() => {
+      const userId = this.auth.user()?.id
+      const routes = this._favorites()
+      if (userId) {
+        writeFavoritesForUser(userId, routes)
+      }
+    })
+
     effect(() => {
       localStorage.setItem(COLLAPSED_KEY, String(this._collapsed()))
     })
     effect(() => {
       localStorage.setItem(EXPANDED_KEY, JSON.stringify(this._expanded()))
-    })
-    effect(() => {
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(this._favorites()))
     })
   }
 
