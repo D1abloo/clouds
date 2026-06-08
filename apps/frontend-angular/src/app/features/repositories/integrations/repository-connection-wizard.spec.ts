@@ -37,7 +37,11 @@ describe('RepositoryConnectionWizardComponent', () => {
         },
         {
           provide: ProModeService,
-          useValue: { proMode: () => true, oauthGithubEnabled: () => false },
+          useValue: {
+            proMode: () => true,
+            demoMode: () => false,
+            oauthGithubEnabled: () => false,
+          },
         },
         { provide: ToastService, useValue: { success: () => {}, error: () => {}, info: () => {} } },
       ],
