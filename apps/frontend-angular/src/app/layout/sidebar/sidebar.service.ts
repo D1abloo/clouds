@@ -1,5 +1,7 @@
-import { Injectable, signal, effect, computed } from '@angular/core'
+import { Injectable, inject, signal, effect, computed } from '@angular/core'
 import { DEFAULT_FAVORITES } from './sidebar-tree.config'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { environment } from '../../../environments/environment'
 
 const COLLAPSED_KEY = 'cloudops_sidebar_collapsed'
 const EXPANDED_KEY = 'cloudops_sidebar_expanded'
@@ -34,8 +36,19 @@ const readFavorites = (): string[] => {
   }
 }
 
+const defaultOrgName = (): string => {
+  if (environment.production) return 'Spendlyx'
+  return 'CloudOps Demo'
+}
+
 @Injectable({ providedIn: 'root' })
 export class SidebarService {
+  private readonly pro = inject(ProModeService)
+
+  private readonly orgLabel = computed(() =>
+    this.pro.proMode() && !this.pro.demoMode() ? 'Spendlyx' : defaultOrgName(),
+  )
+
   private readonly _collapsed = signal<boolean>(readStorage(COLLAPSED_KEY) === 'true')
   readonly collapsed = this._collapsed.asReadonly()
 
@@ -50,16 +63,23 @@ export class SidebarService {
 
   private readonly _currentOrg = signal<OrgInfo>({
     id: 'default',
-    name: 'CloudOps Demo',
-    initials: 'CO',
+    name: defaultOrgName(),
+    initials: 'SL',
   })
-  readonly currentOrg = this._currentOrg.asReadonly()
+  readonly currentOrg = computed(() => {
+    const org = this._currentOrg()
+    const name = this.orgLabel()
+    return org.id === 'default' ? { ...org, name, initials: name === 'Spendlyx' ? 'SL' : 'CO' } : org
+  })
 
-  readonly availableOrgs: OrgInfo[] = [
-    { id: 'default', name: 'CloudOps Demo', initials: 'CO' },
-    { id: 'prod', name: 'Production', initials: 'PR' },
-    { id: 'stg', name: 'Staging Env', initials: 'ST' },
-  ]
+  readonly availableOrgs = computed((): OrgInfo[] => {
+    const primary = this.orgLabel()
+    return [
+      { id: 'default', name: primary, initials: primary === 'Spendlyx' ? 'SL' : 'CO' },
+      { id: 'prod', name: 'Production', initials: 'PR' },
+      { id: 'stg', name: 'Staging Env', initials: 'ST' },
+    ]
+  })
 
   readonly showFavoritesOnly = computed(() => false)
 

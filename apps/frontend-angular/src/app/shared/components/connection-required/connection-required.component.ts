@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core'
+import { ChangeDetectionStrategy, Component, input } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -15,9 +15,11 @@ import { MatIconModule } from '@angular/material/icon'
       </div>
       <h2>Configuración requerida</h2>
       <p class="conn-req__lead">
-        El módulo <strong>{{ module() }}</strong> necesita credenciales o integración externa antes de mostrar datos en modo PRO.
+        Esta integración aún no está conectada. Añade las credenciales en Configuración para comenzar a usarla en modo PRO.
       </p>
-      <p class="conn-req__hint">{{ hint() }}</p>
+      @if (module()) {
+        <p class="conn-req__module">Módulo: <strong>{{ module() }}</strong></p>
+      }
       <div class="conn-req__actions">
         <a mat-flat-button color="primary" routerLink="/admin/settings">
           Ir a configuración
@@ -51,13 +53,10 @@ import { MatIconModule } from '@angular/material/icon'
     }
     h2 { margin: 0 0 0.5rem; font-size: 1.15rem; font-weight: 700; }
     .conn-req__lead { margin: 0 0 0.5rem; max-width: 520px; line-height: 1.55; color: var(--app-text-muted); }
-    .conn-req__hint { margin: 0 0 1.25rem; max-width: 480px; font-size: 0.88rem; color: var(--app-text-muted); }
+    .conn-req__module { margin: 0 0 1.25rem; max-width: 480px; font-size: 0.88rem; color: var(--app-text-muted); }
     .conn-req__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
   `,
 })
 export class ConnectionRequiredComponent {
-  readonly module = input.required<string>()
-  readonly hint = input<string | undefined>(
-    'Añada las variables de entorno o conecte la cuenta en Administración → Configuración → Integraciones.',
-  )
+  readonly module = input<string>('')
 }

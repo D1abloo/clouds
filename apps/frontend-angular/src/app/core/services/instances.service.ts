@@ -1,13 +1,17 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
+import { ProModeService } from './pro-mode.service'
 import { CloudProvider, Instance } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 import { demoInstances } from '../demo/demo-fallback.data'
+import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
+import { emptyInstances } from '../demo/pro-empty.data'
 
 @Injectable({ providedIn: 'root' })
 export class InstancesService {
   private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
 
   list = (filters?: {
     projectId?: string
@@ -20,9 +24,10 @@ export class InstancesService {
         const list = unwrapList<Instance>(res)
         if (list.length) return list
         const grouped = flattenGroupedInstances(res)
-        return grouped.length ? grouped : demoInstances()
+        if (grouped.length) return grouped
+        return allowsDemoDataFrom(this.pro) ? demoInstances() : emptyInstances()
       }),
-      catchError(() => of(demoInstances())),
+      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoInstances() : emptyInstances())),
     )
 
   getOne = (id: string): Observable<Instance> =>
@@ -48,17 +53,16 @@ export class InstancesService {
 const flattenGroupedInstances = (data: unknown): Instance[] => {
   const result: Instance[] = []
   const walk = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return
     if (Array.isArray(node)) {
-      node.forEach((item) => {
-        if (item && typeof item === 'object' && 'id' in item) {
-          result.push(item as Instance)
-        } else {
-          walk(item)
-        }
-      })
-    } else if (node && typeof node === 'object') {
-      Object.values(node).forEach(walk)
+      node.forEach(walk)
+      return
     }
+    const obj = node as Record<string, unknown>
+    if (typeof obj['id'] === 'string' && typeof obj['name'] === 'string') {
+      result.push(obj as unknown as Instance)
+    }
+    Object.values(obj).forEach(walk)
   }
   walk(data)
   return result

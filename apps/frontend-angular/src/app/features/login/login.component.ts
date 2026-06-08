@@ -94,11 +94,13 @@ import { environment } from '../../../environments/environment'
           </button>
         }
 
-        <aside class="login-hint" role="note">
-          <strong>Credenciales demo</strong>
-          <p>Admin: <code>admin&#64;cloudops.local</code> / <code>Admin123!</code></p>
-          <p>Demo: <code>demo&#64;cloudops.local</code> / <code>Demo1234!</code></p>
-        </aside>
+        @if (pro.showDemoLogin()) {
+          <aside class="login-hint" role="note">
+            <strong>Credenciales demo</strong>
+            <p>Admin: <code>admin&#64;cloudops.local</code> / <code>Admin123!</code></p>
+            <p>Demo: <code>demo&#64;cloudops.local</code> / <code>Demo1234!</code></p>
+          </aside>
+        }
       </section>
     </main>
   `,
@@ -219,6 +221,10 @@ export class LoginComponent implements OnInit {
   }
 
   handleDemoLogin = (): void => {
+    if (!this.pro.showDemoLogin()) {
+      this.error = 'El modo demo no está disponible en producción. Usa OAuth o tus credenciales de administrador.'
+      return
+    }
     this.form.patchValue({ email: 'demo@cloudops.local', password: 'Demo1234!' })
     this.handleSubmit()
   }
@@ -244,7 +250,9 @@ export class LoginComponent implements OnInit {
       },
       error: () => {
         this.oauthLoading = null
-        this.error = 'Error al iniciar sesión con OAuth. Usa modo demo o correo.'
+        this.error = this.pro.showDemoLogin()
+          ? 'Error al iniciar sesión con OAuth. Usa modo demo o correo.'
+          : 'Error al iniciar sesión con OAuth. Comprueba la configuración o usa correo y contraseña.'
       },
     })
   }

@@ -1,9 +1,12 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
+import { ProModeService } from './pro-mode.service'
 import { NotificationItem } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 import { demoNotifications } from '../demo/demo-fallback.data'
+import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
+import { emptyNotifications } from '../demo/pro-empty.data'
 
 type RawNotification = {
   id: string
@@ -18,6 +21,7 @@ type RawNotification = {
 @Injectable({ providedIn: 'root' })
 export class NotificationsService {
   private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
 
   list = (): Observable<NotificationItem[]> =>
     this.api.get<unknown>('notifications').pipe(
@@ -29,9 +33,12 @@ export class NotificationsService {
           read: n.isRead ?? n.read ?? false,
           createdAt: n.createdAt,
         }))
-        return mapped.length ? mapped : demoNotifications()
+        if (mapped.length) return mapped
+        return allowsDemoDataFrom(this.pro) ? demoNotifications() : emptyNotifications()
       }),
-      catchError(() => of(demoNotifications())),
+      catchError(() =>
+        of(allowsDemoDataFrom(this.pro) ? demoNotifications() : emptyNotifications()),
+      ),
     )
 
   markRead = (id: string): Observable<unknown> =>

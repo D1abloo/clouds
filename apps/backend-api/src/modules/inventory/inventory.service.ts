@@ -2,12 +2,27 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { CloudProvider } from '@prisma/client'
 import { GithubSummaryService } from '../github/github-summary.service'
+import { AppModeService } from '../../common/config/app-mode.service'
+
+const emptyGithubSummary = () => ({
+  connected: false,
+  username: null,
+  repoCount: 0,
+  branchCount: 0,
+  commitCount: 0,
+  openPullRequests: 0,
+  webhookCount: 0,
+  deploymentCount: 0,
+  repoItems: [] as unknown[],
+  lastSyncAt: null,
+})
 
 @Injectable()
 export class InventoryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly githubSummarySvc: GithubSummaryService,
+    private readonly mode: AppModeService,
   ) {}
 
   async dockerSummary() {
@@ -128,7 +143,9 @@ export class InventoryService {
         this.kubernetesSummary(),
         this.jenkinsSummary(),
         this.terraformSummary(),
-        this.githubSummarySvc.summaryForInventory().catch(() => this.githubSummarySvc.demoSummary()),
+        this.githubSummarySvc.summaryForInventory().catch(() =>
+          this.mode.canUseDemoFallback() ? this.githubSummarySvc.demoSummary() : emptyGithubSummary(),
+        ),
       ])
 
     const byProvider = instances.reduce(

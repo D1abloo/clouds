@@ -1,9 +1,12 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
+import { ProModeService } from './pro-mode.service'
 import { AlertItem } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 import { demoAlerts } from '../demo/demo-fallback.data'
+import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
+import { emptyAlerts } from '../demo/pro-empty.data'
 
 type RawAlert = {
   id: string
@@ -17,6 +20,7 @@ type RawAlert = {
 @Injectable({ providedIn: 'root' })
 export class AlertsService {
   private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
 
   list = (): Observable<AlertItem[]> =>
     this.api.get<unknown>('alerts').pipe(
@@ -28,9 +32,10 @@ export class AlertsService {
           status: a.isResolved ? 'resolved' : 'active',
           createdAt: a.createdAt,
         }))
-        return mapped.length ? mapped : demoAlerts()
+        if (mapped.length) return mapped
+        return allowsDemoDataFrom(this.pro) ? demoAlerts() : emptyAlerts()
       }),
-      catchError(() => of(demoAlerts())),
+      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoAlerts() : emptyAlerts())),
     )
 
   resolve = (id: string): Observable<unknown> =>

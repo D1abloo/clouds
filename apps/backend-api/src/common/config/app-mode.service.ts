@@ -5,6 +5,7 @@ export type AppModeStatus = {
   demoMode: boolean
   proMode: boolean
   authUrl: string
+  appUrl: string
   oauth: {
     google: boolean
     github: boolean
@@ -33,12 +34,16 @@ export class AppModeService {
   getAuthUrl = (): string =>
     this.config.get<string>('AUTH_URL') ?? 'http://localhost:4200'
 
+  getAppUrl = (): string =>
+    this.config.get<string>('APP_URL') ?? this.getAuthUrl()
+
   canUseDemoFallback = (): boolean => this.isDemoMode()
 
   getStatus = (): AppModeStatus => ({
     demoMode: this.isDemoMode(),
     proMode: this.isProMode(),
     authUrl: this.getAuthUrl(),
+    appUrl: this.getAppUrl(),
     oauth: {
       google: !!this.config.get<string>('GOOGLE_CLIENT_ID'),
       github: !!this.config.get<string>('GITHUB_CLIENT_ID'),

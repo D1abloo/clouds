@@ -50,7 +50,11 @@ export class AuthController {
       normalized === 'google'
         ? this.config.get<string>('GOOGLE_CLIENT_ID')
         : this.config.get<string>('GITHUB_CLIENT_ID')
-    const callbackBase = this.config.get<string>('OAUTH_CALLBACK_URL', `${this.config.get('AUTH_URL', 'http://localhost:4200')}/auth/callback`)
+    const authUrl = this.config.get<string>('AUTH_URL', 'http://localhost:4200')
+    const callbackBase = this.config.get<string>(
+      'OAUTH_CALLBACK_URL',
+      `${authUrl}/api/v1/auth/oauth/callback`,
+    )
 
     if (proMode && clientId) {
       const redirectUrl =

@@ -62,8 +62,8 @@ import { MatButtonModule } from '@angular/material/button'
 })
 export class EmptyStateComponent {
   @Input() icon = 'inbox'
-  @Input() title = 'No data yet'
-  @Input() description = 'There is nothing to display.'
+  @Input() title = 'Sin datos todavía'
+  @Input() description = 'Conecta una integración para comenzar.'
   @Input() actionLabel?: string
   readonly actionClick = output<void>()
 }

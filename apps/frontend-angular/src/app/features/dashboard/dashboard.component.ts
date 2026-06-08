@@ -8,6 +8,9 @@ import { RealtimeService } from '../../core/services/realtime.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { DashboardData, DashboardInstanceRow } from './dashboard.models'
 import { buildDemoDashboard } from './utils/dashboard-demo.util'
+import { emptyDashboard } from '../../core/demo/pro-empty.data'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
+import { ProModeService } from '../../core/services/pro-mode.service'
 
 @Component({
   selector: 'app-dashboard',
@@ -77,6 +80,7 @@ import { buildDemoDashboard } from './utils/dashboard-demo.util'
 export class DashboardComponent implements OnInit {
   private readonly inventory = inject(InventoryService)
   private readonly realtime = inject(RealtimeService)
+  private readonly pro = inject(ProModeService)
 
   readonly page = createPageLoader(true)
   readonly data = signal<DashboardData | null>(null)
@@ -96,7 +100,7 @@ export class DashboardComponent implements OnInit {
     this.page.run(this.inventory.dashboard(), {
       onSuccess: (d) => this.data.set(d),
       errorMessage: 'No se pudo cargar el tablero',
-      fallback: buildDemoDashboard,
+      fallback: () => (allowsDemoDataFrom(this.pro) ? buildDemoDashboard() : emptyDashboard()),
     })
   }
 

@@ -30,8 +30,20 @@ const PERMISSIONS = [
   { action: 'read', resource: 'alerts' },
 ]
 
+const isProductionSeed = (): boolean => {
+  const seedMode = process.env.SEED_MODE?.toLowerCase()
+  if (seedMode === 'production') return true
+  if (seedMode === 'demo') return false
+  return process.env.DEMO_MODE === 'false'
+}
+
 async function main() {
-  console.log('Seeding CloudOps Control Center...')
+  const productionSeed = isProductionSeed()
+  console.log(
+    productionSeed
+      ? 'Seeding Spendlyx PRO (roles, permisos, admin, proyecto)...'
+      : 'Seeding CloudOps Control Center...',
+  )
 
   for (const perm of PERMISSIONS) {
     await prisma.permission.upsert({
@@ -70,10 +82,6 @@ async function main() {
   })
 
   const passwordHash = await bcrypt.hash('Admin123!', 12)
-  const demoPasswordHash = await bcrypt.hash('Demo123!', 12)
-
-  const roleByName = async (name: string) =>
-    prisma.role.findUnique({ where: { name } })
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@cloudops.local' },
@@ -88,47 +96,53 @@ async function main() {
     update: {},
   })
 
-  const DEMO_USERS = [
-    { email: 'cloud.admin@demo.local', name: 'Demo Cloud Admin', role: 'cloud_admin' },
-    { email: 'devops@demo.local', name: 'Demo DevOps', role: 'devops' },
-    { email: 'viewer@demo.local', name: 'Demo Viewer', role: 'viewer' },
-    { email: 'auditor@demo.local', name: 'Demo Auditor', role: 'auditor' },
-    { email: 'billing@demo.local', name: 'Demo Billing', role: 'billing_viewer' },
-    { email: 'jenkins@demo.local', name: 'Demo Jenkins Op', role: 'jenkins_operator' },
-    { email: 'terraform@demo.local', name: 'Demo Terraform Op', role: 'terraform_operator' },
-  ]
+  if (!productionSeed) {
+    const demoPasswordHash = await bcrypt.hash('Demo123!', 12)
 
-  for (const demo of DEMO_USERS) {
-    const role = await roleByName(demo.role)
-    await prisma.user.upsert({
-      where: { email: demo.email },
-      create: {
-        email: demo.email,
-        passwordHash: demoPasswordHash,
-        name: demo.name,
-        userRoles: role
-          ? { create: [{ roleId: role.id, projectId: project.id }] }
-          : undefined,
-      },
-      update: { name: demo.name },
+    const roleByName = async (name: string) =>
+      prisma.role.findUnique({ where: { name } })
+
+    const DEMO_USERS = [
+      { email: 'cloud.admin@demo.local', name: 'Demo Cloud Admin', role: 'cloud_admin' },
+      { email: 'devops@demo.local', name: 'Demo DevOps', role: 'devops' },
+      { email: 'viewer@demo.local', name: 'Demo Viewer', role: 'viewer' },
+      { email: 'auditor@demo.local', name: 'Demo Auditor', role: 'auditor' },
+      { email: 'billing@demo.local', name: 'Demo Billing', role: 'billing_viewer' },
+      { email: 'jenkins@demo.local', name: 'Demo Jenkins Op', role: 'jenkins_operator' },
+      { email: 'terraform@demo.local', name: 'Demo Terraform Op', role: 'terraform_operator' },
+    ]
+
+    for (const demo of DEMO_USERS) {
+      const role = await roleByName(demo.role)
+      await prisma.user.upsert({
+        where: { email: demo.email },
+        create: {
+          email: demo.email,
+          passwordHash: demoPasswordHash,
+          name: demo.name,
+          userRoles: role
+            ? { create: [{ roleId: role.id, projectId: project.id }] }
+            : undefined,
+        },
+        update: { name: demo.name },
+      })
+    }
+
+    await prisma.alertRule.createMany({
+      data: [
+        { name: 'High CPU', condition: 'cpu_high', severity: AlertSeverity.WARNING },
+        { name: 'High RAM', condition: 'ram_high', severity: AlertSeverity.WARNING },
+        { name: 'Disk Full', condition: 'disk_full', severity: AlertSeverity.CRITICAL },
+        { name: 'High Cost', condition: 'cost_high', severity: AlertSeverity.WARNING },
+      ],
+      skipDuplicates: true,
     })
   }
 
-  await prisma.alertRule.createMany({
-    data: [
-      { name: 'High CPU', condition: 'cpu_high', severity: AlertSeverity.WARNING },
-      { name: 'High RAM', condition: 'ram_high', severity: AlertSeverity.WARNING },
-      { name: 'Disk Full', condition: 'disk_full', severity: AlertSeverity.CRITICAL },
-      { name: 'High Cost', condition: 'cost_high', severity: AlertSeverity.WARNING },
-    ],
-    skipDuplicates: true,
-  })
-
   console.log('Seed complete.')
   console.log('Admin: admin@cloudops.local / Admin123!')
-  console.log('Demo users (password Demo123! for all):')
-  for (const demo of DEMO_USERS) {
-    console.log(`  - ${demo.email} (${demo.role})`)
+  if (!productionSeed) {
+    console.log('Demo users (password Demo123! for all): ver prisma/seed-demo.ts')
   }
   console.log(`Project ID: ${project.id}`)
   console.log(`Admin ID: ${admin.id}`)

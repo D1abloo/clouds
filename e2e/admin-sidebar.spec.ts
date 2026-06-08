@@ -77,6 +77,20 @@ test.describe('Panel admin — login y sidebar (español)', () => {
     }
   })
 
+  test('modo PRO — botón demo no visible', async ({ page }) => {
+    test.skip(process.env.E2E_PRO_MODE !== '1', 'Defina E2E_PRO_MODE=1 con backend en PRO')
+
+    await page.goto('/login')
+    await expect(page.getByRole('button', { name: /Entrar en modo demo/i })).not.toBeVisible()
+    await expect(page.getByText('Credenciales demo')).not.toBeVisible()
+  })
+
+  test('ruta protegida redirige a login sin sesión', async ({ page }) => {
+    await page.goto('/dashboard')
+    await page.waitForURL('**/login**', { timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: 'CloudOps' })).toBeVisible()
+  })
+
   test('texto de navegación en español tras login demo', async ({ page }) => {
     test.skip(!process.env.E2E_WITH_AUTH, 'Defina E2E_WITH_AUTH=1 con backend activo')
 

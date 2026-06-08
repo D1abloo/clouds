@@ -14,6 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed.ts",
+    "prisma:seed:prod": "SEED_MODE=production DEMO_MODE=false TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed.ts",
     "prisma:seed:demo": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed-demo.ts",
     "prisma:seed:demo:reset": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed-demo.ts --reset",
     "github:demo:verify": "npx --yes tsx scripts/verify-github-demo-catalog.mjs",

@@ -20,6 +20,7 @@
     "prisma:migrate": "npm run prisma:migrate -w apps/backend-api",
     "prisma:studio": "npm run prisma:studio -w apps/backend-api",
     "prisma:seed": "npm run prisma:seed -w apps/backend-api",
+    "prisma:seed:prod": "npm run prisma:seed:prod -w apps/backend-api",
     "prisma:seed:demo": "npm run prisma:seed:demo -w apps/backend-api",
     "seed:demo": "bash scripts/seed-demo.sh",
     "demo:seed": "bash scripts/demo-seed.sh",

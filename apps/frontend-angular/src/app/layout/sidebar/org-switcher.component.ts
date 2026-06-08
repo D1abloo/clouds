@@ -34,7 +34,7 @@ import type { OrgInfo } from './sidebar.service'
           class="absolute left-2 right-2 top-[calc(100%+4px)] z-[200] overflow-hidden rounded-[10px] border border-[color:var(--sidebar-border)] bg-[color:var(--sidebar-dropdown-bg)] p-1 shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
           role="listbox"
         >
-          @for (o of authStore.availableOrgs; track o.id) {
+          @for (o of authStore.availableOrgs(); track o.id) {
             <button
               type="button"
               class="flex w-full items-center gap-2 rounded-md border-0 bg-transparent px-2.5 py-2 text-left text-[0.82rem] font-medium text-[color:var(--sidebar-text-muted)] transition-colors hover:bg-[color:var(--sidebar-item-hover)] hover:text-[color:var(--sidebar-text)]"

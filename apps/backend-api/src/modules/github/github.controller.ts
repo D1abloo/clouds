@@ -8,6 +8,8 @@ import { GithubPullRequestsService } from './github-pull-requests.service'
 import { GithubWebhooksService } from './github-webhooks.service'
 import { GithubDeploymentsService } from './github-deployments.service'
 import { GithubDemoService } from './github-demo.service'
+import { ConfigService } from '@nestjs/config'
+import { assertDemoModeEnabled } from '../../common/utils/demo-runtime.util'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('GitHub')
@@ -23,11 +25,13 @@ export class GithubController {
     private readonly webhooks: GithubWebhooksService,
     private readonly deployments: GithubDeploymentsService,
     private readonly demo: GithubDemoService,
+    private readonly config: ConfigService,
   ) {}
 
   @Get('demo/repos')
   @ApiOperation({ summary: 'Repositorios ficticios del modo demo' })
   demoRepos() {
+    assertDemoModeEnabled(this.config)
     return {
       demoMode: true,
       count: this.demo.listMemoryRepos().length,
@@ -38,6 +42,7 @@ export class GithubController {
   @Post('demo/connect')
   @ApiOperation({ summary: 'Conectar cuenta GitHub demo (sin credenciales reales)' })
   connectDemo(@CurrentUser() user: JwtPayload) {
+    assertDemoModeEnabled(this.config)
     return this.accounts.connectDemo(user.sub)
   }
 

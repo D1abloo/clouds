@@ -7,6 +7,10 @@ sleep 3
 echo "==> Running migrations..."
 npx prisma migrate deploy --schema=./prisma/schema.prisma
 
+if [ "${DEMO_MODE:-true}" = "false" ]; then
+  export SEED_MODE=production
+fi
+
 echo "==> Base seed (roles, admin user)..."
 npx prisma db seed --schema=./prisma/schema.prisma 2>/dev/null || echo "Prisma seed skipped, running ensure-users..."
 echo "==> Ensuring default login users..."

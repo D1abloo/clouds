@@ -1,20 +1,25 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
+import { ProModeService } from './pro-mode.service'
 import { AuditLog } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 import { demoAuditLogs } from '../demo/demo-fallback.data'
+import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
+import { emptyAuditLogs } from '../demo/pro-empty.data'
 
 @Injectable({ providedIn: 'root' })
 export class AuditService {
   private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
 
   list = (): Observable<AuditLog[]> =>
     this.api.get<unknown>('audit').pipe(
       map((res) => {
         const rows = unwrapList<AuditLog>(res)
-        return rows.length ? rows : demoAuditLogs()
+        if (rows.length) return rows
+        return allowsDemoDataFrom(this.pro) ? demoAuditLogs() : emptyAuditLogs()
       }),
-      catchError(() => of(demoAuditLogs())),
+      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoAuditLogs() : emptyAuditLogs())),
     )
 }

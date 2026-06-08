@@ -7,6 +7,7 @@ export type PlatformStatusDto = {
   demoMode: boolean
   proMode: boolean
   authUrl: string
+  appUrl?: string
   oauth: { google: boolean; github: boolean }
   message: string
   database?: { connected: boolean; latencyMs: number | null; error?: string }

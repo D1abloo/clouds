@@ -21,6 +21,7 @@ import { AlertsStore } from '../../core/stores/alerts.store'
 import { JenkinsStore } from '../../core/stores/jenkins.store'
 import { VpsStore } from '../../core/stores/vps.store'
 import { AuthStore } from '../../core/stores/auth.store'
+import { ProModeService } from '../../core/services/pro-mode.service'
 
 @Component({
   selector: 'app-sidebar',
@@ -315,6 +316,7 @@ export class SidebarComponent {
   readonly jenkinsStore = inject(JenkinsStore)
   readonly vpsStore = inject(VpsStore)
   readonly authStore = inject(AuthStore)
+  readonly pro = inject(ProModeService)
 
   readonly mainModules = SIDEBAR_MAIN_MODULES
   readonly collapsed = this.sidebarSvc.collapsed
@@ -346,8 +348,9 @@ export class SidebarComponent {
 
   readonly visibleModules = computed(() => {
     const q = this.sidebarSvc.searchQuery()
-    if (!q) return this.mainModules
-    return this.mainModules.filter((m) => {
+    const modules = this.filterDemoNavItem(this.mainModules)
+    if (!q) return modules
+    return modules.filter((m) => {
       if (m.label.toLowerCase().includes(q)) return true
       if (m.branches?.length) {
         return m.branches.some(
@@ -387,6 +390,14 @@ export class SidebarComponent {
       .map((route) => this.flatNav.find((e) => e.route === route))
       .filter((e): e is NonNullable<typeof e> => !!e)
   })
+
+  private filterDemoNavItem = (modules: typeof SIDEBAR_MAIN_MODULES) => {
+    if (!this.pro.proMode() || this.pro.demoMode()) return modules
+    return modules.map((m) => ({
+      ...m,
+      tabs: m.tabs.filter((t) => t.id !== 'demo-mode'),
+    }))
+  }
 
   isModuleActive = (moduleId: string): boolean => {
     const path = this.url().split('?')[0]
