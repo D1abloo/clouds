@@ -19,7 +19,7 @@ echo ""
 
 # --- 1. Platform status ---
 echo "--- 1. Estado PRO ---"
-STATUS=$(curl -sf -m 20 "${API}/platform/status" || echo '{}')
+STATUS=$(curl -sf -m 20 "${API}/platform/status" 2>/dev/null || curl -sf -m 20 "${API}/platform/status" 2>/dev/null || echo '{}')
 echo "${STATUS}" | grep -q '"demoMode":false' && ok "demoMode=false" || bad "demoMode no es false"
 echo "${STATUS}" | grep -q '"proMode":true' && ok "proMode=true" || bad "proMode no es true"
 echo "${STATUS}" | grep -q '"appEnv":"production"' && ok "appEnv=production" || bad "appEnv no es production"
@@ -58,7 +58,7 @@ echo ""
 
 # --- 5. API notificaciones (auth requerida) ---
 echo "--- 5. API notificaciones ---"
-NOTIF_CODE=$(curl -sf -m 15 -o /dev/null -w '%{http_code}' "${API}/notifications/unread-summary" || echo '000')
+NOTIF_CODE=$(curl -s -m 15 -o /dev/null -w '%{http_code}' "${API}/notifications/unread-summary" 2>/dev/null || echo '000')
 [[ "${NOTIF_CODE}" == "401" || "${NOTIF_CODE}" == "403" ]] && ok "unread-summary requiere auth (${NOTIF_CODE})" || warn "unread-summary HTTP ${NOTIF_CODE}"
 echo ""
 
