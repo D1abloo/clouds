@@ -1,50 +1,84 @@
 #!/usr/bin/env bash
-# Despliegue rápido Spendlyx PRO (spendlyx.com) tras cambios en GitHub
+# Despliegue Spendlyx PRO: sincroniza código local → servidor y reconstruye Docker
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REMOTE_HOST="${REMOTE_HOST:-root@82.223.54.195}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/cloudops}"
-REPO_URL="${REPO_URL:-https://github.com/D1abloo/clouds.git}"
-BRANCH="${BRANCH:-pro-clean-cutover}"
 
-echo "==> Despliegue Spendlyx (${BRANCH}) en ${REMOTE_HOST}"
-
-ssh -o StrictHostKeyChecking=accept-new "${REMOTE_HOST}" bash -s <<REMOTE
-set -euo pipefail
-REMOTE_DIR="${REMOTE_DIR}"
-REPO_URL="${REPO_URL}"
-BRANCH="${BRANCH}"
-
-mkdir -p "\${REMOTE_DIR}"
-
-if [ ! -d "\${REMOTE_DIR}/.git" ]; then
-  echo "==> Primera sincronización git (preservando infra/.env y certs)"
-  BACKUP="/tmp/cloudops-infra-\$(date +%s)"
-  if [ -d "\${REMOTE_DIR}/infra" ]; then
-    cp -a "\${REMOTE_DIR}/infra" "\${BACKUP}"
-  fi
-  rm -rf "\${REMOTE_DIR}"/*
-  git clone --branch "\${BRANCH}" --depth 1 "\${REPO_URL}" "\${REMOTE_DIR}"
-  if [ -d "\${BACKUP}" ]; then
-    cp -a "\${BACKUP}/.env" "\${REMOTE_DIR}/infra/.env" 2>/dev/null || true
-    cp -a "\${BACKUP}/certs" "\${REMOTE_DIR}/infra/certs" 2>/dev/null || true
-    rm -rf "\${BACKUP}"
-  fi
-else
-  cd "\${REMOTE_DIR}"
-  git fetch origin "\${BRANCH}"
-  git checkout "\${BRANCH}"
-  git pull --ff-only origin "\${BRANCH}"
+# Certificados SSL (no están en git)
+if [ ! -f "${ROOT}/infra/certs/fullchain.pem" ]; then
+  bash "${ROOT}/scripts/setup-domain-certs.sh"
 fi
 
-cd "\${REMOTE_DIR}/infra"
-test -f .env || { echo "ERROR: falta infra/.env en el servidor"; exit 1; }
+echo "==> Sincronizando código a ${REMOTE_HOST}:${REMOTE_DIR}"
+
+rsync -az \
+  --exclude '.git' \
+  --exclude 'node_modules' \
+  --exclude 'dist' \
+  --exclude 'apps/*/dist' \
+  --exclude 'apps/*/node_modules' \
+  --exclude 'infra/.env' \
+  --exclude 'certificado' \
+  --exclude '.cursor' \
+  "${ROOT}/" "${REMOTE_HOST}:${REMOTE_DIR}/"
+
+echo "==> Sincronizando certificados SSL"
+rsync -az "${ROOT}/infra/certs/" "${REMOTE_HOST}:${REMOTE_DIR}/infra/certs/"
+
+echo "==> Asegurando infra/.env en el servidor"
+
+ssh -o StrictHostKeyChecking=accept-new "${REMOTE_HOST}" bash -s <<'REMOTE'
+set -euo pipefail
+REMOTE_DIR="/opt/cloudops"
+mkdir -p "${REMOTE_DIR}/infra/certs"
+cd "${REMOTE_DIR}/infra"
+
+if [ ! -f .env ]; then
+  echo "==> Creando infra/.env desde contenedor en ejecución"
+  DB_PASS=$(docker exec cloudops-backend printenv POSTGRES_PASSWORD 2>/dev/null || openssl rand -hex 16)
+  JWT=$(docker exec cloudops-backend printenv JWT_SECRET 2>/dev/null || openssl rand -hex 32)
+  AUTH=$(docker exec cloudops-backend printenv AUTH_SECRET 2>/dev/null || openssl rand -hex 32)
+  ENC=$(docker exec cloudops-backend printenv ENCRYPTION_KEY 2>/dev/null || openssl rand -hex 32)
+  cat > .env <<ENV
+PUBLIC_URL=https://spendlyx.com
+CORS_ORIGIN=https://spendlyx.com,https://www.spendlyx.com
+AUTH_URL=https://spendlyx.com
+APP_URL=https://spendlyx.com
+OAUTH_CALLBACK_URL=https://spendlyx.com/api/v1/auth/oauth/callback
+JWT_SECRET=${JWT}
+AUTH_SECRET=${AUTH}
+ENCRYPTION_KEY=${ENC}
+VAULT_ENCRYPTION_KEY=${ENC}
+POSTGRES_PASSWORD=${DB_PASS}
+DATABASE_URL=postgresql://cloudops:${DB_PASS}@postgres:5432/cloudops
+DEMO_MODE=false
+PRO_MODE=true
+AUTO_DEMO_SEED=false
+INTEGRATIONS_LIVE=true
+LOG_LEVEL=info
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=eu-west-1
+GCP_PROJECT_ID=
+GCP_SERVICE_ACCOUNT_JSON=
+IONOS_VPS_HOST=
+IONOS_VPS_PORT=22
+IONOS_VPS_USER=root
+IONOS_VPS_SSH_KEY=
+ENV
+  chmod 600 .env
+fi
 
 echo "==> Reconstruyendo stack PRO..."
 docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --build postgres redis backend-api frontend
 
-echo "==> Esperando API..."
-for i in \$(seq 1 36); do
+for i in $(seq 1 36); do
   if docker compose -f docker-compose.yml -f docker-compose.production.yml exec -T backend-api wget -qO- http://127.0.0.1:3000/api/v1/health >/dev/null 2>&1; then
     echo "==> API lista"
     break
@@ -56,7 +90,7 @@ docker compose -f docker-compose.yml -f docker-compose.production.yml ps
 echo "Panel: https://spendlyx.com"
 REMOTE
 
-echo "==> Verificando https://spendlyx.com/api/v1/platform/status"
+echo "==> Verificando platform/status"
 curl -sS -m 25 https://spendlyx.com/api/v1/platform/status || true
 echo ""
 echo "==> Despliegue finalizado"
