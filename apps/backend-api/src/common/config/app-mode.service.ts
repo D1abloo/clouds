@@ -38,7 +38,11 @@ export class AppModeService {
   getAppUrl = (): string =>
     this.config.get<string>('APP_URL') ?? this.getAuthUrl()
 
-  canUseDemoFallback = (): boolean => this.isDemoMode()
+  canUseDemoFallback = (): boolean => {
+    if (this.isProMode() && !this.isDemoMode()) return false
+    if (this.getAppEnv() === 'production' && !this.isDemoMode()) return false
+    return this.isDemoMode()
+  }
 
   getAppEnv = (): string => {
     const explicit = this.config.get<string>('APP_ENV')?.trim()

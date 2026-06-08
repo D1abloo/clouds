@@ -59,7 +59,7 @@ export const buildDockerWorkspace = (data: Record<string, unknown>): InfraWorksp
       'Motor de contenedores multi-host: runtime, imágenes, redes overlay, volúmenes persistentes, healthchecks y acciones en caliente sobre VPS y bare metal.',
     lastSync: 'hace 1 min',
     headerActions: [
-      { label: 'Iniciar contenedor demo', icon: 'play_arrow', primary: true },
+      { label: 'Iniciar contenedor', icon: 'play_arrow', primary: true },
       { label: 'Actualizar inventario', icon: 'refresh' },
       { label: 'Ejecutar prune', icon: 'cleaning_services' },
     ],

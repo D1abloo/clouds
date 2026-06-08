@@ -80,7 +80,6 @@ const entries: { match: (p: string) => boolean; meta: NavVisualMeta }[] = [
   { match: (p) => p.startsWith('/admin/roles'), meta: { icon: 'manage_accounts', tone: 'violet', label: 'Roles' } },
   { match: (p) => p.startsWith('/admin/api-tokens'), meta: { icon: 'vpn_key', tone: 'violet', label: 'Tokens API' } },
   { match: (p) => p.startsWith('/admin/webhooks'), meta: { icon: 'webhook', tone: 'violet', label: 'Webhooks' } },
-  { match: (p) => p.startsWith('/admin/demo-mode'), meta: { icon: 'science', tone: 'violet', label: 'Modo demo' } },
   { match: (p) => p.startsWith('/settings'), meta: { icon: 'settings', tone: 'slate', label: 'Configuración' } },
   { match: (p) => p.startsWith('/ai-assistant'), meta: { icon: 'auto_awesome', tone: 'violet', label: 'Asistente IA' } },
 ]

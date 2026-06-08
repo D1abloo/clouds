@@ -68,7 +68,7 @@ export class DockerPageComponent implements OnInit {
       this.infraActions.runModuleHeaderAction(label, this.actionCtx, () => this.runDiscovery())
       return
     }
-    if (label === 'Iniciar contenedor demo') {
+    if (label === 'Iniciar contenedor') {
       this.infraActions.runModuleHeaderAction(label, this.actionCtx, () => this.runStartDemo())
       return
     }

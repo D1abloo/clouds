@@ -65,7 +65,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
       <app-page-header
         icon="auto_awesome"
         title="Asistente IA"
-        description="CloudOps Copilot — consulta instancias, costes, alertas, Kubernetes, aprobaciones y diagnósticos con contexto de plataforma (modo demo)."
+        description="CloudOps Copilot — consulta instancias, costes, alertas, Kubernetes, aprobaciones y diagnósticos con contexto de plataforma."
         [actions]="headerActions"
         (actionClick)="handleHeader($event)"
       />
@@ -75,7 +75,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
           <span class="cop-intro__eyebrow">Administración · Copilot</span>
           <h2 class="cop-intro__title">CloudOps Copilot</h2>
           <p class="cop-intro__desc">
-            Asistente contextual con acceso a datos demo de instancias, alertas, costes y despliegues.
+            Asistente contextual con acceso a datos de instancias, alertas, costes y despliegues cuando las integraciones están conectadas.
             Escribe en español natural o usa las sugerencias para obtener respuestas accionables.
           </p>
           <ul class="cop-intro__meta">

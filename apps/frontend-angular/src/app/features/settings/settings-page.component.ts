@@ -11,6 +11,7 @@ import { AuthService } from '../../core/services/auth.service'
 import { ThemeService } from '../../core/services/theme.service'
 import { DemoService } from '../../core/services/demo.service'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
 import { environment } from '../../../environments/environment'
 
 @Component({
@@ -30,7 +31,7 @@ import { environment } from '../../../environments/environment'
     <div class="page-container">
       <app-page-header
         title="Configuración"
-        description="Preferencias generales, usuarios, integraciones y modo demo"
+        description="Preferencias generales, usuarios e integraciones"
         icon="settings"
         [actions]="[
           { label: 'Guardar cambios', icon: 'save', primary: true },
@@ -48,32 +49,37 @@ import { environment } from '../../../environments/environment'
                   <mat-label>URL del backend</mat-label>
                   <input matInput [value]="apiUrl" readonly />
                 </mat-form-field>
-                <p>Frecuencia de sincronización: cada 15 minutos (demo)</p>
+                <p>Frecuencia de sincronización: cada 15 minutos</p>
             </div>
           </div>
         </mat-tab>
         <mat-tab label="Usuarios">
           <div class="tab-panel">
-            <p>Usuarios demo: roles super_admin y admin (ver pestaña Modo Demo para credenciales).</p>
+            @if (pro.proMode() && !pro.demoMode()) {
+              <p>Gestiona usuarios y roles desde Administración → Usuarios.</p>
+            } @else {
+              <p>Usuarios de prueba: roles superadministrador y administrador (ver pestaña Modo demo para credenciales).</p>
+            }
             <button mat-stroked-button type="button" (click)="simulateAction('Crear usuario')">Crear usuario</button>
           </div>
         </mat-tab>
-        <mat-tab label="Roles"><div class="tab-panel"><p>super_admin, admin, operator, viewer</p></div></mat-tab>
-        <mat-tab label="Permisos"><div class="tab-panel"><p>Matriz RBAC (demo) — cloud.*, vps.*, terraform.apply</p></div></mat-tab>
+        <mat-tab label="Roles"><div class="tab-panel"><p>superadministrador, administrador, operador, auditor, solo_lectura</p></div></mat-tab>
+        <mat-tab label="Permisos"><div class="tab-panel"><p>Matriz RBAC — cloud.*, vps.*, terraform.apply</p></div></mat-tab>
         <mat-tab label="Secretos"><div class="tab-panel"><button mat-stroked-button (click)="simulateAction('Configurar secretos')">Configurar secretos</button></div></mat-tab>
         <mat-tab label="Integraciones"><div class="tab-panel"><button mat-stroked-button (click)="simulateAction('Configurar webhooks')">Configurar webhooks</button></div></mat-tab>
-        <mat-tab label="Modo Demo">
+        @if (pro.demoMode()) {
+        <mat-tab label="Modo demo">
           <div class="tab-panel">
             <div class="settings-panel surface-elevated">
-                <h3 class="panel-title">Modo Demo</h3>
+                <h3 class="panel-title">Modo demo</h3>
                 <p>Datos cloud simulados — sin recursos reales AWS/GCP/Azure.</p>
-                <p><strong>Status:</strong> {{ demo.demoMode() ? 'Activo' : 'Desactivado en servidor' }}</p>
-                <p><strong>User:</strong> {{ demoUserLabel }}</p>
+                <p><strong>Estado:</strong> {{ demo.demoMode() ? 'Activo' : 'Desactivado en servidor' }}</p>
+                <p><strong>Usuario:</strong> {{ demoUserLabel }}</p>
                 @if (!demo.canManageDemo()) {
                   <p class="hint">Inicia sesión como admin para cargar o resetear datos demo.</p>
                 }
                 @if (demo.status(); as s) {
-                  <p class="demo-stats">{{ s.instances }} instances · {{ s.vps }} VPS · {{ s.metrics }} metrics</p>
+                  <p class="demo-stats">{{ s.instances }} instancias · {{ s.vps }} VPS · {{ s.metrics }} métricas</p>
                 }
                 <div class="demo-actions">
                   @if (demo.loading()) {
@@ -86,6 +92,7 @@ import { environment } from '../../../environments/environment'
             </div>
           </div>
         </mat-tab>
+        }
         <mat-tab label="Tema">
           <div class="tab-panel">
             <mat-slide-toggle [checked]="theme.mode() === 'dark'" (change)="handleThemeChange($event.checked)" aria-label="Modo oscuro">
@@ -126,12 +133,16 @@ export class SettingsPageComponent implements OnInit {
   readonly auth = inject(AuthService)
   readonly theme = inject(ThemeService)
   readonly demo = inject(DemoService)
+  readonly pro = inject(ProModeService)
   private readonly actions = inject(PlatformActionService)
   readonly apiUrl = environment.apiUrl
   readonly demoUserLabel = 'demo@cloudops.local / Demo1234!'
 
   ngOnInit(): void {
-    this.demo.refreshStatus()
+    this.pro.loadStatus()
+    if (this.pro.demoMode()) {
+      this.demo.refreshStatus()
+    }
   }
 
   handleThemeChange = (dark: boolean): void => {

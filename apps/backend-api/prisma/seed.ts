@@ -146,6 +146,47 @@ async function main() {
     update: { role: MembershipRole.OWNER },
   })
 
+  if (productionSeed) {
+    const spendlyxAdmin = await prisma.user.upsert({
+      where: { email: 'admin@spendlyx.com' },
+      create: {
+        email: 'admin@spendlyx.com',
+        passwordHash,
+        name: 'Administrador Spendlyx',
+        userRoles: superAdminRole
+          ? { create: [{ roleId: superAdminRole.id, projectId: project.id }] }
+          : undefined,
+      },
+      update: { name: 'Administrador Spendlyx', deletedAt: null, isActive: true },
+    })
+
+    if (superAdminRole) {
+      await prisma.userRole.upsert({
+        where: {
+          userId_roleId_projectId: {
+            userId: spendlyxAdmin.id,
+            roleId: superAdminRole.id,
+            projectId: project.id,
+          },
+        },
+        create: { userId: spendlyxAdmin.id, roleId: superAdminRole.id, projectId: project.id },
+        update: {},
+      })
+    }
+
+    await prisma.membership.upsert({
+      where: {
+        userId_organizationId: { userId: spendlyxAdmin.id, organizationId: organization.id },
+      },
+      create: {
+        userId: spendlyxAdmin.id,
+        organizationId: organization.id,
+        role: MembershipRole.OWNER,
+      },
+      update: { role: MembershipRole.OWNER },
+    })
+  }
+
   if (!productionSeed) {
     const demoPasswordHash = await bcrypt.hash('Demo123!', 12)
 
@@ -187,6 +228,9 @@ async function main() {
 
   console.log('Seed complete.')
   console.log('Admin: admin@cloudops.local / Admin123!')
+  if (productionSeed) {
+    console.log('Admin PRO: admin@spendlyx.com (contraseña vía provision-panel-users.js --admin)')
+  }
   console.log('Roles: superadministrador, administrador, operador, auditor, solo_lectura')
   if (!productionSeed) {
     console.log('Demo users (password Demo123! for all)')

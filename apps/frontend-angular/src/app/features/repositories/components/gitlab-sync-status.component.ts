@@ -44,7 +44,7 @@ export class GitlabSyncStatusComponent {
   }
 
   get hint(): string {
-    return 'Conecta una cuenta GitLab o usa el modo demo'
+    return 'Conecta una cuenta GitLab en Configuración → Integraciones'
   }
 
   get icon(): string {

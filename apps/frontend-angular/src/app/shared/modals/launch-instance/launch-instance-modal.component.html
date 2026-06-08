@@ -110,7 +110,7 @@
               <label class="li-field">
                 <span>Cuenta cloud</span>
                 <select class="li-control" [ngModel]="form().accountId" (ngModelChange)="patchForm({ accountId: $event }); onAccountChange()">
-                  <option value="">Sin cuenta (demo)</option>
+                  <option value="">Seleccionar cuenta cloud</option>
                   @for (a of accountsForProvider(); track a.id) {
                     <option [value]="a.id">{{ a.name }}</option>
                   }

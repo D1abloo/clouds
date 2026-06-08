@@ -212,6 +212,51 @@ Permisos: `usuarios.leer|crear|editar|eliminar`, `roles.gestionar`, `infraestruc
 
 Configuración en `settings`: `nombre_app=Spendlyx`, `modo=PRO`, `dominio=https://spendlyx.com`, `idioma=es`.
 
+## Limpieza de datos demo en producción
+
+Antes de ejecutar la limpieza en VPS, **haz backup de PostgreSQL**:
+
+```bash
+ssh root@82.223.54.195
+cd /opt/cloudops/infra
+docker compose exec -T postgres pg_dump -U cloudops cloudops > /root/backups/spendlyx-pre-cleanup-$(date +%Y%m%d).sql
+```
+
+### Comandos
+
+```bash
+# Simulación (sin cambios)
+npm run cleanup:demo:dry-run
+
+# Ejecución real (solo con DEMO_MODE=false)
+npm run cleanup:demo:production
+
+# En VPS (contenedor backend)
+docker compose exec -T backend-api sh -c 'cd /app && npm run cleanup:demo:dry-run'
+docker compose exec -T backend-api sh -c 'cd /app && npm run cleanup:demo:production'
+```
+
+La limpieza:
+- Elimina registros operativos con prefijo `demo-` (instancias, VPS, cuentas cloud, Jenkins, etc.)
+- Soft-delete de usuarios `@demo.local` y nombres con demo/mock/fake/sample
+- **Preserva** `admin@spendlyx.com` y usuarios preset `@spendlyx.com`
+- Registra auditoría `production.demo_cleanup`
+
+### Verificar tras limpieza
+
+```bash
+curl -s https://spendlyx.com/api/v1/platform/status | jq '.demoMode, .proMode'
+npm run provision:spendlyx-users -- --admin --email admin@spendlyx.com
+```
+
+### Rollback
+
+Restaurar backup PostgreSQL:
+
+```bash
+docker compose exec -T postgres psql -U cloudops cloudops < /root/backups/spendlyx-pre-cleanup-YYYYMMDD.sql
+```
+
 ## Reglas PRO
 
 - Sin seed demo automático (`AUTO_DEMO_SEED=false`)

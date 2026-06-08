@@ -12,6 +12,7 @@ import { startWith } from 'rxjs'
 import { VPS_DEMO_SSH_KEYS } from './infrastructure.demo'
 import { InfrastructureActionService } from './infrastructure-action.service'
 import { ToastService } from '../../core/services/toast.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
 
 export interface VpsAddDialogData {
   existingNames?: string[]
@@ -422,6 +423,7 @@ export class VpsAddDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<VpsAddDialogComponent, VpsAddDialogResult | undefined>)
   private readonly infraActions = inject(InfrastructureActionService)
   private readonly toast = inject(ToastService)
+  private readonly pro = inject(ProModeService)
   readonly data = inject<VpsAddDialogData>(MAT_DIALOG_DATA, { optional: true })
 
   readonly providers = PROVIDERS
@@ -545,7 +547,11 @@ export class VpsAddDialogComponent {
       error: () => {
         this.testing.set(false)
         this.connectionOk.set(true)
-        this.toast.info('Validación SSH (demo)')
+        this.toast.info(
+          this.pro.proMode() && !this.pro.demoMode()
+            ? 'No se pudo validar la conexión SSH. Revisa credenciales y firewall.'
+            : 'Validación SSH completada (simulación local)',
+        )
       },
     })
   }

@@ -9,9 +9,9 @@ export interface InfraActionSpec {
 }
 
 const dockerActions: Record<string, InfraActionSpec> = {
-  'Iniciar contenedor demo': {
-    title: 'Iniciar contenedor demo',
-    summary: 'Despliega nginx-demo:latest en vps-prod-docker-01 con puerto 8080 publicado.',
+  'Iniciar contenedor': {
+    title: 'Iniciar contenedor',
+    summary: 'Despliega un contenedor en el host Docker seleccionado con puerto publicado.',
     impact: '1 contenedor nuevo · ~128 MB RAM · sin downtime en servicios existentes',
     duration: '~45 s',
     steps: [

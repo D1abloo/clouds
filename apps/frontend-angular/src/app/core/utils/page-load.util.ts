@@ -46,7 +46,7 @@ export const createPageLoader = (initialLoading = false): PageLoader => {
         error: () =>
           error.set(
             opts.errorMessage ??
-              'No se pudieron cargar los datos. Comprueba que el API esté activo o activa el modo demo.',
+              'No se pudieron cargar los datos. Comprueba que el API esté activo y tus integraciones estén configuradas.',
           ),
       })
   }

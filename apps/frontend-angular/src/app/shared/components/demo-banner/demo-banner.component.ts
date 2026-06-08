@@ -10,7 +10,7 @@ import { ProModeService } from '../../../core/services/pro-mode.service'
   standalone: true,
   imports: [MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   template: `
-    @if (demo.demoMode() && pro.demoMode()) {
+    @if (demo.demoMode() && pro.demoMode() && !pro.proMode()) {
       <div class="demo-banner animate-fade-in" role="status" aria-label="Demo mode active">
         <div class="demo-banner__content">
           <div class="demo-banner__icon"><mat-icon>science</mat-icon></div>

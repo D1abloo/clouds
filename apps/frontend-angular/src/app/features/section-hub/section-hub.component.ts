@@ -160,10 +160,12 @@ export class SectionHubComponent {
 
   readonly description = computed(() => {
     if (this.module() === 'metrics') return metricsHubDescription(this.section())
-    return (
-      (this.route.snapshot.data['description'] as string) ??
-      `Gestiona ${this.sectionLabel()} con filtros, métricas y acciones (modo demo).`
-    )
+    const custom = this.route.snapshot.data['description'] as string | undefined
+    if (custom) return custom
+    if (this.pro.proMode() && !this.pro.demoMode()) {
+      return `Gestiona ${this.sectionLabel()} con filtros, métricas y acciones.`
+    }
+    return `Gestiona ${this.sectionLabel()} con filtros, métricas y acciones (entorno de demostración).`
   })
 
   readonly metricsLogos: NavLogoKey[] = ['prometheus', 'grafana', 'kubernetes', 'docker', 'aws']

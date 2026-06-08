@@ -22,6 +22,7 @@ import { TerraformRunStore } from '../../../core/stores/terraform-run.store'
 import { TerraformService } from '../../../core/services/terraform.service'
 import { InstancePricingService } from '../../../core/services/instance-pricing.service'
 import { ToastService } from '../../../core/services/toast.service'
+import { ProModeService } from '../../../core/services/pro-mode.service'
 import { LaunchProvider } from '../../data/instance-pricing'
 import { LaunchWizardStepperComponent, WizardStepId } from './launch-wizard-stepper.component'
 import { DEFAULT_LAUNCH_FORM, LaunchInstanceFormState } from './launch-instance.models'
@@ -88,6 +89,7 @@ export class LaunchInstanceModalComponent implements OnInit {
   readonly pricing = inject(InstancePricingService)
   readonly settingsStore = inject(SettingsStore)
   private readonly toast = inject(ToastService)
+  private readonly pro = inject(ProModeService)
 
   readonly step = signal<WizardStepId>(1)
   readonly animDir = signal<'forward' | 'back'>('forward')
@@ -550,7 +552,11 @@ export class LaunchInstanceModalComponent implements OnInit {
         }
       },
       error: () => {
-        this.appendLaunchLog('! API no disponible — continuando en modo demo')
+        this.appendLaunchLog(
+          this.pro.proMode() && !this.pro.demoMode()
+            ? '! API no disponible — no se pudo completar el lanzamiento'
+            : '! API no disponible — continuando con simulación local',
+        )
         setTimeout(() => this.finishLaunchSuccess(), 2200)
       },
     })

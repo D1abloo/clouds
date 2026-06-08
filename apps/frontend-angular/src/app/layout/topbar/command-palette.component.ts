@@ -13,6 +13,7 @@ import {
 import { Router } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import { MatIconModule } from '@angular/material/icon'
+import { ProModeService } from '../../core/services/pro-mode.service'
 
 interface PaletteItem {
   label: string
@@ -245,12 +246,13 @@ interface PaletteItem {
 })
 export class CommandPaletteComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router)
+  private readonly pro = inject(ProModeService)
   readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput')
 
   query = ''
   readonly selectedIndex = signal(0)
 
-  private readonly allItems: PaletteItem[] = [
+  private readonly baseItems: PaletteItem[] = [
     { label: 'Overview', description: 'Dashboard and global visibility', icon: 'space_dashboard', action: () => this.router.navigate(['/dashboard']) },
     { label: 'Clouds', description: 'AWS, GCP, Azure', icon: 'cloud', action: () => this.router.navigate(['/cloud/aws/overview']) },
     { label: 'Infrastructure', description: 'Instances, VPS, Docker, K8s', icon: 'dns', action: () => this.router.navigate(['/instances/all-instances']) },
@@ -281,13 +283,29 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
     { label: 'Runbooks', description: 'Operational runbooks', icon: 'menu_book', action: () => this.router.navigate(['/runbooks']) },
     { label: 'AI Assistant', description: 'CloudOps Copilot demo', icon: 'smart_toy', action: () => this.router.navigate(['/ai-assistant']) },
     { label: 'Settings', description: 'Application settings', icon: 'tune', action: () => this.router.navigate(['/settings/general']) },
-    { label: 'Demo Mode', description: 'Load and reset demo data', icon: 'science', action: () => this.router.navigate(['/admin/demo-mode']) },
   ]
+
+  private readonly allItems = computed((): PaletteItem[] => {
+    const items = this.baseItems
+    if (this.pro.proMode() && !this.pro.demoMode()) {
+      return items.filter((i) => !/demo/i.test(i.label) && !/demo/i.test(i.description))
+    }
+    return [
+      ...items,
+      {
+        label: 'Modo demo',
+        description: 'Cargar y reiniciar datos de demostración',
+        icon: 'science',
+        action: () => this.router.navigate(['/admin/demo-mode']),
+      },
+    ]
+  })
 
   readonly filtered = computed(() => {
     const q = this.query.toLowerCase().trim()
-    if (!q) return this.allItems
-    return this.allItems.filter(
+    const items = this.allItems()
+    if (!q) return items
+    return items.filter(
       (i) => i.label.toLowerCase().includes(q) || i.description.toLowerCase().includes(q),
     )
   })

@@ -50,7 +50,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
         (actionClick)="handleHeader($event)"
       />
 
-      <p class="info-banner"><mat-icon>info</mat-icon> Datos estimados — modo demo · AWS Cost Explorer · GCP Billing · Azure Cost Management</p>
+      <p class="info-banner"><mat-icon>info</mat-icon> Conecta cuentas cloud en Configuración para sincronizar costes desde AWS Cost Explorer, GCP Billing y Azure Cost Management.</p>
 
       <div class="billing-providers">
         <article class="billing-provider">

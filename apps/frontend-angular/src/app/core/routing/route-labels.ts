@@ -89,7 +89,6 @@ export const ROUTE_LABELS: Record<string, string> = {
   'admin/roles': 'Roles',
   'admin/api-tokens': 'Tokens API',
   'admin/webhooks': 'Webhooks',
-  'admin/demo-mode': 'Modo demo',
   settings: 'Configuración',
   'settings/general': 'Configuración general',
   'ai-assistant': 'Asistente IA',

@@ -356,9 +356,25 @@ bash scripts/verify-pro-vps.sh
 npm run deploy:spendlyx
 ```
 
+## Eliminación completa de demo en producción (2026-06-09)
+
+| Criterio | Estado |
+|----------|--------|
+| Pestaña «Modo demo» eliminada de `area-nav.config.ts` | ✅ |
+| Ruta `/admin/demo-mode` bloqueada con `proDemoGuard` → `/settings/general` | ✅ |
+| Command palette sin entrada Demo Mode en PRO | ✅ |
+| Banner demo oculto cuando `proMode && !demoMode` | ✅ |
+| Billing, launch-instance, VPS, Docker sin copy demo | ✅ |
+| `allowsDemoDataFrom()` false en PRO | ✅ |
+| Backend `/api/v1/demo/*` → 403 en PRO | ✅ |
+| `canUseDemoFallback()` false en producción | ✅ |
+| Script `cleanup:demo:dry-run` / `cleanup:demo:production` | ✅ |
+| Seed PRO sin usuarios `@demo.local` | ✅ |
+| `admin@spendlyx.com` preservado en seed y cleanup | ✅ |
+| Tests `pro-production-ui.spec.ts`, `pro-demo.guard.spec.ts` | ✅ |
+
 ### Avisos menores
 
-- «Modo demo» permanece en ruta `/admin/demo-mode` (oculta del sidebar PRO).
 - Favoritos persisten en `localStorage` por usuario (mismo navegador); sync multi-dispositivo pendiente de API.
 
 ## Cómo pasar a PRO
