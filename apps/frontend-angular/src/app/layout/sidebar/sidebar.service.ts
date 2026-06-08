@@ -4,6 +4,7 @@ import {
   SIDEBAR_MAIN_MODULES,
   resolveAreaFromPath,
   CLOUD_SIDEBAR_BRANCHES,
+  VPS_SIDEBAR_BRANCHES,
 } from '../../core/routing/area-nav.config'
 import { AuthService } from '../../core/services/auth.service'
 
@@ -15,6 +16,8 @@ const EXPANDED_MIGRATION_KEY = 'cloudops_sidebar_expanded_v2'
 const favoritesKeyForUser = (userId: string): string => `cloudops_sidebar_favorites_${userId}`
 
 const CLOUD_BRANCH_IDS = CLOUD_SIDEBAR_BRANCHES.map((b) => b.id)
+const VPS_BRANCH_IDS = VPS_SIDEBAR_BRANCHES.map((b) => b.id)
+const BRANCH_IDS = [...CLOUD_BRANCH_IDS, ...VPS_BRANCH_IDS]
 const MODULE_IDS = SIDEBAR_MAIN_MODULES.map((m) => m.id)
 
 const readStorage = (key: string): string | null => {
@@ -154,7 +157,7 @@ export class SidebarService {
     this._expanded.update((m) => {
       if (mobile && willOpen) {
         const next: Record<string, boolean> = {}
-        for (const key of [...MODULE_IDS, ...CLOUD_BRANCH_IDS]) {
+        for (const key of [...MODULE_IDS, ...BRANCH_IDS]) {
           next[key] = key === id
         }
         return next
@@ -171,6 +174,7 @@ export class SidebarService {
   syncNavigationExpand = (path: string): void => {
     const area = resolveAreaFromPath(path)
     const cloud = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
+    const vps = path.match(/^\/vps\/(digitalocean|hetzner|linode|ovh)/)?.[1]
     const mobile = typeof window !== 'undefined' && window.innerWidth <= 960
 
     this._expanded.update((prev) => {
@@ -188,6 +192,14 @@ export class SidebarService {
         if (mobile) {
           next[id] = cloud === id
         } else if (cloud === id) {
+          next[id] = true
+        }
+      }
+
+      for (const id of VPS_BRANCH_IDS) {
+        if (mobile) {
+          next[id] = vps === id
+        } else if (vps === id) {
           next[id] = true
         }
       }

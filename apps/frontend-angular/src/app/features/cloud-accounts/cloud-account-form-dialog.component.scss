@@ -132,8 +132,31 @@
   border-color: #0078d4;
 }
 
+.provider-card--do.provider-card--selected {
+  border-color: #0080ff;
+}
+
+.provider-card--hetzner.provider-card--selected {
+  border-color: #d50c2d;
+}
+
+.provider-card--linode.provider-card--selected {
+  border-color: #00b3a4;
+}
+
+.provider-card--ovh.provider-card--selected {
+  border-color: #123f6d;
+}
+
+.provider-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
 .provider-card h4 {
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-size: 1rem;
 }
 
@@ -168,6 +191,9 @@
 }
 
 .credentials-step__banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
   padding: 0.85rem 1rem;
   margin-bottom: 1rem;
   border-radius: var(--app-radius-md);
@@ -191,6 +217,22 @@
 
 .provider-card--azure.credentials-step__banner {
   border-left-color: #0078d4;
+}
+
+.provider-card--do.credentials-step__banner {
+  border-left-color: #0080ff;
+}
+
+.provider-card--hetzner.credentials-step__banner {
+  border-left-color: #d50c2d;
+}
+
+.provider-card--linode.credentials-step__banner {
+  border-left-color: #00b3a4;
+}
+
+.provider-card--ovh.credentials-step__banner {
+  border-left-color: #123f6d;
 }
 
 .form-grid {
@@ -239,6 +281,10 @@
 }
 
 .review-card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+
   h4 {
     margin: 0;
   }

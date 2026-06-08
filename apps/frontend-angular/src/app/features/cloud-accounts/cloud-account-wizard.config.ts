@@ -18,6 +18,8 @@ export type ConnectionProviderId =
   | 'JENKINS'
   | 'TERRAFORM'
 
+export type WizardProviderScope = 'cloud' | 'vps' | 'platform'
+
 export interface CloudProviderWizardCard {
   id: ConnectionProviderId
   name: string
@@ -27,6 +29,7 @@ export interface CloudProviderWizardCard {
   permissionsSummary: string[]
   logo: NavLogoKey
   toneClass: string
+  scope: WizardProviderScope
   /** Si guarda vía API cloud-accounts (AWS/GCP/AZURE) */
   cloudApiProvider?: CloudProvider
   defaultCredentialType: string
@@ -58,6 +61,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     ],
     logo: 'aws',
     toneClass: 'provider-card--aws',
+    scope: 'cloud',
     cloudApiProvider: 'AWS',
     defaultCredentialType: 'iam_role',
     defaultRegion: 'us-east-1',
@@ -77,6 +81,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     ],
     logo: 'gcp',
     toneClass: 'provider-card--gcp',
+    scope: 'cloud',
     cloudApiProvider: 'GCP',
     defaultCredentialType: 'service_account',
     defaultRegion: 'us-central1-a',
@@ -95,6 +100,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     ],
     logo: 'azure',
     toneClass: 'provider-card--azure',
+    scope: 'cloud',
     cloudApiProvider: 'AZURE',
     defaultCredentialType: 'client_secret',
     defaultRegion: 'westeurope',
@@ -106,8 +112,9 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     description: 'Droplets, VPC, load balancers y facturación desde la API de DigitalOcean.',
     credentialsSummary: 'Personal Access Token con alcance de lectura/escritura',
     permissionsSummary: ['droplet:read', 'droplet:write', 'account:read', 'vpc:read'],
-    logo: 'docker',
+    logo: 'digitalocean',
     toneClass: 'provider-card--do',
+    scope: 'vps',
     defaultCredentialType: 'api_token',
     defaultRegion: 'nyc3',
   },
@@ -118,8 +125,9 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     description: 'Servidores cloud, redes privadas y volúmenes en Hetzner Cloud.',
     credentialsSummary: 'API Token del panel Hetzner Cloud',
     permissionsSummary: ['servers:read', 'servers:write', 'networks:read', 'volumes:read'],
-    logo: 'docker',
+    logo: 'hetzner',
     toneClass: 'provider-card--hetzner',
+    scope: 'vps',
     defaultCredentialType: 'api_token',
     defaultRegion: 'fsn1',
   },
@@ -132,6 +140,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     permissionsSummary: ['Zone:Read', 'DNS:Edit', 'Account:Read', 'Workers Routes:Read'],
     logo: 'docker',
     toneClass: 'provider-card--cf',
+    scope: 'platform',
     defaultCredentialType: 'api_token',
   },
   {
@@ -141,8 +150,9 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     description: 'Instancias Linode, volúmenes, balanceadores y facturación.',
     credentialsSummary: 'Personal Access Token de Linode API v4',
     permissionsSummary: ['linodes:read_write', 'volumes:read_only', 'account:read_only'],
-    logo: 'docker',
+    logo: 'linode',
     toneClass: 'provider-card--linode',
+    scope: 'vps',
     defaultCredentialType: 'api_token',
     defaultRegion: 'eu-central',
   },
@@ -153,8 +163,9 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     description: 'Instancias Public Cloud, vRack y facturación OVH.',
     credentialsSummary: 'Application Key + Secret + Consumer Key (API OVH)',
     permissionsSummary: ['GET /cloud/project/*', 'GET /me/bill', 'POST /cloud/project/*/instance'],
-    logo: 'docker',
+    logo: 'ovh',
     toneClass: 'provider-card--ovh',
+    scope: 'vps',
     defaultCredentialType: 'ovh_keys',
     defaultRegion: 'GRA',
   },
@@ -167,6 +178,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     permissionsSummary: ['get/list pods', 'get/list deployments', 'get/list services', 'get/list namespaces'],
     logo: 'kubernetes',
     toneClass: 'provider-card--k8s',
+    scope: 'platform',
     defaultCredentialType: 'kubeconfig',
   },
   {
@@ -178,6 +190,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     permissionsSummary: ['containers:inspect', 'images:list', 'networks:list', 'volumes:list'],
     logo: 'docker',
     toneClass: 'provider-card--docker',
+    scope: 'platform',
     defaultCredentialType: 'tls',
   },
   {
@@ -189,6 +202,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     permissionsSummary: ['repo', 'read:org', 'admin:repo_hook', 'workflow'],
     logo: 'github',
     toneClass: 'provider-card--github',
+    scope: 'platform',
     defaultCredentialType: 'pat',
   },
   {
@@ -200,6 +214,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     permissionsSummary: ['read_api', 'read_repository', 'read_user', 'write_repository'],
     logo: 'gitlab',
     toneClass: 'provider-card--gitlab',
+    scope: 'platform',
     defaultCredentialType: 'pat',
   },
   {
@@ -211,6 +226,7 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     permissionsSummary: ['Job/Read', 'Job/Build', 'Run/Replay', 'Computer/Read'],
     logo: 'jenkins',
     toneClass: 'provider-card--jenkins',
+    scope: 'platform',
     defaultCredentialType: 'api_token',
   },
   {
@@ -222,9 +238,13 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     permissionsSummary: ['organization:read', 'workspace:read', 'run:read', 'state:read'],
     logo: 'terraform',
     toneClass: 'provider-card--terraform',
+    scope: 'platform',
     defaultCredentialType: 'api_token',
   },
 ]
+
+export const CLOUD_WIZARD_CARDS = CLOUD_PROVIDER_CARDS.filter((c) => c.scope === 'cloud')
+export const VPS_WIZARD_CARDS = CLOUD_PROVIDER_CARDS.filter((c) => c.scope === 'vps')
 
 export const providerCard = (id: ConnectionProviderId): CloudProviderWizardCard | undefined =>
   CLOUD_PROVIDER_CARDS.find((c) => c.id === id)

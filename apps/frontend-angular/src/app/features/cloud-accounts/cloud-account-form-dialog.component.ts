@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
 import { MatCheckboxModule } from '@angular/material/checkbox'
 import { MatExpansionModule } from '@angular/material/expansion'
+import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { ToastService } from '../../core/services/toast.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
@@ -50,6 +51,7 @@ export interface CloudAccountFormData {
     MatProgressSpinnerModule,
     MatCheckboxModule,
     MatExpansionModule,
+    BrandLogoComponent,
   ],
   templateUrl: './cloud-account-form-dialog.component.html',
   styleUrl: './cloud-account-form-dialog.component.scss',

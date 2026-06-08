@@ -3,6 +3,10 @@ export type NavLogoKey =
   | 'aws'
   | 'gcp'
   | 'azure'
+  | 'digitalocean'
+  | 'hetzner'
+  | 'linode'
+  | 'ovh'
   | 'docker'
   | 'kubernetes'
   | 'jenkins'
@@ -14,7 +18,16 @@ export type NavLogoKey =
   | 'prometheus'
   | 'grafana'
 
-export const sidebarBrandToLogo = (brand?: 'aws' | 'gcp' | 'azure'): NavLogoKey | null => {
+export type SidebarBrand =
+  | 'aws'
+  | 'gcp'
+  | 'azure'
+  | 'digitalocean'
+  | 'hetzner'
+  | 'linode'
+  | 'ovh'
+
+export const sidebarBrandToLogo = (brand?: SidebarBrand): NavLogoKey | null => {
   if (!brand) return null
   return brand
 }

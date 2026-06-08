@@ -1,5 +1,5 @@
 import type { NavIconTone } from '../../layout/sidebar/sidebar-nav.config'
-import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
+import type { NavLogoKey, SidebarBrand } from '../../shared/theme/nav-logo.types'
 
 export interface AreaNavTab {
   id: string
@@ -10,9 +10,7 @@ export interface AreaNavTab {
   badgeKey?: string
 }
 
-export type SidebarBrand = 'aws' | 'gcp' | 'azure'
-
-/** Segundo nivel desplegable (p. ej. AWS → EC2, Red). Solo en Nubes. */
+/** Segundo nivel desplegable (p. ej. AWS → EC2, Red). Nubes y VPS. */
 export interface SidebarNavBranch {
   id: string
   label: string
@@ -88,6 +86,46 @@ export const cloudSectionTabs = (provider: string): AreaNavTab[] => {
   return branch?.children ?? []
 }
 
+const vpsProviderBranch = (
+  provider: 'digitalocean' | 'hetzner' | 'linode' | 'ovh',
+  label: string,
+  brand: SidebarBrand,
+): SidebarNavBranch => {
+  const base = `/vps/${provider}`
+  return {
+    id: provider,
+    label,
+    brand,
+    defaultRoute: `${base}/overview`,
+    children: [
+      { id: `${provider}-overview`, label: 'Resumen', route: `${base}/overview`, icon: 'space_dashboard' },
+      { id: `${provider}-accounts`, label: 'Cuentas', route: `${base}/accounts`, icon: 'corporate_fare' },
+      { id: `${provider}-servers`, label: 'Servidores', route: `${base}/servers`, icon: 'dns' },
+      { id: `${provider}-billing`, label: 'Facturación', route: `${base}/billing`, icon: 'account_balance_wallet' },
+      { id: `${provider}-metrics`, label: 'Métricas', route: `${base}/metrics`, icon: 'show_chart' },
+    ],
+  }
+}
+
+export const VPS_SIDEBAR_BRANCHES: SidebarNavBranch[] = [
+  vpsProviderBranch('digitalocean', 'DigitalOcean', 'digitalocean'),
+  vpsProviderBranch('hetzner', 'Hetzner', 'hetzner'),
+  vpsProviderBranch('linode', 'Linode', 'linode'),
+  vpsProviderBranch('ovh', 'OVH', 'ovh'),
+]
+
+export type VpsProviderSlug = 'digitalocean' | 'hetzner' | 'linode' | 'ovh'
+
+export const resolveVpsProviderFromPath = (path: string): VpsProviderSlug | null => {
+  const m = path.match(/^\/vps\/(digitalocean|hetzner|linode|ovh)(?:\/|$)/)
+  return m ? (m[1] as VpsProviderSlug) : null
+}
+
+export const vpsSectionTabs = (provider: string): AreaNavTab[] => {
+  const branch = VPS_SIDEBAR_BRANCHES.find((b) => b.id === provider)
+  return branch?.children ?? []
+}
+
 /** Subpestañas visibles al estar dentro de /runbooks (catálogo y ejecuciones). */
 export const RUNBOOKS_SECTION_TABS: AreaNavTab[] = [
   { id: 'catalog', label: 'Catálogo', route: '/runbooks', icon: 'auto_stories' },
@@ -147,15 +185,30 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     match: prefix('/cloud', '/accounts'),
   },
   {
+    id: 'vps',
+    label: 'VPS',
+    icon: 'dns',
+    tone: 'blue',
+    route: '/vps/digitalocean/overview',
+    description: 'Proveedores VPS: DigitalOcean, Hetzner, Linode y OVH',
+    tabs: [
+      { id: 'digitalocean', label: 'DigitalOcean', route: '/vps/digitalocean/overview', logo: 'digitalocean' },
+      { id: 'hetzner', label: 'Hetzner', route: '/vps/hetzner/overview', logo: 'hetzner' },
+      { id: 'linode', label: 'Linode', route: '/vps/linode/overview', logo: 'linode' },
+      { id: 'ovh', label: 'OVH', route: '/vps/ovh/overview', logo: 'ovh' },
+    ],
+    branches: VPS_SIDEBAR_BRANCHES,
+    match: prefix('/vps'),
+  },
+  {
     id: 'infrastructure',
     label: 'Infraestructura',
     icon: 'domain',
     tone: 'blue',
     route: '/instances/all-instances',
-    description: 'Instancias, VPS, contenedores y recursos de plataforma',
+    description: 'Instancias, contenedores y recursos de plataforma',
     tabs: [
       { id: 'instances', label: 'Instancias', route: '/instances/all-instances', icon: 'layers', badgeKey: 'instances' },
-      { id: 'vps', label: 'VPS / Bare metal', route: '/vps/overview', icon: 'storage', badgeKey: 'vps' },
       { id: 'docker', label: 'Docker', route: '/docker/containers', logo: 'docker' },
       { id: 'kubernetes', label: 'Kubernetes', route: '/kubernetes/pods', logo: 'kubernetes' },
       { id: 'network', label: 'Red', route: '/network', icon: 'device_hub', badgeKey: 'network' },
@@ -165,7 +218,6 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     ],
     match: prefix(
       '/instances',
-      '/vps',
       '/docker',
       '/kubernetes',
       '/network',

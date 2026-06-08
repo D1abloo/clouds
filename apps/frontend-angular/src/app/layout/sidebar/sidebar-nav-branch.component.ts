@@ -91,6 +91,10 @@ import type { SidebarNavBranch } from '../../core/routing/area-nav.config'
     .nav-branch__logo-wrap--aws { background: color-mix(in srgb, #ff9900 22%, transparent); }
     .nav-branch__logo-wrap--gcp { background: color-mix(in srgb, #4285f4 22%, transparent); }
     .nav-branch__logo-wrap--azure { background: color-mix(in srgb, #0078d4 22%, transparent); }
+    .nav-branch__logo-wrap--digitalocean { background: color-mix(in srgb, #0080ff 22%, transparent); }
+    .nav-branch__logo-wrap--hetzner { background: color-mix(in srgb, #d50c2d 22%, transparent); }
+    .nav-branch__logo-wrap--linode { background: color-mix(in srgb, #00b3a4 22%, transparent); }
+    .nav-branch__logo-wrap--ovh { background: color-mix(in srgb, #123f6d 22%, transparent); }
     .nav-branch__icon-wrap {
       width: 30px;
       height: 30px;

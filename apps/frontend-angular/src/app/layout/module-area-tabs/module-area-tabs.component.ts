@@ -8,7 +8,9 @@ import { NavBadgeService } from '../../core/services/nav-badge.service'
 import {
   resolveAreaFromPath,
   resolveCloudProviderFromPath,
+  resolveVpsProviderFromPath,
   cloudSectionTabs,
+  vpsSectionTabs,
   isRunbooksSectionPath,
   RUNBOOKS_SECTION_TABS,
   type SidebarMainModule,
@@ -141,6 +143,10 @@ export class ModuleAreaTabsComponent {
     if (a.id === 'clouds') {
       const provider = resolveCloudProviderFromPath(path)
       if (provider) return cloudSectionTabs(provider)
+    }
+    if (a.id === 'vps') {
+      const provider = resolveVpsProviderFromPath(path)
+      if (provider) return vpsSectionTabs(provider)
     }
     if (isRunbooksSectionPath(path)) return RUNBOOKS_SECTION_TABS
     return a.tabs

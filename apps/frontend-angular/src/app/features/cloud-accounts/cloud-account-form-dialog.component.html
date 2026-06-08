@@ -39,7 +39,10 @@
               [class.provider-card--suggested]="suggestedProvider() === card.id"
               (click)="selectProvider(card.id)"
             >
-              <h4>{{ card.shortName }}</h4>
+              <div class="provider-card__head">
+                <app-brand-logo [logo]="card.logo" size="lg" />
+                <h4>{{ card.shortName }}</h4>
+              </div>
               <p class="provider-card__desc">{{ card.description }}</p>
               <div class="provider-card__creds">
                 <mat-icon>vpn_key</mat-icon>
@@ -57,6 +60,7 @@
     @if (step() === 'credentials' && selectedProvider(); as prov) {
       <section class="credentials-step">
         <div class="credentials-step__banner" [class]="providerMeta()?.toneClass ?? ''">
+          <app-brand-logo [logo]="providerMeta()!.logo" size="xl" />
           <div>
             <strong>{{ providerMeta()!.name }}</strong>
             <p>Completa los campos obligatorios. Las credenciales se cifrarán antes de guardarse.</p>
@@ -405,6 +409,9 @@
       <section class="review-step">
         <div class="review-card">
           <div class="review-card__head">
+            @if (providerMeta(); as meta) {
+              <app-brand-logo [logo]="meta.logo" size="lg" />
+            }
             <div>
               <h4>{{ form.value.name || '—' }}</h4>
               <span>{{ reviewLine() }}</span>

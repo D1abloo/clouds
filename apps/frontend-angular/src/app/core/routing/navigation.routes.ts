@@ -128,10 +128,12 @@ export const NAVIGATION_ROUTES: Routes = [
     data: { breadcrumb: 'Nubes' },
   },
   {
-    path: 'vps/:section',
+    path: 'vps/:provider/:section',
     loadComponent: () =>
-      import('../../features/infrastructure/vps-page.component').then((m) => m.VpsPageComponent),
-    data: { breadcrumb: 'VPS / Bare metal', module: 'vps' },
+      import('../../features/infrastructure/vps-provider-page.component').then(
+        (m) => m.VpsProviderPageComponent,
+      ),
+    data: { breadcrumb: 'VPS', module: 'vps' },
   },
   {
     path: 'instances/all-instances',
@@ -268,7 +270,12 @@ export const NAVIGATION_ROUTES: Routes = [
   { path: 'cloud/aws', redirectTo: 'cloud/aws/overview', pathMatch: 'full' },
   { path: 'cloud/gcp', redirectTo: 'cloud/gcp/overview', pathMatch: 'full' },
   { path: 'cloud/azure', redirectTo: 'cloud/azure/overview', pathMatch: 'full' },
-  { path: 'vps', redirectTo: 'vps/overview', pathMatch: 'full' },
+  { path: 'vps/digitalocean', redirectTo: 'vps/digitalocean/overview', pathMatch: 'full' },
+  { path: 'vps/hetzner', redirectTo: 'vps/hetzner/overview', pathMatch: 'full' },
+  { path: 'vps/linode', redirectTo: 'vps/linode/overview', pathMatch: 'full' },
+  { path: 'vps/ovh', redirectTo: 'vps/ovh/overview', pathMatch: 'full' },
+  { path: 'vps/overview', redirectTo: 'vps/digitalocean/overview', pathMatch: 'full' },
+  { path: 'vps', redirectTo: 'vps/digitalocean/overview', pathMatch: 'full' },
   { path: 'instances', redirectTo: 'instances/all-instances', pathMatch: 'full' },
   { path: 'docker', redirectTo: 'docker/containers', pathMatch: 'full' },
   { path: 'kubernetes', redirectTo: 'kubernetes/pods', pathMatch: 'full' },
