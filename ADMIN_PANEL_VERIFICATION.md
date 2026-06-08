@@ -1,11 +1,11 @@
 # Informe de verificación — Panel Admin CloudOps
 
-> Generado: 2026-06-08T21:19:01.088Z
+> Generado: 2026-06-08T21:58:27.108Z
 > Recomendación final: **READY_FOR_PRO**
 
 ## Resumen ejecutivo
 
-Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 63 modelos Prisma, auth JWT+OAuth, RBAC activo, UI en español con estado «Configuración requerida» cuando faltan credenciales externas.
+Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 65 modelos Prisma, auth JWT+OAuth, RBAC activo, UI en español con estado «Configuración requerida» cuando faltan credenciales externas.
 
 ## Criterios PRO
 
@@ -208,9 +208,9 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 63 modelos Prisma, auth J
 
 ## Calidad (checks)
 
-- `npm run build -w apps/frontend-angular`: ✅ OK (12151ms)
-- `npm run build -w apps/backend-api`: ✅ OK (5858ms)
-- `npm test -w apps/backend-api`: ✅ OK (5764ms)
+- `npm run build -w apps/frontend-angular`: ✅ OK (12812ms)
+- `npm run build -w apps/backend-api`: ✅ OK (6028ms)
+- `npm test -w apps/backend-api`: ✅ OK (6460ms)
 
 ## Elementos faltantes
 
@@ -218,7 +218,29 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 63 modelos Prisma, auth J
 
 ## Riesgos restantes
 
-- Revisar manualmente flujos OAuth en PRO con credenciales reales.
+- Completar al menos un login real con GitHub en producción para validar creación de usuario OAuth (Google ya verificado en BD).
+
+## Verificación OAuth producción — spendlyx.com (2026-06-08)
+
+Verificación manual y automatizada del flujo OAuth en https://spendlyx.com.
+
+| Check | Estado | Detalle |
+|-------|--------|---------|
+| Botón «Continuar con Google» | ✅ | Visible en `/login`, redirige a Google OAuth |
+| Botón «Continuar con GitHub» | ✅ | Visible en `/login`, redirige a GitHub OAuth |
+| Callback Google | ✅ | `https://spendlyx.com/api/v1/auth/oauth/callback/google` |
+| Callback GitHub | ✅ | `https://spendlyx.com/api/v1/auth/oauth/callback/github` |
+| Inicio OAuth API | ✅ | `GET /api/v1/auth/oauth/{google\|github}` → `redirectUrl` |
+| `platform/status` OAuth flags | ✅ | `oauth.google: true`, `oauth.github: true` |
+| Modo demo oculto | ✅ | Sin botón «Entrar en modo demo» en PRO |
+| Rutas protegidas | ✅ | `/dashboard` → redirect `/login` sin JWT |
+| Errores en español | ✅ | Login, OAuth cancelado, email no verificado |
+| Secretos no expuestos | ✅ | API no devuelve `*_SECRET` ni passwords |
+| PostgreSQL OAuth | ✅ | Tabla `oauth_accounts` (Google: 1 cuenta) |
+| Auditoría sesión | ✅ | `audit_logs`: `oauth_login` (4), `login` (4) |
+| Builds producción | ✅ | frontend + backend + tests backend |
+
+Variables VPS verificadas (enmascaradas): `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`, `OAUTH_CALLBACK_URL`, `AUTH_URL`, `DEMO_MODE=false`, `PRO_MODE=true`. Secretos presentes con longitud válida, no impresos.
 
 ## Cómo pasar a PRO
 

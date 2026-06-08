@@ -72,6 +72,45 @@ AUTH_URL=https://spendlyx.com
 
 Inicio OAuth (frontend): `GET /api/v1/auth/oauth/google` | `GET /api/v1/auth/oauth/github`
 
+> **Nota:** La URL de callback de GitHub es `/api/v1/auth/oauth/callback/github`, no `/api/v1/auth/oauth/github` (esta última es solo el inicio del flujo).
+
+### Verificación OAuth en producción (2026-06-08)
+
+| Comprobación | Resultado |
+|--------------|-----------|
+| Botón Google en `/login` | OK — redirige a `accounts.google.com` |
+| Botón GitHub en `/login` | OK — redirige a `github.com/login/oauth` |
+| Callback Google registrado | `https://spendlyx.com/api/v1/auth/oauth/callback/google` |
+| Callback GitHub registrado | `https://spendlyx.com/api/v1/auth/oauth/callback/github` |
+| `platform/status` → `oauth.google/github` | `true` / `true` |
+| Modo demo oculto en login | OK (`DEMO_MODE=false`) |
+| Rutas protegidas sin sesión | Redirigen a `/login` |
+| Errores OAuth en español | OK (`access_denied`, códigos inválidos) |
+| Secretos en respuestas API | No expuestos (solo client IDs públicos en redirect) |
+| Cuentas OAuth en PostgreSQL | `oauth_accounts` activo (Google verificado) |
+| Auditoría `oauth_login` | Registrada en `audit_logs` |
+
+Comprobar variables en VPS (valores enmascarados):
+
+```bash
+ssh root@82.223.54.195 "grep -E '^(GOOGLE_|GITHUB_|OAUTH_|AUTH_URL|DEMO_MODE|PRO_MODE)=' /opt/cloudops/infra/.env | sed 's/SECRET=.*/SECRET=***/'"
+```
+
+Prueba rápida de inicio OAuth:
+
+```bash
+curl -sS https://spendlyx.com/api/v1/auth/oauth/google | jq '{proMode, redirectUri: (.redirectUrl | capture("redirect_uri=([^&]+)") | .[0] // empty)}'
+curl -sS https://spendlyx.com/api/v1/auth/oauth/github | jq '{proMode, hasRedirect: (.redirectUrl != null)}'
+```
+
+Flujo completo tras login OAuth:
+
+1. Proveedor redirige a `/api/v1/auth/oauth/callback/:provider?code=...`
+2. Backend crea/actualiza usuario, marca email verificado, upsert `oauth_accounts`
+3. Redirige a `/login/oauth/callback#token=...&user=...`
+4. Frontend persiste JWT y accede a rutas `/dashboard`, `/admin/*`, etc.
+5. Logout limpia `localStorage` y vuelve a `/login`
+
 ## SMTP (registro y contacto)
 
 Correos transaccionales desde `info@spendlyx.com` vía Ionos. Variables en `infra/.env`:

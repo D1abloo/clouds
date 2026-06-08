@@ -44,7 +44,7 @@ export class AuthService {
     })
 
     if (!user || !user.isActive) {
-      throw new UnauthorizedException('Invalid credentials')
+      throw new UnauthorizedException('Credenciales incorrectas')
     }
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash)

@@ -523,10 +523,7 @@ export class LoginComponent implements OnInit {
     this.pro.loadStatus()
     const oauthError = this.route.snapshot.queryParamMap.get('oauth_error')
     if (oauthError) {
-      this.error =
-        oauthError === 'access_denied'
-          ? 'Inicio de sesión con Google cancelado.'
-          : 'No se pudo completar el inicio de sesión con OAuth. Inténtalo de nuevo.'
+      this.error = decodeURIComponent(oauthError)
     }
     if (environment.demoMode) {
       this.form.patchValue({ email: 'admin@cloudops.local', password: 'Admin123!' })

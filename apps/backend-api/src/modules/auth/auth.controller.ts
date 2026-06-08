@@ -95,7 +95,15 @@ export class AuthController {
     const authUrl = this.config.get<string>('AUTH_URL', 'http://localhost:4200').replace(/\/$/, '')
 
     if (oauthError) {
-      return res.redirect(`${authUrl}/login?oauth_error=${encodeURIComponent(oauthError)}`)
+      const message =
+        oauthError === 'access_denied'
+          ? 'Inicio de sesión OAuth cancelado.'
+          : oauthError === 'bad_verification_code'
+            ? 'No se pudo validar el código OAuth. Inténtalo de nuevo.'
+            : oauthError.startsWith('No se ') || oauthError.startsWith('GitHub ') || oauthError.startsWith('Google ')
+              ? oauthError
+              : 'No se pudo completar el inicio de sesión con OAuth. Inténtalo de nuevo.'
+      return res.redirect(`${authUrl}/login?oauth_error=${encodeURIComponent(message)}`)
     }
 
     try {
@@ -105,10 +113,16 @@ export class AuthController {
         `${authUrl}/login/oauth/callback#token=${encodeURIComponent(session.accessToken)}&user=${userJson}`,
       )
     } catch (err) {
-      const message =
+      const raw =
         err instanceof Error && 'message' in err
           ? String((err as { message?: string }).message ?? 'oauth_failed')
           : 'oauth_failed'
+      const message =
+        raw === 'bad_verification_code'
+          ? 'No se pudo validar el código OAuth. Inténtalo de nuevo.'
+          : raw.startsWith('No se ') || raw.startsWith('GitHub ') || raw.startsWith('Google ')
+            ? raw
+            : 'No se pudo completar el inicio de sesión con OAuth. Inténtalo de nuevo.'
       return res.redirect(`${authUrl}/login?oauth_error=${encodeURIComponent(message)}`)
     }
   }
