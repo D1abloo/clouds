@@ -57,6 +57,8 @@ docker-compose.override.yml
 *.key
 !*.key.example
 secrets/
+certificado/
+infra/certs/
 
 # Misc
 .angular/
