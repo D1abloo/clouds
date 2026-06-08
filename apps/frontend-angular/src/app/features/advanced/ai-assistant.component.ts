@@ -107,7 +107,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
       @if (loading()) {
         <app-loading-state message="Inicializando Copilot…" />
       } @else if (pro.proMode()) {
-        <app-connection-required module="Asistente IA" />
+        <app-connection-required moduleId="ai-assistant" variant="inline" icon="smart_toy" />
       } @else {
         <div class="cop-layout">
           <aside class="cop-sidebar">

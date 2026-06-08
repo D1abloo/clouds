@@ -42,8 +42,8 @@ export class ProModeService {
             authUrl: environment.authUrl ?? 'http://localhost:4200',
             oauth: { google: false, github: false },
             message: environment.proMode
-              ? 'Modo PRO (frontend) — backend no disponible'
-              : 'Modo demo (frontend) — backend no disponible',
+              ? 'Modo PRO — conecta tus integraciones en Configuración'
+              : 'Entorno local — backend no disponible',
           })
           this.loaded.set(true)
           return of(null)

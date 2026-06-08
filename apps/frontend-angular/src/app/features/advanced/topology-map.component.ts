@@ -11,7 +11,7 @@ import {
   ElementRef,
   effect,
 } from '@angular/core'
-import { Router } from '@angular/router'
+import { Router, RouterLink } from '@angular/router'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatSelectModule } from '@angular/material/select'
@@ -26,8 +26,6 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
-import { ProModeService } from '../../core/services/pro-mode.service'
-import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountsStore } from '../../core/stores/cloud-accounts.store'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
@@ -88,11 +86,11 @@ import {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     DecimalPipe,
     ReactiveFormsModule,
     PageHeaderComponent,
     LoadingStateComponent,
-    ConnectionRequiredComponent,
     BrandLogoComponent,
     MatFormFieldModule,
     MatSelectModule,
@@ -118,8 +116,6 @@ import {
 
       @if (loading()) {
         <app-loading-state message="Cargando topología…" />
-      } @else if (pro.proMode()) {
-        <app-connection-required module="Mapa de topología" />
       } @else {
         <div class="topology-workspace">
           <div class="topology-main">
@@ -317,7 +313,8 @@ import {
             @if (!cloudAccounts().length) {
               <div class="topology-empty" role="status">
                 <mat-icon>cloud_off</mat-icon>
-                <p>Conecta una cuenta en Cloud para ver su topología.</p>
+                <p>Sin datos todavía. Conecta una cuenta cloud para visualizar la topología.</p>
+                <a class="topology-empty__cta" routerLink="/cloud/aws/accounts">Conectar nube</a>
               </div>
             } @else if (!scopedLayout()) {
               <div class="topology-empty" role="status">
@@ -900,6 +897,13 @@ import {
       height: 40px;
       opacity: 0.5;
     }
+    .topology-empty__cta {
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #0284c7;
+      text-decoration: none;
+    }
 
     .topology-canvas {
       position: relative;
@@ -1326,7 +1330,6 @@ import {
   `,
 })
 export class TopologyMapComponent implements OnInit, AfterViewInit, OnDestroy {
-  readonly pro = inject(ProModeService)
   private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly cloudStore = inject(CloudAccountsStore)

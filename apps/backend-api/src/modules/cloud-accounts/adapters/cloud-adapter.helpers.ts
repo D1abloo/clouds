@@ -26,15 +26,15 @@ export const buildValidation = (
     ctx.credentials['roleArn'] ||
     ctx.credentials['serviceAccountJson'] ||
     ctx.credentials['clientId'] ||
-    ctx.credentials['demoMode'] === 'true'
+    ctx.credentials['managedIdentity']
 
   return {
     valid: !!hasCreds,
     message: hasCreds
-      ? `${providerLabel} connection validated (demo/SDK-ready)`
-      : 'Missing credentials — configure auth in account form',
+      ? `${providerLabel}: credenciales presentes — validación completa requiere conexión al proveedor`
+      : 'Faltan credenciales — completa el formulario de autenticación',
     permissions: requiredPerms,
-    sdkReady: ctx.credentials['demoMode'] !== 'true',
+    sdkReady: true,
   }
 }
 

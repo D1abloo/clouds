@@ -80,7 +80,7 @@ export type GithubAccountFormResult = {
   webhookEvents: string[]
   description?: string
   contactEmail?: string
-  useDemoData: boolean
+  useDemoData?: boolean
   validateBeforeSave: boolean
   syncOnConnect: boolean
 }

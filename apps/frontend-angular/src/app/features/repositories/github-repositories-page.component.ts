@@ -298,7 +298,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
           webhookEvents: body.webhookEvents,
           description: body.description,
           contactEmail: body.contactEmail,
-          useDemoData: body.useDemoData,
+          useDemoData: false,
         })
         .pipe(
           switchMap((created) => {
@@ -332,7 +332,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
               'Cuenta GitHub añadida',
               sync
                 ? `${body.label} · ${sync.synced} repos según permisos`
-                : `${body.label} · ${body.useDemoData ? 'modo demo' : body.authMethod}`,
+                : `${body.label} · ${body.authMethod}`,
             )
             if (body.syncOnConnect && sync && !sync.repos?.length) {
               this.handleSync()

@@ -26,11 +26,10 @@ export class CloudAccountsService {
   }
 
   async create(dto: CreateCloudAccountDto, userId?: string) {
-    const proMode = this.config.get<string>('DEMO_MODE', 'false') !== 'true'
     const creds = dto.credentials ?? {}
     const secretPayload: Record<string, string> = {
-      credentialType: creds.credentialType ?? (proMode ? 'access_key' : 'demo'),
-      demoMode: creds.demoMode ?? (proMode ? 'false' : 'true'),
+      credentialType: creds.credentialType ?? 'access_key',
+      demoMode: 'false',
       roleArn: creds.roleArn ?? '',
       externalId: creds.externalId ?? '',
       accessKeyId: creds.accessKeyId ?? '',
@@ -54,7 +53,7 @@ export class CloudAccountsService {
         credentials: {
           create: [
             {
-              credentialType: creds.credentialType ?? (proMode ? 'access_key' : 'demo'),
+              credentialType: creds.credentialType ?? 'access_key',
               secretRef: this.vault.storeSecrets(secretPayload),
             },
           ],
@@ -105,10 +104,49 @@ export class CloudAccountsService {
     const result = await this.registry.validateConnection(id)
     await this.audit.create({
       userId,
-      action: 'cloud_account.validate',
+      action: result.valid ? 'cloud_account.validate' : 'cloud_account.validate_failed',
       resource: 'cloud_account',
       resourceId: id,
-      metadata: { valid: result.valid },
+      metadata: { valid: result.valid, message: result.message },
+    })
+    return result
+  }
+
+  async validatePreview(dto: CreateCloudAccountDto, userId?: string) {
+    const creds = dto.credentials ?? {}
+    const credentials: Record<string, string> = {
+      credentialType: creds.credentialType ?? 'access_key',
+      demoMode: 'false',
+      roleArn: creds.roleArn ?? '',
+      externalId: creds.externalId ?? '',
+      accessKeyId: creds.accessKeyId ?? '',
+      secretAccessKey: creds.secretAccessKey ?? '',
+      oidcProvider: creds.oidcProvider ?? '',
+      serviceAccountJson: creds.serviceAccountJson ?? '',
+      tenantId: creds.tenantId ?? '',
+      clientId: creds.clientId ?? '',
+      clientSecret: creds.clientSecret ?? '',
+      managedIdentity: creds.managedIdentity ?? '',
+    }
+
+    const ctx = {
+      accountId: 'preview',
+      projectId: dto.projectId,
+      provider: dto.provider,
+      name: dto.name,
+      accountExternalId: dto.accountId,
+      defaultRegion: dto.defaultRegion,
+      config: (dto.config ?? {}) as Record<string, unknown>,
+      credentials,
+    }
+
+    const result = await this.registry.validatePreview(ctx)
+    await this.audit.create({
+      userId,
+      action: result.valid ? 'cloud_account.validate_preview' : 'cloud_account.validate_failed',
+      resource: 'cloud_account',
+      resourceId: dto.projectId,
+      metadata: { provider: dto.provider, valid: result.valid, message: result.message },
     })
     return result
   }

@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
+import { resolveConnectionCopy } from '../../../core/routing/module-requirements.util'
 
 @Component({
   selector: 'app-connection-required',
@@ -9,15 +10,20 @@ import { MatIconModule } from '@angular/material/icon'
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatButtonModule, MatIconModule, RouterLink],
   template: `
-    <div class="conn-req animate-fade-in" role="status" aria-live="polite">
+    <div
+      class="conn-req animate-fade-in"
+      [class.conn-req--inline]="variant() === 'inline'"
+      role="status"
+      aria-live="polite"
+    >
       <div class="conn-req__icon" aria-hidden="true">
-        <mat-icon>link_off</mat-icon>
+        <mat-icon>{{ icon() }}</mat-icon>
       </div>
-      <h2>{{ title() }}</h2>
-      <p class="conn-req__lead">{{ description() }}</p>
+      <h2>{{ displayTitle() }}</h2>
+      <p class="conn-req__lead">{{ displayDescription() }}</p>
       <div class="conn-req__actions">
-        <a mat-flat-button color="primary" [routerLink]="actionRoute()">
-          {{ actionLabel() }}
+        <a mat-flat-button color="primary" [routerLink]="displayActionRoute()">
+          {{ displayActionLabel() }}
         </a>
       </div>
     </div>
@@ -34,6 +40,25 @@ import { MatIconModule } from '@angular/material/icon'
       border: 1px dashed color-mix(in srgb, var(--app-text) 14%, transparent);
       background: color-mix(in srgb, var(--app-text) 2%, transparent);
     }
+    .conn-req--inline {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: left;
+      padding: 1rem 1.15rem;
+      gap: 0.65rem 1rem;
+      margin: 0 0 1rem;
+    }
+    .conn-req--inline h2 { font-size: 0.95rem; margin: 0; flex: 1 1 100%; }
+    .conn-req--inline .conn-req__lead { margin: 0; flex: 1 1 220px; max-width: none; }
+    .conn-req--inline .conn-req__icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 0;
+      mat-icon { font-size: 1.5rem; width: 1.5rem; height: 1.5rem; }
+    }
+    .conn-req--inline .conn-req__actions { margin-left: auto; }
     .conn-req__icon {
       width: 64px;
       height: 64px;
@@ -48,13 +73,30 @@ import { MatIconModule } from '@angular/material/icon'
     h2 { margin: 0 0 0.45rem; font-size: 1.05rem; font-weight: 700; }
     .conn-req__lead { margin: 0 0 1.25rem; max-width: 420px; line-height: 1.55; color: var(--app-text-muted); font-size: 0.9rem; }
     .conn-req__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+    .conn-req--inline .conn-req__actions { justify-content: flex-start; }
   `,
 })
 export class ConnectionRequiredComponent {
-  readonly title = input<string>('Sin cuentas conectadas')
-  readonly description = input<string>('Añade una cuenta para comenzar.')
-  readonly actionLabel = input<string>('Añadir cuenta')
-  readonly actionRoute = input<string>('/admin/settings')
-  /** @deprecated use title/description/actionLabel */
+  readonly moduleId = input<string>('')
+  /** @deprecated use moduleId */
   readonly module = input<string>('')
+  readonly title = input<string>('')
+  readonly description = input<string>('')
+  readonly actionLabel = input<string>('')
+  readonly actionRoute = input<string>('')
+  readonly variant = input<'full' | 'inline'>('full')
+  readonly icon = input<string>('link_off')
+
+  private readonly resolvedKey = computed(() => {
+    const id = this.moduleId().trim()
+    if (id) return id
+    return this.module().trim()
+  })
+
+  private readonly resolvedCopy = computed(() => resolveConnectionCopy(this.resolvedKey()))
+
+  readonly displayTitle = computed(() => this.title() || this.resolvedCopy().title)
+  readonly displayDescription = computed(() => this.description() || this.resolvedCopy().description)
+  readonly displayActionLabel = computed(() => this.actionLabel() || this.resolvedCopy().actionLabel)
+  readonly displayActionRoute = computed(() => this.actionRoute() || this.resolvedCopy().actionRoute)
 }

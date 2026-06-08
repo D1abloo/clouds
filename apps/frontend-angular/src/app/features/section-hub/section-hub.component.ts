@@ -7,8 +7,9 @@ import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.comp
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
-import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
+import { ModuleOptionalCtaComponent } from '../../shared/components/module-optional-cta/module-optional-cta.component'
+import { getInternalEmptyCopy, shouldShowOptionalCloudCta } from '../../core/routing/module-requirements.util'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { metricsHubDescription, metricsHubRows, type MetricsHubRow } from '../../shared/platform/metrics-hub.demo'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
@@ -23,8 +24,8 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
     PageHeaderComponent,
     StatusBadgeComponent,
     NavIconComponent,
-    ConnectionRequiredComponent,
     EmptyStateComponent,
+    ModuleOptionalCtaComponent,
   ],
   template: `
     <div class="page-container section-hub animate-fade-in">
@@ -42,12 +43,13 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
         <button type="button" class="hub-action-chip" (click)="handleAction('Sincronizar')"><mat-icon>sync</mat-icon> Sincronizar</button>
       </div>
 
-      @if (pro.proMode()) {
-        <app-connection-required [module]="title()" />
-      } @else if (!rows().length) {
+      @if (showCloudCta()) {
+        <app-module-optional-cta />
+      }
+      @if (!rows().length) {
         <app-empty-state
-          title="Sin datos todavía"
-          message="Conecta una integración para comenzar."
+          [title]="emptyCopy().title"
+          [description]="emptyCopy().message"
           icon="inventory_2"
         />
       } @else {
@@ -165,6 +167,12 @@ export class SectionHubComponent {
   })
 
   readonly metricsLogos: NavLogoKey[] = ['prometheus', 'grafana', 'kubernetes', 'docker', 'aws']
+
+  readonly emptyCopy = computed(() => getInternalEmptyCopy(this.module()))
+
+  readonly showCloudCta = computed(
+    () => this.pro.proMode() && shouldShowOptionalCloudCta(this.module()) && !this.rows().length,
+  )
 
   readonly rows = computed((): MetricsHubRow[] => {
     if (!allowsDemoDataFrom(this.pro)) return []

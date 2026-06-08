@@ -62,7 +62,6 @@ import {
   defaultDemoWorkspaces,
   defaultDemoLaunches,
   demoRunsFromSummary,
-  hasTerraformLiveData,
   mergeTerraformSummary,
   mergeTerraformSummaryPro,
   TERRAFORM_DEMO_SUMMARY,
@@ -70,7 +69,6 @@ import {
   type TerraformPageSummary,
 } from './terraform.demo'
 import { ProModeService } from '../core/services/pro-mode.service'
-import { ConnectionRequiredComponent } from '../shared/components/connection-required/connection-required.component'
 import type { TerraformLaunchRecord } from './terraform-folders'
 import {
   defaultTerraformLaunchDetails,
@@ -100,7 +98,6 @@ import { CloudProvider } from '../core/models/api.models'
     TerraformInspectorPanelComponent,
     TerraformLaunchProgressComponent,
     RunDetailDrawerComponent,
-    ConnectionRequiredComponent,
   ],
   templateUrl: './terraform.component.html',
   styleUrl: './terraform.component.scss',
@@ -119,8 +116,6 @@ export class TerraformComponent implements OnInit {
   private readonly pro = inject(ProModeService)
 
   readonly inspectorRef = viewChild<ElementRef<HTMLElement>>('inspectorPane')
-  readonly requiresTerraformConfig = signal(false)
-
   readonly builtinTemplates = BUILTIN_TEMPLATES
 
   readonly projects = signal<TerraformProject[]>(defaultTerraformProjects())
@@ -215,20 +210,12 @@ export class TerraformComponent implements OnInit {
         const merged = this.pro.proMode()
           ? mergeTerraformSummaryPro(data)
           : mergeTerraformSummary(data)
-        if (this.pro.proMode() && !hasTerraformLiveData(merged)) {
-          this.requiresTerraformConfig.set(true)
-          this.summary.set(merged)
-          this.loading.set(false)
-          return
-        }
-        this.requiresTerraformConfig.set(false)
         this.summary.set(merged)
         this.hydrateFromSummary(merged)
         this.loading.set(false)
       },
       error: () => {
         if (this.pro.proMode()) {
-          this.requiresTerraformConfig.set(true)
           this.summary.set(mergeTerraformSummaryPro({}))
           this.loading.set(false)
           return

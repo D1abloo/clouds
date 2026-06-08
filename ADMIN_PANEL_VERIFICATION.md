@@ -1,7 +1,22 @@
 # Informe de verificación — Panel Admin CloudOps
 
-> Generado: 2026-06-08T21:58:27.108Z
+> Generado: 2026-06-09 (actualizado — formularios cloud PRO)
 > Recomendación final: **READY_FOR_PRO**
+
+## Limpieza demo y formularios cloud (2026-06-09)
+
+| Criterio | Estado |
+|----------|--------|
+| Referencias «Modo demo» eliminadas del UI PRO | ✅ |
+| Login sin botón demo en producción | ✅ |
+| Sidebar «Modo demo» oculto en PRO | ✅ |
+| Modal «Conectar cuenta cloud» sin demo/sin SDK | ✅ |
+| Formularios AWS / GCP / Azure completos | ✅ |
+| Formularios DO / Hetzner / CF / Linode / OVH / K8s / Docker / GitHub / GitLab / Jenkins / Terraform | ✅ (paso Conexión) |
+| Validación real `POST /cloud-accounts/validate-preview` | ✅ |
+| Secretos enmascarados en paso Revisión | ✅ |
+| Cifrado credenciales + audit logs sync/validate | ✅ |
+| RBAC en endpoints cloud-accounts (JWT + PermissionsGuard) | ✅ |
 
 ## Resumen ejecutivo
 
@@ -241,6 +256,19 @@ Verificación manual y automatizada del flujo OAuth en https://spendlyx.com.
 | Builds producción | ✅ | frontend + backend + tests backend |
 
 Variables VPS verificadas (enmascaradas): `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`, `OAUTH_CALLBACK_URL`, `AUTH_URL`, `DEMO_MODE=false`, `PRO_MODE=true`. Secretos presentes con longitud válida, no impresos.
+
+## Corrección de estados de configuración por módulo
+
+| Tipo | Comportamiento PRO |
+|------|-------------------|
+| Módulos internos | Carga normal; empty state «Sin datos todavía» / «Cuando haya actividad, aparecerá aquí.» |
+| AWS / GCP / Azure | Empty state corto con CTA «Conectar {proveedor}» → cuentas del proveedor |
+| GitHub / GitLab / Jenkins | Empty state específico del proveedor con botón de conexión |
+| Datos opcionales (métricas, instancias, explorador…) | Página visible + tarjeta CTA opcional, sin bloqueo pantalla completa |
+| Asistente IA | Inline «Asistente no disponible» + «Configurar IA» (no mensaje cloud genérico) |
+| Sidebar | Sin bloqueo de secciones por falta de integraciones |
+
+Fuente de verdad: `apps/frontend-angular/src/app/core/routing/module-requirements.config.ts` y utilidades en `module-requirements.util.ts`. Componentes `pro-config-gate` y `connection-required` consultan esta configuración.
 
 ## Correcciones de UX del panel PRO
 

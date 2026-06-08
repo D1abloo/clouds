@@ -25,7 +25,7 @@ import type { GitlabAccount } from '../utils/gitlab-demo-catalog'
         <dl class="account-card__grid">
           <div>
             <dt>Instancia</dt>
-            <dd>gitlab.cloudops.local (demo)</dd>
+            <dd>gitlab.com</dd>
           </div>
           <div>
             <dt>Estado</dt>
@@ -40,12 +40,6 @@ import type { GitlabAccount } from '../utils/gitlab-demo-catalog'
             <dd>{{ account.lastSyncAt ? (account.lastSyncAt | date: 'short') : 'Ahora' }}</dd>
           </div>
         </dl>
-        @if (demoMode) {
-          <p class="account-card__demo">
-            <mat-icon>science</mat-icon>
-            Modo demostración — sin credenciales reales de GitLab
-          </p>
-        }
       </div>
     }
   `,

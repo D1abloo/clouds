@@ -611,9 +611,7 @@ export class LoginComponent implements OnInit {
       },
       error: () => {
         this.oauthLoading = null
-        this.error = this.pro.showDemoLogin()
-          ? 'Error al iniciar sesión con OAuth. Usa modo demo o correo.'
-          : 'Error al iniciar sesión con OAuth. Comprueba la configuración o usa correo y contraseña.'
+        this.error = 'Error al iniciar sesión con OAuth. Comprueba la configuración o usa correo y contraseña.'
       },
     })
   }

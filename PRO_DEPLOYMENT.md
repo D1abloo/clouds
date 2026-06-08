@@ -15,7 +15,12 @@ AUTO_DEMO_SEED=false
 INTEGRATIONS_LIVE=true
 ```
 
-## PostgreSQL
+## Cloud accounts — conexión PRO
+
+- Modal **Conectar cuenta cloud**: formularios por proveedor (AWS/GCP/Azure + integraciones) sin modo demo.
+- Validación previa al guardar: `POST /api/v1/cloud-accounts/validate-preview` (credenciales reales vía adapters SDK).
+- Credenciales cifradas en vault (`SecretsVaultService`); audit: `cloud_account.create`, `validate_preview`, `validate_failed`, `sync_started`, `sync_completed`, `sync_failed`.
+
 
 ```bash
 # Migraciones (local o en contenedor backend)

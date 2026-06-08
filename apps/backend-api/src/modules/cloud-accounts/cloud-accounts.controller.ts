@@ -26,6 +26,12 @@ export class CloudAccountsController {
     return this.service.getDefaultProject()
   }
 
+  @Post('validate-preview')
+  @ApiOperation({ summary: 'Validate cloud credentials before saving' })
+  validatePreview(@Body() dto: CreateCloudAccountDto, @CurrentUser() user: JwtPayload) {
+    return this.service.validatePreview(dto, user.sub)
+  }
+
   @Post()
   @ApiOperation({ summary: 'Add cloud account with encrypted credentials' })
   create(@Body() dto: CreateCloudAccountDto, @CurrentUser() user: JwtPayload) {

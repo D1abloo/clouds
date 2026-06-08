@@ -20,10 +20,24 @@ export class CloudSyncService {
     await this.setSyncStatus(accountId, 'syncing')
     this.realtime.emitSyncProgress(accountId, { status: 'syncing', step: 'validate' })
 
+    await this.audit.create({
+      userId,
+      action: 'cloud_account.sync_started',
+      resource: 'cloud_account',
+      resourceId: accountId,
+    })
+
     const validation = await this.registry.validateConnection(accountId)
     if (!validation.valid) {
       await this.setSyncStatus(accountId, 'error')
       this.realtime.emitSyncProgress(accountId, { status: 'error', message: validation.message })
+      await this.audit.create({
+        userId,
+        action: 'cloud_account.sync_failed',
+        resource: 'cloud_account',
+        resourceId: accountId,
+        metadata: { reason: validation.message ?? 'validation_failed' },
+      })
       return { synced: 0, regions: 0, networks: 0, securityGroups: 0, instances: 0, durationMs: Date.now() - started }
     }
 
@@ -76,7 +90,7 @@ export class CloudSyncService {
 
     await this.audit.create({
       userId,
-      action: 'cloud_account.sync',
+      action: 'cloud_account.sync_completed',
       resource: 'cloud_account',
       resourceId: accountId,
       metadata: { ...result } as Record<string, unknown>,

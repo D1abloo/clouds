@@ -52,6 +52,11 @@ export class CloudAccountsService {
   validate = (id: string): Observable<{ valid: boolean; message?: string; permissions?: string[] }> =>
     this.api.post(`cloud-accounts/${id}/validate`)
 
+  validatePreview = (
+    body: CreateCloudAccountPayload,
+  ): Observable<{ valid: boolean; message?: string; permissions?: string[] }> =>
+    this.api.post('cloud-accounts/validate-preview', body)
+
   sync = (id: string): Observable<{ synced: number; regions: number; instances: number }> =>
     this.api.post(`cloud-accounts/${id}/sync`)
 

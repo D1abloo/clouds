@@ -59,7 +59,7 @@ export class CloudAccountCredentialsDto {
   @IsString()
   managedIdentity?: string
 
-  @ApiProperty({ required: false, description: 'Use demo credentials without real SDK' })
+  @ApiProperty({ required: false, description: 'Deprecated — always false in PRO' })
   @IsOptional()
   @IsString()
   demoMode?: string

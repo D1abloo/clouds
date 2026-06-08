@@ -26,7 +26,9 @@ import { StatusBadgeComponent } from '../components/status-badge/status-badge.co
 import { NavIconComponent } from '../components/nav-icon/nav-icon.component'
 import { PlatformActionService } from './platform-action.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
-import { ConnectionRequiredComponent } from '../components/connection-required/connection-required.component'
+import { ModuleOptionalCtaComponent } from '../components/module-optional-cta/module-optional-cta.component'
+import { getInternalEmptyCopy, shouldShowOptionalCloudCta } from '../../core/routing/module-requirements.util'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { getPlatformRowOps, isPlatformScopeModule } from './platform-module-ops.catalog'
 import { observabilityModuleMeta } from './observability-meta.util'
 import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.models'
@@ -42,7 +44,7 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
-    ConnectionRequiredComponent,
+    ModuleOptionalCtaComponent,
     StatusBadgeComponent,
     NavIconComponent,
     MatTabsModule,
@@ -56,11 +58,11 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
   template: `
     <div class="page-container platform-module animate-fade-in">
       <app-page-header
-        [title]="config().title"
-        [description]="config().description"
-        [icon]="config().icon"
+        [title]="effectiveConfig().title"
+        [description]="effectiveConfig().description"
+        [icon]="effectiveConfig().icon"
         [demoMode]="pro.demoMode()"
-        [actions]="config().headerActions"
+        [actions]="effectiveConfig().headerActions"
         (actionClick)="handleHeaderAction($event)"
       />
 
@@ -68,9 +70,10 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
         <app-loading-state message="Cargando módulo…" />
       } @else if (error()) {
         <app-error-state [message]="error()!" (retry)="load()" />
-      } @else if (pro.proMode()) {
-        <app-connection-required [module]="config().title" />
       } @else {
+        @if (showCloudCta()) {
+          <app-module-optional-cta />
+        }
         @if (isObservability()) {
           <div class="obs-integration-bar">
             <app-nav-icon [logo]="obsMeta().primaryLogo" size="md" />
@@ -86,9 +89,9 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
           </div>
         }
 
-        @if (config().summaryCards.length) {
+        @if (effectiveConfig().summaryCards.length) {
           <div class="obs-summary-row">
-            @for (card of config().summaryCards; track card.title) {
+            @for (card of effectiveConfig().summaryCards; track card.title) {
               <article class="obs-summary-card" [attr.data-tone]="card.iconColor ?? 'primary'">
                 <mat-icon>{{ card.icon }}</mat-icon>
                 <div>
@@ -101,9 +104,9 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
           </div>
         }
 
-        @if (config().quickActions?.length) {
+        @if (effectiveConfig().quickActions?.length) {
           <div class="hub-quick-actions">
-            @for (qa of config().quickActions!; track qa.label) {
+            @for (qa of effectiveConfig().quickActions!; track qa.label) {
               <button type="button" class="hub-action-chip" (click)="runQuickAction(qa.label)">
                 <mat-icon>{{ qa.icon }}</mat-icon>
                 {{ qa.label }}
@@ -119,7 +122,7 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
             [selectedIndex]="tabIndex()"
             (selectedIndexChange)="onTabChange($event)"
           >
-            @for (tab of config().tabs; track tab.label; let i = $index) {
+            @for (tab of effectiveConfig().tabs; track tab.label; let i = $index) {
               <mat-tab [label]="tab.label">
                 <div class="tab-panel hub-tab-panel">
                   @if (tab.filters?.length || tab.searchPlaceholder) {
@@ -154,8 +157,8 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
 
                   @if (filteredRows(tab, i).length === 0) {
                     <app-empty-state
-                      [title]="tab.emptyMessage ?? 'Sin registros'"
-                      description="Ajusta los filtros o sincroniza para refrescar los datos demo."
+                      [title]="tab.emptyMessage ?? emptyCopy().title"
+                      [description]="emptyCopy().message"
                       icon="inbox"
                     />
                   } @else {
@@ -191,7 +194,7 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
                                   </td>
                                 }
                                 <td>
-                                  @if (config().id === 'reports') {
+                                  @if (effectiveConfig().id === 'reports') {
                                     <button mat-stroked-button type="button" class="row-detail-btn" (click)="openRowDetail(row, tab.label)">
                                       <mat-icon>article</mat-icon> Leer informe
                                     </button>
@@ -301,13 +304,34 @@ export class PlatformModulePageComponent implements OnInit {
     { initialValue: '' },
   )
 
-  activeTab = computed(() => this.config().tabs[this.tabIndex()] ?? this.config().tabs[0])
+  readonly effectiveConfig = computed(() => {
+    const cfg = this.config()
+    if (!this.pro.proMode() || allowsDemoDataFrom(this.pro)) return cfg
+    return {
+      ...cfg,
+      summaryCards: [],
+      quickActions: [],
+      tabs: cfg.tabs.map((tab) => ({ ...tab, rows: [], charts: [] })),
+    }
+  })
+
+  activeTab = computed(
+    () => this.effectiveConfig().tabs[this.tabIndex()] ?? this.effectiveConfig().tabs[0],
+  )
 
   readonly observabilityIds = new Set(['logs', 'incidents', 'cost-optimizer', 'reports', 'change-management'])
 
-  isObservability = (): boolean => this.observabilityIds.has(this.config().id)
+  isObservability = (): boolean => this.observabilityIds.has(this.effectiveConfig().id)
 
-  obsMeta = () => observabilityModuleMeta(this.config().id)
+  obsMeta = () => observabilityModuleMeta(this.effectiveConfig().id)
+
+  readonly emptyCopy = computed(() => getInternalEmptyCopy(this.effectiveConfig().id))
+
+  readonly showCloudCta = computed(
+    () => this.pro.proMode() && shouldShowOptionalCloudCta(this.effectiveConfig().id) && !this.hasAnyRows(),
+  )
+
+  private hasAnyRows = (): boolean => this.effectiveConfig().tabs.some((t) => t.rows.length > 0)
 
   openRowDetail = (row: Record<string, unknown>, tabLabel: string): void => {
     this.actions.openDetail(this.config().id, row, tabLabel)
@@ -316,7 +340,7 @@ export class PlatformModulePageComponent implements OnInit {
   rowMenuItems = computed(() => {
     const row = this.selectedRow()
     const tab = this.selectedTabLabel() || this.activeTab().label
-    const moduleId = this.config().id
+    const moduleId = this.effectiveConfig().id
     if (!row) return []
     if (isPlatformScopeModule(moduleId)) {
       return getPlatformRowOps(moduleId, tab, row)

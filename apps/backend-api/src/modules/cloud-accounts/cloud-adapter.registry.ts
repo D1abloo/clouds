@@ -40,6 +40,11 @@ export class CloudAdapterRegistry {
   validateConnection = (accountId: string) =>
     this.withContext(accountId, (ctx, a) => a.validateConnection(ctx))
 
+  validatePreview = (ctx: CloudAdapterContext) => {
+    const adapter = this.pick(ctx.provider)
+    return adapter.validateConnection(ctx)
+  }
+
   listRegions = (accountId: string) =>
     this.withContext(accountId, (ctx, a) => a.listRegions(ctx))
 

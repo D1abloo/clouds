@@ -86,7 +86,7 @@ import { previewGithubRepoSync } from '../utils/github-sync-permissions.util'
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Usuario GitHub</mat-label>
-                  <input matInput [formControl]="username" placeholder="cloudops-demo" />
+                  <input matInput [formControl]="username" placeholder="mi-organizacion" />
                   @if (username.invalid && username.touched) {
                     <mat-error>Obligatorio · sin &#64;</mat-error>
                   }
@@ -127,46 +127,35 @@ import { previewGithubRepoSync } from '../utils/github-sync-permissions.util'
                   <mat-hint>Referencia en Settings → Developer settings</mat-hint>
                 </mat-form-field>
               </div>
-              @if (!useDemoData.value) {
-                <mat-form-field appearance="outline" class="full">
-                  <mat-label>{{ tokenLabel() }}</mat-label>
-                  <input
-                    matInput
-                    [formControl]="token"
-                    [type]="showToken() ? 'text' : 'password'"
-                    autocomplete="off"
-                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                  />
-                  <button mat-icon-button matSuffix type="button" (click)="toggleShowToken()" [attr.aria-label]="showToken() ? 'Ocultar token' : 'Mostrar token'">
-                    <mat-icon>{{ showToken() ? 'visibility_off' : 'visibility' }}</mat-icon>
-                  </button>
-                  @if (token.invalid && token.touched) {
-                    <mat-error>Token obligatorio (o activa modo demo)</mat-error>
-                  }
-                  <mat-hint>Nunca se muestra de nuevo · almacenado como referencia cifrada</mat-hint>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>{{ tokenLabel() }}</mat-label>
+                <input
+                  matInput
+                  [formControl]="token"
+                  [type]="showToken() ? 'text' : 'password'"
+                  autocomplete="off"
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                />
+                <button mat-icon-button matSuffix type="button" (click)="toggleShowToken()" [attr.aria-label]="showToken() ? 'Ocultar token' : 'Mostrar token'">
+                  <mat-icon>{{ showToken() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                </button>
+                @if (token.invalid && token.touched) {
+                  <mat-error>Token obligatorio</mat-error>
+                }
+                <mat-hint>Nunca se muestra de nuevo · almacenado como referencia cifrada</mat-hint>
+              </mat-form-field>
+              <div class="gh-acc-grid gh-acc-grid--2">
+                <mat-form-field appearance="outline">
+                  <mat-label>Caducidad del token</mat-label>
+                  <input matInput type="date" [formControl]="tokenExpiry" />
+                  <mat-hint>Opcional · alerta 7 días antes</mat-hint>
                 </mat-form-field>
-                <div class="gh-acc-grid gh-acc-grid--2">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Caducidad del token</mat-label>
-                    <input matInput type="date" [formControl]="tokenExpiry" />
-                    <mat-hint>Opcional · alerta 7 días antes</mat-hint>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Email de contacto</mat-label>
-                    <input matInput type="email" [formControl]="contactEmail" placeholder="devops@empresa.com" />
-                    <mat-hint>Alertas de expiración y fallos de sync</mat-hint>
-                  </mat-form-field>
-                </div>
-              } @else {
-                <div class="gh-acc-demo-banner" role="status">
-                  <mat-icon>science</mat-icon>
-                  <div>
-                    <strong>Modo demostración</strong>
-                    <p>Sin PAT real se cargarán repos, Actions y webhooks simulados de cloudops-org.</p>
-                  </div>
-                </div>
-              }
-              <mat-checkbox [formControl]="useDemoData">Usar datos demo (sin token real)</mat-checkbox>
+                <mat-form-field appearance="outline">
+                  <mat-label>Email de contacto</mat-label>
+                  <input matInput type="email" [formControl]="contactEmail" placeholder="devops@empresa.com" />
+                  <mat-hint>Alertas de expiración y fallos de sync</mat-hint>
+                </mat-form-field>
+              </div>
             </section>
 
             <section class="gh-acc-section">
@@ -430,15 +419,14 @@ export class GithubAccountDialogComponent {
   readonly label = new FormControl('GitHub producción', { nonNullable: true, validators: [Validators.required] })
   readonly environment = new FormControl<'production' | 'staging' | 'development'>('production', { nonNullable: true })
   readonly accountType = new FormControl<GithubAccountType>('organization', { nonNullable: true })
-  readonly username = new FormControl('cloudops-demo', { nonNullable: true, validators: [Validators.required] })
+  readonly username = new FormControl('', { nonNullable: true, validators: [Validators.required] })
   readonly organization = new FormControl('cloudops-org', { nonNullable: true })
   readonly description = new FormControl('', { nonNullable: true })
   readonly authMethod = new FormControl<GithubAuthMethod>('pat-fine-grained', { nonNullable: true })
   readonly tokenName = new FormControl('cloudops-prod-pat', { nonNullable: true })
-  readonly token = new FormControl('', { nonNullable: true })
+  readonly token = new FormControl('', { nonNullable: true, validators: [Validators.required] })
   readonly tokenExpiry = new FormControl('', { nonNullable: true })
   readonly contactEmail = new FormControl('', { nonNullable: true })
-  readonly useDemoData = new FormControl(true, { nonNullable: true })
   readonly autoSync = new FormControl(true, { nonNullable: true })
   readonly syncInterval = new FormControl<'15m' | '1h' | '6h' | 'manual'>('1h', { nonNullable: true })
   readonly repoScope = new FormControl<'all' | 'organization' | 'selected'>('organization', { nonNullable: true })
@@ -460,9 +448,6 @@ export class GithubAccountDialogComponent {
   })
   private readonly authMethodSig = toSignal(this.authMethod.valueChanges.pipe(startWith(this.authMethod.value)), {
     initialValue: this.authMethod.value,
-  })
-  private readonly useDemoSig = toSignal(this.useDemoData.valueChanges.pipe(startWith(this.useDemoData.value)), {
-    initialValue: this.useDemoData.value,
   })
   private readonly autoSyncSig = toSignal(this.autoSync.valueChanges.pipe(startWith(this.autoSync.value)), {
     initialValue: this.autoSync.value,
@@ -520,7 +505,7 @@ export class GithubAccountDialogComponent {
       typeLabel: GITHUB_ACCOUNT_TYPES.find((t) => t.value === type)?.label ?? type,
       organization: this.showOrganization() ? this.organization.value : undefined,
       environmentLabel: envLabels[this.environment.value],
-      authLabel: this.useDemoSig() ? 'Demo (sin token)' : auth,
+      authLabel: auth,
       scopeCount: this.selectedScopes().length,
       syncLabel: sync,
     }
@@ -546,7 +531,7 @@ export class GithubAccountDialogComponent {
   canSubmit = (): boolean => {
     if (this.label.invalid || this.username.invalid) return false
     if (this.showOrganization() && !this.organization.value.trim()) return false
-    if (!this.useDemoData.value && !this.token.value.trim()) return false
+    if (!this.token.value.trim()) return false
     return true
   }
 
@@ -582,7 +567,7 @@ export class GithubAccountDialogComponent {
     const result: GithubAccountFormResult = {
       label: this.label.value.trim(),
       username: this.username.value.trim(),
-      token: this.useDemoData.value ? undefined : this.token.value.trim() || undefined,
+      token: this.token.value.trim(),
       accountType: this.accountType.value,
       organization: this.showOrganization() ? this.organization.value.trim() : undefined,
       authMethod: this.authMethod.value,
@@ -598,7 +583,6 @@ export class GithubAccountDialogComponent {
       webhookEvents: this.selectedEvents(),
       description: this.description.value.trim() || undefined,
       contactEmail: this.contactEmail.value.trim() || undefined,
-      useDemoData: this.useDemoData.value,
       validateBeforeSave: this.validateBeforeSave.value,
       syncOnConnect: this.syncOnConnect.value,
     }

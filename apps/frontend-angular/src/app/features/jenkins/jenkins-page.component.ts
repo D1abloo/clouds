@@ -63,7 +63,7 @@ import { jenkinsSectionToTab } from './jenkins.models'
       } @else if (page.error()) {
         <app-error-state [message]="page.error()!" (retry)="load()" />
       } @else if (requiresJenkinsConfig()) {
-        <app-connection-required module="Jenkins" />
+        <app-connection-required moduleId="jenkins" />
       } @else if (inventory()) {
         @let inv = inventory()!;
         <app-jenkins-overview

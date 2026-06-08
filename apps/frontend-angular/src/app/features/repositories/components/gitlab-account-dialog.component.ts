@@ -82,18 +82,13 @@ import {
 
             <section class="gl-acc-section">
               <h3><mat-icon>key</mat-icon> Token</h3>
-              @if (!useDemoData.value) {
-                <mat-form-field appearance="outline" class="full">
-                  <mat-label>Personal Access Token</mat-label>
-                  <input matInput [formControl]="token" type="password" autocomplete="off" placeholder="glpat-…" />
-                </mat-form-field>
-              } @else {
-                <div class="gl-acc-demo-banner">
-                  <mat-icon>science</mat-icon>
-                  <p>Modo demo — proyectos simulados de cloudops-platform y release-eng</p>
-                </div>
-              }
-              <mat-checkbox [formControl]="useDemoData">Usar datos demo (sin token)</mat-checkbox>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Personal Access Token</mat-label>
+                <input matInput [formControl]="token" type="password" autocomplete="off" placeholder="glpat-…" />
+                @if (token.invalid && token.touched) {
+                  <mat-error>Token obligatorio</mat-error>
+                }
+              </mat-form-field>
             </section>
 
             <section class="gl-acc-section">
@@ -207,8 +202,7 @@ export class GitlabAccountDialogComponent {
   readonly hostUrl = new FormControl('https://gitlab.com', { nonNullable: true })
   readonly accountType = new FormControl<'personal' | 'group' | 'self-hosted'>('group', { nonNullable: true })
   readonly groupPath = new FormControl('cloudops-platform', { nonNullable: true })
-  readonly token = new FormControl('', { nonNullable: true })
-  readonly useDemoData = new FormControl(true, { nonNullable: true })
+  readonly token = new FormControl('', { nonNullable: true, validators: [Validators.required] })
   readonly projectScope = new FormControl<'all' | 'group' | 'selected'>('group', { nonNullable: true })
   readonly syncOnConnect = new FormControl(true, { nonNullable: true })
   readonly autoSync = new FormControl(true, { nonNullable: true })
@@ -254,7 +248,7 @@ export class GitlabAccountDialogComponent {
   canSubmit = (): boolean =>
     this.label.valid &&
     this.username.valid &&
-    (this.useDemoData.value || !!this.token.value.trim())
+    !!this.token.value.trim()
 
   isScopeChecked = (id: string): boolean => this.selectedScopes().includes(id)
 
@@ -269,7 +263,7 @@ export class GitlabAccountDialogComponent {
     this.ref.close({
       label: this.label.value.trim(),
       username: this.username.value.trim(),
-      token: this.useDemoData.value ? undefined : this.token.value.trim(),
+      token: this.token.value.trim(),
       hostUrl: this.hostUrl.value.trim(),
       accountType: this.accountType.value,
       groupPath: this.showGroup() ? this.groupPath.value.trim() : undefined,
@@ -278,7 +272,7 @@ export class GitlabAccountDialogComponent {
       autoSync: this.autoSync.value,
       syncOnConnect: this.syncOnConnect.value,
       validateBeforeSave: this.validateBeforeSave.value,
-      useDemoData: this.useDemoData.value,
+      useDemoData: false,
     })
   }
 }

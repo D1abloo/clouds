@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core'
 import { delay, finalize, of, timeout } from 'rxjs'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
-import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
+import { ModuleOptionalCtaComponent } from '../../shared/components/module-optional-cta/module-optional-cta.component'
 import { ProModeService } from '../../core/services/pro-mode.service'
+import { shouldShowOptionalCloudCta } from '../../core/routing/module-requirements.util'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import type { PlatformModuleConfig } from '../../shared/platform/platform-module.models'
 import { InfrastructureActionService } from './infrastructure-action.service'
 import { InfrastructureWorkspaceComponent } from './infrastructure-workspace.component'
@@ -13,13 +15,14 @@ import { platformConfigToWorkspace } from './infrastructure-workspace.util'
   selector: 'app-infrastructure-module-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [InfrastructureWorkspaceComponent, ErrorStateComponent, ConnectionRequiredComponent],
+  imports: [InfrastructureWorkspaceComponent, ErrorStateComponent, ModuleOptionalCtaComponent],
   template: `
     @if (error()) {
       <app-error-state [message]="error()!" (retry)="load()" />
-    } @else if (pro.proMode()) {
-      <app-connection-required [module]="config().title" />
     } @else {
+      @if (showCloudCta()) {
+        <app-module-optional-cta />
+      }
       <app-infrastructure-workspace
         [config]="workspace()"
         [loading]="loading()"
@@ -37,7 +40,21 @@ export class InfrastructureModulePageComponent implements OnInit {
   readonly loading = signal(true)
   readonly error = signal<string | null>(null)
 
-  readonly workspace = computed(() => platformConfigToWorkspace(this.config()))
+  readonly workspace = computed(() => {
+    const cfg = this.config()
+    if (!this.pro.proMode() || allowsDemoDataFrom(this.pro)) {
+      return platformConfigToWorkspace(cfg)
+    }
+    return platformConfigToWorkspace({
+      ...cfg,
+      summaryCards: [],
+      tabs: cfg.tabs.map((tab) => ({ ...tab, rows: [] })),
+    })
+  })
+
+  readonly showCloudCta = computed(
+    () => this.pro.proMode() && shouldShowOptionalCloudCta(this.config().id),
+  )
 
   ngOnInit(): void {
     this.load()

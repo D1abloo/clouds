@@ -22,7 +22,8 @@ import {
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { ToastService } from '../../core/services/toast.service'
-import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
+import { ModuleOptionalCtaComponent } from '../../shared/components/module-optional-cta/module-optional-cta.component'
+import { getInternalEmptyCopy } from '../../core/routing/module-requirements.util'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import {
   EXPLORER_RESOURCES_RICH,
@@ -43,7 +44,7 @@ const nowTime = (): string =>
     PageHeaderComponent,
     LoadingStateComponent,
     EmptyStateComponent,
-    ConnectionRequiredComponent,
+    ModuleOptionalCtaComponent,
     StatusBadgeComponent,
     BrandLogoComponent,
     MatFormFieldModule,
@@ -69,9 +70,10 @@ const nowTime = (): string =>
 
       @if (loading()) {
         <app-loading-state message="Indexando recursos multi-cloud…" />
-      } @else if (pro.proMode()) {
-        <app-connection-required module="Explorador de recursos" />
       } @else {
+        @if (pro.proMode() && !resources.length) {
+          <app-module-optional-cta />
+        }
         <div class="exp-providers" role="list" aria-label="Filtrar por proveedor">
           @for (p of providerPills; track p.key) {
             <button
@@ -182,7 +184,11 @@ const nowTime = (): string =>
         }
 
         @if (filtered().length === 0) {
-          <app-empty-state title="Sin resultados" description="Prueba con otros filtros o términos de búsqueda." icon="search_off" />
+          <app-empty-state
+            [title]="resources.length ? 'Sin resultados' : emptyCopy().title"
+            [description]="resources.length ? 'Prueba con otros filtros o términos de búsqueda.' : emptyCopy().message"
+            icon="search_off"
+          />
         } @else {
           <section class="exp-table-section">
             <header class="exp-table-head">
@@ -494,6 +500,7 @@ export class ResourceExplorerComponent implements OnInit {
   private readonly dialog = inject(MatDialog)
   readonly pro = inject(ProModeService)
 
+  readonly emptyCopy = getInternalEmptyCopy('resource-explorer')
   readonly resources = allowsDemoDataFrom(this.pro) ? EXPLORER_RESOURCES_RICH : []
   readonly typeFilters = EXPLORER_TYPE_FILTERS
 
