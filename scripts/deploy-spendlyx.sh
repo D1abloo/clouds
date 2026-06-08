@@ -13,7 +13,7 @@ fi
 
 echo "==> Sincronizando código a ${REMOTE_HOST}:${REMOTE_DIR}"
 
-rsync -az \
+rsync -az --delete \
   --exclude '.git' \
   --exclude 'node_modules' \
   --exclude 'dist' \
