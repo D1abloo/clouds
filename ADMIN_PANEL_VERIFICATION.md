@@ -1,6 +1,6 @@
 # Informe de verificación — Panel Admin CloudOps
 
-> Generado: 2026-06-08T21:12:55.873Z
+> Generado: 2026-06-08T21:13:56.691Z
 > Recomendación final: **READY_FOR_PRO**
 
 ## Resumen ejecutivo
@@ -208,9 +208,9 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 63 modelos Prisma, auth J
 
 ## Calidad (checks)
 
-- `npm run build -w apps/frontend-angular`: ✅ OK (16217ms)
-- `npm run build -w apps/backend-api`: ✅ OK (6508ms)
-- `npm test -w apps/backend-api`: ✅ OK (6145ms)
+- `npm run build -w apps/frontend-angular`: ✅ OK (13314ms)
+- `npm run build -w apps/backend-api`: ✅ OK (5916ms)
+- `npm test -w apps/backend-api`: ✅ OK (6014ms)
 
 ## Elementos faltantes
 
