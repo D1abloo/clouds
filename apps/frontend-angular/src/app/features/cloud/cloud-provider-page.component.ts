@@ -29,6 +29,8 @@ import { CloudServiceInvoiceDialogComponent } from './cloud-service-invoice-dial
 import { CloudComputeDetailDialogComponent } from './cloud-compute-detail-dialog.component'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { InstancesService } from '../../core/services/instances.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from '../cloud-accounts/cloud-account-form-dialog.component'
@@ -2068,6 +2070,7 @@ export class CloudProviderPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly accountsSvc = inject(CloudAccountsService)
   private readonly instancesSvc = inject(InstancesService)
+  private readonly pro = inject(ProModeService)
   private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
@@ -2418,6 +2421,7 @@ export class CloudProviderPageComponent implements OnInit {
               hasCredentials: (a as { hasCredentials?: boolean }).hasCredentials,
             })),
           ),
+          allowsDemoDataFrom(this.pro),
         ),
       )
       of(true)
@@ -2444,7 +2448,9 @@ export class CloudProviderPageComponent implements OnInit {
       .syncAll()
       .pipe(
         catchError(() => {
-          this.demo.simulate(`Sync ${this.cfg().title}`, 900, 'Inventario actualizado').subscribe()
+          if (allowsDemoDataFrom(this.pro)) {
+            this.demo.simulate(`Sync ${this.cfg().title}`, 900, 'Inventario actualizado').subscribe()
+          }
           return of({ accounts: 0, instances: 0 })
         }),
       )

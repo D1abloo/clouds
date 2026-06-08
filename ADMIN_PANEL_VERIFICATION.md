@@ -1,6 +1,6 @@
 # Informe de verificación — Panel Admin CloudOps
 
-> Generado: 2026-06-08T20:11:05.825Z
+> Generado: 2026-06-08T20:15:34.092Z
 > Recomendación final: **READY_FOR_PRO**
 
 ## Resumen ejecutivo
@@ -26,8 +26,8 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth J
 | Resumen | Catálogo | `/runbooks` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Resumen | Tablero | `/dashboard` | OK | OK | OK | WARN | Component path not resolved |
 | Resumen | Centro de mando | `/command-center` | OK | OK | OK | OK | Estado configuración requerida en PRO |
-| Resumen | Explorador de recursos | `/resource-explorer` | OK | OK | OK | OK | Ruta registrada en area-nav |
-| Resumen | Mapa de topología | `/topology-map` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Resumen | Explorador de recursos | `/resource-explorer` | OK | OK | OK | OK | Estado configuración requerida en PRO |
+| Resumen | Mapa de topología | `/topology-map` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Resumen | Centro de salud | `/health-center` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Nubes | AWS | `/cloud/aws/overview` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Nubes | GCP | `/cloud/gcp/overview` | OK | OK | OK | OK | Ruta registrada en area-nav |
@@ -76,7 +76,7 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth J
 | Administración | Webhooks | `/admin/webhooks` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Administración | Configuración | `/settings/general` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Administración | Modo demo | `/admin/demo-mode` | OK | OK | OK | OK | Estado configuración requerida en PRO |
-| Administración | Asistente IA | `/ai-assistant` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Administración | Asistente IA | `/ai-assistant` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 
 ## API y backend
 
@@ -202,9 +202,9 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth J
 
 ## Calidad (checks)
 
-- `npm run build -w apps/frontend-angular`: ✅ OK (12999ms)
-- `npm run build -w apps/backend-api`: ✅ OK (5869ms)
-- `npm test -w apps/backend-api`: ✅ OK (6022ms)
+- `npm run build -w apps/frontend-angular`: ✅ OK (16830ms)
+- `npm run build -w apps/backend-api`: ✅ OK (6255ms)
+- `npm test -w apps/backend-api`: ✅ OK (5929ms)
 
 ## Elementos faltantes
 

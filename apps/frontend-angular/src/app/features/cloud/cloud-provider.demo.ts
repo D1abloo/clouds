@@ -1380,20 +1380,27 @@ export const buildCloudSnapshot = (
   slug: CloudSlug,
   apiInstances: Instance[] = [],
   apiAccounts: CloudAccountRow[] = [],
+  allowDemo = true,
 ): CloudSnapshot => {
   const cfg = CLOUD_PROVIDER_CONFIGS[slug]
   const seed = SEEDS[slug]
   const provider = cfg.provider
 
   const fromApi = apiInstances.filter((i) => i.provider === provider).map((inst, idx) => instanceToRow(inst, idx, slug))
-  const computeRows = fromApi.length ? [...fromApi, ...seed.computeRows.slice(0, 2)] : seed.computeRows
+  const computeRows = fromApi.length
+    ? allowDemo
+      ? [...fromApi, ...seed.computeRows.slice(0, 2)]
+      : fromApi
+    : allowDemo
+      ? seed.computeRows
+      : []
 
-  let accountRows = seed.accountRows
+  let accountRows = allowDemo ? seed.accountRows : []
   if (apiAccounts.length) {
     accountRows = apiAccounts.map((a, i) => ({
-      ...seed.accountRows[i % seed.accountRows.length],
+      ...(allowDemo ? seed.accountRows[i % seed.accountRows.length] : {}),
       ...a,
-      id: a.id || seed.accountRows[i]?.id || `acc-${i}`,
+      id: a.id || (allowDemo ? seed.accountRows[i]?.id : undefined) || `acc-${i}`,
       instances: computeRows.filter((c) => c.account === a.name).length || a.instances,
     }))
   }
@@ -1404,70 +1411,98 @@ export const buildCloudSnapshot = (
   const stopped = enrichedCompute.filter((e) => e.status === 'STOPPED').length
   const monthlyCost =
     enrichedCompute.reduce((s, e) => s + e.monthlyCost, 0) +
-    seed.billingByService.reduce((s, b) => s + b.cost, 0) * 0.15
+    (allowDemo ? seed.billingByService.reduce((s, b) => s + b.cost, 0) * 0.15 : 0)
 
-  const billingByRegion = seed.regionList.map((r) => ({
-    region: r.code,
-    cost: r.cost,
-    share: Math.round((r.cost / Math.max(seed.regionList.reduce((s, x) => s + x.cost, 0), 1)) * 100),
-  }))
+  const billingByRegion = allowDemo
+    ? seed.regionList.map((r) => ({
+        region: r.code,
+        cost: r.cost,
+        share: Math.round((r.cost / Math.max(seed.regionList.reduce((s, x) => s + x.cost, 0), 1)) * 100),
+      }))
+    : []
 
   const roundedMonthly = Math.round(monthlyCost)
   const roundedForecast = Math.round(monthlyCost * 1.08)
   const dailyAvg = Math.round(monthlyCost / 30)
-  const billingByService = seed.billingByService.map((r, i) => enrichBillingRow(r, i, slug))
+  const billingByService = allowDemo
+    ? seed.billingByService.map((r, i) => enrichBillingRow(r, i, slug))
+    : []
 
   return {
     accounts: accountRows.length,
     instances: computeRows.length,
     running,
     stopped,
-    regions: seed.regionList.length,
-    networkCount: seed.networkList.length,
+    regions: allowDemo ? seed.regionList.length : 0,
+    networkCount: allowDemo ? seed.networkList.length : 0,
     monthlyCost: roundedMonthly,
     forecast: roundedForecast,
-    alerts: ALERTS_BY_SLUG[slug].length,
+    alerts: allowDemo ? ALERTS_BY_SLUG[slug].length : 0,
     avgCpu: Math.round(enrichedCompute.reduce((s, e) => s + e.cpu, 0) / Math.max(enrichedCompute.length, 1)),
     avgRam: Math.round(enrichedCompute.reduce((s, e) => s + e.ram, 0) / Math.max(enrichedCompute.length, 1)),
     lastSync: fmtTime(8),
     accountRows: accountRows.map((a, i) => enrichAccount(a, i, slug)),
     computeRows: enrichedCompute,
-    networkList: seed.networkList.map((n, i) => enrichNetworkRow(n, i, slug)),
-    securityGroups: seed.securityGroups.map(enrichSecurityRow),
-    loadBalancers: seed.loadBalancers.map(enrichLbRow),
+    networkList: allowDemo ? seed.networkList.map((n, i) => enrichNetworkRow(n, i, slug)) : [],
+    securityGroups: allowDemo ? seed.securityGroups.map(enrichSecurityRow) : [],
+    loadBalancers: allowDemo ? seed.loadBalancers.map(enrichLbRow) : [],
     billingByService,
     billingByRegion,
     billingTrends: buildBillingTrends(
       roundedMonthly,
       roundedForecast,
-      seed.billingSummary.previousMonth,
+      allowDemo ? seed.billingSummary.previousMonth : 0,
       dailyAvg,
       billingByService,
     ),
-    metrics: seed.metrics.map((m) => enrichMetric(m, slug)),
-    activity: seed.activity.map(enrichActivity),
-    regionList: seed.regionList.map((r, i) =>
-      enrichRegion(
-        {
-          ...r,
-          instances: enrichedCompute.filter((c) => c.region === r.code).length || r.instances,
+    metrics: allowDemo ? seed.metrics.map((m) => enrichMetric(m, slug)) : [],
+    activity: allowDemo ? seed.activity.map(enrichActivity) : [],
+    regionList: allowDemo
+      ? seed.regionList.map((r, i) =>
+          enrichRegion(
+            {
+              ...r,
+              instances: enrichedCompute.filter((c) => c.region === r.code).length || r.instances,
+            },
+            i,
+          ),
+        )
+      : [],
+    overview: allowDemo
+      ? OVERVIEW_BY_SLUG[slug]
+      : {
+          complianceScore: 0,
+          uptimePercent: 0,
+          openIncidents: 0,
+          monitoringCoverage: 0,
+          costVariance: 0,
+          lastAudit: '—',
+          managedResources: 0,
+          backupCoverage: 0,
         },
-        i,
-      ),
-    ),
-    overview: OVERVIEW_BY_SLUG[slug],
-    billingSummary: {
-      ...seed.billingSummary,
-      previousMonth: seed.billingSummary.previousMonth,
-      dailyAverage: dailyAvg,
-    },
+    billingSummary: allowDemo
+      ? {
+          ...seed.billingSummary,
+          previousMonth: seed.billingSummary.previousMonth,
+          dailyAverage: dailyAvg,
+        }
+      : {
+          budget: 0,
+          credits: 0,
+          previousMonth: 0,
+          dailyAverage: dailyAvg,
+          topAccount: '—',
+          anomalies: 0,
+          reservedSavings: 0,
+          invoiceDate: '—',
+        },
     networkSummary: {
-      totalSubnets: seed.networkList.reduce((s, n) => s + n.subnets, 0),
-      totalSgRules: seed.securityGroups.reduce((s, g) => s + g.inbound + g.outbound, 0),
-      publicExposure: seed.securityGroups.filter((g) => g.risk === 'high').length,
-      peeringCount: seed.networkList.reduce((s, n) => s + (n.peerings ?? 0), 0),
-      natGateways: seed.networkList.reduce((s, n) => s + (n.natGateways ?? 0), 0),
-      dnsZones: 4,
+      totalSubnets: allowDemo ? seed.networkList.reduce((s, n) => s + n.subnets, 0) : 0,
+      totalSgRules: allowDemo ? seed.securityGroups.reduce((s, g) => s + g.inbound + g.outbound, 0) : 0,
+      publicExposure: allowDemo ? seed.securityGroups.filter((g) => g.risk === 'high').length : 0,
+      peeringCount: allowDemo ? seed.networkList.reduce((s, n) => s + (n.peerings ?? 0), 0) : 0,
+      natGateways: allowDemo ? seed.networkList.reduce((s, n) => s + (n.natGateways ?? 0), 0) : 0,
+      dnsZones: allowDemo ? 4 : 0,
     },
     computeSummary: {
       healthy: enrichedCompute.filter((e) => e.health === 'healthy').length,
@@ -1475,11 +1510,11 @@ export const buildCloudSnapshot = (
       critical: enrichedCompute.filter((e) => e.health === 'critical').length,
       totalVcpus: enrichedCompute.reduce((s, e) => s + (e.vcpus ?? 0), 0),
       totalMemoryGb: enrichedCompute.reduce((s, e) => s + (e.memoryGb ?? 0), 0),
-      avgUptime: '99.91%',
-      spotInstances: enrichedCompute.filter((_, i) => i % 5 === 0).length,
+      avgUptime: allowDemo ? '99.91%' : '—',
+      spotInstances: allowDemo ? enrichedCompute.filter((_, i) => i % 5 === 0).length : 0,
       onDemandCost: Math.round(monthlyCost * 0.62),
     },
-    alertItems: ALERTS_BY_SLUG[slug],
+    alertItems: allowDemo ? ALERTS_BY_SLUG[slug] : [],
   }
 }
 

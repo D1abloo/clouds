@@ -4,6 +4,8 @@ import { bindSectionTabs } from '../../core/routing/section-tab.util'
 import { MatDialog, MatDialogModule } from '@angular/material/dialog'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { VpsService } from '../../core/services/vps.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { InfrastructureActionService } from './infrastructure-action.service'
@@ -45,6 +47,7 @@ type DemoRow = Record<string, unknown>
 })
 export class VpsPageComponent implements OnInit {
   private readonly service = inject(VpsService)
+  private readonly pro = inject(ProModeService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly infraActions = inject(InfrastructureActionService)
@@ -56,10 +59,10 @@ export class VpsPageComponent implements OnInit {
   readonly page = createPageLoader(true)
   readonly tabIndex = signal(0)
   readonly hosts = signal<VpsHostRow[]>([])
-  readonly portCatalog = signal<DemoRow[]>([...VPS_DEMO_PORTS])
-  readonly serviceCatalog = signal<DemoRow[]>([...VPS_DEMO_SERVICES])
-  readonly auditLog = signal<DemoRow[]>([...VPS_DEMO_AUDIT])
-  readonly sshKeys = signal([...VPS_DEMO_SSH_KEYS])
+  readonly portCatalog = signal<DemoRow[]>(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_PORTS] : [])
+  readonly serviceCatalog = signal<DemoRow[]>(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_SERVICES] : [])
+  readonly auditLog = signal<DemoRow[]>(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_AUDIT] : [])
+  readonly sshKeys = signal(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_SSH_KEYS] : [])
 
   readonly workspace = computed(() =>
     buildVpsWorkspace(
@@ -90,23 +93,28 @@ export class VpsPageComponent implements OnInit {
   }
 
   load = (): void => {
+    const allowDemo = allowsDemoDataFrom(this.pro)
     const providers = ['Hetzner', 'OVH', 'DigitalOcean', 'Bare metal']
     const locations = ['fra1', 'ams3', 'nyc1', 'mad1', 'lon1']
     this.page.run(this.service.list(), {
       onSuccess: (data) =>
         this.hosts.set(
-          data.map((h, i) => ({
-            ...h,
-            user: 'ubuntu',
-            os: i % 3 === 0 ? 'Ubuntu 22.04 LTS' : i % 3 === 1 ? 'Debian 12' : 'Rocky Linux 9',
-            provider: providers[i % providers.length],
-            location: locations[i % locations.length],
-            docker: i % 2 === 0,
-            kubernetes: i < 3,
-            cpu: 20 + (i * 7) % 60,
-            ram: 40 + (i * 11) % 50,
-            disk: 55 + (i * 5) % 30,
-          })),
+          data.map((h, i) =>
+            allowDemo
+              ? {
+                  ...h,
+                  user: 'ubuntu',
+                  os: i % 3 === 0 ? 'Ubuntu 22.04 LTS' : i % 3 === 1 ? 'Debian 12' : 'Rocky Linux 9',
+                  provider: providers[i % providers.length],
+                  location: locations[i % locations.length],
+                  docker: i % 2 === 0,
+                  kubernetes: i < 3,
+                  cpu: 20 + (i * 7) % 60,
+                  ram: 40 + (i * 11) % 50,
+                  disk: 55 + (i * 5) % 30,
+                }
+              : { ...h },
+          ),
         ),
       errorMessage: 'Error al cargar servidores VPS',
     })

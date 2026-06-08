@@ -1,7 +1,9 @@
+import { emptyGithubInventory } from '../../../core/demo/pro-empty.data'
 import { CLIENT_DEMO_GITHUB_REPOS } from './github-demo-catalog'
 
 /** Resumen inventario GitHub cuando el API no responde */
-export const buildGithubInventoryFallback = (): Record<string, unknown> => {
+export const buildGithubInventoryFallback = (allowDemo = true): Record<string, unknown> => {
+  if (!allowDemo) return emptyGithubInventory()
   const n = CLIENT_DEMO_GITHUB_REPOS.length
   return {
     connected: true,

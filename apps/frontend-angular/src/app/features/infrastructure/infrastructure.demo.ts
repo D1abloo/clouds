@@ -122,37 +122,81 @@ export const VPS_DEMO_AUDIT = [
   { user: 'admin@cloudops', host: 'vps-db-primary', action: 'sudo systemctl restart postgresql', duration: '1 min', at: infraTs(240), status: 'warning' },
 ]
 
-export const mergeDockerPageData = (d: Record<string, unknown>): Record<string, unknown> => ({
-  hosts: d['hosts'] ?? DOCKER_DEMO_HOSTS.length,
-  running: d['running'] ?? 22,
-  stopped: d['stopped'] ?? 4,
-  images: d['images'] ?? DOCKER_DEMO_IMAGES.length,
-  volumes: d['volumes'] ?? DOCKER_DEMO_VOLUMES.length,
-  networks: d['networks'] ?? DOCKER_DEMO_NETWORKS.length,
-  containers: d['containers'] ?? 26,
-  items: hasRows(d['items']) ? d['items'] : DOCKER_DEMO_CONTAINERS,
-  hostRows: hasRows(d['hostRows']) ? d['hostRows'] : DOCKER_DEMO_HOSTS,
-  imageRows: hasRows(d['imageRows']) ? d['imageRows'] : DOCKER_DEMO_IMAGES,
-  networkRows: hasRows(d['networkRows']) ? d['networkRows'] : DOCKER_DEMO_NETWORKS,
-  volumeRows: hasRows(d['volumeRows']) ? d['volumeRows'] : DOCKER_DEMO_VOLUMES,
+const emptyDockerPageData = (): Record<string, unknown> => ({
+  hosts: 0,
+  running: 0,
+  stopped: 0,
+  images: 0,
+  volumes: 0,
+  networks: 0,
+  containers: 0,
+  items: [],
+  hostRows: [],
+  imageRows: [],
+  networkRows: [],
+  volumeRows: [],
 })
 
-export const mergeKubernetesPageData = (d: Record<string, unknown>): Record<string, unknown> => ({
+const emptyKubernetesPageData = (d: Record<string, unknown>): Record<string, unknown> => ({
   ...d,
-  clusters: d['clusters'] ?? K8S_DEMO_CLUSTERS.length,
-  namespaceCount: d['namespaceCount'] ?? K8S_DEMO_NAMESPACES.length,
-  podCount: d['podCount'] ?? 128,
-  deployments: d['deployments'] ?? K8S_DEMO_DEPLOYMENTS.length,
-  services: d['services'] ?? K8S_DEMO_SERVICES.length,
-  podsWithError: d['podsWithError'] ?? 2,
-  podItems: hasRows(d['podItems']) ? d['podItems'] : K8S_DEMO_PODS,
-  clusterRows: hasRows(d['clusterRows']) ? d['clusterRows'] : K8S_DEMO_CLUSTERS,
-  nodeRows: hasRows(d['nodeRows']) ? d['nodeRows'] : K8S_DEMO_NODES,
-  namespaceRows: hasRows(d['namespaceRows']) ? d['namespaceRows'] : K8S_DEMO_NAMESPACES,
-  deploymentRows: hasRows(d['deploymentRows']) ? d['deploymentRows'] : K8S_DEMO_DEPLOYMENTS,
-  serviceRows: hasRows(d['serviceRows']) ? d['serviceRows'] : K8S_DEMO_SERVICES,
-  eventRows: hasRows(d['eventRows']) ? d['eventRows'] : K8S_DEMO_EVENTS,
+  clusters: 0,
+  namespaceCount: 0,
+  podCount: 0,
+  deployments: 0,
+  services: 0,
+  podsWithError: 0,
+  podItems: [],
+  clusterRows: [],
+  nodeRows: [],
+  namespaceRows: [],
+  deploymentRows: [],
+  serviceRows: [],
+  eventRows: [],
 })
+
+export const mergeDockerPageData = (
+  d: Record<string, unknown>,
+  allowDemo = true,
+): Record<string, unknown> => {
+  if (!allowDemo) return { ...emptyDockerPageData(), ...d, items: d['items'] ?? [], hostRows: d['hostRows'] ?? [] }
+  return {
+    hosts: d['hosts'] ?? DOCKER_DEMO_HOSTS.length,
+    running: d['running'] ?? 22,
+    stopped: d['stopped'] ?? 4,
+    images: d['images'] ?? DOCKER_DEMO_IMAGES.length,
+    volumes: d['volumes'] ?? DOCKER_DEMO_VOLUMES.length,
+    networks: d['networks'] ?? DOCKER_DEMO_NETWORKS.length,
+    containers: d['containers'] ?? 26,
+    items: hasRows(d['items']) ? d['items'] : DOCKER_DEMO_CONTAINERS,
+    hostRows: hasRows(d['hostRows']) ? d['hostRows'] : DOCKER_DEMO_HOSTS,
+    imageRows: hasRows(d['imageRows']) ? d['imageRows'] : DOCKER_DEMO_IMAGES,
+    networkRows: hasRows(d['networkRows']) ? d['networkRows'] : DOCKER_DEMO_NETWORKS,
+    volumeRows: hasRows(d['volumeRows']) ? d['volumeRows'] : DOCKER_DEMO_VOLUMES,
+  }
+}
+
+export const mergeKubernetesPageData = (
+  d: Record<string, unknown>,
+  allowDemo = true,
+): Record<string, unknown> => {
+  if (!allowDemo) return emptyKubernetesPageData(d)
+  return {
+    ...d,
+    clusters: d['clusters'] ?? K8S_DEMO_CLUSTERS.length,
+    namespaceCount: d['namespaceCount'] ?? K8S_DEMO_NAMESPACES.length,
+    podCount: d['podCount'] ?? 128,
+    deployments: d['deployments'] ?? K8S_DEMO_DEPLOYMENTS.length,
+    services: d['services'] ?? K8S_DEMO_SERVICES.length,
+    podsWithError: d['podsWithError'] ?? 2,
+    podItems: hasRows(d['podItems']) ? d['podItems'] : K8S_DEMO_PODS,
+    clusterRows: hasRows(d['clusterRows']) ? d['clusterRows'] : K8S_DEMO_CLUSTERS,
+    nodeRows: hasRows(d['nodeRows']) ? d['nodeRows'] : K8S_DEMO_NODES,
+    namespaceRows: hasRows(d['namespaceRows']) ? d['namespaceRows'] : K8S_DEMO_NAMESPACES,
+    deploymentRows: hasRows(d['deploymentRows']) ? d['deploymentRows'] : K8S_DEMO_DEPLOYMENTS,
+    serviceRows: hasRows(d['serviceRows']) ? d['serviceRows'] : K8S_DEMO_SERVICES,
+    eventRows: hasRows(d['eventRows']) ? d['eventRows'] : K8S_DEMO_EVENTS,
+  }
+}
 
 export const INFRA_NETWORK_CONFIG: PlatformModuleConfig = {
   id: 'network',

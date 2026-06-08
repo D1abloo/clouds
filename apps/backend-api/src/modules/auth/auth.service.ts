@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { LoginDto, RegisterDto } from './dto/login.dto'
 import { AuditService } from '../audit/audit.service'
+import { resolveUserPermissions } from '../../common/rbac/rbac.resolve'
 
 @Injectable()
 export class AuthService {
@@ -33,7 +34,8 @@ export class AuthService {
     }
 
     const roles = user.userRoles.map((ur) => ur.role.name)
-    const payload = { sub: user.id, email: user.email, roles }
+    const permissions = await resolveUserPermissions(this.prisma, user.id)
+    const payload = { sub: user.id, email: user.email, roles, permissions }
 
     await this.audit.create({
       userId: user.id,
@@ -44,7 +46,7 @@ export class AuthService {
 
     return {
       accessToken: this.jwt.sign(payload),
-      user: { id: user.id, email: user.email, name: user.name, roles },
+      user: { id: user.id, email: user.email, name: user.name, roles, permissions },
     }
   }
 
@@ -55,7 +57,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12)
-    const viewerRole = await this.prisma.role.findUnique({ where: { name: 'viewer' } })
+    const viewerRole = await this.prisma.role.findUnique({ where: { name: 'solo_lectura' } })
 
     const user = await this.prisma.user.create({
       data: {
@@ -88,10 +90,12 @@ export class AuthService {
       include: { userRoles: { include: { role: true } } },
     })
     if (!user) return null
+    const permissions = await resolveUserPermissions(this.prisma, user.id)
     return {
       sub: user.id,
       email: user.email,
       roles: user.userRoles.map((ur) => ur.role.name),
+      permissions,
     }
   }
 
@@ -137,7 +141,7 @@ export class AuthService {
     })
 
     if (!user) {
-      const viewerRole = await this.prisma.role.findUnique({ where: { name: 'viewer' } })
+      const viewerRole = await this.prisma.role.findUnique({ where: { name: 'solo_lectura' } })
       const passwordHash = await bcrypt.hash(`oauth-${provider}-${Date.now()}`, 12)
       user = await this.prisma.user.create({
         data: {
@@ -158,7 +162,8 @@ export class AuthService {
     })
 
     const roles = user.userRoles.map((ur) => ur.role.name)
-    const payload = { sub: user.id, email: user.email, roles }
+    const permissions = await resolveUserPermissions(this.prisma, user.id)
+    const payload = { sub: user.id, email: user.email, roles, permissions }
 
     await this.audit.create({
       userId: user.id,
@@ -170,7 +175,7 @@ export class AuthService {
 
     return {
       accessToken: this.jwt.sign(payload),
-      user: { id: user.id, email: user.email, name: user.name, roles },
+      user: { id: user.id, email: user.email, name: user.name, roles, permissions },
       provider,
     }
   }

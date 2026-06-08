@@ -1,5 +1,7 @@
-import { Injectable } from '@angular/core'
+import { Injectable, inject } from '@angular/core'
 import { Observable, of } from 'rxjs'
+import { ProModeService } from './pro-mode.service'
+import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 import {
   buildGitlabDemoBootstrap,
   CLIENT_DEMO_GITLAB_DEPLOYMENTS,
@@ -20,9 +22,22 @@ export type GitlabDemoState = ReturnType<typeof buildGitlabDemoBootstrap>
 
 @Injectable({ providedIn: 'root' })
 export class GitlabService {
+  private readonly pro = inject(ProModeService)
   private syncPermissions: GitlabSyncPermissionInput | null = null
 
+  private allowDemo = (): boolean => allowsDemoDataFrom(this.pro)
+
   connectDemo = (): Observable<GitlabDemoState & { message: string }> => {
+    if (!this.allowDemo()) {
+      const empty = buildGitlabDemoBootstrap()
+      return of({
+        ...empty,
+        account: { ...empty.account, status: 'disconnected', statusLabel: 'Sin conectar' },
+        projects: [],
+        groups: [],
+        message: 'Conecta GitLab en Configuración para usar esta integración en modo PRO',
+      })
+    }
     const state = buildGitlabDemoBootstrap()
     return of({
       ...state,
@@ -52,6 +67,7 @@ export class GitlabService {
   }
 
   projects = (): Observable<{ items: GitlabProject[] }> => {
+    if (!this.allowDemo()) return of({ items: [] })
     if (this.syncPermissions) {
       const { projects } = filterGitlabProjectsByPermissions(this.syncPermissions)
       return of({ items: projects.length ? projects : buildGitlabDemoBootstrap().projects })
@@ -60,21 +76,22 @@ export class GitlabService {
   }
 
   groups = (): Observable<{ items: GitlabGroup[] }> =>
-    of({ items: buildGitlabDemoBootstrap().groups })
+    of({ items: this.allowDemo() ? buildGitlabDemoBootstrap().groups : [] })
 
-  account = (): Observable<GitlabAccount> => of(buildGitlabDemoBootstrap().account)
+  account = (): Observable<GitlabAccount | null> =>
+    of(this.allowDemo() ? buildGitlabDemoBootstrap().account : null)
 
   mergeRequests = (): Observable<{ items: Record<string, unknown>[] }> =>
-    of({ items: CLIENT_DEMO_GITLAB_MRS })
+    of({ items: this.allowDemo() ? CLIENT_DEMO_GITLAB_MRS : [] })
 
   pipelines = (): Observable<{ items: Record<string, unknown>[] }> =>
-    of({ items: CLIENT_DEMO_GITLAB_PIPELINES })
+    of({ items: this.allowDemo() ? CLIENT_DEMO_GITLAB_PIPELINES : [] })
 
   webhooks = (): Observable<{ items: Record<string, unknown>[] }> =>
-    of({ items: CLIENT_DEMO_GITLAB_WEBHOOKS })
+    of({ items: this.allowDemo() ? CLIENT_DEMO_GITLAB_WEBHOOKS : [] })
 
   deployments = (): Observable<{ items: Record<string, unknown>[] }> =>
-    of({ items: CLIENT_DEMO_GITLAB_DEPLOYMENTS })
+    of({ items: this.allowDemo() ? CLIENT_DEMO_GITLAB_DEPLOYMENTS : [] })
 
   syncProjects = (
     override?: GitlabSyncPermissionInput,
@@ -87,6 +104,14 @@ export class GitlabService {
     lastSyncAt: string
     message: string
   }> => {
+    if (!this.allowDemo()) {
+      return of({
+        synced: 0,
+        projects: [],
+        lastSyncAt: new Date().toISOString(),
+        message: 'Configuración requerida. Conecta GitLab en Configuración.',
+      })
+    }
     const perms = override ?? this.syncPermissions ?? {
       scopes: ['api', 'read_repository', 'read_user'],
       projectScope: 'all' as const,
@@ -110,14 +135,17 @@ export class GitlabService {
   }
 
   validateAccount = (): Observable<{ valid: boolean; message: string }> =>
-    of({ valid: true, message: 'Token GitLab demo válido' })
+    of({
+      valid: this.allowDemo(),
+      message: this.allowDemo()
+        ? 'Token GitLab demo válido'
+        : 'Configuración requerida. Añade credenciales GitLab en Configuración.',
+    })
 
   deploymentLogs = (id: string): Observable<{ logs: string }> =>
     of({
-      logs: [
-        `[GitLab] Despliegue ${id}`,
-        '[OK] Pipeline deploy stage',
-        '[OK] Environment production actualizado',
-      ].join('\n'),
+      logs: this.allowDemo()
+        ? [`[GitLab] Despliegue ${id}`, '[OK] Pipeline deploy stage', '[OK] Environment production actualizado'].join('\n')
+        : 'Sin registros de despliegue disponibles.',
     })
 }

@@ -77,6 +77,20 @@ git checkout demo-backup-before-pro
 Tag de respaldo: `demo-backup-before-pro`  
 Rama de cutover: `pro-clean-cutover`
 
+## RBAC (seed PRO)
+
+| Rol | Slug |
+|-----|------|
+| Superadministrador | `superadministrador` |
+| Administrador | `administrador` |
+| Operador | `operador` |
+| Auditor | `auditor` |
+| Solo lectura | `solo_lectura` |
+
+Permisos: `usuarios.leer|crear|editar|eliminar`, `roles.gestionar`, `infraestructura.leer|gestionar`, `nubes.conectar`, `repositorios.conectar`, `seguridad.leer|gestionar`, `auditoria.leer`, `configuracion.gestionar`.
+
+Configuración en `settings`: `nombre_app=Spendlyx`, `modo=PRO`, `dominio=https://spendlyx.com`, `idioma=es`.
+
 ## Reglas PRO
 
 - Sin seed demo automático (`AUTO_DEMO_SEED=false`)

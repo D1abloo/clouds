@@ -44,7 +44,12 @@ export class DemoService {
 
   readonly canManageDemo = computed(() => {
     const roles = this.auth.user()?.roles ?? []
-    return roles.includes('super_admin') || roles.includes('admin')
+    return (
+      roles.includes('superadministrador') ||
+      roles.includes('administrador') ||
+      roles.includes('super_admin') ||
+      roles.includes('admin')
+    )
   })
 
   refreshStatus = (): void => {

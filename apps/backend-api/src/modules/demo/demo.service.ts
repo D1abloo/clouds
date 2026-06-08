@@ -9,7 +9,7 @@ import { PrismaService } from '../../common/prisma/prisma.service'
 import { JwtPayload } from '../../common/decorators/current-user.decorator'
 import { seedDemoData } from '../../../prisma/seed-demo'
 
-const ADMIN_ROLES = new Set(['super_admin', 'admin'])
+const ADMIN_ROLES = new Set(['superadministrador', 'administrador', 'super_admin', 'admin'])
 
 @Injectable()
 export class DemoService {

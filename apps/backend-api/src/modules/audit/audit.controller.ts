@@ -10,7 +10,7 @@ export class AuditController {
   constructor(private auditService: AuditService) {}
 
   @Get()
-  @RequirePermissions('audit:read')
+  @RequirePermissions('auditoria.leer')
   @ApiOperation({ summary: 'List audit logs' })
   findAll(@Query('page') page = 1, @Query('pageSize') pageSize = 20) {
     return this.auditService.findAll(+page, +pageSize)

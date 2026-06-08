@@ -6,6 +6,10 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
+import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { metricsHubDescription, metricsHubRows, type MetricsHubRow } from '../../shared/platform/metrics-hub.demo'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
@@ -19,6 +23,8 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
     PageHeaderComponent,
     StatusBadgeComponent,
     NavIconComponent,
+    ConnectionRequiredComponent,
+    EmptyStateComponent,
   ],
   template: `
     <div class="page-container section-hub animate-fade-in">
@@ -36,6 +42,15 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
         <button type="button" class="hub-action-chip" (click)="handleAction('Sincronizar')"><mat-icon>sync</mat-icon> Sincronizar</button>
       </div>
 
+      @if (pro.proMode()) {
+        <app-connection-required [module]="title()" />
+      } @else if (!rows().length) {
+        <app-empty-state
+          title="Sin datos todavía"
+          message="Conecta una integración para comenzar."
+          icon="inventory_2"
+        />
+      } @else {
       @if (isMetrics()) {
         <div class="metrics-bar">
           <app-nav-icon logo="prometheus" size="md" />
@@ -90,6 +105,7 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
           </table>
         </div>
       </div>
+      }
     </div>
   `,
   styles: `
@@ -126,6 +142,7 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 export class SectionHubComponent {
   private readonly route = inject(ActivatedRoute)
   private readonly actions = inject(PlatformActionService)
+  readonly pro = inject(ProModeService)
 
   readonly module = computed(() => this.route.snapshot.data['module'] as string ?? 'module')
   readonly section = computed(() => this.route.snapshot.paramMap.get('section') ?? 'overview')
@@ -150,6 +167,7 @@ export class SectionHubComponent {
   readonly metricsLogos: NavLogoKey[] = ['prometheus', 'grafana', 'kubernetes', 'docker', 'aws']
 
   readonly rows = computed((): MetricsHubRow[] => {
+    if (!allowsDemoDataFrom(this.pro)) return []
     const s = this.section()
     const mod = this.module()
     if (mod === 'metrics') return metricsHubRows(s)

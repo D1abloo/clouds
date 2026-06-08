@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Public } from '../../common/decorators/auth.decorators'
 import { AppModeService } from '../../common/config/app-mode.service'
+import { PLATFORM_SETTINGS_PRO } from '../../common/rbac/rbac.catalog'
 import { PrismaService } from '../../common/prisma/prisma.service'
 
 @ApiTags('Platform')
@@ -39,10 +40,20 @@ export class PlatformController {
       this.prisma.alert.count({ where: { isResolved: false } }).catch(() => 0),
     ])
 
+    const settingsRows = await this.prisma.platformSetting
+      .findMany({
+        where: { key: { in: Object.keys(PLATFORM_SETTINGS_PRO) } },
+      })
+      .catch(() => [])
+
+    const settingsFromDb = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]))
+    const settings = { ...PLATFORM_SETTINGS_PRO, ...settingsFromDb }
+
     return {
       ...mode,
       database,
       counts: { users, instances, alerts },
+      settings,
     }
   }
 }

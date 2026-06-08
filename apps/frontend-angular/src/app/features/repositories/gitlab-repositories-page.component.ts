@@ -4,6 +4,8 @@ import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { GitlabService } from '../../core/services/gitlab.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import {
   buildGitlabDemoBootstrap,
@@ -91,6 +93,7 @@ import { RepositoriesCrossNavComponent } from './components/repositories-cross-n
 })
 export class GitlabRepositoriesPageComponent implements OnInit {
   private readonly gitlab = inject(GitlabService)
+  private readonly pro = inject(ProModeService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   readonly repoActions = inject(RepositoriesActionService)
@@ -101,7 +104,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   readonly account = signal<GitlabAccount | null>(null)
   readonly projects = signal<GitlabProject[]>([])
   readonly groups = signal<GitlabGroup[]>([])
-  readonly demoMode = signal(true)
+  readonly demoMode = signal(allowsDemoDataFrom(this.pro))
   readonly drawerOpen = signal(false)
   readonly drawerProject = signal<GitlabProject | null>(null)
   readonly drawerWebhooks = signal<Record<string, unknown>[]>([])
@@ -114,7 +117,28 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   )
 
   ngOnInit(): void {
-    this.connectDemo()
+    if (allowsDemoDataFrom(this.pro)) {
+      this.connectDemo()
+      return
+    }
+    this.loadPro()
+  }
+
+  private loadPro = (): void => {
+    this.loading.set(true)
+    this.gitlab.account().subscribe({
+      next: (acc) => {
+        this.account.set(acc)
+        this.loading.set(false)
+      },
+      error: () => this.loading.set(false),
+    })
+    this.gitlab.projects().subscribe({
+      next: (res) => {
+        this.projects.set(res.items ?? [])
+        if (res.items?.[0]) this.projectControl.setValue(res.items[0].id)
+      },
+    })
   }
 
   connectDemo = (): void => {
@@ -129,6 +153,10 @@ export class GitlabRepositoriesPageComponent implements OnInit {
         this.loading.set(false)
       },
       error: () => {
+        if (!allowsDemoDataFrom(this.pro)) {
+          this.loading.set(false)
+          return
+        }
         const boot = buildGitlabDemoBootstrap()
         this.account.set(boot.account)
         this.projects.set(boot.projects)
@@ -198,7 +226,9 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   openDrawer = (project: GitlabProject): void => {
     this.drawerProject.set(project)
     this.drawerWebhooks.set(
-      CLIENT_DEMO_GITLAB_WEBHOOKS.filter((w) => w['projectPath'] === project.fullPath),
+      allowsDemoDataFrom(this.pro)
+        ? CLIENT_DEMO_GITLAB_WEBHOOKS.filter((w) => w['projectPath'] === project.fullPath)
+        : [],
     )
     this.drawerOpen.set(true)
   }

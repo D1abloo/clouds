@@ -7,6 +7,8 @@ import { DiscoveryService } from '../../core/services/discovery.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { mergeDockerPageData } from '../infrastructure/infrastructure.demo'
 import { InfrastructureActionService } from '../infrastructure/infrastructure-action.service'
 import { InfrastructureWorkspaceComponent } from '../infrastructure/infrastructure-workspace.component'
@@ -30,6 +32,7 @@ import { buildDockerWorkspace } from '../infrastructure/infrastructure-workspace
   `,
 })
 export class DockerPageComponent implements OnInit {
+  private readonly pro = inject(ProModeService)
   private readonly docker = inject(DockerService)
   private readonly discovery = inject(DiscoveryService)
   private readonly realtime = inject(RealtimeService)
@@ -55,7 +58,7 @@ export class DockerPageComponent implements OnInit {
 
   load = (): void => {
     this.page.run(this.docker.pageData(), {
-      onSuccess: (d) => this.data.set(mergeDockerPageData(d)),
+      onSuccess: (d) => this.data.set(mergeDockerPageData(d, allowsDemoDataFrom(this.pro))),
       errorMessage: 'Error al cargar datos Docker',
     })
   }

@@ -1,9 +1,11 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
+import { ProModeService } from './pro-mode.service'
 import { CloudAccount, CloudProvider } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 import { demoCloudAccounts } from '../demo/demo-fallback.data'
+import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 
 export interface CreateCloudAccountPayload {
   projectId: string
@@ -27,6 +29,7 @@ export interface LaunchInstancePayload {
 @Injectable({ providedIn: 'root' })
 export class CloudAccountsService {
   private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
 
   defaultProject = (): Observable<{ id: string; name: string; slug: string }> =>
     this.api.get('cloud-accounts/meta/default-project')
@@ -35,9 +38,10 @@ export class CloudAccountsService {
     this.api.get<unknown>('cloud-accounts', { projectId, provider }).pipe(
       map((res) => {
         const rows = unwrapList<CloudAccount>(res)
-        return rows.length ? rows : demoCloudAccounts(provider)
+        if (rows.length) return rows
+        return allowsDemoDataFrom(this.pro) ? demoCloudAccounts(provider) : []
       }),
-      catchError(() => of(demoCloudAccounts(provider))),
+      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoCloudAccounts(provider) : [])),
     )
 
   get = (id: string): Observable<CloudAccount> => this.api.get<CloudAccount>(`cloud-accounts/${id}`)

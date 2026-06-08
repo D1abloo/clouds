@@ -198,12 +198,15 @@ export class LoginComponent implements OnInit {
   error = ''
 
   form = this.fb.group({
-    email: ['admin@cloudops.local', [Validators.required, Validators.email]],
-    password: ['Admin123!', [Validators.required, Validators.minLength(8)]],
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(8)]],
   })
 
   ngOnInit(): void {
     this.pro.loadStatus()
+    if (environment.demoMode) {
+      this.form.patchValue({ email: 'admin@cloudops.local', password: 'Admin123!' })
+    }
   }
 
   handleSubmit = (): void => {

@@ -1,13 +1,15 @@
 import { ForbiddenException } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { PermissionsGuard } from './permissions.guard'
-import { PERMISSIONS_KEY } from '../decorators/auth.decorators'
 
 describe('PermissionsGuard', () => {
   const reflector = new Reflector()
   const guard = new PermissionsGuard(reflector)
 
-  const mockContext = (user: { roles: string[] } | null, permissions?: string[]) => {
+  const mockContext = (
+    user: { roles: string[]; permissions?: string[] } | null,
+    permissions?: string[],
+  ) => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(permissions)
     return {
       switchToHttp: () => ({
@@ -19,18 +21,43 @@ describe('PermissionsGuard', () => {
   }
 
   it('allows access when no permissions required', () => {
-    expect(guard.canActivate(mockContext({ roles: ['viewer'] }))).toBe(true)
+    expect(guard.canActivate(mockContext({ roles: ['solo_lectura'] }))).toBe(true)
   })
 
-  it('allows super_admin for any permission', () => {
+  it('allows superadministrador for any permission', () => {
     expect(
-      guard.canActivate(mockContext({ roles: ['super_admin'] }, ['terraform:write'])),
+      guard.canActivate(
+        mockContext({ roles: ['superadministrador'], permissions: [] }, ['configuracion.gestionar']),
+      ),
+    ).toBe(true)
+  })
+
+  it('allows legacy super_admin for any permission', () => {
+    expect(
+      guard.canActivate(
+        mockContext({ roles: ['super_admin'], permissions: [] }, ['configuracion.gestionar']),
+      ),
+    ).toBe(true)
+  })
+
+  it('allows when user has required permission code', () => {
+    expect(
+      guard.canActivate(
+        mockContext(
+          { roles: ['auditor'], permissions: ['auditoria.leer', 'usuarios.leer'] },
+          ['auditoria.leer'],
+        ),
+      ),
     ).toBe(true)
   })
 
   it('denies when user lacks permission', () => {
     expect(() =>
-      guard.canActivate(mockContext({ roles: ['viewer'] }, ['terraform:write'])),
+      guard.canActivate(
+        mockContext({ roles: ['solo_lectura'], permissions: ['usuarios.leer'] }, [
+          'configuracion.gestionar',
+        ]),
+      ),
     ).toThrow(ForbiddenException)
   })
 })

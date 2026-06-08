@@ -1,21 +1,25 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
+import { ProModeService } from './pro-mode.service'
 import { VpsHost } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 import { demoVpsHosts } from '../demo/demo-fallback.data'
+import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 
 @Injectable({ providedIn: 'root' })
 export class VpsService {
   private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
 
   list = (): Observable<VpsHost[]> =>
     this.api.get<unknown>('vps').pipe(
       map((res) => {
         const rows = unwrapList<VpsHost>(res)
-        return rows.length ? rows : demoVpsHosts()
+        if (rows.length) return rows
+        return allowsDemoDataFrom(this.pro) ? demoVpsHosts() : []
       }),
-      catchError(() => of(demoVpsHosts())),
+      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoVpsHosts() : [])),
     )
 
   getOne = (id: string): Observable<VpsHost> =>

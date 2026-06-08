@@ -26,6 +26,8 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountsStore } from '../../core/stores/cloud-accounts.store'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
@@ -90,6 +92,7 @@ import {
     ReactiveFormsModule,
     PageHeaderComponent,
     LoadingStateComponent,
+    ConnectionRequiredComponent,
     BrandLogoComponent,
     MatFormFieldModule,
     MatSelectModule,
@@ -115,6 +118,8 @@ import {
 
       @if (loading()) {
         <app-loading-state message="Cargando topología…" />
+      } @else if (pro.proMode()) {
+        <app-connection-required module="Mapa de topología" />
       } @else {
         <div class="topology-workspace">
           <div class="topology-main">
@@ -1321,6 +1326,7 @@ import {
   `,
 })
 export class TopologyMapComponent implements OnInit, AfterViewInit, OnDestroy {
+  readonly pro = inject(ProModeService)
   private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly cloudStore = inject(CloudAccountsStore)

@@ -7,6 +7,8 @@ import { DiscoveryService } from '../../core/services/discovery.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { mergeKubernetesPageData } from '../infrastructure/infrastructure.demo'
 import { InfrastructureActionService } from '../infrastructure/infrastructure-action.service'
 import { InfrastructureWorkspaceComponent } from '../infrastructure/infrastructure-workspace.component'
@@ -30,6 +32,7 @@ import { buildKubernetesWorkspace } from '../infrastructure/infrastructure-works
   `,
 })
 export class KubernetesPageComponent implements OnInit {
+  private readonly pro = inject(ProModeService)
   private readonly kubernetes = inject(KubernetesService)
   private readonly discovery = inject(DiscoveryService)
   private readonly realtime = inject(RealtimeService)
@@ -55,7 +58,7 @@ export class KubernetesPageComponent implements OnInit {
 
   load = (): void => {
     this.page.run(this.kubernetes.pageData(), {
-      onSuccess: (d) => this.data.set(mergeKubernetesPageData(d)),
+      onSuccess: (d) => this.data.set(mergeKubernetesPageData(d, allowsDemoDataFrom(this.pro))),
       errorMessage: 'Error al cargar datos Kubernetes',
     })
   }

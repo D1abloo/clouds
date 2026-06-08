@@ -5,6 +5,8 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { InventoryService } from '../../core/services/inventory.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import {
   GithubService,
   type GithubAccount,
@@ -108,6 +110,7 @@ import { RepositoriesCrossNavComponent } from './components/repositories-cross-n
 export class GithubRepositoriesPageComponent implements OnInit {
   private readonly github = inject(GithubService)
   private readonly inventory = inject(InventoryService)
+  private readonly pro = inject(ProModeService)
   private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   readonly repoActions = inject(RepositoriesActionService)
@@ -119,15 +122,19 @@ export class GithubRepositoriesPageComponent implements OnInit {
   readonly repos = signal<GithubRepo[]>([])
   readonly branches = signal<Record<string, unknown>[]>([])
   readonly commits = signal<Record<string, unknown>[]>([])
-  readonly githubPullRequests = signal(CLIENT_DEMO_GITHUB_PRS)
-  readonly githubDeployments = signal<Record<string, unknown>[]>(CLIENT_DEMO_DEPLOYMENTS)
+  readonly githubPullRequests = signal(
+    allowsDemoDataFrom(this.pro) ? CLIENT_DEMO_GITHUB_PRS : [],
+  )
+  readonly githubDeployments = signal<Record<string, unknown>[]>(
+    allowsDemoDataFrom(this.pro) ? CLIENT_DEMO_DEPLOYMENTS : [],
+  )
   readonly drawerOpen = signal(false)
   readonly drawerRepo = signal<GithubRepo | null>(null)
   readonly drawerWebhooks = signal<Record<string, unknown>[]>([])
   readonly logsOpen = signal(false)
   readonly logsText = signal('')
   readonly logsTitle = signal('Logs GitHub')
-  readonly demoMode = signal(false)
+  readonly demoMode = signal(allowsDemoDataFrom(this.pro))
   readonly repoControl = new FormControl<string>('', { nonNullable: true })
 
   readonly primaryAccount = computed(() => this.accounts()[0] ?? null)
@@ -142,11 +149,24 @@ export class GithubRepositoriesPageComponent implements OnInit {
   })
 
   ngOnInit(): void {
-    this.bootstrapGithubDemo()
+    if (allowsDemoDataFrom(this.pro)) {
+      this.bootstrapGithubDemo()
+      this.refreshDemoFromApi()
+    } else {
+      this.loadAccounts()
+    }
     this.load()
-    this.refreshDemoFromApi()
     this.repoControl.valueChanges.subscribe((id) => {
       if (id) this.loadRepoDetails(id)
+    })
+  }
+
+  private loadAccounts = (): void => {
+    this.github.accounts().pipe(catchError(() => of({ items: [] as GithubAccount[] }))).subscribe((res) => {
+      this.accounts.set(res.items)
+    })
+    this.github.connection().pipe(catchError(() => of(null))).subscribe((conn) => {
+      if (conn) this.connection.set(conn)
     })
   }
 
@@ -179,7 +199,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
         const items = (d['repoItems'] as GithubRepo[]) ?? []
         if (items.length) this.repos.set(items)
       },
-      fallback: () => buildGithubInventoryFallback(),
+      fallback: () => buildGithubInventoryFallback(allowsDemoDataFrom(this.pro)),
       errorMessage: 'No se pudo cargar GitHub',
     })
   }
@@ -192,9 +212,11 @@ export class GithubRepositoriesPageComponent implements OnInit {
       .repoWebhooks(repoId)
       .pipe(
         catchError(() => of({ items: [] })),
-        map((w) =>
-          w.items.length ? w.items : CLIENT_DEMO_WEBHOOKS.filter((wh) => wh['repoFullName'] === repo?.fullName),
-        ),
+        map((w) => {
+          if (w.items.length) return w.items
+          if (!allowsDemoDataFrom(this.pro)) return []
+          return CLIENT_DEMO_WEBHOOKS.filter((wh) => wh['repoFullName'] === repo?.fullName)
+        }),
       )
       .subscribe((items) => this.drawerWebhooks.set(items))
   }
@@ -239,7 +261,11 @@ export class GithubRepositoriesPageComponent implements OnInit {
         this.logsOpen.set(true)
       },
       error: () => {
-        this.logsText.set('[GitHub] Registros demo del despliegue')
+        this.logsText.set(
+          allowsDemoDataFrom(this.pro)
+            ? '[GitHub] Registros demo del despliegue'
+            : 'Sin registros de despliegue disponibles.',
+        )
         this.logsOpen.set(true)
       },
     })
@@ -317,6 +343,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
   }
 
   handleQuickConnect = (): void => {
+    if (!allowsDemoDataFrom(this.pro)) return
     this.bootstrapGithubDemo()
     this.runDemo('Demo GitHub conectada')
     this.refreshDemoFromApi()
@@ -332,11 +359,20 @@ export class GithubRepositoriesPageComponent implements OnInit {
 
   handleSync = (): void => {
     const acc = this.primaryAccount()
+    const allowDemo = allowsDemoDataFrom(this.pro)
     const sync$: Observable<{ synced: number; repos?: GithubRepo[] }> = acc
       ? this.github.syncAccount(acc.id).pipe(map((r) => ({ synced: r.synced, repos: this.repos() })))
-      : this.github.connectDemo().pipe(map((s) => ({ synced: s.synced, repos: s.repos })))
+      : allowDemo
+        ? this.github.connectDemo().pipe(map((s) => ({ synced: s.synced, repos: s.repos })))
+        : of({ synced: 0, repos: [] })
     sync$
-      .pipe(catchError(() => this.github.demoRepos().pipe(map((r) => ({ synced: r.count, repos: r.items })))))
+      .pipe(
+        catchError(() =>
+          allowDemo
+            ? this.github.demoRepos().pipe(map((r) => ({ synced: r.count, repos: r.items })))
+            : of({ synced: 0, repos: [] }),
+        ),
+      )
       .subscribe({
         next: (res) => {
           if (res.repos?.length) this.repos.set(res.repos)

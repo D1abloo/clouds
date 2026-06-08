@@ -26,6 +26,8 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { DemoService } from '../../core/services/demo.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ToastService } from '../../core/services/toast.service'
 import {
   CommandCenterApiService,
@@ -902,6 +904,7 @@ const pendingRowToPayload = (row: OverviewActionRow): ExecuteActionPayload | nul
 export class CommandCenterPageComponent implements OnInit {
   private readonly demo = inject(DemoActionsService)
   private readonly demoService = inject(DemoService)
+  private readonly pro = inject(ProModeService)
   private readonly commandCenterApi = inject(CommandCenterApiService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
@@ -917,9 +920,9 @@ export class CommandCenterPageComponent implements OnInit {
   readonly platformFilter = signal<string | null>(null)
   readonly selectedQuickId = signal<string | null>(COMMAND_CENTER_QUICK_ACTIONS[0]?.id ?? null)
 
-  readonly recent = signal<OverviewActionRow[]>([...COMMAND_CENTER_ACTIONS])
-  readonly pending = signal<OverviewActionRow[]>([...COMMAND_CENTER_PENDING])
-  readonly queue = signal<CommandCenterQueueItem[]>([...COMMAND_CENTER_QUEUE])
+  readonly recent = signal<OverviewActionRow[]>([])
+  readonly pending = signal<OverviewActionRow[]>([])
+  readonly queue = signal<CommandCenterQueueItem[]>([])
   readonly auditLog = signal<{ id: string; when: string; message: string }[]>([])
   private readonly pendingPayloads = signal<Record<string, ExecuteActionPayload>>({})
 
@@ -938,7 +941,10 @@ export class CommandCenterPageComponent implements OnInit {
     return this.quickActions.find((a) => a.id === id) ?? null
   })
 
-  readonly connectedPlatforms = computed(() => this.platforms.length)
+  readonly connectedPlatforms = computed(() => {
+    if (allowsDemoDataFrom(this.pro)) return this.platforms.length
+    return new Set(this.recent().map((r) => r.provider)).size
+  })
 
   readonly filteredRecent = computed(() => {
     const q = this.searchQuery()
@@ -961,6 +967,11 @@ export class CommandCenterPageComponent implements OnInit {
   ])
 
   ngOnInit(): void {
+    if (allowsDemoDataFrom(this.pro)) {
+      this.recent.set([...COMMAND_CENTER_ACTIONS])
+      this.pending.set([...COMMAND_CENTER_PENDING])
+      this.queue.set([...COMMAND_CENTER_QUEUE])
+    }
     this.demoService.refreshStatus()
     of(true).pipe(delay(350)).subscribe(() => {
       this.loading.set(false)

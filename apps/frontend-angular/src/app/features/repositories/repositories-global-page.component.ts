@@ -6,6 +6,8 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { GithubService } from '../../core/services/github.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { catchError, of } from 'rxjs'
 import {
@@ -154,14 +156,25 @@ const GLOBAL_SECTIONS: RepositoriesSectionId[] = [
 export class RepositoriesGlobalPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly github = inject(GithubService)
+  private readonly pro = inject(ProModeService)
   readonly actions = inject(RepositoriesActionService)
 
   readonly page = createPageLoader(false)
-  readonly githubPullRequests = signal(CLIENT_DEMO_GITHUB_PRS)
-  readonly allWebhooks = signal([...CLIENT_DEMO_WEBHOOKS, ...CLIENT_DEMO_GITLAB_WEBHOOKS])
-  readonly allDeployments = signal([...CLIENT_DEMO_DEPLOYMENTS, ...CLIENT_DEMO_GITLAB_DEPLOYMENTS])
-  readonly globalBranches = signal<GlobalBranchRow[]>(buildGlobalDemoBranches())
-  readonly globalCommits = signal<GlobalCommitRow[]>(buildGlobalDemoCommits())
+  readonly githubPullRequests = signal(
+    allowsDemoDataFrom(this.pro) ? CLIENT_DEMO_GITHUB_PRS : [],
+  )
+  readonly allWebhooks = signal(
+    allowsDemoDataFrom(this.pro) ? [...CLIENT_DEMO_WEBHOOKS, ...CLIENT_DEMO_GITLAB_WEBHOOKS] : [],
+  )
+  readonly allDeployments = signal(
+    allowsDemoDataFrom(this.pro) ? [...CLIENT_DEMO_DEPLOYMENTS, ...CLIENT_DEMO_GITLAB_DEPLOYMENTS] : [],
+  )
+  readonly globalBranches = signal<GlobalBranchRow[]>(
+    allowsDemoDataFrom(this.pro) ? buildGlobalDemoBranches() : [],
+  )
+  readonly globalCommits = signal<GlobalCommitRow[]>(
+    allowsDemoDataFrom(this.pro) ? buildGlobalDemoCommits() : [],
+  )
   readonly logsOpen = signal(false)
   readonly logsText = signal('')
   readonly logsTitle = signal('')
@@ -217,19 +230,22 @@ export class RepositoriesGlobalPageComponent implements OnInit {
   }
 
   reloadTables = (): void => {
+    const allowDemo = allowsDemoDataFrom(this.pro)
     this.github
       .webhooks()
       .pipe(catchError(() => of({ items: [] as Record<string, unknown>[] })))
       .subscribe((w) => {
-        const gh = w.items.length ? w.items : CLIENT_DEMO_WEBHOOKS
-        this.allWebhooks.set([...gh, ...CLIENT_DEMO_GITLAB_WEBHOOKS])
+        const gh = w.items.length ? w.items : allowDemo ? CLIENT_DEMO_WEBHOOKS : []
+        const gl = allowDemo ? CLIENT_DEMO_GITLAB_WEBHOOKS : []
+        this.allWebhooks.set([...gh, ...gl])
       })
     this.github
       .deployments()
       .pipe(catchError(() => of({ items: [] as Record<string, unknown>[] })))
       .subscribe((d) => {
-        const gh = d.items.length ? d.items : CLIENT_DEMO_DEPLOYMENTS
-        this.allDeployments.set([...gh, ...CLIENT_DEMO_GITLAB_DEPLOYMENTS])
+        const gh = d.items.length ? d.items : allowDemo ? CLIENT_DEMO_DEPLOYMENTS : []
+        const gl = allowDemo ? CLIENT_DEMO_GITLAB_DEPLOYMENTS : []
+        this.allDeployments.set([...gh, ...gl])
       })
   }
 

@@ -1,40 +1,76 @@
 import { PrismaClient, AlertSeverity } from '@prisma/client'
 import * as bcrypt from 'bcrypt'
+import {
+  PLATFORM_SETTINGS_PRO,
+  RBAC_PERMISSIONS,
+  RBAC_ROLE_PERMISSIONS,
+  RBAC_ROLES,
+  rbacPermissionCode,
+} from '../src/common/rbac/rbac.catalog'
 
 const prisma = new PrismaClient()
-
-const ROLES = [
-  { name: 'super_admin', description: 'Full system access' },
-  { name: 'cloud_admin', description: 'Manage cloud accounts and instances' },
-  { name: 'devops', description: 'DevOps operations' },
-  { name: 'viewer', description: 'Read-only access' },
-  { name: 'auditor', description: 'Audit log access' },
-  { name: 'billing_viewer', description: 'Billing read access' },
-  { name: 'jenkins_operator', description: 'Jenkins job operations' },
-  { name: 'terraform_operator', description: 'Terraform operations' },
-]
-
-const PERMISSIONS = [
-  { action: 'read', resource: 'instances' },
-  { action: 'write', resource: 'instances' },
-  { action: 'read', resource: 'cloud_accounts' },
-  { action: 'write', resource: 'cloud_accounts' },
-  { action: 'read', resource: 'vps' },
-  { action: 'write', resource: 'vps' },
-  { action: 'execute', resource: 'ssh' },
-  { action: 'read', resource: 'audit' },
-  { action: 'read', resource: 'billing' },
-  { action: 'write', resource: 'terraform' },
-  { action: 'write', resource: 'jenkins' },
-  { action: 'read', resource: 'metrics' },
-  { action: 'read', resource: 'alerts' },
-]
 
 const isProductionSeed = (): boolean => {
   const seedMode = process.env.SEED_MODE?.toLowerCase()
   if (seedMode === 'production') return true
   if (seedMode === 'demo') return false
   return process.env.DEMO_MODE === 'false'
+}
+
+async function seedPermissions() {
+  for (const perm of RBAC_PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { action_resource: { action: perm.action, resource: perm.resource } },
+      create: {
+        action: perm.action,
+        resource: perm.resource,
+        description: perm.description,
+      },
+      update: { description: perm.description },
+    })
+  }
+}
+
+async function seedRoles() {
+  for (const role of RBAC_ROLES) {
+    await prisma.role.upsert({
+      where: { name: role.name },
+      create: role,
+      update: { description: role.description },
+    })
+  }
+}
+
+async function seedRolePermissions() {
+  const permRows = await prisma.permission.findMany()
+  const permByCode = new Map(
+    permRows.map((p) => [rbacPermissionCode(p.resource, p.action), p.id]),
+  )
+
+  for (const [roleName, codes] of Object.entries(RBAC_ROLE_PERMISSIONS)) {
+    const role = await prisma.role.findUnique({ where: { name: roleName } })
+    if (!role) continue
+
+    for (const code of codes) {
+      const permissionId = permByCode.get(code)
+      if (!permissionId) continue
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId } },
+        create: { roleId: role.id, permissionId },
+        update: {},
+      })
+    }
+  }
+}
+
+async function seedPlatformSettings() {
+  for (const [key, value] of Object.entries(PLATFORM_SETTINGS_PRO)) {
+    await prisma.platformSetting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    })
+  }
 }
 
 async function main() {
@@ -45,40 +81,18 @@ async function main() {
       : 'Seeding CloudOps Control Center...',
   )
 
-  for (const perm of PERMISSIONS) {
-    await prisma.permission.upsert({
-      where: { action_resource: { action: perm.action, resource: perm.resource } },
-      create: perm,
-      update: {},
-    })
-  }
+  await seedPermissions()
+  await seedRoles()
+  await seedRolePermissions()
+  await seedPlatformSettings()
 
-  for (const role of ROLES) {
-    await prisma.role.upsert({
-      where: { name: role.name },
-      create: role,
-      update: { description: role.description },
-    })
-  }
-
-  const superAdminRole = await prisma.role.findUnique({ where: { name: 'super_admin' } })
-  const viewerRole = await prisma.role.findUnique({ where: { name: 'viewer' } })
-  const allPerms = await prisma.permission.findMany()
-
-  if (superAdminRole) {
-    for (const perm of allPerms) {
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: superAdminRole.id, permissionId: perm.id } },
-        create: { roleId: superAdminRole.id, permissionId: perm.id },
-        update: {},
-      })
-    }
-  }
+  const superAdminRole = await prisma.role.findUnique({ where: { name: 'superadministrador' } })
+  const soloLecturaRole = await prisma.role.findUnique({ where: { name: 'solo_lectura' } })
 
   const project = await prisma.project.upsert({
     where: { slug: 'default' },
-    create: { name: 'Default Project', slug: 'default', description: 'Default tenant project' },
-    update: {},
+    create: { name: 'Spendlyx', slug: 'default', description: 'Proyecto principal' },
+    update: { name: 'Spendlyx' },
   })
 
   const passwordHash = await bcrypt.hash('Admin123!', 12)
@@ -88,28 +102,38 @@ async function main() {
     create: {
       email: 'admin@cloudops.local',
       passwordHash,
-      name: 'CloudOps Admin',
+      name: 'Administrador Spendlyx',
       userRoles: superAdminRole
         ? { create: [{ roleId: superAdminRole.id, projectId: project.id }] }
         : undefined,
     },
-    update: {},
+    update: { name: 'Administrador Spendlyx' },
   })
+
+  if (superAdminRole) {
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId_projectId: {
+          userId: admin.id,
+          roleId: superAdminRole.id,
+          projectId: project.id,
+        },
+      },
+      create: { userId: admin.id, roleId: superAdminRole.id, projectId: project.id },
+      update: {},
+    })
+  }
 
   if (!productionSeed) {
     const demoPasswordHash = await bcrypt.hash('Demo123!', 12)
 
-    const roleByName = async (name: string) =>
-      prisma.role.findUnique({ where: { name } })
+    const roleByName = async (name: string) => prisma.role.findUnique({ where: { name } })
 
     const DEMO_USERS = [
-      { email: 'cloud.admin@demo.local', name: 'Demo Cloud Admin', role: 'cloud_admin' },
-      { email: 'devops@demo.local', name: 'Demo DevOps', role: 'devops' },
-      { email: 'viewer@demo.local', name: 'Demo Viewer', role: 'viewer' },
+      { email: 'cloud.admin@demo.local', name: 'Demo Administrador', role: 'administrador' },
+      { email: 'devops@demo.local', name: 'Demo Operador', role: 'operador' },
+      { email: 'viewer@demo.local', name: 'Demo Solo lectura', role: 'solo_lectura' },
       { email: 'auditor@demo.local', name: 'Demo Auditor', role: 'auditor' },
-      { email: 'billing@demo.local', name: 'Demo Billing', role: 'billing_viewer' },
-      { email: 'jenkins@demo.local', name: 'Demo Jenkins Op', role: 'jenkins_operator' },
-      { email: 'terraform@demo.local', name: 'Demo Terraform Op', role: 'terraform_operator' },
     ]
 
     for (const demo of DEMO_USERS) {
@@ -141,8 +165,9 @@ async function main() {
 
   console.log('Seed complete.')
   console.log('Admin: admin@cloudops.local / Admin123!')
+  console.log('Roles: superadministrador, administrador, operador, auditor, solo_lectura')
   if (!productionSeed) {
-    console.log('Demo users (password Demo123! for all): ver prisma/seed-demo.ts')
+    console.log('Demo users (password Demo123! for all)')
   }
   console.log(`Project ID: ${project.id}`)
   console.log(`Admin ID: ${admin.id}`)

@@ -2,6 +2,7 @@ import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@
 import { Reflector } from '@nestjs/core'
 import { PERMISSIONS_KEY } from '../decorators/auth.decorators'
 import { JwtPayload } from '../decorators/current-user.decorator'
+import { hasAnyPermission } from '../rbac/rbac.util'
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -15,11 +16,8 @@ export class PermissionsGuard implements CanActivate {
     if (!required?.length) return true
 
     const user = context.switchToHttp().getRequest().user as JwtPayload
-    const userPerms: string[] = user?.roles ?? []
-
-    const hasPermission = required.some((p) => userPerms.includes(p) || userPerms.includes('super_admin'))
-    if (!hasPermission) {
-      throw new ForbiddenException('Insufficient permissions')
+    if (!hasAnyPermission(user?.permissions, user?.roles, required)) {
+      throw new ForbiddenException('Permisos insuficientes')
     }
     return true
   }

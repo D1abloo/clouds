@@ -20,6 +20,8 @@ import { delay, of } from 'rxjs'
 import { PageHeaderComponent, type PageHeaderAction } from '../../shared/components/page-header/page-header.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
 import { ToastService } from '../../core/services/toast.service'
 import { AuthService } from '../../core/services/auth.service'
 import {
@@ -52,6 +54,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
     ReactiveFormsModule,
     PageHeaderComponent,
     LoadingStateComponent,
+    ConnectionRequiredComponent,
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
@@ -103,6 +106,8 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
 
       @if (loading()) {
         <app-loading-state message="Inicializando Copilot…" />
+      } @else if (pro.proMode()) {
+        <app-connection-required module="Asistente IA" />
       } @else {
         <div class="cop-layout">
           <aside class="cop-sidebar">
@@ -638,6 +643,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
   `,
 })
 export class AiAssistantComponent implements OnInit {
+  readonly pro = inject(ProModeService)
   private readonly actions = inject(PlatformActionService)
   private readonly toast = inject(ToastService)
   private readonly router = inject(Router)

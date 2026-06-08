@@ -20,7 +20,10 @@ import {
   type ResourceExplorerDetailDialogResult,
 } from './resource-explorer-detail-dialog.component'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
 import { ToastService } from '../../core/services/toast.service'
+import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import {
   EXPLORER_RESOURCES_RICH,
   EXPLORER_TYPE_FILTERS,
@@ -40,6 +43,7 @@ const nowTime = (): string =>
     PageHeaderComponent,
     LoadingStateComponent,
     EmptyStateComponent,
+    ConnectionRequiredComponent,
     StatusBadgeComponent,
     BrandLogoComponent,
     MatFormFieldModule,
@@ -65,6 +69,8 @@ const nowTime = (): string =>
 
       @if (loading()) {
         <app-loading-state message="Indexando recursos multi-cloud…" />
+      } @else if (pro.proMode()) {
+        <app-connection-required module="Explorador de recursos" />
       } @else {
         <div class="exp-providers" role="list" aria-label="Filtrar por proveedor">
           @for (p of providerPills; track p.key) {
@@ -486,8 +492,9 @@ export class ResourceExplorerComponent implements OnInit {
   private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  readonly pro = inject(ProModeService)
 
-  readonly resources = EXPLORER_RESOURCES_RICH
+  readonly resources = allowsDemoDataFrom(this.pro) ? EXPLORER_RESOURCES_RICH : []
   readonly typeFilters = EXPLORER_TYPE_FILTERS
 
   readonly searchControl = new FormControl('', { nonNullable: true })

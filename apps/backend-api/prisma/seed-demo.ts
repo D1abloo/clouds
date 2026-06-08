@@ -43,7 +43,7 @@ export async function seedDemoData(
   const project = await prisma.project.findUnique({ where: { slug: 'default' } })
   if (!project) throw new Error('Run prisma:seed first (base roles/users required)')
 
-  const superAdminRole = await prisma.role.findUnique({ where: { name: 'super_admin' } })
+  const superAdminRole = await prisma.role.findUnique({ where: { name: 'superadministrador' } })
   const demoPasswordHash = await bcrypt.hash('Demo1234!', 12)
   const demoUser = await prisma.user.upsert({
     where: { email: 'demo@cloudops.local' },
