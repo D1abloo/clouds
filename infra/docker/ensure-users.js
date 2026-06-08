@@ -12,10 +12,26 @@ const USERS = [
 const run = async () => {
   const prisma = new PrismaClient()
   try {
+    const organization = await prisma.organization.upsert({
+      where: { slug: 'spendlyx' },
+      create: { name: 'Spendlyx', slug: 'spendlyx' },
+      update: { name: 'Spendlyx' },
+    })
+
     let project = await prisma.project.findUnique({ where: { slug: 'default' } })
     if (!project) {
       project = await prisma.project.create({
-        data: { name: 'Default Project', slug: 'default', description: 'Default tenant project' },
+        data: {
+          name: 'Spendlyx',
+          slug: 'default',
+          description: 'Espacio de trabajo principal',
+          organizationId: organization.id,
+        },
+      })
+    } else if (!project.organizationId) {
+      project = await prisma.project.update({
+        where: { id: project.id },
+        data: { organizationId: organization.id, name: 'Spendlyx' },
       })
     }
 
@@ -42,6 +58,15 @@ const run = async () => {
           where: { userId_roleId_projectId: { userId: user.id, roleId: role.id, projectId: project.id } },
           create: { userId: user.id, roleId: role.id, projectId: project.id },
           update: {},
+        })
+      }
+      if (u.email === 'admin@cloudops.local') {
+        await prisma.membership.upsert({
+          where: {
+            userId_organizationId: { userId: user.id, organizationId: organization.id },
+          },
+          create: { userId: user.id, organizationId: organization.id, role: 'OWNER' },
+          update: { role: 'OWNER' },
         })
       }
       console.log(`==> User ready: ${u.email}`)
