@@ -87,7 +87,8 @@ for i in $(seq 1 48); do
   sleep 5
 done
 
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --build frontend
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env build --no-cache frontend
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d frontend
 
 docker compose -f docker-compose.yml -f docker-compose.production.yml ps
 echo "Panel: https://spendlyx.com"

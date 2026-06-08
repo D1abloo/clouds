@@ -281,7 +281,7 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
     { label: 'Notifications', description: 'Recent notifications', icon: 'notifications', action: () => this.router.navigate(['/notifications/all']) },
     { label: 'Audit Log', description: 'Action history', icon: 'manage_search', action: () => this.router.navigate(['/audit/activity-logs']) },
     { label: 'Runbooks', description: 'Operational runbooks', icon: 'menu_book', action: () => this.router.navigate(['/runbooks']) },
-    { label: 'AI Assistant', description: 'CloudOps Copilot demo', icon: 'smart_toy', action: () => this.router.navigate(['/ai-assistant']) },
+    { label: 'AI Assistant', description: 'Asistente IA de operaciones', icon: 'smart_toy', action: () => this.router.navigate(['/ai-assistant']) },
     { label: 'Settings', description: 'Application settings', icon: 'tune', action: () => this.router.navigate(['/settings/general']) },
   ]
 

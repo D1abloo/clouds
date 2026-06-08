@@ -14,6 +14,8 @@ import { PlatformActionService } from '../../shared/platform/platform-action.ser
 import { IntegrationsService } from '../../core/services/integrations.service'
 import type { IntegrationConfigDto, IntegrationDeliveryDto, IntegrationPlatformSourceDto, IntegrationsStatusDto } from '../../core/models/api.models'
 import { environment } from '../../../environments/environment'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import {
   ADMIN_SETTINGS_ACCENT,
   ADMIN_SETTINGS_ACCENT_BORDER,
@@ -37,6 +39,8 @@ import {
   mergeIntegrationFromApi,
   sparkPath,
   type SettingsIntegration,
+  type SettingsNotificationChannel,
+  type SettingsSecurityPolicy,
   type SettingsTabId,
 } from './admin-settings.demo'
 import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integration-dialog.component'
@@ -71,7 +75,7 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
           <h2 class="set-intro__title">Centro de configuración</h2>
           <p class="set-intro__desc">
             Ajusta el comportamiento global de CloudOps para toda la organización.
-            Los cambios se aplican inmediatamente en modo demo.
+            Los cambios se aplican de inmediato en toda la organización.
           </p>
         </div>
         <ul class="set-intro__stats">
@@ -475,8 +479,8 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
                 <section class="set-account-profile">
                   <span class="set-account-avatar">{{ accountInitials() }}</span>
                   <div>
-                    <h3>{{ auth.user()?.name ?? 'Usuario demo' }}</h3>
-                    <p>{{ auth.user()?.email ?? 'demo@cloudops.io' }}</p>
+                    <h3>{{ auth.user()?.name ?? '—' }}</h3>
+                    <p>{{ auth.user()?.email ?? '—' }}</p>
                     <div class="set-account-badges">
                       @for (role of auth.user()?.roles ?? ['admin']; track role) {
                         <span class="set-role-chip">{{ role }}</span>
@@ -881,6 +885,7 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
 export class AdminSettingsPageComponent implements OnInit {
   readonly auth = inject(AuthService)
   readonly theme = inject(ThemeService)
+  readonly pro = inject(ProModeService)
   readonly toast = inject(ToastService)
   private readonly actions = inject(PlatformActionService)
   private readonly dialog = inject(MatDialog)
@@ -894,7 +899,7 @@ export class AdminSettingsPageComponent implements OnInit {
   readonly tabs = SETTINGS_TABS
   readonly timezones = ['Europe/Madrid', 'Europe/London', 'America/New_York', 'America/Sao_Paulo', 'UTC']
 
-  readonly orgName = signal('CloudOps Demo Org')
+  readonly orgName = signal('Spendlyx')
   readonly timezone = signal(SETTINGS_GENERAL.timezone)
   readonly locale = signal(SETTINGS_GENERAL.locale)
   readonly syncInterval = signal(SETTINGS_GENERAL.syncIntervalMin)
@@ -904,14 +909,14 @@ export class AdminSettingsPageComponent implements OnInit {
   readonly selectedTheme = signal<'light' | 'dark' | 'system'>('light')
   readonly view = signal<SettingsTabId>('general')
 
-  readonly integrations = signal<SettingsIntegration[]>([...SETTINGS_INTEGRATIONS])
+  readonly integrations = signal<SettingsIntegration[]>([])
   readonly integrationsStatus = signal<IntegrationsStatusDto | null>(null)
   readonly integrationDeliveries = signal<IntegrationDeliveryDto[]>([])
   readonly platformSources = signal<IntegrationPlatformSourceDto[]>(
     SETTINGS_PLATFORM_SOURCES.map((s) => ({ ...s, events: [...s.events] })),
   )
-  readonly notificationChannels = signal([...SETTINGS_NOTIFICATION_CHANNELS])
-  readonly securityPolicies = signal([...SETTINGS_SECURITY_POLICIES])
+  readonly notificationChannels = signal<SettingsNotificationChannel[]>([])
+  readonly securityPolicies = signal<SettingsSecurityPolicy[]>([])
 
   readonly headerActions: PageHeaderAction[] = [
     { label: 'Guardar cambios', icon: 'save', primary: true },
@@ -942,6 +947,11 @@ export class AdminSettingsPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (allowsDemoDataFrom(this.pro)) {
+      this.integrations.set([...SETTINGS_INTEGRATIONS])
+      this.notificationChannels.set([...SETTINGS_NOTIFICATION_CHANNELS])
+      this.securityPolicies.set([...SETTINGS_SECURITY_POLICIES])
+    }
     this.loadIntegrationsFromApi()
   }
 
@@ -989,7 +999,7 @@ export class AdminSettingsPageComponent implements OnInit {
   }
 
   accountInitials = (): string => {
-    const name = this.auth.user()?.name ?? 'Demo User'
+    const name = this.auth.user()?.name ?? 'U'
     return name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
   }
 
@@ -1083,7 +1093,7 @@ export class AdminSettingsPageComponent implements OnInit {
 
   handleChangePassword = (): void => {
     this.actions.runPageAction('settings', 'password', 'Cambiar contraseña', { area: 'admin' })
-    this.toast.info('Flujo de cambio de contraseña (demo)')
+    this.toast.info('Flujo de cambio de contraseña en preparación')
   }
 
   saveSection = (section: string): void => {

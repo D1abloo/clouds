@@ -56,17 +56,10 @@ import type { GithubAccount } from '../../../core/services/github.service'
             <dd>{{ account.createdAt ? (account.createdAt | date: 'shortDate') : '—' }}</dd>
           </div>
         </dl>
-        @if (demoMode) {
-          <p class="account-card__demo">
-            <mat-icon>science</mat-icon>
-            Modo demostración — PAT simulado · datos de cloudops-org
-          </p>
-        } @else {
-          <p class="account-card__secure">
-            <mat-icon>lock</mat-icon>
-            Token almacenado cifrado · no visible tras el alta
-          </p>
-        }
+        <p class="account-card__secure">
+          <mat-icon>lock</mat-icon>
+          Token almacenado cifrado · no visible tras el alta
+        </p>
       </div>
     }
   `,
