@@ -24,6 +24,5 @@ export const emptyGithubInventorySummary = () => ({
   deploymentCount: 0,
   repoItems: [] as unknown[],
   lastSyncAt: null as string | null,
-  message:
-    'Configuración requerida. Esta integración aún no está conectada. Añade las credenciales en Configuración.',
+  message: 'Sin cuentas conectadas. Añade una cuenta para comenzar.',
 })

@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core'
+import { Component, DestroyRef, inject } from '@angular/core'
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms'
 import { Router, RouterLink } from '@angular/router'
 import { PublicApiService } from './public-api.service'
 import { PublicSeoService } from './public-seo.service'
+import { bindPublicScroll } from './public-scroll.util'
 import { PUBLIC_THEME } from './public-theme'
 
 const passwordMatch = (group: AbstractControl): ValidationErrors | null => {
@@ -17,8 +18,11 @@ const passwordMatch = (group: AbstractControl): ValidationErrors | null => {
   selector: 'app-register-page',
   template: `
     <div class="pub pub-register">
-      <div class="pub-wrap pub-register__card">
-        <h1>Crea tu cuenta de Spendlyx</h1>
+      <div class="pub-wrap pub-register__card pub-card">
+        <div class="pub-register__head">
+          <span class="pub-logo__mark" aria-hidden="true">S</span>
+          <h1>Crea tu cuenta de Spendlyx</h1>
+        </div>
         <form [formGroup]="form" (ngSubmit)="submit()">
           <div class="row">
             <label>Nombre<input formControlName="firstName" autocomplete="given-name" /></label>
@@ -40,21 +44,32 @@ const passwordMatch = (group: AbstractControl): ValidationErrors | null => {
     </div>
   `,
   styles: [PUBLIC_THEME, `
-    .pub-register { min-height: 100dvh; display: grid; place-items: center; padding: 2rem 0; background: #f8fafc; }
-    .pub-register__card { max-width: 480px; background: #fff; border-radius: 16px; padding: 2rem; box-shadow: 0 12px 40px rgba(15,23,42,.08); width: 100%; }
-    .pub-register h1 { font-size: 1.35rem; margin: 0 0 1.25rem; }
+    .pub-register {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 2.5rem 0;
+      background: linear-gradient(160deg, #f0f9ff 0%, #f8fafc 40%, #eef2ff 100%);
+    }
+    .pub-register__card { max-width: 500px; width: 100%; padding: 2rem; box-shadow: 0 20px 50px rgba(15, 23, 42, 0.1); }
+    .pub-register__head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.35rem; }
+    .pub-register__head .pub-logo__mark { width: 40px; height: 40px; border-radius: 11px; background: linear-gradient(135deg, #0284c7, #6366f1); color: #fff; display: grid; place-items: center; font-weight: 800; }
+    .pub-register h1 { font-size: 1.3rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
     form { display: flex; flex-direction: column; gap: .75rem; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
     label { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; font-weight: 600; }
-    label input { padding: .55rem .65rem; border: 1px solid #e2e8f0; border-radius: 8px; font: inherit; }
-    .check { flex-direction: row; align-items: flex-start; font-weight: 400; font-size: .82rem; }
+    label input { padding: .6rem .7rem; border: 1px solid #e2e8f0; border-radius: 10px; font: inherit; }
+    label input:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); }
+    .check { flex-direction: row; align-items: flex-start; font-weight: 400; font-size: .82rem; gap: 0.5rem; }
     .full { width: 100%; margin-top: .5rem; }
     .hp { position: absolute; left: -9999px; }
     .err { color: #dc2626; font-size: .85rem; margin: 0; }
     .foot { text-align: center; margin-top: 1rem; font-size: .85rem; color: #64748b; }
+    @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
   `],
 })
 export class RegisterPageComponent {
+  private readonly destroyRef = inject(DestroyRef)
   private readonly fb = inject(FormBuilder)
   private readonly api = inject(PublicApiService)
   private readonly router = inject(Router)
@@ -76,6 +91,8 @@ export class RegisterPageComponent {
 
   constructor() {
     this.seo.apply({ title: 'Crear cuenta | Spendlyx', description: 'Regístrate en Spendlyx', path: '/registro' })
+    const unbind = bindPublicScroll()
+    this.destroyRef.onDestroy(unbind)
   }
 
   submit = (): void => {

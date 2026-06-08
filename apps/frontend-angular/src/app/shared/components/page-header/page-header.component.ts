@@ -36,8 +36,6 @@ export interface PageHeaderAction {
               <h1>{{ title }}</h1>
               @if (showDemoBadge()) {
                 <app-realtime-status-badge mode="demo" label="Datos demo" icon="science" />
-              } @else if (pro.proMode()) {
-                <app-realtime-status-badge mode="live" label="Modo PRO" icon="verified" />
               }
             </div>
             @if (description) {

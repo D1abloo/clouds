@@ -242,6 +242,19 @@ Verificación manual y automatizada del flujo OAuth en https://spendlyx.com.
 
 Variables VPS verificadas (enmascaradas): `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID`, `OAUTH_CALLBACK_URL`, `AUTH_URL`, `DEMO_MODE=false`, `PRO_MODE=true`. Secretos presentes con longitud válida, no impresos.
 
+## Correcciones de UX del panel PRO
+
+| Cambio | Detalle |
+|--------|---------|
+| Sidebar colapsado | Secciones cerradas por defecto; solo la ruta activa se expande |
+| Preferencias sidebar | Estado manual en `localStorage` (`cloudops_sidebar_expanded_v2`) |
+| Selector entorno | Eliminado Spendlyx / Production / Staging del sidebar |
+| Badges sidebar | Solo contadores reales (alertas, notificaciones no leídas) vía API |
+| Notificaciones | Campos `read_at` y `section`; endpoints `unread-summary`, `read-all`, `:id/read` |
+| Header | Sin badge PRO ni indicador WebSocket en topbar |
+| Integraciones | Empty state corto: «Sin cuentas conectadas» + «Añadir cuenta» / «Conectar cuenta» |
+| Español | «Marcar como leído», «Marcar todas como leídas», «No tienes notificaciones nuevas» |
+
 ## Cómo pasar a PRO
 
 ```bash

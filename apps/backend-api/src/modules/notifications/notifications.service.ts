@@ -5,8 +5,10 @@ import { PrismaService } from '../../common/prisma/prisma.service'
 export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, channel: string, title: string, body: string) {
-    return this.prisma.notification.create({ data: { userId, channel, title, body } })
+  async create(userId: string, channel: string, title: string, body: string, section?: string) {
+    return this.prisma.notification.create({
+      data: { userId, channel, title, body, section: section ?? null },
+    })
   }
 
   async findByUser(userId: string, unreadOnly = false) {
@@ -16,18 +18,46 @@ export class NotificationsService {
     })
   }
 
-  async markRead(id: string) {
-    return this.prisma.notification.update({ where: { id }, data: { isRead: true } })
+  async unreadSummary(userId: string) {
+    const rows = await this.prisma.notification.groupBy({
+      by: ['section'],
+      where: { userId, isRead: false },
+      _count: { _all: true },
+    })
+    const bySection: Record<string, number> = {}
+    let total = 0
+    for (const row of rows) {
+      const key = row.section ?? 'general'
+      const count = row._count?._all ?? 0
+      bySection[key] = count
+      total += count
+    }
+    return { total, bySection }
+  }
+
+  async markRead(id: string, userId: string) {
+    const row = await this.prisma.notification.findFirst({ where: { id, userId } })
+    if (!row) return null
+    return this.prisma.notification.update({
+      where: { id },
+      data: { isRead: true, readAt: new Date() },
+    })
+  }
+
+  async markAllRead(userId: string) {
+    const result = await this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true, readAt: new Date() },
+    })
+    return { updated: result.count }
   }
 
   async sendWebhook(url: string, payload: Record<string, unknown>) {
-    // TODO: HTTP POST to webhook URL
     console.log(`[Webhook Mock] POST ${url}`, payload)
     return { sent: true, url }
   }
 
   async sendEmail(to: string, subject: string, body: string) {
-    // TODO: Integrate email provider (SES, SendGrid, etc.)
     console.log(`[Email Mock] To: ${to}, Subject: ${subject}`)
     return { sent: true, to, subject, body }
   }

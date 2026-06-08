@@ -11,14 +11,18 @@ import { SPENDLYX_CONTACT_EMAIL } from './public.constants'
   imports: [ReactiveFormsModule],
   selector: 'app-contact-page',
   template: `
-    <div class="pub pub-page">
-      <div class="pub-wrap" style="max-width:560px;padding:3rem 0">
+    <header class="pub-page-hero">
+      <div class="pub-wrap">
         <h1>Contacto</h1>
         <p>Escríbenos a <a [href]="'mailto:' + contactEmail">{{ contactEmail }}</a> o usa el formulario.</p>
+      </div>
+    </header>
+    <div class="pub pub-page-body">
+      <div class="pub-wrap" style="max-width: 560px">
         @if (success) {
           <p class="ok" role="status">{{ success }}</p>
         } @else {
-          <form [formGroup]="form" (ngSubmit)="submit()" class="pub-form">
+          <form [formGroup]="form" (ngSubmit)="submit()" class="pub-form pub-card">
             <label>Nombre<input formControlName="name" /></label>
             <label>Email<input type="email" formControlName="email" /></label>
             <label>Motivo
@@ -41,11 +45,14 @@ import { SPENDLYX_CONTACT_EMAIL } from './public.constants'
     </div>
   `,
   styles: [PUBLIC_THEME, `
-    .pub-form { display: flex; flex-direction: column; gap: .85rem; margin-top: 1.5rem; }
+    .pub-form { display: flex; flex-direction: column; gap: .85rem; padding: 1.75rem; }
     .pub-form label { display: flex; flex-direction: column; gap: .3rem; font-size: .85rem; font-weight: 600; }
-    .pub-form input, .pub-form select, .pub-form textarea { padding: .55rem .65rem; border: 1px solid #e2e8f0; border-radius: 8px; font: inherit; }
+    .pub-form input, .pub-form select, .pub-form textarea { padding: .6rem .7rem; border: 1px solid #e2e8f0; border-radius: 10px; font: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+    .pub-form input:focus, .pub-form select:focus, .pub-form textarea:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); }
     .hp { position: absolute; left: -9999px; }
-    .err { color: #dc2626; font-size: .85rem; } .ok { color: #059669; font-weight: 600; }
+    .err { color: #dc2626; font-size: .85rem; margin: 0; }
+    .ok { color: #059669; font-weight: 600; padding: 1.5rem; background: #ecfdf5; border-radius: 12px; border: 1px solid #a7f3d0; }
+    .pub-page-hero a { color: #0284c7; }
   `],
 })
 export class ContactPageComponent implements OnInit {

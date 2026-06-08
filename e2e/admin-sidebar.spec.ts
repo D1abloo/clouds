@@ -77,12 +77,12 @@ test.describe('Panel admin — login y sidebar (español)', () => {
     }
   })
 
-  test('modo PRO — botón demo no visible', async ({ page }) => {
+  test('modo PRO — sin selector de entorno ni badge PRO en topbar', async ({ page }) => {
     test.skip(process.env.E2E_PRO_MODE !== '1', 'Defina E2E_PRO_MODE=1 con backend en PRO')
 
     await page.goto('/login')
-    await expect(page.getByRole('button', { name: /Entrar en modo demo/i })).not.toBeVisible()
-    await expect(page.getByText('Credenciales demo')).not.toBeVisible()
+    await expect(page.getByText('Staging Env')).not.toBeVisible()
+    await expect(page.getByText('Production', { exact: true })).not.toBeVisible()
   })
 
   test('ruta protegida redirige a login sin sesión', async ({ page }) => {

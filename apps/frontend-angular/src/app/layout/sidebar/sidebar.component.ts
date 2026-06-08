@@ -8,7 +8,6 @@ import { MatMenuModule } from '@angular/material/menu'
 import { MatDividerModule } from '@angular/material/divider'
 import { AppLogoComponent } from '../../shared/components/app-logo/app-logo.component'
 import { SidebarService } from './sidebar.service'
-import { OrgSwitcherComponent } from './org-switcher.component'
 import {
   SIDEBAR_MAIN_MODULES,
   resolveAreaFromPath,
@@ -17,11 +16,9 @@ import {
 import { SidebarNavGroupComponent } from './sidebar-nav-group.component'
 import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
 import { SidebarSearchComponent } from './sidebar-search.component'
-import { AlertsStore } from '../../core/stores/alerts.store'
-import { JenkinsStore } from '../../core/stores/jenkins.store'
-import { VpsStore } from '../../core/stores/vps.store'
 import { AuthStore } from '../../core/stores/auth.store'
 import { ProModeService } from '../../core/services/pro-mode.service'
+import { NavBadgeService } from '../../core/services/nav-badge.service'
 
 @Component({
   selector: 'app-sidebar',
@@ -33,7 +30,6 @@ import { ProModeService } from '../../core/services/pro-mode.service'
     MatMenuModule,
     MatDividerModule,
     RouterLink,
-    OrgSwitcherComponent,
     SidebarNavGroupComponent,
     SidebarNavLeafComponent,
     SidebarSearchComponent,
@@ -57,14 +53,10 @@ import { ProModeService } from '../../core/services/pro-mode.service'
           <app-logo size="md" />
           @if (!collapsed()) {
             <div class="sidebar-brand__text">
-              <strong>CloudOps</strong>
-              <span>Control Center</span>
+              <strong>{{ brandName() }}</strong>
+              <span>Panel de operaciones</span>
             </div>
           }
-        </div>
-
-        <div class="sidebar-org">
-          <app-org-switcher />
         </div>
       </div>
 
@@ -193,13 +185,12 @@ import { ProModeService } from '../../core/services/pro-mode.service'
       display: flex;
       align-items: center;
       gap: 0.65rem;
-      padding: 1rem 0.85rem 0.35rem;
+      padding: 1rem 0.85rem 0.65rem;
     }
     .sidebar-brand__text {
       strong { display: block; font-size: 0.92rem; color: var(--sidebar-text); }
       span { font-size: 0.68rem; color: var(--sidebar-text-faint); }
     }
-    .sidebar-org { padding: 0 0.35rem 0.35rem; }
     .sidebar-scroll {
       flex: 1 1 auto;
       min-height: 0;
@@ -312,15 +303,17 @@ import { ProModeService } from '../../core/services/pro-mode.service'
 export class SidebarComponent {
   private readonly router = inject(Router)
   readonly sidebarSvc = inject(SidebarService)
-  readonly alertsStore = inject(AlertsStore)
-  readonly jenkinsStore = inject(JenkinsStore)
-  readonly vpsStore = inject(VpsStore)
+  readonly navBadges = inject(NavBadgeService)
   readonly authStore = inject(AuthStore)
   readonly pro = inject(ProModeService)
 
   readonly mainModules = SIDEBAR_MAIN_MODULES
   readonly collapsed = this.sidebarSvc.collapsed
   private readonly flatNav = flattenAreaNavForSearch()
+
+  readonly brandName = computed(() =>
+    this.pro.proMode() && !this.pro.demoMode() ? 'Spendlyx' : 'CloudOps',
+  )
 
   readonly url = toSignal(
     this.router.events.pipe(
@@ -334,13 +327,7 @@ export class SidebarComponent {
   constructor() {
     effect(() => {
       const path = this.url().split('?')[0]
-      const area = resolveAreaFromPath(path)
-      if (area) this.sidebarSvc.setExpanded(area.id, true)
-      const cloudProvider = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
-      if (cloudProvider) this.sidebarSvc.setExpanded(cloudProvider, true)
-      if (path === '/dashboard' && typeof window !== 'undefined' && window.innerWidth > 960) {
-        this.sidebarSvc.setCollapsed(false)
-      }
+      this.sidebarSvc.syncNavigationExpand(path)
     })
   }
 
@@ -405,41 +392,7 @@ export class SidebarComponent {
     return area?.id === moduleId
   }
 
-  readonly resolveBadge = (key?: string): number | null => {
-    if (!key) return null
-    const demo: Record<string, number> = {
-      alerts: this.alertsStore.activeAlerts() || 12,
-      vps: this.vpsStore.totalHosts() || 6,
-      jenkins: this.jenkinsStore.failedBuilds() || 3,
-      billing: 4,
-      notifications: 8,
-      approvals: 4,
-      incidents: 3,
-      logs: 84,
-      backups: 2,
-      security: 9,
-      secrets: 5,
-      deployments: 6,
-      'command-center': 5,
-      cost: 15,
-      network: 8,
-      health: 4,
-      compliance: 14,
-      scheduler: 12,
-      changes: 47,
-      tokens: 6,
-      'admin-webhooks': 4,
-      copilot: 1,
-      capacity: 7,
-      instances: 26,
-      'github-repos': 6,
-      'gitlab-projects': 5,
-      'github-webhooks': 7,
-      'github-deployments': 4,
-    }
-    const n = demo[key]
-    return n && n > 0 ? n : null
-  }
+  readonly resolveBadge = (key?: string): number | null => this.navBadges.resolve(key)
 
   readonly userInitials = computed(() => {
     const u = this.authStore.user()

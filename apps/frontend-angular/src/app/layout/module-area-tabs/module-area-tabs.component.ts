@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import { filter, map, startWith } from 'rxjs'
 import { MatIconModule } from '@angular/material/icon'
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
+import { NavBadgeService } from '../../core/services/nav-badge.service'
 import {
   resolveAreaFromPath,
   resolveCloudProviderFromPath,
@@ -117,6 +118,7 @@ import {
 })
 export class ModuleAreaTabsComponent {
   private readonly router = inject(Router)
+  private readonly navBadges = inject(NavBadgeService)
 
   readonly url = toSignal(
     this.router.events.pipe(
@@ -144,43 +146,7 @@ export class ModuleAreaTabsComponent {
     return a.tabs
   })
 
-  /** Injected from parent via optional callback — set in main layout */
-  badgeResolver = (key?: string): number | null => {
-    if (!key) return null
-    const demo: Record<string, number> = {
-      alerts: 12,
-      vps: 6,
-      jenkins: 3,
-      billing: 4,
-      notifications: 8,
-      approvals: 4,
-      incidents: 3,
-      logs: 84,
-      backups: 2,
-      security: 9,
-      secrets: 5,
-      deployments: 6,
-      'command-center': 5,
-      cost: 15,
-      network: 8,
-      health: 4,
-      compliance: 14,
-      scheduler: 12,
-      changes: 47,
-      tokens: 6,
-      'admin-webhooks': 4,
-      copilot: 1,
-      capacity: 7,
-      instances: 26,
-      'github-repos': 4,
-      'gitlab-projects': 5,
-      'github-webhooks': 2,
-      'github-deployments': 2,
-      'runbooks-executions': 6,
-    }
-    const n = demo[key]
-    return n && n > 0 ? n : null
-  }
+  badgeResolver = (key?: string): number | null => this.navBadges.resolve(key)
 
   badge = (key?: string): number | null => this.badgeResolver(key)
 }

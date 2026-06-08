@@ -1854,6 +1854,48 @@ body,
   min-height: unset !important;
 }
 
+html.pub-site,
+html.pub-site body {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+html.pub-site app-root,
+html.pub-site .app-root {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
+html.pub-site {
+  scroll-padding-top: 72px;
+}
+
+html.pub-site::-webkit-scrollbar,
+html.pub-site body::-webkit-scrollbar {
+  width: 10px;
+}
+
+html.pub-site::-webkit-scrollbar-track,
+html.pub-site body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html.pub-site::-webkit-scrollbar-thumb,
+html.pub-site body::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 999px;
+  border: 2px solid #f1f5f9;
+}
+
+html.pub-site::-webkit-scrollbar-thumb:hover,
+html.pub-site body::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 @import 'material-fields';
 @import 'global-flat-ui';
 @import 'app/features/repositories/repositories-layout';

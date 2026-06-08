@@ -9,6 +9,12 @@ import { FormsModule } from '@angular/forms'
   imports: [FormsModule],
   selector: 'app-docs-page',
   template: `
+    <header class="pub-page-hero">
+      <div class="pub-wrap">
+        <h1>Documentación</h1>
+        <p>Guía de uso del panel Spendlyx para usuarios — sin detalles técnicos internos.</p>
+      </div>
+    </header>
     <div class="pub pub-docs">
       <div class="pub-wrap pub-docs__layout">
         <aside class="pub-docs__sidebar">
@@ -27,15 +33,52 @@ import { FormsModule } from '@angular/forms'
     </div>
   `,
   styles: [PUBLIC_THEME, `
-    .pub-docs { padding: 2rem 0 4rem; }
-    .pub-docs__layout { display: grid; gap: 2rem; grid-template-columns: 240px 1fr; }
-    .pub-docs__sidebar { display: flex; flex-direction: column; gap: .35rem; position: sticky; top: 80px; align-self: start; }
-    .pub-docs__sidebar input { padding: .5rem .65rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: .5rem; }
-    .pub-docs__sidebar button { text-align: left; padding: .45rem .65rem; border: none; background: none; border-radius: 6px; cursor: pointer; font-size: .85rem; color: #475569; }
-    .pub-docs__sidebar button.active, .pub-docs__sidebar button:hover { background: #f1f5f9; color: #0284c7; }
-    .pub-docs__content h1 { font-size: 1.75rem; margin: 0 0 1rem; }
-    .pub-docs__content p { line-height: 1.65; color: #475569; margin: 0 0 .85rem; }
-    @media (max-width: 768px) { .pub-docs__layout { grid-template-columns: 1fr; } .pub-docs__sidebar { position: static; } }
+    .pub-docs { padding: 0 0 4rem; }
+    .pub-docs__layout { display: grid; gap: 2rem; grid-template-columns: 260px 1fr; align-items: start; }
+    .pub-docs__sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      position: sticky;
+      top: 88px;
+      max-height: calc(100dvh - 100px);
+      overflow-y: auto;
+      padding-right: 0.35rem;
+      scrollbar-width: thin;
+    }
+    .pub-docs__sidebar input {
+      padding: 0.55rem 0.7rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+      font: inherit;
+      background: #fff;
+    }
+    .pub-docs__sidebar button {
+      text-align: left;
+      padding: 0.5rem 0.7rem;
+      border: none;
+      background: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #475569;
+      transition: background 0.15s, color 0.15s;
+    }
+    .pub-docs__sidebar button.active, .pub-docs__sidebar button:hover { background: #f0f9ff; color: #0284c7; font-weight: 600; }
+    .pub-docs__content {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+    }
+    .pub-docs__content h1 { font-size: 1.75rem; margin: 0 0 1rem; font-weight: 800; letter-spacing: -0.02em; }
+    .pub-docs__content p { line-height: 1.7; color: #475569; margin: 0 0 0.9rem; }
+    @media (max-width: 768px) {
+      .pub-docs__layout { grid-template-columns: 1fr; }
+      .pub-docs__sidebar { position: static; max-height: none; }
+    }
   `],
 })
 export class DocsPageComponent implements OnInit {

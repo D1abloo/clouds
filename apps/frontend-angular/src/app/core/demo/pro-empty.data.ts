@@ -3,8 +3,7 @@ import type { AlertItem, AuditLog, BillingSummary, Instance, NotificationItem } 
 import { CloudProvider } from '../models/api.models'
 
 export const PRO_EMPTY_MSG = 'Sin datos todavía'
-export const PRO_CONFIG_MSG =
-  'Configuración requerida. Esta integración aún no está conectada. Añade las credenciales en Configuración para comenzar a usar esta función en modo PRO.'
+export const PRO_CONFIG_MSG = 'Sin cuentas conectadas. Añade una cuenta para comenzar.'
 
 export const emptyDashboard = (): DashboardData => ({
   totalInstances: 0,

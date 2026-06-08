@@ -43,4 +43,12 @@ export class NotificationsService {
 
   markRead = (id: string): Observable<unknown> =>
     this.api.post(`notifications/${id}/read`)
+
+  markAllRead = (): Observable<{ updated: number }> =>
+    this.api.post<{ updated: number }>('notifications/read-all')
+
+  unreadSummary = (): Observable<{ total: number; bySection: Record<string, number> }> =>
+    this.api.get<{ total: number; bySection: Record<string, number> }>('notifications/unread-summary').pipe(
+      catchError(() => of({ total: 0, bySection: {} })),
+    )
 }

@@ -7,8 +7,13 @@ import { PUBLIC_THEME } from './public-theme'
   standalone: true,
   selector: 'app-use-cases-page',
   template: `
-    <div class="pub pub-page">
-      <div class="pub-wrap pub-page__head"><h1>Casos de uso</h1><p>Cómo Spendlyx ayuda a distintos equipos a operar con claridad.</p></div>
+    <header class="pub-page-hero">
+      <div class="pub-wrap">
+        <h1>Casos de uso</h1>
+        <p>Cómo Spendlyx ayuda a distintos equipos a operar con claridad y trazabilidad.</p>
+      </div>
+    </header>
+    <div class="pub pub-page-body">
       <div class="pub-wrap">
         @for (c of cases; track c.title) {
           <article class="pub-card pub-case">
@@ -22,7 +27,7 @@ import { PUBLIC_THEME } from './public-theme'
       </div>
     </div>
   `,
-  styles: [PUBLIC_THEME, `.pub-page { padding: 3rem 0; } .pub-case { margin-bottom: 1rem; } .pub-case p { margin: .35rem 0; font-size: .85rem; }`],
+  styles: [PUBLIC_THEME],
 })
 export class UseCasesPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)

@@ -14,8 +14,18 @@ export class NotificationsController {
     return this.service.findByUser(user.sub, unreadOnly === 'true')
   }
 
+  @Get('unread-summary')
+  unreadSummary(@CurrentUser() user: JwtPayload) {
+    return this.service.unreadSummary(user.sub)
+  }
+
+  @Post('read-all')
+  markAllRead(@CurrentUser() user: JwtPayload) {
+    return this.service.markAllRead(user.sub)
+  }
+
   @Post(':id/read')
-  markRead(@Param('id') id: string) {
-    return this.service.markRead(id)
+  markRead(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.service.markRead(id, user.sub)
   }
 }

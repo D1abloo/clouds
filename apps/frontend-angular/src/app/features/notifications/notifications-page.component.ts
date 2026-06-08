@@ -18,6 +18,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { NotificationsService } from '../../core/services/notifications.service'
 import { ToastService } from '../../core/services/toast.service'
+import { NotificationsStore } from '../../core/stores/notifications.store'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { NotificationItem } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
@@ -95,7 +96,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             } @else if (page.error()) {
               <app-error-state [message]="page.error()!" (retry)="load()" />
             } @else if (filtered().length === 0) {
-              <app-empty-state icon="notifications_none" title="Sin notificaciones" description="Estás al día." />
+              <app-empty-state icon="notifications_none" title="Sin notificaciones" description="No tienes notificaciones pendientes." />
             } @else {
               <mat-list class="notification-list table-card">
                 @for (item of filtered(); track item.id) {
@@ -106,7 +107,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
                     <div matListItemMeta class="meta">
                       <span class="date">{{ item.createdAt | date: 'short' }}</span>
                       @if (!item.read) {
-                        <button mat-button type="button" (click)="handleMarkRead(item)">Marcar leída</button>
+                        <button mat-button type="button" (click)="handleMarkRead(item)">Marcar como leído</button>
                       }
                       <button mat-icon-button type="button" aria-label="Eliminar" (click)="handleDelete(item)"><mat-icon>delete</mat-icon></button>
                       <button mat-icon-button type="button" aria-label="Ver recurso" (click)="viewResource(item)"><mat-icon>open_in_new</mat-icon></button>
@@ -157,6 +158,7 @@ import { createPageLoader } from '../../core/utils/page-load.util'
 })
 export class NotificationsPageComponent implements OnInit {
   private readonly service = inject(NotificationsService)
+  private readonly notificationsStore = inject(NotificationsStore)
   private readonly toast = inject(ToastService)
   private readonly actions = inject(PlatformActionService)
 
@@ -194,10 +196,8 @@ export class NotificationsPageComponent implements OnInit {
 
   handleHeader = (label: string): void => {
     if (label === 'Marcar todas leídas') {
-      this.actions.runPageAction('notifications', 'mark-all-read', label, {
-        count: this.unreadCount(),
-        area: 'observability',
-      })
+      this.notificationsStore.markAllRead()
+      this.toast.success('Notificaciones marcadas como leídas')
       this.load()
       return
     }
@@ -205,22 +205,11 @@ export class NotificationsPageComponent implements OnInit {
   }
 
   handleMarkRead = (item: NotificationItem): void => {
-    this.service.markRead(item.id).subscribe({
-      next: () => {
-        this.actions.runPageAction('notifications', 'mark-read', 'Marcar leída', {
-          row: item as unknown as Record<string, unknown>,
-          area: 'observability',
-        })
-        this.load()
-      },
-      error: () => {
-        this.actions.runPageAction('notifications', 'mark-read', 'Marcar leída', {
-          row: item as unknown as Record<string, unknown>,
-          area: 'observability',
-        })
-        this.load()
-      },
-    })
+    this.notificationsStore.markRead(item.id)
+    this.items.update((list) =>
+      list.map((i) => (i.id === item.id ? { ...i, read: true } : i)),
+    )
+    this.toast.success('Notificación leída')
   }
 
   handleDelete = (item: NotificationItem): void => {

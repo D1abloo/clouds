@@ -1,6 +1,7 @@
-import { Component, inject, OnInit } from '@angular/core'
+import { Component, DestroyRef, inject, OnInit } from '@angular/core'
 import { ActivatedRoute, RouterLink } from '@angular/router'
 import { PublicApiService } from './public-api.service'
+import { bindPublicScroll } from './public-scroll.util'
 import { PUBLIC_THEME } from './public-theme'
 
 @Component({
@@ -23,16 +24,23 @@ import { PUBLIC_THEME } from './public-theme'
       </div>
     </div>
   `,
-  styles: [PUBLIC_THEME, `.pub-verify { min-height: 80dvh; display: grid; place-items: center; } .pub-verify__card { text-align: center; max-width: 420px; padding: 2rem; }`],
+  styles: [PUBLIC_THEME, `
+    .pub-verify { min-height: 100dvh; display: grid; place-items: center; padding: 2rem 0; background: linear-gradient(160deg, #f0f9ff, #f8fafc); }
+    .pub-verify__card { text-align: center; max-width: 440px; padding: 2.25rem; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 16px 40px rgba(15,23,42,.08); }
+    .pub-verify__card h1 { font-size: 1.35rem; font-weight: 800; margin: 0 0 0.75rem; }
+    .pub-verify__card p { color: #64748b; line-height: 1.6; margin: 0 0 1.25rem; }
+  `],
 })
 export class VerifyEmailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly api = inject(PublicApiService)
+  private readonly destroyRef = inject(DestroyRef)
   loading = true
   success = false
   errorTitle = 'El enlace no es válido'
   errorMsg = 'Solicita un nuevo enlace de verificación.'
   ngOnInit(): void {
+    this.destroyRef.onDestroy(bindPublicScroll())
     const token = this.route.snapshot.queryParamMap.get('token')
     if (!token) { this.loading = false; return }
     this.api.verifyEmail(token).subscribe({

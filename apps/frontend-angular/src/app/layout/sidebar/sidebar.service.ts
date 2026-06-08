@@ -1,17 +1,18 @@
-import { Injectable, inject, signal, effect, computed } from '@angular/core'
+import { Injectable, signal, effect, computed } from '@angular/core'
 import { DEFAULT_FAVORITES } from './sidebar-tree.config'
-import { ProModeService } from '../../core/services/pro-mode.service'
-import { environment } from '../../../environments/environment'
+import {
+  SIDEBAR_MAIN_MODULES,
+  resolveAreaFromPath,
+  CLOUD_SIDEBAR_BRANCHES,
+} from '../../core/routing/area-nav.config'
 
 const COLLAPSED_KEY = 'cloudops_sidebar_collapsed'
 const EXPANDED_KEY = 'cloudops_sidebar_expanded'
 const FAVORITES_KEY = 'cloudops_sidebar_favorites'
+const EXPANDED_MIGRATION_KEY = 'cloudops_sidebar_expanded_v2'
 
-export interface OrgInfo {
-  id: string
-  name: string
-  initials: string
-}
+const CLOUD_BRANCH_IDS = CLOUD_SIDEBAR_BRANCHES.map((b) => b.id)
+const MODULE_IDS = SIDEBAR_MAIN_MODULES.map((m) => m.id)
 
 const readStorage = (key: string): string | null => {
   if (typeof localStorage === 'undefined') return null
@@ -36,19 +37,8 @@ const readFavorites = (): string[] => {
   }
 }
 
-const defaultOrgName = (): string => {
-  if (environment.production) return 'Spendlyx'
-  return 'CloudOps Demo'
-}
-
 @Injectable({ providedIn: 'root' })
 export class SidebarService {
-  private readonly pro = inject(ProModeService)
-
-  private readonly orgLabel = computed(() =>
-    this.pro.proMode() && !this.pro.demoMode() ? 'Spendlyx' : defaultOrgName(),
-  )
-
   private readonly _collapsed = signal<boolean>(readStorage(COLLAPSED_KEY) === 'true')
   readonly collapsed = this._collapsed.asReadonly()
 
@@ -61,29 +51,15 @@ export class SidebarService {
   private readonly _favorites = signal<string[]>(readFavorites())
   readonly favorites = this._favorites.asReadonly()
 
-  private readonly _currentOrg = signal<OrgInfo>({
-    id: 'default',
-    name: defaultOrgName(),
-    initials: 'SL',
-  })
-  readonly currentOrg = computed(() => {
-    const org = this._currentOrg()
-    const name = this.orgLabel()
-    return org.id === 'default' ? { ...org, name, initials: name === 'Spendlyx' ? 'SL' : 'CO' } : org
-  })
-
-  readonly availableOrgs = computed((): OrgInfo[] => {
-    const primary = this.orgLabel()
-    return [
-      { id: 'default', name: primary, initials: primary === 'Spendlyx' ? 'SL' : 'CO' },
-      { id: 'prod', name: 'Production', initials: 'PR' },
-      { id: 'stg', name: 'Staging Env', initials: 'ST' },
-    ]
-  })
-
   readonly showFavoritesOnly = computed(() => false)
 
   constructor() {
+    if (typeof localStorage !== 'undefined' && !readStorage(EXPANDED_MIGRATION_KEY)) {
+      localStorage.removeItem(EXPANDED_KEY)
+      localStorage.setItem(EXPANDED_MIGRATION_KEY, '1')
+      this._expanded.set({})
+    }
+
     effect(() => {
       localStorage.setItem(COLLAPSED_KEY, String(this._collapsed()))
     })
@@ -110,15 +86,56 @@ export class SidebarService {
   isExpanded = (id: string): boolean => {
     const map = this._expanded()
     if (id in map) return map[id]
-    return true
+    return false
   }
 
   toggleExpanded = (id: string): void => {
-    this._expanded.update((m) => ({ ...m, [id]: !this.isExpanded(id) }))
+    const mobile = typeof window !== 'undefined' && window.innerWidth <= 960
+    const willOpen = !this.isExpanded(id)
+
+    this._expanded.update((m) => {
+      if (mobile && willOpen) {
+        const next: Record<string, boolean> = {}
+        for (const key of [...MODULE_IDS, ...CLOUD_BRANCH_IDS]) {
+          next[key] = key === id
+        }
+        return next
+      }
+      return { ...m, [id]: willOpen }
+    })
   }
 
   setExpanded = (id: string, open: boolean): void => {
     this._expanded.update((m) => ({ ...m, [id]: open }))
+  }
+
+  /** Expande solo la sección activa; en móvil cierra el resto (acordeón). */
+  syncNavigationExpand = (path: string): void => {
+    const area = resolveAreaFromPath(path)
+    const cloud = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
+    const mobile = typeof window !== 'undefined' && window.innerWidth <= 960
+
+    this._expanded.update((prev) => {
+      const next = mobile ? {} : { ...prev }
+
+      for (const id of MODULE_IDS) {
+        if (mobile) {
+          next[id] = area?.id === id
+        } else if (area?.id === id) {
+          next[id] = true
+        }
+      }
+
+      for (const id of CLOUD_BRANCH_IDS) {
+        if (mobile) {
+          next[id] = cloud === id
+        } else if (cloud === id) {
+          next[id] = true
+        }
+      }
+
+      return next
+    })
   }
 
   isFavorite = (route: string): boolean => this._favorites().includes(route)
@@ -127,9 +144,5 @@ export class SidebarService {
     this._favorites.update((list) =>
       list.includes(route) ? list.filter((r) => r !== route) : [...list, route],
     )
-  }
-
-  setOrg = (org: OrgInfo): void => {
-    this._currentOrg.set(org)
   }
 }

@@ -51,9 +51,13 @@ const LEGAL: Record<string, { title: string; sections: { h: string; p: string }[
   standalone: true,
   selector: 'app-legal-page',
   template: `
-    <div class="pub pub-page">
-      <div class="pub-wrap pub-legal">
+    <header class="pub-page-hero">
+      <div class="pub-wrap">
         <h1>{{ content().title }}</h1>
+      </div>
+    </header>
+    <div class="pub pub-page-body">
+      <div class="pub-wrap pub-legal pub-card">
         @for (s of content().sections; track s.h) {
           <section><h2>{{ s.h }}</h2><p>{{ s.p }}</p></section>
         }
@@ -61,7 +65,7 @@ const LEGAL: Record<string, { title: string; sections: { h: string; p: string }[
       </div>
     </div>
   `,
-  styles: [PUBLIC_THEME, `.pub-legal { padding: 3rem 0; max-width: 720px; } .pub-legal h2 { font-size: 1.1rem; margin: 1.5rem 0 .5rem; } .pub-legal p { line-height: 1.65; color: #475569; } .pub-legal__updated { margin-top: 2rem; font-size: .8rem; color: #94a3b8; }`],
+  styles: [PUBLIC_THEME, `.pub-legal { max-width: 720px; padding: 2rem; } .pub-legal h2 { font-size: 1.05rem; margin: 1.5rem 0 .5rem; font-weight: 700; } .pub-legal p { line-height: 1.7; color: #475569; margin: 0; } .pub-legal__updated { margin-top: 2rem; font-size: .8rem; color: #94a3b8; }`],
 })
 export class LegalPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)

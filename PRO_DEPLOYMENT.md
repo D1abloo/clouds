@@ -212,6 +212,18 @@ Configuración en `settings`: `nombre_app=Spendlyx`, `modo=PRO`, `dominio=https:
 - Servicios devuelven listas vacías o «Configuración requerida», no datos fake
 - `APP_ENV=production` en backend, `platform/status` y entornos Angular
 
+## Correcciones de UX del panel PRO
+
+| Cambio | Detalle |
+|--------|---------|
+| Sidebar colapsado | Secciones cerradas por defecto; solo la ruta activa se expande |
+| Preferencias sidebar | Estado manual en `localStorage` (`cloudops_sidebar_expanded`) |
+| Selector entorno | Eliminado Spendlyx / Production / Staging del sidebar |
+| Badges sidebar | Solo contadores reales (alertas, notificaciones no leídas) |
+| Notificaciones | `read_at`, `section`, API `unread-summary`, marcar leído/todas |
+| Header | Sin badge PRO ni indicador WebSocket |
+| Integraciones | Empty state corto: «Sin cuentas conectadas» + «Añadir cuenta» |
+
 ## Rollback a demo
 
 ```bash
