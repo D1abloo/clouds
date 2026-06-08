@@ -16,9 +16,11 @@ const statusLabelEs = (status: string): string => {
   return status
 }
 
+export const isDemoGithubAccount = (a: Pick<GithubAccount, 'id' | 'tokenRef'>): boolean =>
+  a.id === DEMO_GITHUB_ACCOUNT_ID || a.tokenRef?.startsWith('demo:') || a.tokenRef === 'demo'
+
 export const mapAccount = (a: GithubAccount) => {
-  const isDemo =
-    a.id === DEMO_GITHUB_ACCOUNT_ID || a.tokenRef?.startsWith('demo:') || a.tokenRef === 'demo'
+  const isDemo = isDemoGithubAccount(a)
   return {
     id: a.id,
     label: a.label,

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
+import { AppModeService } from '../../common/config/app-mode.service'
 import {
   DEMO_DEPLOYMENTS,
   DEMO_GITHUB_ACCOUNT_ID,
@@ -30,11 +31,15 @@ export class GithubDemoService implements OnModuleInit {
   private dbReady = false
   private demoSessionActive = true
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mode: AppModeService,
+  ) {
     this.seedMemoryDeployments()
   }
 
   async onModuleInit(): Promise<void> {
+    if (!this.mode.canUseDemoFallback()) return
     await this.ensureDemoAccountInDatabase()
   }
 

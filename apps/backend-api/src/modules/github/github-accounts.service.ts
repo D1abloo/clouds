@@ -6,7 +6,7 @@ import { RealtimeGateway } from '../realtime/realtime.gateway'
 import { AppModeService } from '../../common/config/app-mode.service'
 import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubDemoService } from './github-demo.service'
-import { mapAccount, mapDemoAccountProfile } from './github-mappers'
+import { mapAccount, mapDemoAccountProfile, isDemoGithubAccount } from './github-mappers'
 import { DEMO_GITHUB_ACCOUNT_ID, DEMO_GITHUB_REPOS } from './github-demo.data'
 
 @Injectable()
@@ -23,13 +23,14 @@ export class GithubAccountsService {
   async list() {
     if (this.mode.isProMode() && !this.mode.canUseDemoFallback()) {
       const items = await this.prisma.githubAccount.findMany({ orderBy: { createdAt: 'desc' } })
-      if (!items.length) {
+      const liveAccounts = items.filter((a) => !isDemoGithubAccount(a))
+      if (!liveAccounts.length) {
         return {
           ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
           demoMode: false,
         }
       }
-      return { items: items.map(mapAccount), demoMode: false, proMode: true }
+      return { items: liveAccounts.map(mapAccount), demoMode: false, proMode: true }
     }
 
     if (!this.demo.isDbReady() || !this.demo.isSessionActive()) {

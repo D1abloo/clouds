@@ -77,15 +77,17 @@ ENV
 fi
 
 echo "==> Reconstruyendo stack PRO..."
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --build postgres redis backend-api frontend
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --build postgres redis backend-api
 
-for i in $(seq 1 36); do
+for i in $(seq 1 48); do
   if docker compose -f docker-compose.yml -f docker-compose.production.yml exec -T backend-api wget -qO- http://127.0.0.1:3000/api/v1/health >/dev/null 2>&1; then
     echo "==> API lista"
     break
   fi
   sleep 5
 done
+
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d frontend
 
 docker compose -f docker-compose.yml -f docker-compose.production.yml ps
 echo "Panel: https://spendlyx.com"

@@ -4,7 +4,7 @@ import { AuditService } from '../audit/audit.service'
 import { AppModeService } from '../../common/config/app-mode.service'
 import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubDemoService } from './github-demo.service'
-import { mapRepo } from './github-mappers'
+import { mapRepo, isDemoGithubAccount } from './github-mappers'
 import { DEMO_GITHUB_REPOS, resolveDemoSlugFromRepoId } from './github-demo.data'
 
 @Injectable()
@@ -37,13 +37,21 @@ export class GithubRepositoriesService {
     }
     try {
       const accounts = await this.prisma.githubAccount.findMany()
-      const connected = accounts.some((a) => a.status === 'connected')
+      const liveAccounts = demoAllowed
+        ? accounts
+        : accounts.filter((a) => !isDemoGithubAccount(a))
+      const connected = liveAccounts.some((a) => a.status === 'connected')
+      const liveAccountIds = liveAccounts.map((a) => a.id)
       const items = await this.prisma.githubRepository.findMany({
-        where: accountId ? { accountId } : undefined,
+        where: accountId
+          ? { accountId }
+          : liveAccountIds.length
+            ? { accountId: { in: liveAccountIds } }
+            : { accountId: '__none__' },
         orderBy: { name: 'asc' },
       })
       if (items.length) {
-        const lastSync = accounts
+        const lastSync = liveAccounts
           .map((a) => a.lastSyncAt)
           .filter(Boolean)
           .sort((a, b) => (b!.getTime() - a!.getTime()))[0]
