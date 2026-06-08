@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
+import { AppModeService } from '../../common/config/app-mode.service'
+import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubDemoService } from './github-demo.service'
 import { mapWebhook } from './github-mappers'
 
@@ -10,10 +12,14 @@ export class GithubWebhooksService {
     private readonly prisma: PrismaService,
     private readonly demo: GithubDemoService,
     private readonly audit: AuditService,
+    private readonly mode: AppModeService,
   ) {}
 
-  async listAll() {
+  async listAll(): Promise<{ items: ReturnType<typeof mapWebhook>[]; demoMode: boolean }> {
+    const demoAllowed = this.mode.canUseDemoFallback()
+
     if (!this.demo.isDbReady()) {
+      if (!demoAllowed) return { items: [], demoMode: false }
       return { items: this.demo.listMemoryWebhooks(), demoMode: true }
     }
     try {
@@ -22,10 +28,11 @@ export class GithubWebhooksService {
         orderBy: { createdAt: 'desc' },
       })
       if (items.length) {
-        return { items: items.map((w) => mapWebhook(w, w.repo?.fullName)) }
+        return { items: items.map((w) => mapWebhook(w, w.repo?.fullName)), demoMode: false }
       }
+      if (!demoAllowed) return { items: [], demoMode: false }
     } catch {
-      /* memoria */
+      if (!demoAllowed) return { items: [], demoMode: false }
     }
     return { items: this.demo.listMemoryWebhooks(), demoMode: true }
   }
@@ -42,7 +49,11 @@ export class GithubWebhooksService {
     userId: string,
     body: { repoId?: string; accountId?: string; event: string; url: string; secret?: string },
   ) {
+    const demoAllowed = this.mode.canUseDemoFallback()
     if (!this.demo.isDbReady()) {
+      if (!demoAllowed) {
+        return connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT')
+      }
       return {
         id: `gh-wh-mem-${Date.now()}`,
         repoId: body.repoId,

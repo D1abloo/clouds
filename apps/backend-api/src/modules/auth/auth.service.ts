@@ -6,6 +6,7 @@ import { PrismaService } from '../../common/prisma/prisma.service'
 import { LoginDto, RegisterDto } from './dto/login.dto'
 import { AuditService } from '../audit/audit.service'
 import { resolveUserPermissions } from '../../common/rbac/rbac.resolve'
+import { OrganizationScopeService } from '../../common/organization/organization-scope.service'
 
 @Injectable()
 export class AuthService {
@@ -14,7 +15,23 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private audit: AuditService,
+    private orgScope: OrganizationScopeService,
   ) {}
+
+  private async buildAuthPayload(userId: string, email: string, roles: string[]) {
+    const [permissions, scope] = await Promise.all([
+      resolveUserPermissions(this.prisma, userId),
+      this.orgScope.resolveForUser(userId),
+    ])
+    return {
+      sub: userId,
+      email,
+      roles,
+      permissions,
+      organizationIds: scope.organizationIds,
+      projectIds: scope.projectIds,
+    }
+  }
 
   async login(dto: LoginDto, ipAddress?: string) {
     const user = await this.prisma.user.findUnique({
@@ -34,8 +51,7 @@ export class AuthService {
     }
 
     const roles = user.userRoles.map((ur) => ur.role.name)
-    const permissions = await resolveUserPermissions(this.prisma, user.id)
-    const payload = { sub: user.id, email: user.email, roles, permissions }
+    const payload = await this.buildAuthPayload(user.id, user.email, roles)
 
     await this.audit.create({
       userId: user.id,
@@ -46,7 +62,14 @@ export class AuthService {
 
     return {
       accessToken: this.jwt.sign(payload),
-      user: { id: user.id, email: user.email, name: user.name, roles, permissions },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        roles,
+        permissions: payload.permissions,
+        organizationIds: payload.organizationIds,
+      },
     }
   }
 
@@ -90,13 +113,8 @@ export class AuthService {
       include: { userRoles: { include: { role: true } } },
     })
     if (!user) return null
-    const permissions = await resolveUserPermissions(this.prisma, user.id)
-    return {
-      sub: user.id,
-      email: user.email,
-      roles: user.userRoles.map((ur) => ur.role.name),
-      permissions,
-    }
+    const roles = user.userRoles.map((ur) => ur.role.name)
+    return this.buildAuthPayload(user.id, user.email, roles)
   }
 
   async oauthCallback(provider: string, code: string, ipAddress?: string) {
@@ -162,8 +180,7 @@ export class AuthService {
     })
 
     const roles = user.userRoles.map((ur) => ur.role.name)
-    const permissions = await resolveUserPermissions(this.prisma, user.id)
-    const payload = { sub: user.id, email: user.email, roles, permissions }
+    const payload = await this.buildAuthPayload(user.id, user.email, roles)
 
     await this.audit.create({
       userId: user.id,
@@ -175,7 +192,14 @@ export class AuthService {
 
     return {
       accessToken: this.jwt.sign(payload),
-      user: { id: user.id, email: user.email, name: user.name, roles, permissions },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        roles,
+        permissions: payload.permissions,
+        organizationIds: payload.organizationIds,
+      },
       provider,
     }
   }

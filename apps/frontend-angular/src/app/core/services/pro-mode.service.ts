@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment'
 export type PlatformStatusDto = {
   demoMode: boolean
   proMode: boolean
+  appEnv?: string
   authUrl: string
   appUrl?: string
   oauth: { google: boolean; github: boolean }

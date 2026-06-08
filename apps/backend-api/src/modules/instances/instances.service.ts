@@ -18,10 +18,14 @@ export class InstancesService {
 
   async findAll(filters?: {
     projectId?: string
+    projectIds?: string[]
     provider?: string
     cloudAccountId?: string
     region?: string
   }) {
+    if (filters?.projectIds && !filters.projectIds.length) {
+      return []
+    }
     if (filters?.provider === 'VPS') {
       return this.findAllVpsAsInstances(filters)
     }
@@ -30,6 +34,7 @@ export class InstancesService {
       where: {
         deletedAt: null,
         ...(filters?.projectId && { projectId: filters.projectId }),
+        ...(filters?.projectIds?.length && { projectId: { in: filters.projectIds } }),
         ...(filters?.provider &&
           filters.provider !== 'VPS' && { provider: filters.provider as CloudProvider }),
         ...(filters?.cloudAccountId && { cloudAccountId: filters.cloudAccountId }),
@@ -49,11 +54,16 @@ export class InstancesService {
     return [...cloud, ...vps]
   }
 
-  private async findAllVpsAsInstances(filters?: { projectId?: string; region?: string }) {
+  private async findAllVpsAsInstances(filters?: {
+    projectId?: string
+    projectIds?: string[]
+    region?: string
+  }) {
     const vpsRows = await this.prisma.vpsServer.findMany({
       where: {
         deletedAt: null,
         ...(filters?.projectId && { projectId: filters.projectId }),
+        ...(filters?.projectIds?.length && { projectId: { in: filters.projectIds } }),
       },
       orderBy: { name: 'asc' },
     })

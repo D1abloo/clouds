@@ -207,7 +207,10 @@ export const buildVerificationReport = async (
   const envExample = fs.existsSync(path.join(root, '.env.example'))
     ? fs.readFileSync(path.join(root, '.env.example'), 'utf8')
     : ''
-  const proConfigured = envExample.includes('PRO_MODE=true') && envExample.includes('DEMO_MODE=false')
+  const proConfigured =
+    envExample.includes('PRO_MODE=true') &&
+    envExample.includes('DEMO_MODE=false') &&
+    envExample.includes('APP_ENV=production')
   const envFiles = [
     'apps/frontend-angular/src/environments/environment.ts',
     'apps/frontend-angular/src/environments/environment.production.ts',

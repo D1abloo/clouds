@@ -40,6 +40,12 @@ enum TerraformStatus {
   DESTROYED
 }
 
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
@@ -52,9 +58,38 @@ model User {
   updatedAt    DateTime   @updatedAt @map("updated_at")
   deletedAt    DateTime?  @map("deleted_at")
   userRoles    UserRole[]
+  memberships  Membership[]
   auditLogs    AuditLog[]
 
   @@map("users")
+}
+
+model Organization {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  deletedAt   DateTime?    @map("deleted_at")
+  projects    Project[]
+  memberships Membership[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String         @id @default(uuid())
+  userId         String         @map("user_id")
+  organizationId String         @map("organization_id")
+  role           MembershipRole @default(MEMBER)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  user           User           @relation(fields: [userId], references: [id])
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("memberships")
 }
 
 model Role {
@@ -107,18 +142,21 @@ model RolePermission {
 }
 
 model Project {
-  id            String         @id @default(uuid())
-  name          String
-  slug          String         @unique
-  description   String?
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  deletedAt     DateTime?      @map("deleted_at")
-  userRoles     UserRole[]
-  cloudAccounts CloudAccount[]
-  instances     Instance[]
-  vpsServers    VpsServer[]
+  id             String        @id @default(uuid())
+  organizationId String?       @map("organization_id")
+  name           String
+  slug           String        @unique
+  description    String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  userRoles      UserRole[]
+  cloudAccounts  CloudAccount[]
+  instances      Instance[]
+  vpsServers     VpsServer[]
 
+  @@index([organizationId])
   @@map("projects")
 }
 

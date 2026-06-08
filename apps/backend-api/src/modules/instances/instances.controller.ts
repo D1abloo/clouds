@@ -1,24 +1,38 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common'
+import { Controller, ForbiddenException, Get, Param, Post, Query } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
 import { CloudProvider } from '@prisma/client'
 import { InstancesService } from './instances.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
+import { OrganizationScopeService } from '../../common/organization/organization-scope.service'
 
 @ApiTags('Instances')
 @ApiBearerAuth()
 @Controller('instances')
 export class InstancesController {
-  constructor(private service: InstancesService) {}
+  constructor(
+    private service: InstancesService,
+    private orgScope: OrganizationScopeService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List all instances (cloud + VPS)' })
-  findAll(
+  async findAll(
+    @CurrentUser() user: JwtPayload,
     @Query('projectId') projectId?: string,
     @Query('provider') provider?: string,
     @Query('cloudAccountId') cloudAccountId?: string,
     @Query('region') region?: string,
   ) {
-    return this.service.findAll({ projectId, provider, cloudAccountId, region })
+    const scope = await this.orgScope.resolveForUser(user.sub)
+    const scoped = this.orgScope.projectFilter(scope, projectId)
+    if (scoped === null) throw new ForbiddenException('Sin acceso a este espacio de trabajo')
+    return this.service.findAll({
+      projectId: scoped.projectId,
+      projectIds: scoped.projectIds,
+      provider,
+      cloudAccountId,
+      region,
+    })
   }
 
   @Get(':id')

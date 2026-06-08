@@ -13,6 +13,8 @@ export const RBAC_PERMISSIONS = [
   { resource: 'seguridad', action: 'gestionar', description: 'Gestionar seguridad y secretos' },
   { resource: 'auditoria', action: 'leer', description: 'Consultar registros de auditoría' },
   { resource: 'configuracion', action: 'gestionar', description: 'Gestionar configuración de la plataforma' },
+  { resource: 'automatizacion', action: 'gestionar', description: 'Gestionar pipelines, Jenkins y Terraform' },
+  { resource: 'observabilidad', action: 'leer', description: 'Ver métricas, alertas y registros' },
 ] as const
 
 export type RbacPermissionCode = `${(typeof RBAC_PERMISSIONS)[number]['resource']}.${(typeof RBAC_PERMISSIONS)[number]['action']}`
@@ -52,24 +54,30 @@ export const RBAC_ROLE_PERMISSIONS: Record<RbacRoleName, readonly string[]> = {
     'seguridad.gestionar',
     'auditoria.leer',
     'configuracion.gestionar',
+    'automatizacion.gestionar',
+    'observabilidad.leer',
   ],
   operador: [
     'infraestructura.leer',
     'infraestructura.gestionar',
     'repositorios.conectar',
     'seguridad.leer',
+    'automatizacion.gestionar',
+    'observabilidad.leer',
   ],
   auditor: [
     'usuarios.leer',
     'infraestructura.leer',
     'seguridad.leer',
     'auditoria.leer',
+    'observabilidad.leer',
   ],
   solo_lectura: [
     'usuarios.leer',
     'infraestructura.leer',
     'seguridad.leer',
     'auditoria.leer',
+    'observabilidad.leer',
   ],
 }
 

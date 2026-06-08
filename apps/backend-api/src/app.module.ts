@@ -33,12 +33,14 @@ import { CommandCenterModule } from './modules/command-center/command-center.mod
 import { IntegrationsModule } from './modules/integrations/integrations.module'
 import { KubernetesApiModule } from './modules/kubernetes/kubernetes.module'
 import { AppModeModule } from './common/config/app-mode.module'
+import { OrganizationScopeModule } from './common/organization/organization-scope.module'
 import { PlatformModule } from './modules/platform/platform.module'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     AppModeModule,
+    OrganizationScopeModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     PrismaModule,
     RedisModule,

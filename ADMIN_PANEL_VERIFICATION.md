@@ -1,11 +1,11 @@
 # Informe de verificación — Panel Admin CloudOps
 
-> Generado: 2026-06-08T20:15:34.092Z
+> Generado: 2026-06-08T21:12:55.873Z
 > Recomendación final: **READY_FOR_PRO**
 
 ## Resumen ejecutivo
 
-Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth JWT+OAuth, RBAC activo, UI en español con estado «Configuración requerida» cuando faltan credenciales externas.
+Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 63 modelos Prisma, auth JWT+OAuth, RBAC activo, UI en español con estado «Configuración requerida» cuando faltan credenciales externas.
 
 ## Criterios PRO
 
@@ -40,8 +40,8 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth J
 | Infraestructura | Almacenamiento | `/storage` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Infraestructura | Copias de seguridad | `/backups` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Infraestructura | Planificador de capacidad | `/capacity-planner` | OK | OK | OK | OK | Estado configuración requerida en PRO |
-| Automatización | Jenkins | `/jenkins/jobs` | OK | OK | OK | OK | Ruta registrada en area-nav |
-| Automatización | Terraform | `/terraform/workspaces` | OK | OK | OK | OK | Ruta registrada en area-nav |
+| Automatización | Jenkins | `/jenkins/jobs` | OK | OK | OK | OK | Estado configuración requerida en PRO |
+| Automatización | Terraform | `/terraform/workspaces` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Automatización | Despliegues | `/deployments` | OK | OK | OK | OK | Estado configuración requerida en PRO |
 | Automatización | Sesiones activas | `/terminal/active-sessions` | OK | OK | OK | OK | Ruta registrada en area-nav |
 | Automatización | Historial | `/terminal/history` | OK | OK | OK | OK | Ruta registrada en area-nav |
@@ -135,6 +135,9 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth J
 | Tabla esperada | Modelo Prisma | Estado |
 |------------------|---------------|--------|
 | users | User | OK |
+| organizations | Organization | OK |
+| memberships | Membership | OK |
+| workspaces | Project | OK |
 | roles | Role | OK |
 | permissions | Permission | OK |
 | role_permissions | RolePermission | OK |
@@ -175,6 +178,9 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth J
 | audit_logs | AuditLog | OK |
 | api_tokens | ApiToken | OK |
 | settings | IntegrationConfig | OK |
+| integration_connections | IntegrationConfig | OK |
+| integration_sync_jobs | — | PARTIAL |
+| integration_sync_events | IntegrationDelivery | OK |
 | assistant_threads | AssistantThread | OK |
 | assistant_messages | AssistantMessage | OK |
 
@@ -202,9 +208,9 @@ Panel listo para PRO: 54 rutas sidebar, PostgreSQL con 61 modelos Prisma, auth J
 
 ## Calidad (checks)
 
-- `npm run build -w apps/frontend-angular`: ✅ OK (16830ms)
-- `npm run build -w apps/backend-api`: ✅ OK (6255ms)
-- `npm test -w apps/backend-api`: ✅ OK (5929ms)
+- `npm run build -w apps/frontend-angular`: ✅ OK (16217ms)
+- `npm run build -w apps/backend-api`: ✅ OK (6508ms)
+- `npm test -w apps/backend-api`: ✅ OK (6145ms)
 
 ## Elementos faltantes
 

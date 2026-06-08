@@ -292,6 +292,48 @@ export class GithubAccountsService {
 
   async getLegacyConnection(userId: string) {
     void userId
+    if (this.mode.isProMode() && !this.mode.canUseDemoFallback()) {
+      try {
+        const account = await this.prisma.githubAccount.findFirst({
+          where: { status: 'connected' },
+          orderBy: { lastSyncAt: 'desc' },
+        })
+        if (!account) {
+          return {
+            connected: false,
+            username: null,
+            avatarUrl: null,
+            connectedAt: null,
+            lastSyncAt: null,
+            repoCount: 0,
+            accountId: null,
+            demoMode: false,
+          }
+        }
+        const repoCount = await this.prisma.githubRepository.count({ where: { accountId: account.id } })
+        return {
+          connected: true,
+          username: account.username,
+          avatarUrl: account.avatarUrl,
+          connectedAt: account.createdAt.toISOString(),
+          lastSyncAt: account.lastSyncAt?.toISOString() ?? null,
+          repoCount,
+          accountId: account.id,
+          demoMode: false,
+        }
+      } catch {
+        return {
+          connected: false,
+          username: null,
+          avatarUrl: null,
+          connectedAt: null,
+          lastSyncAt: null,
+          repoCount: 0,
+          accountId: null,
+          demoMode: false,
+        }
+      }
+    }
     if (!this.demo.isSessionActive()) {
       return {
         connected: false,

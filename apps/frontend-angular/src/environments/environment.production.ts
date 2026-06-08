@@ -3,5 +3,7 @@ export const environment = {
   apiUrl: '/api/v1',
   demoMode: false,
   proMode: true,
+  appEnv: 'production',
   authUrl: 'https://spendlyx.com',
+  appUrl: 'https://spendlyx.com',
 }

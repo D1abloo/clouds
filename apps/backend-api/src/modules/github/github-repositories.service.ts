@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
+import { AppModeService } from '../../common/config/app-mode.service'
+import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubDemoService } from './github-demo.service'
 import { mapRepo } from './github-mappers'
 import { DEMO_GITHUB_REPOS, resolveDemoSlugFromRepoId } from './github-demo.data'
@@ -11,10 +13,21 @@ export class GithubRepositoriesService {
     private readonly prisma: PrismaService,
     private readonly demo: GithubDemoService,
     private readonly audit: AuditService,
+    private readonly mode: AppModeService,
   ) {}
 
   async list(accountId?: string) {
+    const demoAllowed = this.mode.canUseDemoFallback()
+
     if (!this.demo.isDbReady()) {
+      if (!demoAllowed) {
+        return {
+          ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
+          connected: false,
+          demoMode: false,
+          lastSyncAt: null,
+        }
+      }
       return {
         connected: true,
         demoMode: true,
@@ -36,12 +49,28 @@ export class GithubRepositoriesService {
           .sort((a, b) => (b!.getTime() - a!.getTime()))[0]
         return {
           connected: connected || true,
+          demoMode: false,
           items: items.map(mapRepo),
           lastSyncAt: lastSync?.toISOString() ?? null,
         }
       }
+      if (!demoAllowed) {
+        return {
+          ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
+          connected: false,
+          demoMode: false,
+          lastSyncAt: null,
+        }
+      }
     } catch {
-      /* fallback memoria */
+      if (!demoAllowed) {
+        return {
+          connected: false,
+          demoMode: false,
+          items: [],
+          lastSyncAt: null,
+        }
+      }
     }
     return {
       connected: true,
@@ -52,7 +81,8 @@ export class GithubRepositoriesService {
   }
 
   async getOne(repoId: string) {
-    const mem = this.demo.getMemoryRepo(repoId)
+    const demoAllowed = this.mode.canUseDemoFallback()
+    const mem = demoAllowed ? this.demo.getMemoryRepo(repoId) : null
     if (mem) return mem
     const repo = await this.prisma.githubRepository.findUnique({ where: { id: repoId } })
     if (!repo) throw new NotFoundException('Repositorio no encontrado')
@@ -60,14 +90,15 @@ export class GithubRepositoriesService {
   }
 
   async syncOne(userId: string, repoId: string) {
+    const demoAllowed = this.mode.canUseDemoFallback()
     const slug = resolveDemoSlugFromRepoId(repoId)
-    const mem = this.demo.getMemoryRepo(repoId)
+    const mem = demoAllowed ? this.demo.getMemoryRepo(repoId) : null
     if (mem && slug && !this.demo.isDbReady()) {
       return { repo: mem, message: 'Repositorio sincronizado (demo en memoria)' }
     }
     const repo = await this.prisma.githubRepository.findUnique({ where: { id: repoId } })
     if (!repo) {
-      if (mem && slug) {
+      if (mem && slug && demoAllowed) {
         await this.demo.syncRepoChildren(repoId, slug).catch(() => undefined)
         return { repo: mem, message: 'Repositorio sincronizado (demo)' }
       }

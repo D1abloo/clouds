@@ -34,10 +34,12 @@ export class PlatformController {
       }
     }
 
-    const [users, instances, alerts] = await Promise.all([
+    const [users, instances, alerts, organizations, memberships] = await Promise.all([
       this.prisma.user.count({ where: { deletedAt: null } }).catch(() => 0),
       this.prisma.instance.count({ where: { deletedAt: null } }).catch(() => 0),
       this.prisma.alert.count({ where: { isResolved: false } }).catch(() => 0),
+      this.prisma.organization.count({ where: { deletedAt: null } }).catch(() => 0),
+      this.prisma.membership.count().catch(() => 0),
     ])
 
     const settingsRows = await this.prisma.platformSetting
@@ -52,7 +54,8 @@ export class PlatformController {
     return {
       ...mode,
       database,
-      counts: { users, instances, alerts },
+      counts: { users, instances, alerts, organizations, memberships },
+      multiUser: { organizations, memberships, workspaceScoping: true },
       settings,
     }
   }

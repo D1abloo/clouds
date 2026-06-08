@@ -201,6 +201,9 @@ export const resolveComponentForRoute = (route: string, root = getProjectRoot())
 
 export const REQUIRED_SCHEMA_ALIASES: Record<string, string[]> = {
   users: ['User'],
+  organizations: ['Organization'],
+  memberships: ['Membership'],
+  workspaces: ['Project'],
   roles: ['Role'],
   permissions: ['Permission'],
   role_permissions: ['RolePermission'],
@@ -240,7 +243,10 @@ export const REQUIRED_SCHEMA_ALIASES: Record<string, string[]> = {
   compliance_policies: ['CompliancePolicy'],
   audit_logs: ['AuditLog'],
   api_tokens: ['ApiToken'],
-  settings: ['IntegrationConfig', 'Setting'],
+  settings: ['IntegrationConfig', 'PlatformSetting'],
+  integration_connections: ['IntegrationConfig'],
+  integration_sync_jobs: [],
+  integration_sync_events: ['IntegrationDelivery'],
   assistant_threads: ['AssistantThread'],
   assistant_messages: ['AssistantMessage'],
 }

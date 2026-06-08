@@ -53,6 +53,7 @@ ENCRYPTION_KEY=${ENC}
 VAULT_ENCRYPTION_KEY=${ENC}
 POSTGRES_PASSWORD=${DB_PASS}
 DATABASE_URL=postgresql://cloudops:${DB_PASS}@postgres:5432/cloudops
+APP_ENV=production
 DEMO_MODE=false
 PRO_MODE=true
 AUTO_DEMO_SEED=false

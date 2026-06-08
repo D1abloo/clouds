@@ -11,6 +11,7 @@ services:
   backend-api:
     environment:
       NODE_ENV: production
+      APP_ENV: production
       DEMO_MODE: "false"
       PRO_MODE: "true"
       AUTO_DEMO_SEED: "false"

@@ -1,4 +1,4 @@
-import { PrismaClient, AlertSeverity } from '@prisma/client'
+import { PrismaClient, AlertSeverity, MembershipRole } from '@prisma/client'
 import * as bcrypt from 'bcrypt'
 import {
   PLATFORM_SETTINGS_PRO,
@@ -87,12 +87,22 @@ async function main() {
   await seedPlatformSettings()
 
   const superAdminRole = await prisma.role.findUnique({ where: { name: 'superadministrador' } })
-  const soloLecturaRole = await prisma.role.findUnique({ where: { name: 'solo_lectura' } })
+
+  const organization = await prisma.organization.upsert({
+    where: { slug: 'spendlyx' },
+    create: { name: 'Spendlyx', slug: 'spendlyx' },
+    update: { name: 'Spendlyx' },
+  })
 
   const project = await prisma.project.upsert({
     where: { slug: 'default' },
-    create: { name: 'Spendlyx', slug: 'default', description: 'Proyecto principal' },
-    update: { name: 'Spendlyx' },
+    create: {
+      name: 'Spendlyx',
+      slug: 'default',
+      description: 'Espacio de trabajo principal',
+      organizationId: organization.id,
+    },
+    update: { name: 'Spendlyx', organizationId: organization.id },
   })
 
   const passwordHash = await bcrypt.hash('Admin123!', 12)
@@ -123,6 +133,18 @@ async function main() {
       update: {},
     })
   }
+
+  await prisma.membership.upsert({
+    where: {
+      userId_organizationId: { userId: admin.id, organizationId: organization.id },
+    },
+    create: {
+      userId: admin.id,
+      organizationId: organization.id,
+      role: MembershipRole.OWNER,
+    },
+    update: { role: MembershipRole.OWNER },
+  })
 
   if (!productionSeed) {
     const demoPasswordHash = await bcrypt.hash('Demo123!', 12)
@@ -169,6 +191,7 @@ async function main() {
   if (!productionSeed) {
     console.log('Demo users (password Demo123! for all)')
   }
+  console.log(`Organization ID: ${organization.id}`)
   console.log(`Project ID: ${project.id}`)
   console.log(`Admin ID: ${admin.id}`)
 }

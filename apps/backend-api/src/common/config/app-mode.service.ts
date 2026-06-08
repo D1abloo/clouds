@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config'
 export type AppModeStatus = {
   demoMode: boolean
   proMode: boolean
+  appEnv: string
   authUrl: string
   appUrl: string
   oauth: {
@@ -39,9 +40,16 @@ export class AppModeService {
 
   canUseDemoFallback = (): boolean => this.isDemoMode()
 
+  getAppEnv = (): string => {
+    const explicit = this.config.get<string>('APP_ENV')?.trim()
+    if (explicit) return explicit
+    return this.isProMode() ? 'production' : 'development'
+  }
+
   getStatus = (): AppModeStatus => ({
     demoMode: this.isDemoMode(),
     proMode: this.isProMode(),
+    appEnv: this.getAppEnv(),
     authUrl: this.getAuthUrl(),
     appUrl: this.getAppUrl(),
     oauth: {

@@ -5,6 +5,8 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
 import { IntegrationsService } from '../integrations/integrations.service'
 import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
+import { AppModeService } from '../../common/config/app-mode.service'
+import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubDemoService } from './github-demo.service'
 import { mapDeployment } from './github-mappers'
 
@@ -17,10 +19,19 @@ export class GithubDeploymentsService {
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeGateway,
     private readonly integrations: IntegrationsService,
+    private readonly mode: AppModeService,
   ) {}
 
   async listAll() {
+    const demoAllowed = this.mode.canUseDemoFallback()
+
     if (!this.demo.isDbReady()) {
+      if (!demoAllowed) {
+        return {
+          ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
+          demoMode: false,
+        }
+      }
       return { items: this.demo.listMemoryDeployments(), demoMode: true }
     }
     try {
@@ -30,10 +41,16 @@ export class GithubDeploymentsService {
         take: 100,
       })
       if (items.length) {
-        return { items: items.map((d) => mapDeployment(d, d.repo.fullName)) }
+        return { items: items.map((d) => mapDeployment(d, d.repo.fullName)), demoMode: false }
+      }
+      if (!demoAllowed) {
+        return {
+          ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
+          demoMode: false,
+        }
       }
     } catch {
-      /* memoria */
+      if (!demoAllowed) return { items: [], demoMode: false }
     }
     return { items: this.demo.listMemoryDeployments(), demoMode: true }
   }
@@ -48,8 +65,9 @@ export class GithubDeploymentsService {
       targetName?: string
     },
   ) {
+    const demoAllowed = this.mode.canUseDemoFallback()
     const targetName = body.targetName ?? body.targetId
-    const memRepo = this.demo.getMemoryRepo(repoId)
+    const memRepo = demoAllowed ? this.demo.getMemoryRepo(repoId) : null
     if (memRepo && !this.demo.isDbReady()) {
       const deployment = this.demo.pushMemoryDeployment(memRepo.fullName, repoId, {
         ...body,
@@ -81,7 +99,7 @@ export class GithubDeploymentsService {
 
     const repo = await this.prisma.githubRepository.findUnique({ where: { id: repoId } })
     if (!repo) {
-      if (memRepo) {
+      if (memRepo && demoAllowed) {
         const deployment = this.demo.pushMemoryDeployment(memRepo.fullName, repoId, {
           ...body,
           targetName,
@@ -163,6 +181,7 @@ export class GithubDeploymentsService {
     return {
       queued: true,
       deployment: mapped,
+      demoMode: false,
       message: `Despliegue de ${repo.name}@${body.branch} iniciado hacia ${body.targetType}`,
     }
   }
@@ -216,7 +235,8 @@ export class GithubDeploymentsService {
   }
 
   async getLogs(deploymentId: string) {
-    const mem = this.demo.getMemoryDeploymentLogs(deploymentId)
+    const demoAllowed = this.mode.canUseDemoFallback()
+    const mem = demoAllowed ? this.demo.getMemoryDeploymentLogs(deploymentId) : null
     if (mem) return mem
     const d = await this.prisma.githubDeployment.findUnique({
       where: { id: deploymentId },

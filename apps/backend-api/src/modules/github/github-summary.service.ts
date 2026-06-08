@@ -1,19 +1,16 @@
 import { Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../../common/prisma/prisma.service'
+import { AppModeService } from '../../common/config/app-mode.service'
 import { GithubDemoService } from './github-demo.service'
 import { mapRepo } from './github-mappers'
-import {
-  emptyGithubInventorySummary,
-  isDemoModeEnabled,
-} from '../../common/utils/demo-runtime.util'
+import { emptyGithubInventorySummary } from '../../common/utils/demo-runtime.util'
 
 @Injectable()
 export class GithubSummaryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly demo: GithubDemoService,
-    private readonly config: ConfigService,
+    private readonly mode: AppModeService,
   ) {}
 
   demoSummary() {
@@ -21,7 +18,7 @@ export class GithubSummaryService {
   }
 
   async summaryForInventory() {
-    const demoAllowed = isDemoModeEnabled(this.config)
+    const demoAllowed = this.mode.canUseDemoFallback()
 
     if (!this.demo.isDbReady()) {
       return demoAllowed ? this.demo.demoSummary() : emptyGithubInventorySummary()
