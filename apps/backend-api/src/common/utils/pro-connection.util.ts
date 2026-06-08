@@ -15,7 +15,7 @@ export const connectionRequired = (
   connectionRequired: true,
   proMode: true,
   module,
-  message: `Conexión requerida — configure ${module} para usar este módulo en modo PRO.`,
+  message: `Configuración requerida — configure ${module} para usar este módulo en modo PRO.`,
   configureHint,
   items: [],
 })

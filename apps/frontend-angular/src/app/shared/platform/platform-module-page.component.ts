@@ -26,6 +26,7 @@ import { StatusBadgeComponent } from '../components/status-badge/status-badge.co
 import { NavIconComponent } from '../components/nav-icon/nav-icon.component'
 import { PlatformActionService } from './platform-action.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
+import { ConnectionRequiredComponent } from '../components/connection-required/connection-required.component'
 import { getPlatformRowOps, isPlatformScopeModule } from './platform-module-ops.catalog'
 import { observabilityModuleMeta } from './observability-meta.util'
 import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.models'
@@ -41,6 +42,7 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
     LoadingStateComponent,
     EmptyStateComponent,
     ErrorStateComponent,
+    ConnectionRequiredComponent,
     StatusBadgeComponent,
     NavIconComponent,
     MatTabsModule,
@@ -66,6 +68,8 @@ import type { PlatformModuleConfig, PlatformModuleTab } from './platform-module.
         <app-loading-state message="Cargando módulo…" />
       } @else if (error()) {
         <app-error-state [message]="error()!" (retry)="load()" />
+      } @else if (pro.proMode()) {
+        <app-connection-required [module]="config().title" />
       } @else {
         @if (isObservability()) {
           <div class="obs-integration-bar">

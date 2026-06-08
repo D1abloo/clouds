@@ -39,6 +39,7 @@ import { SecurityBulkRemediateDialogComponent } from './security-bulk-remediate-
 import { SecurityRemediateConfirmDialogComponent } from './security-remediate-confirm-dialog.component'
 import { SecurityEvidenceDialogComponent } from './security-evidence-dialog.component'
 import { SecurityResourceInspectDialogComponent } from './security-resource-inspect-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 
 type SecTab = 'risks' | 'ports' | 'services' | 'firewalls' | 'ssh' | 'secrets' | 'recommendations'
 type SortDir = 'asc' | 'desc'
@@ -58,9 +59,11 @@ const PAGE_SIZE = 8
     MatIconModule,
     MatMenuModule,
     StatusBadgeComponent,
+    ProConfigGateComponent,
   ],
   host: { class: 'sec-host' },
   template: `
+    <app-pro-config-gate module="Centro de seguridad">
     <div class="page-container sec-shell animate-fade-in">
       <!-- Hero: puntuación + desglose + acciones -->
       <header class="sec-hero">
@@ -350,6 +353,7 @@ const PAGE_SIZE = 8
         <button mat-menu-item type="button" (click)="handleSnooze(selectedRisk()!)"><mat-icon>snooze</mat-icon> Ignorar 7 días</button>
       </mat-menu>
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host.sec-host { display: flex; flex: 1; min-height: 0; overflow: hidden; }

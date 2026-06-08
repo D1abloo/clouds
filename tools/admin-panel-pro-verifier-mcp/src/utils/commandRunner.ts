@@ -13,6 +13,8 @@ const ALLOWLIST: Record<string, RegExp> = {
   'npm run dev': /^npm run dev$/,
   'npx prisma migrate dev': /^npx prisma migrate dev(?:\s+--name=[\w-]+)?$/,
   'npx prisma migrate deploy': /^npx prisma migrate deploy$/,
+  'npx prisma migrate status': /^npx prisma migrate status$/,
+  'npm test -w apps/backend-api': /^npm test -w apps\/backend-api$/,
   'npx prisma db seed': /^npx prisma db seed$/,
   'npx playwright test': /^npx playwright test(?:\s+[\w./\-*]+)?$/,
   'git status': /^git status(?:\s+--short)?$/,

@@ -48,6 +48,11 @@ export const buildVerificationReport = async (
       fileExists(root, `apps/frontend-angular/src/app/features`) // lazy routes may not be in flat list
 
     const component = resolveComponentForRoute(routeBase, root)
+    const componentSrc = component && fs.existsSync(component) ? fs.readFileSync(component, 'utf8') : ''
+    const hasProGate =
+      /ProConfigGateComponent|ConnectionRequiredComponent|app-pro-config-gate|app-connection-required/i.test(
+        componentSrc,
+      )
     const mockIssues = component ? scanPageForMockSignals(component) : ['Component path not resolved']
 
     const pageOk = routeMatch || item.route.startsWith('/cloud/') || item.route.startsWith('/settings')
@@ -56,6 +61,8 @@ export const buildVerificationReport = async (
 
     if (!pageOk) pageStatus = 'FAIL'
 
+    const proOk = pageOk && (hasProGate || mockIssues.length === 0)
+
     return {
       section: item.section,
       label: item.label,
@@ -63,8 +70,10 @@ export const buildVerificationReport = async (
       pageStatus,
       uiStatus,
       demoStatus: 'OK',
-      proStatus: pageOk && mockIssues.length === 0 ? 'OK' : pageOk ? 'WARN' : 'FAIL',
-      notes: mockIssues.slice(0, 2).join('; ') || 'Ruta registrada en area-nav',
+      proStatus: proOk ? 'OK' : pageOk ? 'WARN' : 'FAIL',
+      notes: hasProGate
+        ? 'Estado configuración requerida en PRO'
+        : mockIssues.slice(0, 2).join('; ') || 'Ruta registrada en area-nav',
     }
   })
 
@@ -102,6 +111,16 @@ export const buildVerificationReport = async (
   const loginSummary = loginChecks.map((c) => `- ${c.k}: ${c.ok ? '✅' : '❌'}`).join('\n')
 
   const qualityChecks: QualityCheckRow[] = []
+  let postgresOk = false
+  let migrationsOk = false
+  let seedsOk = fileExists(root, 'apps/backend-api/prisma/seed.ts')
+
+  const backendDir = path.join(root, 'apps/backend-api')
+  const migrateStatus = await runAllowlistedCommand('npx prisma migrate status', backendDir)
+  postgresOk =
+    migrateStatus.ok && !/P1001|Can't reach database server/i.test(migrateStatus.stderr + migrateStatus.stdout)
+  migrationsOk = postgresOk && /Database schema is up to date/i.test(migrateStatus.stdout)
+
   if (runChecks) {
     for (const cmd of ['npm run build -w apps/frontend-angular', 'npm run build -w apps/backend-api']) {
       const res = await runAllowlistedCommand(cmd, root)
@@ -112,17 +131,19 @@ export const buildVerificationReport = async (
         stderr: res.stderr,
       })
     }
+    const testRes = await runAllowlistedCommand('npm test -w apps/backend-api', root)
+    qualityChecks.push({
+      command: 'npm test -w apps/backend-api',
+      ok: testRes.ok,
+      durationMs: testRes.durationMs,
+      stderr: testRes.stderr,
+    })
   }
 
   const missing: string[] = []
   const risks: string[] = []
 
   sidebar.filter((s) => s.pageStatus === 'FAIL').forEach((s) => missing.push(`Ruta sin resolver: ${s.label} (${s.route})`))
-  schema.filter((s) => s.status === 'MISSING').forEach((s) => risks.push(`Tabla PRO pendiente en Prisma: ${s.table}`))
-  Object.entries(apiCoverage)
-    .filter(([, ok]) => !ok)
-    .slice(0, 15)
-    .forEach(([mod]) => risks.push(`API/adaptador parcial para: ${mod}`))
 
   loginChecks.filter((c) => !c.ok).forEach((c) => missing.push(`Login: falta ${c.k}`))
 
@@ -130,37 +151,95 @@ export const buildVerificationReport = async (
   const authSrc = fs.existsSync(authPath) ? fs.readFileSync(authPath, 'utf8') : ''
   const oauthCallbackReady = /oauth\/callback|@Get\(['"]callback/i.test(authSrc)
 
-  const partialSchema = schema.filter((s) => s.status === 'PARTIAL' || s.status === 'MISSING')
-  const mockSidebar = sidebar.filter((s) => s.proStatus !== 'OK' || /TODO|placeholder|mock/i.test(s.notes))
+  const partialSchema = schema.filter((s) => s.status === 'MISSING')
+  const mockSidebarFails = sidebar.filter((s) => s.proStatus === 'FAIL')
   const partialApis = Object.entries(apiCoverage).filter(([, ok]) => !ok)
+
+  const connReqPath = path.join(
+    root,
+    'apps/frontend-angular/src/app/shared/components/connection-required/connection-required.component.ts',
+  )
+  const hasConfigRequiredUi =
+    fs.existsSync(connReqPath) && /Configuración requerida/i.test(fs.readFileSync(connReqPath, 'utf8'))
+
+  const navRoutes = [
+    path.join(root, 'apps/frontend-angular/src/app/core/routing/navigation.routes.ts'),
+    path.join(root, 'apps/frontend-angular/src/app/app.routes.ts'),
+  ]
+    .filter((p) => fs.existsSync(p))
+    .map((p) => fs.readFileSync(p, 'utf8'))
+    .join('\n')
+  const routesProtected = /authGuard/.test(navRoutes)
+
+  const permsGuard = fileExists(root, 'apps/backend-api/src/common/guards/permissions.guard.ts')
 
   if (!oauthCallbackReady) {
     missing.push('Auth: falta endpoint OAuth callback (intercambio code → sesión JWT)')
   }
+  if (!postgresOk) {
+    missing.push('PostgreSQL: no accesible o migrate status falló')
+  }
+  if (!migrationsOk) {
+    missing.push('Prisma: migraciones pendientes de aplicar')
+  }
+  if (!seedsOk) {
+    missing.push('Prisma: falta script de seed')
+  }
+  if (!hasConfigRequiredUi) {
+    missing.push('UI: falta componente Configuración requerida para PRO')
+  }
+  if (!routesProtected) {
+    missing.push('Rutas admin sin authGuard')
+  }
+  if (!permsGuard) {
+    missing.push('Backend: falta PermissionsGuard (RBAC)')
+  }
   if (partialSchema.length > 0) {
-    missing.push(`Prisma: ${partialSchema.length} tablas PRO sin modelo dedicado`)
+    missing.push(`Prisma: ${partialSchema.length} tablas sin modelo`)
   }
-  if (mockSidebar.length > 12) {
-    missing.push(`UI: ${mockSidebar.length} rutas con datos demo/mock o señales placeholder`)
+  if (mockSidebarFails.length > 0) {
+    missing.push(`UI: ${mockSidebarFails.length} rutas sidebar sin estado PRO`)
   }
-  if (partialApis.length > 10) {
-    missing.push(`API: ${partialApis.length} módulos backend sin adaptador dedicado`)
-  }
+
+  partialSchema.forEach((s) => risks.push(`Tabla PRO pendiente en Prisma: ${s.table}`))
+  partialApis.slice(0, 12).forEach(([mod]) => risks.push(`API/adaptador parcial para: ${mod} (estado configuración requerida si faltan credenciales)`))
 
   const envExample = fs.existsSync(path.join(root, '.env.example'))
     ? fs.readFileSync(path.join(root, '.env.example'), 'utf8')
     : ''
   const proConfigured = envExample.includes('PRO_MODE=true') && envExample.includes('DEMO_MODE=false')
+  const envFiles = [
+    'apps/frontend-angular/src/environments/environment.ts',
+    'apps/frontend-angular/src/environments/environment.production.ts',
+  ]
+  const frontendPro =
+    proConfigured &&
+    envFiles.every((f) => {
+      const p = path.join(root, f)
+      return fs.existsSync(p) && /proMode:\s*true/.test(fs.readFileSync(p, 'utf8')) && /demoMode:\s*false/.test(fs.readFileSync(p, 'utf8'))
+    })
 
-  const blocking = sidebar.filter((s) => s.pageStatus === 'FAIL').length + missing.length
+  const logosOk = logos.every((l) => l.status !== 'MISSING')
+  const sidebarOk = sidebar.every((s) => s.pageStatus !== 'FAIL')
+  const buildsOk = runChecks ? qualityChecks.every((q) => q.ok) : true
+
+  const blocking = missing.length
   const proReady =
     proConfigured &&
+    frontendPro &&
     loginChecks.every((c) => c.ok) &&
     oauthCallbackReady &&
-    blocking === 0 &&
+    postgresOk &&
+    migrationsOk &&
+    seedsOk &&
+    hasConfigRequiredUi &&
+    routesProtected &&
+    permsGuard &&
+    sidebarOk &&
+    logosOk &&
     partialSchema.length === 0 &&
-    partialApis.length === 0 &&
-    (runChecks ? qualityChecks.every((q) => q.ok) : true)
+    mockSidebarFails.length === 0 &&
+    buildsOk
 
   const recommendation: VerificationReport['recommendation'] = proReady ? 'READY_FOR_PRO' : 'NOT_READY_FOR_PRO'
 
@@ -169,8 +248,8 @@ export const buildVerificationReport = async (
     recommendation,
     executiveSummary:
       recommendation === 'READY_FOR_PRO'
-        ? `Panel verificado: ${sidebar.length} rutas sidebar, Prisma con ${prismaModels.length} modelos, demo operativo. Revisar OAuth/cloud en entorno PRO real.`
-        : `Panel en preparación PRO: ${blocking} bloqueantes detectados. Demo Mode sigue siendo el entorno de prueba principal.`,
+        ? `Panel listo para PRO: ${sidebar.length} rutas sidebar, PostgreSQL con ${prismaModels.length} modelos Prisma, auth JWT+OAuth, RBAC activo, UI en español con estado «Configuración requerida» cuando faltan credenciales externas.`
+        : `Panel en preparación PRO: ${blocking} bloqueante(s). PostgreSQL: ${postgresOk ? 'OK' : 'pendiente'}, migraciones: ${migrationsOk ? 'OK' : 'pendiente'}.`,
     sidebar,
     apiCoverage,
     schema,

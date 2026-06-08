@@ -230,7 +230,7 @@ export class LoginComponent implements OnInit {
       next: (res) => {
         this.oauthLoading = null
         if (res.connectionRequired) {
-          this.error = res.message ?? 'Error al iniciar sesión — configure OAuth en modo PRO'
+          this.error = res.message ?? 'Configuración requerida — configure OAuth en modo PRO'
           return
         }
         if (res.redirectUrl) {

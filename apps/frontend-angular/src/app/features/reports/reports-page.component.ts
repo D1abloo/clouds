@@ -13,6 +13,7 @@ import { PlatformActionService } from '../../shared/platform/platform-action.ser
 import { REPORTS_CONFIG } from '../../shared/platform/platform-modules.demo'
 import { REPORT_CLOUD_META, type ReportCloudProvider } from '../../shared/platform/report-cloud.util'
 import { REPORT_TYPE_ICONS, REPORT_TYPE_LABELS } from './reports.config'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 
 type ReportsView = 'reports' | 'templates'
 
@@ -30,6 +31,7 @@ type ReportRow = Record<string, unknown> & {
   selector: 'app-reports-page',
   standalone: true,
   imports: [
+    ProConfigGateComponent,
     DatePipe,
     ReactiveFormsModule,
     MatButtonModule,
@@ -40,6 +42,7 @@ type ReportRow = Record<string, unknown> & {
     NavIconComponent,
   ],
   template: `
+    <app-pro-config-gate module="Informes">
     <div class="page-container rpt-page animate-fade-in">
       <section class="rpt-intro">
         <div class="rpt-intro__main">
@@ -206,6 +209,7 @@ type ReportRow = Record<string, unknown> & {
         </button>
       </mat-menu>
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

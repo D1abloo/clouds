@@ -21,6 +21,7 @@ import { MatDialog } from '@angular/material/dialog'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { SchedulerRunDialogComponent } from './scheduler-run-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { SchedulerTaskFormDialogComponent, type SchedulerTaskFormDialogResult } from './scheduler-task-form-dialog.component'
 import {
   buildHistoryFromRun,
@@ -48,8 +49,9 @@ const TYPE_ICON: Record<SchedulerTaskType, string> = {
 @Component({
   selector: 'app-scheduler-page',
   standalone: true,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule],
+  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule, ProConfigGateComponent],
   template: `
+    <app-pro-config-gate module="Programador">
     <div class="page-container sched-page animate-fade-in">
       <div class="sched-bar">
         <nav class="sched-views" role="tablist" aria-label="Vistas del programador">
@@ -479,6 +481,7 @@ const TYPE_ICON: Record<SchedulerTaskType, string> = {
         </div>
       }
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host {

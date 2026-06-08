@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core'
 import { delay, finalize, of, timeout } from 'rxjs'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
+import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
+import { ProModeService } from '../../core/services/pro-mode.service'
 import type { PlatformModuleConfig } from '../../shared/platform/platform-module.models'
 import { InfrastructureActionService } from './infrastructure-action.service'
 import { InfrastructureWorkspaceComponent } from './infrastructure-workspace.component'
@@ -11,10 +13,12 @@ import { platformConfigToWorkspace } from './infrastructure-workspace.util'
   selector: 'app-infrastructure-module-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [InfrastructureWorkspaceComponent, ErrorStateComponent],
+  imports: [InfrastructureWorkspaceComponent, ErrorStateComponent, ConnectionRequiredComponent],
   template: `
     @if (error()) {
       <app-error-state [message]="error()!" (retry)="load()" />
+    } @else if (pro.proMode()) {
+      <app-connection-required [module]="config().title" />
     } @else {
       <app-infrastructure-workspace
         [config]="workspace()"
@@ -28,6 +32,7 @@ export class InfrastructureModulePageComponent implements OnInit {
   readonly config = input.required<PlatformModuleConfig>()
 
   private readonly infraActions = inject(InfrastructureActionService)
+  readonly pro = inject(ProModeService)
 
   readonly loading = signal(true)
   readonly error = signal<string | null>(null)

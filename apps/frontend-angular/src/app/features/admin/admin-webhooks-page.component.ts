@@ -30,6 +30,7 @@ import {
   type WebhookPayloadRow,
 } from './admin-webhooks.demo'
 import { AdminWebhookDetailDialogComponent } from './admin-webhook-detail-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { AdminWebhookDeliveryDetailDialogComponent } from './admin-webhook-delivery-detail-dialog.component'
 
 type WebhookTab = 'webhooks' | 'deliveries' | 'failures' | 'payloads' | 'config'
@@ -39,6 +40,7 @@ type WebhookTab = 'webhooks' | 'deliveries' | 'failures' | 'payloads' | 'config'
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ProConfigGateComponent,
     ReactiveFormsModule,
     PageHeaderComponent,
     StatusBadgeComponent,
@@ -49,6 +51,7 @@ type WebhookTab = 'webhooks' | 'deliveries' | 'failures' | 'payloads' | 'config'
     MatDialogModule,
   ],
   template: `
+    <app-pro-config-gate module="Webhooks">
     <div class="page-container wh-page animate-fade-in">
       <app-page-header
         title="Webhooks"
@@ -247,6 +250,7 @@ type WebhookTab = 'webhooks' | 'deliveries' | 'failures' | 'payloads' | 'config'
         <button mat-menu-item type="button" (click)="runWebhook('disable', 'Desactivar webhook')"><mat-icon>pause</mat-icon> Desactivar</button>
       }
     </mat-menu>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

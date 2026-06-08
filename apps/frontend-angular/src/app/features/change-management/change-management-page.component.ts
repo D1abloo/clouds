@@ -36,6 +36,7 @@ import {
   type MaintenanceWindow,
 } from './change-management.demo'
 import { primaryChangeLogo, templateLogo } from './change-management-logo.util'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 
 type ChangesView = 'changes' | 'calendar' | 'templates' | 'history'
@@ -44,6 +45,7 @@ type ChangesView = 'changes' | 'calendar' | 'templates' | 'history'
   selector: 'app-change-management-page',
   standalone: true,
   imports: [
+    ProConfigGateComponent,
     DatePipe,
     ReactiveFormsModule,
     MatButtonModule,
@@ -53,6 +55,7 @@ type ChangesView = 'changes' | 'calendar' | 'templates' | 'history'
     NavIconComponent,
   ],
   template: `
+    <app-pro-config-gate module="Gestión de cambios">
     <div class="page-container chg-page animate-fade-in">
       <section class="chg-intro">
         <div class="chg-intro__main">
@@ -377,6 +380,7 @@ type ChangesView = 'changes' | 'calendar' | 'templates' | 'history'
         </div>
       }
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

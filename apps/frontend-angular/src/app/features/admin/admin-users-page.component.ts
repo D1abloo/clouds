@@ -37,6 +37,7 @@ import { AdminUserDetailDialogComponent } from './admin-user-detail-dialog.compo
 import { AdminUserInviteDialogComponent } from './admin-user-invite-dialog.component'
 import { AdminUserEditDialogComponent } from './admin-user-edit-dialog.component'
 import { AdminUserActionDialogComponent } from './admin-user-action-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 
 type UserTab = 'active' | 'invited' | 'suspended' | 'audit' | 'sso' | 'sessions'
 
@@ -53,8 +54,10 @@ type UserTab = 'active' | 'invited' | 'suspended' | 'audit' | 'sso' | 'sessions'
     MatIconModule,
     MatMenuModule,
     MatDialogModule,
+    ProConfigGateComponent,
   ],
   template: `
+    <app-pro-config-gate module="Usuarios">
     <div class="page-container usr-page animate-fade-in">
       <app-page-header
         title="Usuarios"
@@ -348,6 +351,7 @@ type UserTab = 'active' | 'invited' | 'suspended' | 'audit' | 'sso' | 'sessions'
     <mat-menu #sessionMenu="matMenu">
       <button mat-menu-item type="button" (click)="runSessionRow('revoke', 'Revocar sesión')"><mat-icon>logout</mat-icon> Revocar sesión</button>
     </mat-menu>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

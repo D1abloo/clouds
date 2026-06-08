@@ -10,6 +10,7 @@ import { ToastService } from '../../core/services/toast.service'
 import { ApprovalsService } from '../approvals/approvals.service'
 import { defaultServiceCatalogTemplates } from '../service-catalog/service-catalog.demo'
 import { ApprovalsDetailPanelComponent } from './approvals-detail-panel.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import {
   APPROVAL_ENV_LABELS,
   APPROVAL_RISK_LABELS,
@@ -31,6 +32,7 @@ type ApprovalsView = 'pending' | 'history' | 'policies'
   selector: 'app-approvals-page',
   standalone: true,
   imports: [
+    ProConfigGateComponent,
     DatePipe,
     ReactiveFormsModule,
     MatButtonModule,
@@ -39,6 +41,7 @@ type ApprovalsView = 'pending' | 'history' | 'policies'
     ApprovalsDetailPanelComponent,
   ],
   template: `
+    <app-pro-config-gate module="Aprobaciones">
     <div class="page-container apr-page animate-fade-in">
       <section class="apr-intro">
         <div class="apr-intro__main">
@@ -270,6 +273,7 @@ type ApprovalsView = 'pending' | 'history' | 'policies'
         </div>
       }
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

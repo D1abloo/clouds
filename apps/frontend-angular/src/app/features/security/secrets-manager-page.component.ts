@@ -24,6 +24,7 @@ import {
 import { SecretDetailDialogComponent } from './secret-detail-dialog.component'
 import { SecretAddDialogComponent } from './secret-add-dialog.component'
 import { SecretPolicyDetailDialogComponent } from './secret-policy-detail-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 
 type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
 
@@ -31,8 +32,9 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
   selector: 'app-secrets-manager-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, StatusBadgeComponent],
+  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, StatusBadgeComponent, ProConfigGateComponent],
   template: `
+    <app-pro-config-gate module="Gestor de secretos">
     <div class="page-container secret-page animate-fade-in">
       <section class="secret-intro">
         <div class="secret-intro__main">
@@ -179,6 +181,7 @@ type SecretTab = 'secrets' | 'rotation' | 'audit' | 'policies'
         <button mat-menu-item type="button" (click)="handleRevoke(activeSecret()!)"><mat-icon>delete</mat-icon> Revocar</button>
       </mat-menu>
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

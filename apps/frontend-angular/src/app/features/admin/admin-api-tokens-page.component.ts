@@ -30,6 +30,7 @@ import {
   type ApiTokenRow,
 } from './admin-api-tokens.demo'
 import { AdminApiTokenDetailDialogComponent } from './admin-api-token-detail-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { AdminApiTokenAuditDetailDialogComponent } from './admin-api-token-audit-detail-dialog.component'
 import {
   AdminApiTokenAuditActionDialogComponent,
@@ -47,6 +48,7 @@ type TokenTab = 'active' | 'expiring' | 'revoked' | 'audit' | 'scopes' | 'polici
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ProConfigGateComponent,
     DatePipe,
     ReactiveFormsModule,
     PageHeaderComponent,
@@ -58,6 +60,7 @@ type TokenTab = 'active' | 'expiring' | 'revoked' | 'audit' | 'scopes' | 'polici
     MatDialogModule,
   ],
   template: `
+    <app-pro-config-gate module="Tokens API">
     <div class="page-container tok-page animate-fade-in">
       <app-page-header
         title="Tokens API"
@@ -329,6 +332,7 @@ type TokenTab = 'active' | 'expiring' | 'revoked' | 'audit' | 'scopes' | 'polici
         <span>Copiar endpoint<em>Método y ruta para logs</em></span>
       </button>
     </mat-menu>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

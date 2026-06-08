@@ -26,6 +26,7 @@ import {
 import { ServiceCatalogLaunchDialogComponent } from './service-catalog-launch-dialog.component'
 import { TRIGGER_LABELS } from './service-catalog.util'
 import { CATEGORY_TECH_LOGO } from './service-catalog.config'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { ApprovalsService } from '../approvals/approvals.service'
 
 type CatalogView = 'catalog' | 'launches'
@@ -33,8 +34,9 @@ type CatalogView = 'catalog' | 'launches'
 @Component({
   selector: 'app-service-catalog-page',
   standalone: true,
-  imports: [DatePipe, MatButtonModule, MatIconModule, MatDialogModule, BrandLogoComponent],
+  imports: [DatePipe, MatButtonModule, MatIconModule, MatDialogModule, BrandLogoComponent, ProConfigGateComponent],
   template: `
+    <app-pro-config-gate module="Catálogo de servicios">
     <div class="page-container sc-page animate-fade-in">
       <div class="sc-bar">
         <nav class="sc-tabs" role="tablist" aria-label="Vistas del catálogo">
@@ -269,6 +271,7 @@ type CatalogView = 'catalog' | 'launches'
         </div>
       }
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

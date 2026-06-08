@@ -20,6 +20,7 @@ import {
 } from './compliance.demo'
 import { ComplianceViolationDetailDialogComponent } from './compliance-violation-detail-dialog.component'
 import { ComplianceReportDialogComponent } from './compliance-report-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 
 type CompTab = 'violations' | 'rules' | 'frameworks' | 'reports'
 
@@ -27,8 +28,9 @@ type CompTab = 'violations' | 'rules' | 'frameworks' | 'reports'
   selector: 'app-compliance-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, StatusBadgeComponent],
+  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, StatusBadgeComponent, ProConfigGateComponent],
   template: `
+    <app-pro-config-gate module="Cumplimiento / Políticas">
     <div class="page-container comp-page animate-fade-in">
       <section class="comp-intro">
         <div class="comp-intro__main">
@@ -151,6 +153,7 @@ type CompTab = 'violations' | 'rules' | 'frameworks' | 'reports'
         <button mat-menu-item type="button" (click)="handleRemediateOne(activeViolation()!)"><mat-icon>healing</mat-icon> Remediar</button>
       </mat-menu>
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

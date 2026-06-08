@@ -31,6 +31,7 @@ import {
 } from './admin-roles.demo'
 import { AdminRoleDetailDialogComponent } from './admin-role-detail-dialog.component'
 import { AdminRoleAssignmentEditDialogComponent } from './admin-role-assignment-edit-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 
 type RoleTab = 'roles' | 'permissions' | 'assignments'
 
@@ -48,8 +49,10 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
     MatIconModule,
     MatMenuModule,
     MatDialogModule,
+    ProConfigGateComponent,
   ],
   template: `
+    <app-pro-config-gate module="Roles">
     <div class="page-container rol-page animate-fade-in">
       <app-page-header
         title="Roles"
@@ -244,6 +247,7 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
         <mat-icon>remove_circle</mat-icon><span>Revocar<em>Elimina acceso del usuario</em></span>
       </button>
     </mat-menu>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

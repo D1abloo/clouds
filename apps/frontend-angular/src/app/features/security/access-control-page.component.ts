@@ -20,6 +20,7 @@ import {
 } from './access-control.demo'
 import { AccessGrantDialogComponent } from './access-grant-dialog.component'
 import { AccessDetailDialogComponent } from './access-detail-dialog.component'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 
 type AccessTab = 'assignments' | 'iam' | 'ssh' | 'cloud' | 'violations'
 
@@ -27,8 +28,9 @@ type AccessTab = 'assignments' | 'iam' | 'ssh' | 'cloud' | 'violations'
   selector: 'app-access-control-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, StatusBadgeComponent],
+  imports: [DatePipe, ReactiveFormsModule, MatButtonModule, MatIconModule, MatMenuModule, MatDialogModule, StatusBadgeComponent, ProConfigGateComponent],
   template: `
+    <app-pro-config-gate module="Control de acceso">
     <div class="page-container access-page animate-fade-in">
       <section class="access-intro">
         <div class="access-intro__main">
@@ -141,6 +143,7 @@ type AccessTab = 'assignments' | 'iam' | 'ssh' | 'cloud' | 'violations'
         <button mat-menu-item type="button" (click)="handleRevoke(activeAssignment()!)"><mat-icon>person_remove</mat-icon> Revocar</button>
       </mat-menu>
     </div>
+    </app-pro-config-gate>
   `,
   styles: `
     :host { display: block; flex: 1; min-height: 0; }

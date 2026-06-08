@@ -30,6 +30,7 @@ import { InstancesService } from '../../core/services/instances.service'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { VpsService } from '../../core/services/vps.service'
 import { buildRunbookTargets, type RunbookTargetInstance } from './runbook-target.util'
+import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import type { CloudAccount } from '../../core/models/api.models'
 import {
   RunbookExecuteDialogComponent,
@@ -64,6 +65,7 @@ type RunbooksView = 'catalog' | 'executions'
   selector: 'app-runbooks-page',
   standalone: true,
   imports: [
+    ProConfigGateComponent,
     DatePipe,
     ReactiveFormsModule,
     MatButtonModule,
@@ -73,6 +75,7 @@ type RunbooksView = 'catalog' | 'executions'
     RunbookExecutionsCalendarComponent,
   ],
   template: `
+    <app-pro-config-gate module="Runbooks">
     <div class="page-container runbooks-page animate-fade-in" [class.runbooks-page--executions]="view() === 'executions'">
       @if (view() === 'catalog') {
         <section class="runbooks-intro">
@@ -343,6 +346,7 @@ type RunbooksView = 'catalog' | 'executions'
         </section>
       }
     </div>
+    </app-pro-config-gate>
   `,
   styles: [
     `
