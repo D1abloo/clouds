@@ -1668,22 +1668,30 @@ body,
 .admin-user-edit-dialog-panel .mat-mdc-dialog-container {
   max-width: min(820px, 94vw) !important;
   width: min(820px, 94vw) !important;
+  max-height: 92vh !important;
   padding: 0 !important;
 }
 
 .admin-user-edit-dialog-panel .mat-mdc-dialog-surface {
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 20px 48px rgb(15 23 42 / 0.12);
 }
 
 .admin-user-edit-dialog-panel .mat-mdc-dialog-content {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: none !important;
   padding: 0 !important;
-  overflow: visible !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
 }
 
 .admin-user-edit-dialog-panel mat-dialog-actions {
+  flex-shrink: 0;
   padding: 0 1.35rem 1.15rem !important;
   margin: 0 !important;
   min-height: unset !important;

@@ -185,16 +185,27 @@ export interface AdminUserEditData {
     </article>
   `,
   styles: `
-    :host { display: block; }
+    :host { display: block; max-height: inherit; }
     .ued {
+      display: flex;
+      flex-direction: column;
       width: 100%;
       max-width: 100%;
+      max-height: min(92vh, 900px);
       color: #0f172a;
       padding: 1.15rem 1.35rem 1.25rem;
       box-sizing: border-box;
+      overflow: hidden;
+    }
+    .ued form {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
     .ued__head {
       display: flex;
+      flex-shrink: 0;
       justify-content: space-between;
       align-items: flex-start;
       gap: 1rem;
@@ -222,12 +233,20 @@ export interface AdminUserEditData {
       background: #fff; border: 1px solid ${ADMIN_USERS_ACCENT_BORDER}; color: ${ADMIN_USERS_ACCENT};
     }
     .ued__body {
+      flex: 1;
+      min-height: 0;
       padding: 0 !important;
       margin: 0 !important;
-      max-height: min(62vh, 520px);
+      max-height: none;
+      overflow-x: hidden;
       overflow-y: auto;
+      overscroll-behavior: contain;
       scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+      -webkit-overflow-scrolling: touch;
     }
+    .ued__body::-webkit-scrollbar { width: 6px; }
+    .ued__body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
     .ued__layout {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
@@ -283,6 +302,7 @@ export interface AdminUserEditData {
     .mono { font-family: ui-monospace, monospace; font-size: 0.68rem; }
     .ued__actions {
       display: flex; flex-wrap: wrap; gap: 0.45rem;
+      flex-shrink: 0;
       padding: 1rem 0 0; margin: 1rem 0 0;
       border-top: 1px solid #e2e8f0; min-height: unset;
     }
