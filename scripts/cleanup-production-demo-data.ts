@@ -9,7 +9,7 @@
  * Requiere DATABASE_URL en el entorno (o .env en apps/backend-api).
  */
 import { PrismaClient } from '@prisma/client'
-import { clearDemoData } from '../apps/backend-api/prisma/demo/clear-demo'
+import { clearDemoData } from './lib/clear-demo-data'
 
 const prisma = new PrismaClient()
 

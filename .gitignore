@@ -59,6 +59,7 @@ docker-compose.override.yml
 gcp.txt
 *_accessKeys.csv
 project-*.json
+infra/.env.cloud
 secrets/
 certificado/
 infra/certs/
