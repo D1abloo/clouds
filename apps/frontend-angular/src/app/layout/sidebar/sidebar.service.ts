@@ -1,5 +1,4 @@
 import { Injectable, signal, effect, computed, inject } from '@angular/core'
-import { DEFAULT_FAVORITES } from './sidebar-tree.config'
 import {
   SIDEBAR_MAIN_MODULES,
   resolveAreaFromPath,
@@ -7,6 +6,8 @@ import {
   VPS_SIDEBAR_BRANCHES,
 } from '../../core/routing/area-nav.config'
 import { AuthService } from '../../core/services/auth.service'
+import { UserShortcutsService } from '../../core/services/user-shortcuts.service'
+import { ToastService } from '../../core/services/toast.service'
 
 const COLLAPSED_KEY = 'cloudops_sidebar_collapsed'
 const EXPANDED_KEY = 'cloudops_sidebar_expanded'
@@ -19,6 +20,12 @@ const CLOUD_BRANCH_IDS = CLOUD_SIDEBAR_BRANCHES.map((b) => b.id)
 const VPS_BRANCH_IDS = VPS_SIDEBAR_BRANCHES.map((b) => b.id)
 const BRANCH_IDS = [...CLOUD_BRANCH_IDS, ...VPS_BRANCH_IDS]
 const MODULE_IDS = SIDEBAR_MAIN_MODULES.map((m) => m.id)
+
+export interface ShortcutMeta {
+  label: string
+  section?: string
+  icon?: string
+}
 
 const readStorage = (key: string): string | null => {
   if (typeof localStorage === 'undefined') return null
@@ -48,7 +55,7 @@ const readFavoritesForUser = (userId: string): string[] => {
   const userKey = favoritesKeyForUser(userId)
   const userRaw = readStorage(userKey)
   if (userRaw !== null) {
-    return parseFavorites(userRaw) ?? [...DEFAULT_FAVORITES]
+    return parseFavorites(userRaw) ?? []
   }
 
   const legacyRaw = readStorage(LEGACY_FAVORITES_KEY)
@@ -56,11 +63,12 @@ const readFavoritesForUser = (userId: string): string[] => {
     const legacy = parseFavorites(legacyRaw)
     if (legacy) {
       localStorage.setItem(userKey, JSON.stringify(legacy))
+      localStorage.removeItem(LEGACY_FAVORITES_KEY)
       return legacy
     }
   }
 
-  return [...DEFAULT_FAVORITES]
+  return []
 }
 
 const writeFavoritesForUser = (userId: string, routes: string[]): void => {
@@ -71,6 +79,8 @@ const writeFavoritesForUser = (userId: string, routes: string[]): void => {
 @Injectable({ providedIn: 'root' })
 export class SidebarService {
   private readonly auth = inject(AuthService)
+  private readonly shortcutsApi = inject(UserShortcutsService)
+  private readonly toast = inject(ToastService)
   private activeUserId: string | null = null
 
   private readonly _collapsed = signal<boolean>(readStorage(COLLAPSED_KEY) === 'true')
@@ -96,10 +106,10 @@ export class SidebarService {
 
     const initialUserId = this.auth.user()?.id ?? null
     if (initialUserId) {
-      this._favorites.set(readFavoritesForUser(initialUserId))
       this.activeUserId = initialUserId
+      this.loadShortcutsFromApi(initialUserId)
     } else {
-      this._favorites.set([...DEFAULT_FAVORITES])
+      this._favorites.set([])
     }
 
     effect(() => {
@@ -110,10 +120,12 @@ export class SidebarService {
       }
 
       if (userId !== null && userId !== this.activeUserId) {
-        this._favorites.set(readFavoritesForUser(userId))
+        this.activeUserId = userId
+        this.loadShortcutsFromApi(userId)
+      } else if (userId === null && this.activeUserId !== null) {
+        this.activeUserId = null
+        this._favorites.set([])
       }
-
-      this.activeUserId = userId
     })
 
     effect(() => {
@@ -129,6 +141,26 @@ export class SidebarService {
     })
     effect(() => {
       localStorage.setItem(EXPANDED_KEY, JSON.stringify(this._expanded()))
+    })
+  }
+
+  private loadShortcutsFromApi = (userId: string): void => {
+    const cached = readFavoritesForUser(userId)
+    if (cached.length) {
+      this._favorites.set(cached)
+    } else {
+      this._favorites.set([])
+    }
+
+    this.shortcutsApi.list().subscribe({
+      next: (items) => {
+        const routes = items.map((i) => i.route)
+        this._favorites.set(routes)
+        writeFavoritesForUser(userId, routes)
+      },
+      error: () => {
+        this._favorites.set(cached)
+      },
     })
   }
 
@@ -170,7 +202,6 @@ export class SidebarService {
     this._expanded.update((m) => ({ ...m, [id]: open }))
   }
 
-  /** Expande solo la sección activa; en móvil cierra el resto (acordeón). */
   syncNavigationExpand = (path: string): void => {
     const area = resolveAreaFromPath(path)
     const cloud = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
@@ -210,9 +241,36 @@ export class SidebarService {
 
   isFavorite = (route: string): boolean => this._favorites().includes(route)
 
-  toggleFavorite = (route: string): void => {
-    this._favorites.update((list) =>
-      list.includes(route) ? list.filter((r) => r !== route) : [...list, route],
-    )
+  toggleFavorite = (route: string, meta?: ShortcutMeta): void => {
+    const list = this._favorites()
+    const isOn = list.includes(route)
+
+    if (isOn) {
+      this._favorites.update((items) => items.filter((r) => r !== route))
+      this.toast.info('Eliminado de acceso rápido')
+      this.shortcutsApi.removeByRoute(route).subscribe({
+        error: () => {
+          this._favorites.update((items) => [...items, route])
+          this.toast.error('No se pudo quitar el acceso rápido')
+        },
+      })
+      return
+    }
+
+    this._favorites.update((items) => [...items, route])
+    this.toast.success('Añadido a acceso rápido')
+    this.shortcutsApi
+      .add({
+        route,
+        label: meta?.label ?? route,
+        section: meta?.section,
+        icon: meta?.icon,
+      })
+      .subscribe({
+        error: () => {
+          this._favorites.update((items) => items.filter((r) => r !== route))
+          this.toast.error('No se pudo añadir a acceso rápido')
+        },
+      })
   }
 }

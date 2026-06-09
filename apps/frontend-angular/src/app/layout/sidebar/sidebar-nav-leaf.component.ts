@@ -132,6 +132,9 @@ export class SidebarNavLeafComponent {
   handleFavorite = (e: Event): void => {
     e.preventDefault()
     e.stopPropagation()
-    this.sidebar.toggleFavorite(this.route())
+    this.sidebar.toggleFavorite(this.route(), {
+      label: this.label(),
+      icon: this.icon(),
+    })
   }
 }

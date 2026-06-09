@@ -377,13 +377,20 @@ Script automatizado: `bash scripts/verify-pro-vps.sh` (target: `https://spendlyx
 | «Sin datos todavía» en chunks lazy | ✅ |
 | Asistente IA: copy inline específico | ✅ (spec) |
 
-### Prompt 4 — Accesos rápidos / favoritos por usuario
+### Accesos rápidos del sidebar (2026-06-09)
 
-| Check | VPS / repo |
-|-------|------------|
-| Clave `cloudops_sidebar_favorites_{userId}` en bundle | ✅ |
-| «Acceso rápido» / «Añadir a acceso rápido» en bundle | ✅ |
-| Tests `sidebar.service.spec.ts` (persistencia tras logout) | ✅ 5 passed |
+| Criterio | Estado |
+|----------|--------|
+| «Acceso rápido» oculto si el usuario no tiene favoritos guardados | ✅ |
+| Sin enlaces por defecto (`DEFAULT_FAVORITES` eliminado) | ✅ |
+| Sin favoritos demo/seed al iniciar sesión | ✅ |
+| Estrellas vacías por defecto; rellenas solo si el usuario guardó el acceso | ✅ |
+| Clic en estrella añade/quita atajo real del usuario actual | ✅ |
+| API `GET/POST/DELETE /api/v1/user-shortcuts` + tabla `user_shortcuts` | ✅ |
+| Atajos por `user_id` (localStorage como caché, no fuente de verdad) | ✅ |
+| Toasts: «Añadido a acceso rápido» / «Eliminado de acceso rápido» | ✅ |
+| `admin@spendlyx.com` sin atajos hasta marcar estrellas manualmente | ✅ |
+| Tests `sidebar.service.spec.ts` | ✅ 7 passed |
 
 ### Builds y tests (repo)
 

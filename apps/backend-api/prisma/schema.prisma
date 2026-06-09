@@ -66,6 +66,7 @@ model User {
   memberships     Membership[]
   auditLogs       AuditLog[]
   emailVerificationTokens EmailVerificationToken[]
+  shortcuts       UserShortcut[]
 
   @@map("users")
 }
@@ -973,4 +974,23 @@ model AdminWebhook {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("admin_webhooks")
+}
+
+model UserShortcut {
+  id             String    @id @default(uuid())
+  userId         String    @map("user_id")
+  organizationId String?   @map("organization_id")
+  route          String
+  label          String
+  section        String?
+  icon           String?
+  position       Int       @default(0)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, route])
+  @@index([userId, position])
+  @@map("user_shortcuts")
 }

@@ -38,6 +38,7 @@ import { OrganizationScopeModule } from './common/organization/organization-scop
 import { PlatformModule } from './modules/platform/platform.module'
 import { EmailModule } from './modules/email/email.module'
 import { PublicModule } from './modules/public/public.module'
+import { UserShortcutsModule } from './modules/user-shortcuts/user-shortcuts.module'
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { PublicModule } from './modules/public/public.module'
     PlatformModule,
     EmailModule,
     PublicModule,
+    UserShortcutsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
