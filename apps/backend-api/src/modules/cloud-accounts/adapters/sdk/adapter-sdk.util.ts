@@ -37,15 +37,21 @@ export const mapAzurePowerState = (code?: string): InstanceStatus => {
 }
 
 export const parseGcpZone = (zoneOrRegion: string): { region: string; zone: string } => {
-  if (zoneOrRegion.includes('/')) {
-    const zone = zoneOrRegion.split('/').pop() ?? zoneOrRegion
+  const input = zoneOrRegion.trim()
+  if (input.includes('/')) {
+    const zone = input.split('/').pop() ?? input
     const region = zone.replace(/-[a-z]$/, '')
     return { region, zone }
   }
-  if (/[a-z]+-\d+$/.test(zoneOrRegion)) {
-    return { region: zoneOrRegion.replace(/-[a-z]$/, ''), zone: zoneOrRegion }
+  // Zona completa: europe-west1-b, us-central1-a
+  if (/^[a-z]+-[a-z]+\d+-[a-z]$/.test(input)) {
+    return { region: input.replace(/-[a-z]$/, ''), zone: input }
   }
-  return { region: zoneOrRegion, zone: `${zoneOrRegion}-a` }
+  // Solo región: europe-west1, us-central1
+  if (/^[a-z]+-[a-z]+\d+$/.test(input)) {
+    return { region: input, zone: `${input}-b` }
+  }
+  return { region: input, zone: `${input}-b` }
 }
 
 export const parseAzureResourceIds = (resourceId: string) => {

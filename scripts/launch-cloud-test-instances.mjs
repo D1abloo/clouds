@@ -13,6 +13,9 @@
 const API = process.env.API_URL || 'https://spendlyx.com/api/v1'
 const email = process.env.ADMIN_EMAIL
 const password = process.env.ADMIN_PASSWORD
+const launchAws = process.env.LAUNCH_AWS !== 'false'
+const launchGcp = process.env.LAUNCH_GCP !== 'false'
+const gcpZone = process.env.GCP_ZONE || 'europe-west1-b'
 
 if (!email || !password) {
   console.error('Define ADMIN_EMAIL y ADMIN_PASSWORD')
@@ -82,7 +85,9 @@ const run = async () => {
   const aws = accounts.find((a) => a.provider === 'AWS' && !String(a.id).startsWith('demo-'))
   const gcp = accounts.find((a) => a.provider === 'GCP' && !String(a.id).startsWith('demo-'))
 
-  if (!aws) {
+  if (!launchAws) {
+    console.log('==> AWS omitido (LAUNCH_AWS=false)')
+  } else if (!aws) {
     console.error('Sin cuenta AWS PRO. Ejecuta sync-cloud-env-to-vps.sh primero.')
   } else {
     const region = aws.defaultRegion || 'eu-west-1'
@@ -116,14 +121,16 @@ const run = async () => {
     console.log('AWS:', result.id || result.externalId || result)
   }
 
-  if (!gcp) {
+  if (!launchGcp) {
+    console.log('==> GCP omitido (LAUNCH_GCP=false)')
+  } else if (!gcp) {
     console.error('Sin cuenta GCP PRO. Ejecuta sync-cloud-env-to-vps.sh primero.')
   } else {
     const name = `spendlyx-test-gcp-${stamp()}`
-    console.log('==> Lanzando GCE en europe-west1-b…')
+    console.log(`==> Lanzando GCE en ${gcpZone}…`)
     const result = await launch(token, gcp.id, {
       name,
-      region: 'europe-west1',
+      region: gcpZone,
       instanceType: 'e2-micro',
       imageId: 'debian-cloud/debian-12',
       tags: { environment: 'test', managed_by: 'spendlyx' },

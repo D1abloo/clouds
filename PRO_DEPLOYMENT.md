@@ -33,8 +33,84 @@ INTEGRATIONS_LIVE=true
 - **Guards**: `publicGuestGuard` en marketing; wildcard → `/dashboard` (nunca sitio público).
 - **Alias**: `/admin/configuracion/integraciones` → `/settings/integrations`; `/accounts` → `/cloud/aws/accounts`.
 
+## Credenciales cloud para pruebas (AWS / GCP)
+
+Las credenciales **no van en git**. Usa `infra/.env.cloud` (gitignored) y sincroniza a la VPS:
 
 ```bash
+# Genera infra/.env.cloud desde ~/Descargas (o edita a mano)
+bash scripts/build-env-cloud.sh
+
+# Sube AWS/GCP a /opt/cloudops/infra/.env y registra cuentas en PostgreSQL
+npm run sync:cloud-env
+
+# Lanza instancias de prueba (solo GCP si ya lanzaste AWS)
+ADMIN_EMAIL=admin@spendlyx.com ADMIN_PASSWORD='…' LAUNCH_AWS=false npm run launch:cloud-test
+```
+
+### AWS — permisos IAM mínimos
+
+Usuario o rol con política que incluya al menos:
+
+| Acción | Uso en Spendlyx |
+|--------|-----------------|
+| `ec2:RunInstances` | Lanzar instancias |
+| `ec2:DescribeInstances` | Inventario y sync |
+| `ec2:DescribeImages` | Selector de AMI |
+| `ec2:DescribeSubnets` | Subred para lanzamiento |
+| `ec2:DescribeSecurityGroups` | Grupo de seguridad |
+| `ec2:StartInstances` / `StopInstances` / `RebootInstances` | Operaciones |
+| `sts:GetCallerIdentity` | Validar conexión |
+
+Rol gestionado recomendado: **`AmazonEC2FullAccess`** (pruebas) o política custom acotada a una VPC.
+
+Variables en `infra/.env.cloud`:
+
+```env
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=eu-west-1
+```
+
+### GCP — roles IAM exactos
+
+1. **Habilitar API:** [Compute Engine API](https://console.cloud.google.com/apis/library/compute.googleapis.com) en el proyecto.
+2. **IAM → cuenta de servicio** usada en el JSON → **Conceder acceso**:
+
+| Rol (ID) | Para qué |
+|----------|----------|
+| **`roles/compute.instanceAdmin.v1`** | Crear, listar, arrancar y parar VMs (`compute.instances.insert`, etc.) |
+| **`roles/compute.networkUser`** | Usar la VPC/red por defecto al insertar instancias |
+| **`roles/iam.serviceAccountUser`** | Solo si la VM usa otra cuenta de servicio como identidad |
+
+Alternativa amplia (solo entornos de prueba): **`roles/compute.admin`**.
+
+3. **Zona:** Spendlyx usa `europe-west1-b` por defecto en lanzamientos de prueba (`GCP_ZONE` en el script). Si falla `Permission denied on locations/europe-west1-a`, define zona explícita:
+
+```bash
+GCP_ZONE=europe-west1-b LAUNCH_AWS=false npm run launch:cloud-test
+```
+
+4. **Validar** en el panel: Nubes → GCP → Cuentas → **Validar conexión**, o:
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  https://spendlyx.com/api/v1/cloud-accounts/<ID_GCP>/validate
+```
+
+Variables en `infra/.env.cloud` (JSON en base64, no en texto plano en `.env`):
+
+```env
+GCP_PROJECT_ID=tu-proyecto
+GCP_SERVICE_ACCOUNT_JSON_B64=<salida de build-env-cloud.sh>
+```
+
+### Cifrado de credenciales en BD
+
+`scripts/provision-pro-resources.js` usa el mismo formato que `SecretsVaultService` (`vault:enc:v1:` + `VAULT_ENCRYPTION_KEY`). Si las cuentas no validan tras migrar claves, borra cuentas cloud en BD y vuelve a ejecutar `npm run sync:cloud-env`.
+
+```bash
+# Migraciones (local o en contenedor backend)
 # Migraciones (local o en contenedor backend)
 cd apps/backend-api && npx prisma migrate deploy
 
