@@ -60,8 +60,10 @@ export class AppModeService {
       google: !!this.config.get<string>('GOOGLE_CLIENT_ID'),
       github: !!this.config.get<string>('GITHUB_CLIENT_ID'),
     },
-    message: this.isProMode()
-      ? 'Modo PRO activo — datos desde PostgreSQL y proveedores configurados'
-      : 'Entorno de desarrollo — datos simulados para pruebas locales',
+    message: this.isDemoMode()
+      ? 'Modo demo activo — datos simulados disponibles en el panel'
+      : this.isProMode()
+        ? 'Modo PRO activo — datos desde PostgreSQL y proveedores configurados'
+        : 'Entorno de desarrollo — datos simulados para pruebas locales',
   })
 }

@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
   apiUrl: '/api/v1',
-  demoMode: false,
+  demoMode: true,
   proMode: true,
   appEnv: 'production',
   authUrl: 'https://spendlyx.com',
