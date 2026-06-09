@@ -132,7 +132,7 @@ const run = async () => {
       name,
       region: gcpZone,
       instanceType: 'e2-micro',
-      imageId: 'debian-cloud/debian-12',
+      imageId: 'projects/debian-cloud/global/images/family/debian-12',
       tags: { environment: 'test', managed_by: 'spendlyx' },
     })
     console.log('GCP:', result.id || result.externalId || result)
