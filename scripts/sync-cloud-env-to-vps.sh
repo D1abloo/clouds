@@ -15,13 +15,13 @@ fi
 PATCH="$(mktemp)"
 trap 'rm -f "${PATCH}"' EXIT
 
-grep -E '^(AWS_|GCP_)' "${SOURCE}" > "${PATCH}"
+grep -E '^(AWS_|GCP_)' "${SOURCE}" | grep -v '^GCP_SERVICE_ACCOUNT_JSON=' > "${PATCH}"
 
 if ! grep -q 'AWS_ACCESS_KEY_ID=.\+' "${PATCH}" 2>/dev/null; then
   echo "Advertencia: AWS_ACCESS_KEY_ID vacío en ${SOURCE}" >&2
 fi
-if ! grep -q 'GCP_SERVICE_ACCOUNT_JSON=.\+' "${PATCH}" 2>/dev/null; then
-  echo "Advertencia: GCP_SERVICE_ACCOUNT_JSON vacío en ${SOURCE}" >&2
+if ! grep -qE 'GCP_SERVICE_ACCOUNT_JSON(_B64)?=.+.' "${PATCH}" 2>/dev/null; then
+  echo "Advertencia: credenciales GCP vacías en ${SOURCE}" >&2
 fi
 
 echo "==> Sincronizando credenciales cloud → ${REMOTE_HOST}"
@@ -40,6 +40,9 @@ for line in patch.read_text().splitlines():
         continue
     key, value = line.split("=", 1)
     updates[key.strip()] = value
+
+# Elimina restos de GCP JSON multilínea corrupto
+text = re.sub(r"^GCP_SERVICE_ACCOUNT_JSON=.*?(?=^[A-Z_]+=|\Z)", "", text, flags=re.MULTILINE | re.DOTALL)
 
 for key, value in updates.items():
     pattern = re.compile(rf"^{re.escape(key)}=.*$", re.MULTILINE)

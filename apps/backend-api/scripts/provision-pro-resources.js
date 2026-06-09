@@ -8,13 +8,20 @@ const crypto = require('crypto')
 
 const prisma = new PrismaClient()
 
+const VAULT_PREFIX = 'vault:enc:v1:'
+
 const vaultStore = (payload) => {
-  const key = process.env.VAULT_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY || 'dev-key-32-chars-minimum!!!!'
+  const secret =
+    process.env.VAULT_ENCRYPTION_KEY ||
+    process.env.ENCRYPTION_KEY ||
+    'cloudops-dev-vault-key-change-in-prod'
+  const key = crypto.scryptSync(secret, 'cloudops-salt', 32)
   const iv = crypto.randomBytes(12)
-  const cipher = crypto.createCipheriv('aes-256-gcm', crypto.scryptSync(key, 'salt', 32), iv)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
   const enc = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
-  return `enc:${Buffer.concat([iv, tag, enc]).toString('base64')}`
+  const packed = Buffer.concat([iv, tag, enc]).toString('base64url')
+  return `${VAULT_PREFIX}${packed}`
 }
 
 const run = async () => {
@@ -68,7 +75,12 @@ const run = async () => {
     console.log('· AWS: sin credenciales en entorno')
   }
 
-  const gcpJson = process.env.GCP_SERVICE_ACCOUNT_JSON?.trim()
+  const gcpJsonRaw =
+    process.env.GCP_SERVICE_ACCOUNT_JSON?.trim() ||
+    (process.env.GCP_SERVICE_ACCOUNT_JSON_B64
+      ? Buffer.from(process.env.GCP_SERVICE_ACCOUNT_JSON_B64, 'base64').toString('utf8')
+      : '')
+  const gcpJson = gcpJsonRaw?.trim()
   if (gcpJson) {
     const existing = await prisma.cloudAccount.findFirst({
       where: { projectId: project.id, provider: 'GCP', deletedAt: null },

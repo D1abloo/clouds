@@ -48,6 +48,17 @@ const listAccounts = async (token) => {
   return Array.isArray(data) ? data : data.items || data.data || []
 }
 
+const getJson = async (token, path) => {
+  const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token}` } })
+  const data = await json(res)
+  if (!res.ok) throw new Error(data.message || path)
+  return Array.isArray(data) ? data : data.items || []
+}
+
+const listImages = async (token, accountId, region) => {
+  return getJson(token, `/cloud-accounts/${accountId}/images?region=${encodeURIComponent(region)}`)
+}
+
 const launch = async (token, accountId, payload) => {
   const res = await fetch(`${API}/cloud-accounts/${accountId}/instances`, {
     method: 'POST',
@@ -74,13 +85,32 @@ const run = async () => {
   if (!aws) {
     console.error('Sin cuenta AWS PRO. Ejecuta sync-cloud-env-to-vps.sh primero.')
   } else {
+    const region = aws.defaultRegion || 'eu-west-1'
     const name = `spendlyx-test-aws-${stamp()}`
-    console.log(`==> Lanzando EC2 en ${aws.defaultRegion || 'eu-west-1'}…`)
+    const [images, networks, sgs] = await Promise.all([
+      listImages(token, aws.id, region),
+      getJson(token, `/cloud-accounts/${aws.id}/networks?region=${encodeURIComponent(region)}`),
+      getJson(token, `/cloud-accounts/${aws.id}/security-groups?region=${encodeURIComponent(region)}`),
+    ])
+    const pick =
+      images.find((i) => i.architecture === 'x86_64' && /Amazon Linux 2023/i.test(i.name) && !/GPU|Deep Learning/i.test(i.name)) ||
+      images.find((i) => i.architecture === 'x86_64' && /Amazon Linux/i.test(i.name)) ||
+      images.find((i) => i.architecture === 'x86_64') ||
+      images[0]
+    const ami = pick?.id
+    const instanceType = pick?.architecture === 'arm64' ? 't4g.micro' : 't3.micro'
+    const subnet = networks.find((n) => n.type === 'subnet')?.id
+    const sg = sgs.find((g) => g.name === 'default')?.id || sgs[0]?.id
+    if (!ami) throw new Error('Sin AMIs disponibles en AWS')
+    if (!subnet) throw new Error('Sin subredes en AWS — crea una VPC/subred en la cuenta')
+    console.log(`==> Lanzando EC2 en ${region} (${instanceType})…`)
     const result = await launch(token, aws.id, {
       name,
-      region: aws.defaultRegion || 'eu-west-1',
-      instanceType: 't3.micro',
-      imageId: 'ami-0fa39f5b9332d6465',
+      region,
+      instanceType,
+      imageId: ami,
+      subnetId: subnet,
+      securityGroupIds: sg ? [sg] : undefined,
       tags: { Environment: 'test', ManagedBy: 'spendlyx' },
     })
     console.log('AWS:', result.id || result.externalId || result)
