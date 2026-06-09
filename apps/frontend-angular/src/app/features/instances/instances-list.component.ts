@@ -22,6 +22,8 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { InstancesService } from '../../core/services/instances.service'
 import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { DemoService } from '../../core/services/demo.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ToastService } from '../../core/services/toast.service'
 import { Instance } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
@@ -132,14 +134,21 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             description="Clear filters to see {{ instances().length }} instances."
           />
         } @else if (filtered().length === 0) {
-          <app-empty-state
-            title="No instances"
-            description="Load demo data from Settings or the Demo banner (admin login required)."
-          />
-          @if (demo.canManageDemo()) {
-            <button mat-flat-button color="primary" type="button" class="empty-action" (click)="demo.loadDemo()">
-              Cargar datos demo
-            </button>
+          @if (showDemoExtras()) {
+            <app-empty-state
+              title="Sin instancias"
+              description="Carga datos de demostración desde Configuración o el banner demo (requiere admin)."
+            />
+            @if (demo.canManageDemo()) {
+              <button mat-flat-button color="primary" type="button" class="empty-action" (click)="demo.loadDemo()">
+                Cargar datos de demostración
+              </button>
+            }
+          } @else {
+            <app-empty-state
+              title="Sin instancias"
+              description="Conecta una cuenta cloud o registra un VPS para ver recursos en la flota."
+            />
           }
         } @else if (viewMode() === 'grid') {
           <div class="instance-grid">
@@ -226,10 +235,13 @@ import { createPageLoader } from '../../core/utils/page-load.util'
 })
 export class InstancesListComponent implements OnInit {
   private readonly service = inject(InstancesService)
+  private readonly pro = inject(ProModeService)
   readonly demoActions = inject(DemoActionsService)
   readonly demo = inject(DemoService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+
+  readonly showDemoExtras = (): boolean => allowsDemoDataFrom(this.pro)
 
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly providerControl = new FormControl('', { nonNullable: true })

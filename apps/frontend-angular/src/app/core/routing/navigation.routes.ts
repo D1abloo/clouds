@@ -1,6 +1,4 @@
 import { Routes } from '@angular/router'
-import { proDemoGuard } from '../guards/pro-demo.guard'
-
 const hub = (module: string, parentTitle: string, breadcrumb?: string) => ({
   loadComponent: () =>
     import('../../features/section-hub/section-hub.component').then((m) => m.SectionHubComponent),
@@ -111,15 +109,6 @@ export const NAVIGATION_ROUTES: Routes = [
     loadComponent: () =>
       import('../../features/admin/admin-roles-page.component').then((m) => m.AdminRolesPageComponent),
     data: { breadcrumb: 'Roles' },
-  },
-  {
-    path: 'admin/demo-mode',
-    canActivate: [proDemoGuard],
-    loadComponent: () =>
-      import('../../features/admin/admin-demo-mode-page.component').then(
-        (m) => m.AdminDemoModePageComponent,
-      ),
-    data: { breadcrumb: 'Modo demo' },
   },
   {
     path: 'cloud/:provider/:section',

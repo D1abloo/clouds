@@ -4,7 +4,7 @@
  *
  * Uso:
  *   npm run cleanup:demo:dry-run
- *   npm run cleanup:demo:production
+ *   CONFIRM_DELETE_DEMO_DATA=true npm run cleanup:demo:production
  *
  * Requiere DATABASE_URL en el entorno (o .env en apps/backend-api).
  */
@@ -39,10 +39,22 @@ const isDemoOrg = (slug: string, name: string): boolean => {
   return DEMO_NAME_PATTERN.test(slug) || DEMO_NAME_PATTERN.test(name)
 }
 
+type TablePlan = {
+  table: string
+  count: number
+  samples: string[]
+}
+
 type CleanupPlan = {
+  tables: TablePlan[]
   demoUsers: { id: string; email: string; name: string | null }[]
   demoOrgs: { id: string; slug: string; name: string }[]
-  operational: string[]
+}
+
+const maskEmail = (email: string): string => {
+  const [local, domain] = email.split('@')
+  if (!domain) return '***'
+  return `${local.slice(0, 2)}***@${domain}`
 }
 
 const buildPlan = async (): Promise<CleanupPlan> => {
@@ -62,40 +74,91 @@ const buildPlan = async (): Promise<CleanupPlan> => {
 
   const demoOrgs = orgs.filter((o) => isDemoOrg(o.slug, o.name))
 
-  const operational = [
-    'Instancias/VPS/cloud accounts con prefijo demo- (via clearDemoData)',
-    'GitHub/Jenkins/Terraform/Docker/K8s demo catalog',
-    'Alertas, notificaciones y audit logs demo',
-  ]
+  const countWhere = async (label: string, count: Promise<number>, samples: string[]): Promise<TablePlan> => ({
+    table: label,
+    count: await count,
+    samples,
+  })
 
-  return { demoUsers, demoOrgs, operational }
+  const tables: TablePlan[] = await Promise.all([
+    countWhere(
+      'users (demo)',
+      Promise.resolve(demoUsers.length),
+      demoUsers.slice(0, 5).map((u) => maskEmail(u.email)),
+    ),
+    countWhere(
+      'organizations (demo)',
+      Promise.resolve(demoOrgs.length),
+      demoOrgs.slice(0, 5).map((o) => o.slug),
+    ),
+    countWhere(
+      'instances (demo-*)',
+      prisma.instance.count({ where: { id: { startsWith: 'demo-inst-' } } }),
+      ['demo-inst-*'],
+    ),
+    countWhere(
+      'vps_servers (demo-*)',
+      prisma.vpsServer.count({ where: { id: { startsWith: 'demo-vps' } } }),
+      ['demo-vps-*'],
+    ),
+    countWhere(
+      'cloud_accounts (demo-*)',
+      prisma.cloudAccount.count({ where: { id: { startsWith: 'demo-' } } }),
+      ['demo-*'],
+    ),
+    countWhere(
+      'github_accounts (demo)',
+      prisma.githubAccount.count({ where: { id: { startsWith: 'demo-github' } } }),
+      ['demo-github*'],
+    ),
+    countWhere(
+      'jenkins_servers (demo)',
+      prisma.jenkinsServer.count({ where: { id: { startsWith: 'demo-' } } }),
+      ['demo-*'],
+    ),
+    countWhere(
+      'alerts (demo)',
+      prisma.alert.count({ where: { id: { startsWith: 'demo-alert' } } }),
+      ['demo-alert*'],
+    ),
+    countWhere(
+      'notifications (Demo)',
+      prisma.notification.count({ where: { title: { contains: 'Demo' } } }),
+      ['title~Demo'],
+    ),
+    countWhere(
+      'audit_logs (demo)',
+      prisma.auditLog.count({ where: { action: { contains: 'demo' } } }),
+      ['action~demo'],
+    ),
+  ])
+
+  return { tables, demoUsers, demoOrgs }
 }
 
-const runCleanup = async (dryRun: boolean): Promise<void> => {
+const printGroupedPlan = (plan: CleanupPlan, dryRun: boolean): void => {
   const mode = dryRun ? 'DRY-RUN' : 'PRODUCTION'
   console.log(`\n=== Spendlyx cleanup demo data [${mode}] ===\n`)
 
-  const plan = await buildPlan()
-
-  console.log(`Usuarios demo a eliminar: ${plan.demoUsers.length}`)
-  for (const u of plan.demoUsers) {
-    console.log(`  - ${u.email} (${u.name ?? '—'})`)
-  }
-
-  console.log(`\nOrganizaciones demo a eliminar: ${plan.demoOrgs.length}`)
-  for (const o of plan.demoOrgs) {
-    console.log(`  - ${o.slug} (${o.name})`)
-  }
-
-  console.log('\nDatos operativos demo:')
-  for (const line of plan.operational) {
-    console.log(`  - ${line}`)
+  console.log('Por tabla:')
+  for (const row of plan.tables) {
+    console.log(`  [${row.table}] ${row.count} registro(s)`)
+    for (const sample of row.samples) {
+      console.log(`    · ${sample}`)
+    }
   }
 
   if (dryRun) {
     console.log('\n[DRY-RUN] Sin cambios en la base de datos.')
     return
   }
+}
+
+const runCleanup = async (dryRun: boolean): Promise<void> => {
+  const plan = await buildPlan()
+  printGroupedPlan(plan, dryRun)
+
+  if (dryRun) return
 
   console.log('\nEjecutando limpieza...')
 
@@ -123,7 +186,7 @@ const runCleanup = async (dryRun: boolean): Promise<void> => {
       resource: 'database',
       ipAddress: '127.0.0.1',
       metadata: {
-        deletedUsers: plan.demoUsers.map((u) => u.email),
+        deletedUsers: plan.demoUsers.map((u) => maskEmail(u.email)),
         deletedOrgs: plan.demoOrgs.map((o) => o.slug),
         preservedEmails: [...PRESERVED_EMAILS],
       },
@@ -142,12 +205,19 @@ const main = async (): Promise<void> => {
     process.exit(1)
   }
 
+  if (!dryRun && process.env.CONFIRM_DELETE_DEMO_DATA !== 'true') {
+    console.error(
+      'Abortado: modo producción requiere CONFIRM_DELETE_DEMO_DATA=true',
+    )
+    process.exit(1)
+  }
+
   await runCleanup(dryRun)
 }
 
 main()
   .catch((err) => {
-    console.error(err)
+    console.error(err instanceof Error ? err.message : 'Error en limpieza')
     process.exit(1)
   })
   .finally(async () => {

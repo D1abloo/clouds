@@ -7,7 +7,7 @@ export const isDemoModeEnabled = (config: ConfigService): boolean =>
 export const assertDemoModeEnabled = (config: ConfigService): void => {
   if (!isDemoModeEnabled(config)) {
     throw new ForbiddenException(
-      'Modo demo deshabilitado en producción. Configure DEMO_MODE=true solo en entornos locales.',
+      'Función no disponible en producción. Configure integraciones reales en Configuración.',
     )
   }
 }
@@ -26,3 +26,7 @@ export const emptyGithubInventorySummary = () => ({
   lastSyncAt: null as string | null,
   message: 'Sin cuentas conectadas. Añade una cuenta para comenzar.',
 })
+
+/** Flag demo en respuestas API — solo true si el runtime permite fallback demo. */
+export const apiDemoFlag = (canUseDemo: boolean, isDemoData: boolean): boolean =>
+  canUseDemo && isDemoData

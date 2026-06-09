@@ -20,6 +20,15 @@ import { ToastService } from '../../core/services/toast.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { environment } from '../../../environments/environment'
 import { loginAnimations } from './login.animations'
+import {
+  LOGIN_DEMO_ADMIN_EMAIL,
+  LOGIN_DEMO_ADMIN_PASSWORD,
+  LOGIN_DEMO_BUTTON_LABEL,
+  LOGIN_DEMO_HINT_TITLE,
+  LOGIN_DEMO_USER_EMAIL,
+  LOGIN_DEMO_USER_PASSWORD,
+  SHOW_LOGIN_DEMO_PANEL,
+} from './login-demo.panel'
 
 @Component({
   selector: 'app-login',
@@ -128,7 +137,7 @@ import { loginAnimations } from './login.animations'
           </button>
         </form>
 
-        @if (pro.showDemoLogin()) {
+        @if (showLoginDemoPanel && pro.showDemoLogin()) {
           <button
             type="button"
             class="login-demo"
@@ -137,15 +146,15 @@ import { loginAnimations } from './login.animations'
             (click)="handleDemoLogin()"
           >
             <mat-icon>science</mat-icon>
-            Entrar en modo demo
+            {{ loginDemoButtonLabel }}
           </button>
         }
 
-        @if (pro.showDemoLogin()) {
+        @if (showLoginDemoPanel && pro.showDemoLogin()) {
           <aside class="login-hint" role="note" @hintZone>
-            <strong>Credenciales demo</strong>
-            <p>Admin: <code>admin&#64;cloudops.local</code> / <code>Admin123!</code></p>
-            <p>Demo: <code>demo&#64;cloudops.local</code> / <code>Demo1234!</code></p>
+            <strong>{{ loginDemoHintTitle }}</strong>
+            <p>Admin: <code>{{ loginDemoAdminEmail }}</code> / <code>{{ loginDemoAdminPassword }}</code></p>
+            <p>Demo: <code>{{ loginDemoUserEmail }}</code> / <code>{{ loginDemoUserPassword }}</code></p>
           </aside>
         }
       </section>
@@ -507,6 +516,14 @@ export class LoginComponent implements OnInit {
   private readonly ngZone = inject(NgZone)
   private readonly destroyRef = inject(DestroyRef)
   readonly pro = inject(ProModeService)
+
+  readonly showLoginDemoPanel = SHOW_LOGIN_DEMO_PANEL
+  readonly loginDemoButtonLabel = LOGIN_DEMO_BUTTON_LABEL
+  readonly loginDemoHintTitle = LOGIN_DEMO_HINT_TITLE
+  readonly loginDemoAdminEmail = LOGIN_DEMO_ADMIN_EMAIL
+  readonly loginDemoAdminPassword = LOGIN_DEMO_ADMIN_PASSWORD
+  readonly loginDemoUserEmail = LOGIN_DEMO_USER_EMAIL
+  readonly loginDemoUserPassword = LOGIN_DEMO_USER_PASSWORD
 
   readonly bgShift = signal({ x: 0, y: 0 })
 

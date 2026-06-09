@@ -14,6 +14,7 @@ import { Router } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import { MatIconModule } from '@angular/material/icon'
 import { ProModeService } from '../../core/services/pro-mode.service'
+import { commandPaletteExtraItems } from './command-palette-extra'
 
 interface PaletteItem {
   label: string
@@ -286,19 +287,16 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   ]
 
   private readonly allItems = computed((): PaletteItem[] => {
-    const items = this.baseItems
-    if (this.pro.proMode() && !this.pro.demoMode()) {
-      return items.filter((i) => !/demo/i.test(i.label) && !/demo/i.test(i.description))
-    }
-    return [
-      ...items,
-      {
-        label: 'Modo demo',
-        description: 'Cargar y reiniciar datos de demostración',
-        icon: 'science',
-        action: () => this.router.navigate(['/admin/demo-mode']),
-      },
-    ]
+    const items = this.baseItems.filter(
+      (i) => !/demo/i.test(i.label) && !/demo/i.test(i.description),
+    )
+    const extras = commandPaletteExtraItems().map((e) => ({
+      label: e.label,
+      description: e.description,
+      icon: e.icon,
+      action: () => e.action(this.router),
+    }))
+    return [...items, ...extras]
   })
 
   readonly filtered = computed(() => {

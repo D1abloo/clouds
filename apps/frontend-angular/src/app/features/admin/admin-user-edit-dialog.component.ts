@@ -17,7 +17,7 @@ import {
   ADMIN_USERS_ACCENT_LIGHT,
   adminRelativeTime,
 } from './admin.config'
-import { type AdminUserProfile } from './admin-users.demo'
+import type { AdminUserProfile } from './admin-users.types'
 
 export interface AdminUserEditData {
   user: AdminUserProfile

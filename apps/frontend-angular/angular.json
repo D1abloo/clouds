@@ -57,6 +57,14 @@
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.production.ts"
+                },
+                {
+                  "replace": "src/app/features/login/login-demo.panel.ts",
+                  "with": "src/app/features/login/login-demo.panel.production.ts"
+                },
+                {
+                  "replace": "src/app/layout/topbar/command-palette-extra.ts",
+                  "with": "src/app/layout/topbar/command-palette-extra.production.ts"
                 }
               ]
             },
@@ -68,6 +76,10 @@
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.development.ts"
+                },
+                {
+                  "replace": "src/app/shared/components/demo-banner/demo-banner.component.ts",
+                  "with": "src/app/shared/components/demo-banner/demo-banner.development.component.ts"
                 }
               ]
             }

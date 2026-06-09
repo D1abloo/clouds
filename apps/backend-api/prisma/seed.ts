@@ -1,4 +1,4 @@
-import { PrismaClient, AlertSeverity, MembershipRole } from '@prisma/client'
+import { PrismaClient, MembershipRole } from '@prisma/client'
 import * as bcrypt from 'bcrypt'
 import {
   PLATFORM_SETTINGS_PRO,
@@ -187,43 +187,8 @@ async function main() {
     })
   }
 
-  if (!productionSeed) {
-    const demoPasswordHash = await bcrypt.hash('Demo123!', 12)
-
-    const roleByName = async (name: string) => prisma.role.findUnique({ where: { name } })
-
-    const DEMO_USERS = [
-      { email: 'cloud.admin@demo.local', name: 'Demo Administrador', role: 'administrador' },
-      { email: 'devops@demo.local', name: 'Demo Operador', role: 'operador' },
-      { email: 'viewer@demo.local', name: 'Demo Solo lectura', role: 'solo_lectura' },
-      { email: 'auditor@demo.local', name: 'Demo Auditor', role: 'auditor' },
-    ]
-
-    for (const demo of DEMO_USERS) {
-      const role = await roleByName(demo.role)
-      await prisma.user.upsert({
-        where: { email: demo.email },
-        create: {
-          email: demo.email,
-          passwordHash: demoPasswordHash,
-          name: demo.name,
-          userRoles: role
-            ? { create: [{ roleId: role.id, projectId: project.id }] }
-            : undefined,
-        },
-        update: { name: demo.name },
-      })
-    }
-
-    await prisma.alertRule.createMany({
-      data: [
-        { name: 'High CPU', condition: 'cpu_high', severity: AlertSeverity.WARNING },
-        { name: 'High RAM', condition: 'ram_high', severity: AlertSeverity.WARNING },
-        { name: 'Disk Full', condition: 'disk_full', severity: AlertSeverity.CRITICAL },
-        { name: 'High Cost', condition: 'cost_high', severity: AlertSeverity.WARNING },
-      ],
-      skipDuplicates: true,
-    })
+  if (!productionSeed && process.env.DEMO_MODE === 'true') {
+    console.log('Usuarios demo omitidos en seed base — ejecuta scripts/seed-demo-development.ts con DEMO_MODE=true')
   }
 
   console.log('Seed complete.')

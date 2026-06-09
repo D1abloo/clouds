@@ -30,6 +30,9 @@
     "provision:spendlyx-users": "bash scripts/provision-spendlyx-users.sh",
     "cleanup:demo:dry-run": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/cleanup-production-demo-data.ts",
     "cleanup:demo:production": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/cleanup-production-demo-data.ts --production",
+    "assert:no-demo": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/assert-no-demo-in-production.ts",
+    "assert:no-demo:skip-build": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/assert-no-demo-in-production.ts --skip-build",
+    "seed:demo:dev": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/seed-demo-development.ts",
     "github:demo:verify": "npm run github:demo:verify -w apps/backend-api",
     "github:demo:test": "npm run github:demo:test -w apps/backend-api",
     "github:demo:setup": "bash scripts/github-demo-setup.sh"

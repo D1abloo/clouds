@@ -257,8 +257,8 @@ docker compose exec -T postgres pg_dump -U cloudops cloudops > /root/backups/spe
 # Simulación (sin cambios)
 npm run cleanup:demo:dry-run
 
-# Ejecución real (solo con DEMO_MODE=false)
-npm run cleanup:demo:production
+# Ejecución real (DEMO_MODE=false + confirmación explícita)
+CONFIRM_DELETE_DEMO_DATA=true npm run cleanup:demo:production
 
 # En VPS (contenedor backend)
 docker compose exec -T backend-api sh -c 'cd /app && npm run cleanup:demo:dry-run'
@@ -280,10 +280,39 @@ npm run provision:spendlyx-users -- --admin --email admin@spendlyx.com
 
 ### Rollback
 
+**Tag Git antes de limpieza demo:**
+
+```bash
+git tag demo-full-cleanup-backup-before-delete
+# o restaurar: git checkout demo-full-cleanup-backup-before-delete
+```
+
 Restaurar backup PostgreSQL:
 
 ```bash
 docker compose exec -T postgres psql -U cloudops cloudops < /root/backups/spendlyx-pre-cleanup-YYYYMMDD.sql
+```
+
+**Verificación sin demo tras deploy:**
+
+```bash
+npm run assert:no-demo
+# o solo bundle ya construido:
+npm run assert:no-demo:skip-build
+```
+
+**Rebuild sin caché en VPS (obligatorio tras cambios demo):**
+
+```bash
+ssh root@82.223.54.195
+cd /opt/cloudops/infra
+docker compose down   # no elimina volumen postgres
+docker compose build --no-cache frontend backend-api
+docker compose up -d
+docker exec cloudops-backend npx prisma migrate deploy
+npm run cleanup:demo:dry-run   # desde /opt/cloudops en host o exec backend
+CONFIRM_DELETE_DEMO_DATA=true npm run cleanup:demo:production
+docker compose restart frontend backend-api
 ```
 
 ## Reglas PRO

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core'
+import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
@@ -18,21 +18,21 @@ import {
   adminRelativeTime,
   downloadBlob,
 } from './admin.config'
+import type {
+  AdminUserRow,
+  AdminUserAuditRow,
+  AdminUserSsoRow,
+  AdminUserSessionRow,
+} from './admin-users.types'
 import {
-  ADMIN_USERS_ACTIVE,
-  ADMIN_USERS_INVITED,
-  ADMIN_USERS_SUSPENDED,
-  ADMIN_USERS_AUDIT,
-  ADMIN_USERS_SSO,
-  ADMIN_USERS_SESSIONS,
-  adminUsersRoleDistribution,
-  adminUsersMfaDonut,
-  enrichUserProfile,
-  type AdminUserRow,
-  type AdminUserAuditRow,
-  type AdminUserSsoRow,
-  type AdminUserSessionRow,
-} from './admin-users.demo'
+  enrichUserProfilePro,
+  mapApiUserToRow,
+  mfaDonutFromUsers,
+  roleDistributionFromUsers,
+} from './admin-users.pro-api'
+import { ApiClientService } from '../../core/services/api-client.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { AdminUserDetailDialogComponent } from './admin-user-detail-dialog.component'
 import { AdminUserInviteDialogComponent } from './admin-user-invite-dialog.component'
 import { AdminUserEditDialogComponent } from './admin-user-edit-dialog.component'
@@ -393,10 +393,19 @@ type UserTab = 'active' | 'invited' | 'suspended' | 'audit' | 'sso' | 'sessions'
     }
   `,
 })
-export class AdminUsersPageComponent {
+export class AdminUsersPageComponent implements OnInit {
   private readonly actions = inject(PlatformActionService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
+
+  readonly activeUsers = signal<AdminUserRow[]>([])
+  readonly invitedUsers = signal<AdminUserRow[]>([])
+  readonly suspendedUsers = signal<AdminUserRow[]>([])
+  readonly auditRows = signal<AdminUserAuditRow[]>([])
+  readonly ssoRows = signal<AdminUserSsoRow[]>([])
+  readonly sessionRows = signal<AdminUserSessionRow[]>([])
 
   readonly selectedUser = signal<AdminUserRow | null>(null)
   readonly selectedAudit = signal<AdminUserAuditRow | null>(null)
@@ -424,15 +433,15 @@ export class AdminUsersPageComponent {
     { initialValue: '' },
   )
 
-  readonly filteredActive = computed(() => this.filterUsers(ADMIN_USERS_ACTIVE))
-  readonly filteredInvited = computed(() => this.filterUsers(ADMIN_USERS_INVITED))
-  readonly filteredSuspended = computed(() => this.filterUsers(ADMIN_USERS_SUSPENDED))
-  readonly filteredAudit = computed(() => this.filterAudit(ADMIN_USERS_AUDIT))
-  readonly filteredSso = computed(() => this.filterSso(ADMIN_USERS_SSO))
-  readonly filteredSessions = computed(() => this.filterSessions(ADMIN_USERS_SESSIONS))
+  readonly filteredActive = computed(() => this.filterUsers(this.activeUsers()))
+  readonly filteredInvited = computed(() => this.filterUsers(this.invitedUsers()))
+  readonly filteredSuspended = computed(() => this.filterUsers(this.suspendedUsers()))
+  readonly filteredAudit = computed(() => this.filterAudit(this.auditRows()))
+  readonly filteredSso = computed(() => this.filterSso(this.ssoRows()))
+  readonly filteredSessions = computed(() => this.filterSessions(this.sessionRows()))
 
-  readonly roleDistribution = computed(() => adminUsersRoleDistribution())
-  readonly mfaDonut = computed(() => adminUsersMfaDonut())
+  readonly roleDistribution = computed(() => roleDistributionFromUsers(this.activeUsers()))
+  readonly mfaDonut = computed(() => mfaDonutFromUsers(this.activeUsers()))
   readonly mfaDonutSegments = computed(() => {
     const d = this.mfaDonut()
     const circumference = 302
@@ -453,13 +462,38 @@ export class AdminUsersPageComponent {
 
   tabCount = (id: UserTab): number => {
     switch (id) {
-      case 'active': return ADMIN_USERS_ACTIVE.length
-      case 'invited': return ADMIN_USERS_INVITED.length
-      case 'suspended': return ADMIN_USERS_SUSPENDED.length
-      case 'audit': return ADMIN_USERS_AUDIT.length
-      case 'sso': return ADMIN_USERS_SSO.length
-      case 'sessions': return ADMIN_USERS_SESSIONS.length
+      case 'active': return this.activeUsers().length
+      case 'invited': return this.invitedUsers().length
+      case 'suspended': return this.suspendedUsers().length
+      case 'audit': return this.auditRows().length
+      case 'sso': return this.ssoRows().length
+      case 'sessions': return this.sessionRows().length
     }
+  }
+
+  ngOnInit(): void {
+    if (allowsDemoDataFrom(this.pro)) {
+      void import('./admin-users.demo').then((m) => {
+        this.activeUsers.set(m.ADMIN_USERS_ACTIVE)
+        this.invitedUsers.set(m.ADMIN_USERS_INVITED)
+        this.suspendedUsers.set(m.ADMIN_USERS_SUSPENDED)
+        this.auditRows.set(m.ADMIN_USERS_AUDIT)
+        this.ssoRows.set(m.ADMIN_USERS_SSO)
+        this.sessionRows.set(m.ADMIN_USERS_SESSIONS)
+      })
+      return
+    }
+
+    this.api.get<Array<{ id: string; email: string; name: string | null; isActive: boolean; createdAt: string }>>('users').subscribe({
+      next: (users) => {
+        this.activeUsers.set(users.filter((u) => u.isActive).map(mapApiUserToRow))
+        this.suspendedUsers.set(users.filter((u) => !u.isActive).map(mapApiUserToRow))
+      },
+      error: () => {
+        this.activeUsers.set([])
+        this.suspendedUsers.set([])
+      },
+    })
   }
 
   private filterUsers(rows: AdminUserRow[]): AdminUserRow[] {
@@ -521,7 +555,7 @@ export class AdminUsersPageComponent {
   }
 
   handleExport = (): void => {
-    const rows = [...ADMIN_USERS_ACTIVE, ...ADMIN_USERS_INVITED, ...ADMIN_USERS_SUSPENDED]
+    const rows = [...this.activeUsers(), ...this.invitedUsers(), ...this.suspendedUsers()]
     const header = 'id,email,name,role,department,status,lastLogin\n'
     const body = rows.map((r) =>
       `${r.id},${r.email},${r.name},${r.role},${r.department},${r.status},${r.lastLogin}`,
@@ -557,7 +591,7 @@ export class AdminUsersPageComponent {
       maxWidth: '94vw',
       maxHeight: '92vh',
       panelClass: 'admin-user-edit-dialog-panel',
-      data: { user: enrichUserProfile(row) },
+      data: { user: enrichUserProfilePro(row) },
     })
   }
 
@@ -569,7 +603,7 @@ export class AdminUsersPageComponent {
       maxWidth: '96vw',
       maxHeight: '90vh',
       panelClass: 'admin-user-action-dialog-panel',
-      data: { user: enrichUserProfile(row), mode },
+      data: { user: enrichUserProfilePro(row), mode },
     })
   }
 

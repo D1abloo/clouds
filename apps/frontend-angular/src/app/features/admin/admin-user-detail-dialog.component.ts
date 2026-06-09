@@ -12,16 +12,12 @@ import {
   ADMIN_USERS_ACCENT_LIGHT,
   adminRelativeTime,
 } from './admin.config'
+import type { AdminUserAuditRow, AdminUserRow, AdminUserSessionRow, AdminUserSsoRow } from './admin-users.types'
 import {
-  activityDonutSegments,
-  enrichUserProfile,
-  getUserAudit,
-  getUserSessions,
-  getUserSso,
-  sparkPath,
-  type AdminUserProfile,
-  type AdminUserRow,
-} from './admin-users.demo'
+  activityDonutSegmentsPro,
+  enrichUserProfilePro,
+  loginSparkPathPro,
+} from './admin-users.pro-api'
 import { AdminUserEditDialogComponent } from './admin-user-edit-dialog.component'
 import { AdminUserActionDialogComponent } from './admin-user-action-dialog.component'
 
@@ -347,11 +343,11 @@ export class AdminUserDetailDialogComponent {
     { id: 'permissions' as const, label: 'Permisos', icon: 'policy' },
   ]
 
-  readonly profile = computed(() => enrichUserProfile(this.data.user))
-  readonly sessions = computed(() => getUserSessions(this.profile().email))
-  readonly audit = computed(() => getUserAudit(this.profile().email))
-  readonly sso = computed(() => getUserSso(this.profile().email))
-  readonly donutSegments = computed(() => activityDonutSegments(this.profile().activityMix))
+  readonly profile = computed(() => enrichUserProfilePro(this.data.user))
+  readonly sessions = computed((): AdminUserSessionRow[] => [])
+  readonly audit = computed((): AdminUserAuditRow[] => [])
+  readonly sso = computed((): AdminUserSsoRow | undefined => undefined)
+  readonly donutSegments = computed(() => activityDonutSegmentsPro(this.profile().activityMix))
 
   readonly permissionBars = computed(() => {
     const perms = this.profile().permissions
@@ -377,7 +373,7 @@ export class AdminUserDetailDialogComponent {
     return this.profile().name.slice(0, 2).toUpperCase()
   }
 
-  loginSparkPath = (): string => sparkPath(this.profile().loginSpark)
+  loginSparkPath = (): string => loginSparkPathPro(this.profile().loginSpark)
 
   openEdit = (): void => {
     this.dialog.open(AdminUserEditDialogComponent, {

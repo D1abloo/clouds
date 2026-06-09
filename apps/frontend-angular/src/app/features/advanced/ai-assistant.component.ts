@@ -21,6 +21,7 @@ import { PageHeaderComponent, type PageHeaderAction } from '../../shared/compone
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
 import { ToastService } from '../../core/services/toast.service'
 import { AuthService } from '../../core/services/auth.service'
@@ -221,10 +222,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
                     <mat-icon>auto_awesome</mat-icon>
                   </div>
                   <h3>¿Por dónde empezamos?</h3>
-                  <p>
-                    Pregunta sobre instancias, costes, alertas o Kubernetes.
-                    El Copilot usa datos demo sincronizados con el resto de la plataforma.
-                  </p>
+                  <p>{{ emptyStateDescription() }}</p>
                   <div class="cop-empty__prompts">
                     @for (prompt of emptyPrompts; track prompt.id) {
                       <button type="button" class="cop-empty__prompt" (click)="ask(prompt.question)">
@@ -682,12 +680,18 @@ export class AiAssistantComponent implements OnInit {
     return [...primary, ...extra]
   })
 
-  readonly userName = computed(() => this.auth.user()?.name ?? 'Usuario demo')
+  readonly userName = computed(() => this.auth.user()?.name ?? 'Usuario')
 
   readonly sessionShort = computed(() => this.sessionId().slice(-8))
 
   readonly showEmptyState = computed(() =>
     this.queryCount() === 0 && !this.typing(),
+  )
+
+  readonly emptyStateDescription = computed(() =>
+    allowsDemoDataFrom(this.pro)
+      ? 'Pregunta sobre instancias, costes, alertas o Kubernetes. El Copilot usa datos de demostración sincronizados con el resto de la plataforma.'
+      : 'Pregunta sobre instancias, costes, alertas o Kubernetes. El Copilot usa los datos conectados de tu organización.',
   )
 
   ngOnInit(): void {

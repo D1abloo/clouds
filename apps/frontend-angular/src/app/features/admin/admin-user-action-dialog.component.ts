@@ -10,7 +10,7 @@ import { MatSelectModule } from '@angular/material/select'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { ToastService } from '../../core/services/toast.service'
 import { ADMIN_USERS_ACCENT, ADMIN_USERS_ACCENT_BORDER, ADMIN_USERS_ACCENT_LIGHT, adminRelativeTime } from './admin.config'
-import { getUserSessions, type AdminUserProfile } from './admin-users.demo'
+import type { AdminUserProfile, AdminUserSessionRow } from './admin-users.types'
 
 export type AdminUserActionMode = 'reset-mfa' | 'suspend'
 
@@ -166,7 +166,7 @@ export class AdminUserActionDialogComponent {
   private readonly toast = inject(ToastService)
 
   relativeTime = adminRelativeTime
-  readonly sessions = getUserSessions(this.data.user.email)
+  readonly sessions: AdminUserSessionRow[] = []
   readonly suspendReasons = [
     'Política de seguridad',
     'Baja del empleado',

@@ -29,6 +29,28 @@
 | Copy español por módulo (AWS, GCP, VPS, repos, etc.) | ✅ |
 | Tests `integration-connection.service.spec.ts` + `auth.guard.spec.ts` | ✅ |
 
+## Eliminación total demo PRO (2026-06-09)
+
+| Criterio | Estado |
+|----------|--------|
+| Tag respaldo `demo-full-cleanup-backup-before-delete` | ✅ |
+| `npm run assert:no-demo` en CI/pre-deploy | ✅ |
+| Admin usuarios/roles: API PostgreSQL en PRO (sin `*.demo.ts` estático) | ✅ |
+| `CONFIRM_DELETE_DEMO_DATA=true` para limpieza producción | ✅ |
+| Seed PRO: solo roles, permisos, `admin@spendlyx.com` | ✅ |
+| Demo seed movido a `scripts/seed-demo-development.ts` (DEMO_MODE) | ✅ |
+| Bundle producción sin «Modo demo», «demo@cloudops», «Demo User» | ✅ |
+| `proDemoGuard` en `/admin/demo-mode` | ✅ |
+| Rebuild VPS `--no-cache` documentado en `PRO_DEPLOYMENT.md` | ✅ |
+
+Comandos:
+
+```bash
+npm run build -w apps/frontend-angular -- --configuration=production
+npm run assert:no-demo:skip-build
+CONFIRM_DELETE_DEMO_DATA=true npm run cleanup:demo:production
+```
+
 ## Limpieza demo y formularios cloud (2026-06-09)
 
 | Criterio | Estado |

@@ -24,7 +24,11 @@ export class ProModeService {
 
   readonly proMode = computed(() => this.status()?.proMode ?? environment.proMode)
   readonly demoMode = computed(() => this.status()?.demoMode ?? environment.demoMode)
-  readonly showDemoLogin = computed(() => this.demoMode())
+  readonly showDemoLogin = computed(() => {
+    if (environment.proMode && !environment.demoMode) return false
+    if (this.proMode() && !this.demoMode()) return false
+    return this.demoMode()
+  })
   readonly databaseConnected = computed(() => this.status()?.database?.connected ?? false)
   readonly oauthGithubEnabled = computed(() => this.status()?.oauth?.github ?? false)
 

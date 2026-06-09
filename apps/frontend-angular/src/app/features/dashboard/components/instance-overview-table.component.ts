@@ -1,4 +1,4 @@
-import { Component, Input, output, signal, computed, effect, input } from '@angular/core'
+import { Component, Input, output, signal, computed, effect, input, inject } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
@@ -16,6 +16,8 @@ import { InstancePerformancePanelComponent } from './instance-performance-panel.
 import { DashboardInstanceRow } from '../dashboard.models'
 import { instanceProviderLogo } from '../utils/dashboard-instance-detail.util'
 import type { NavLogoKey } from '../../../shared/theme/nav-logo.types'
+import { ProModeService } from '../../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../../core/utils/demo-runtime.util'
 
 type CloudFilterValue = '' | 'AWS' | 'GCP' | 'AZURE' | 'VPS'
 type ProviderTone = 'aws' | 'gcp' | 'azure' | 'vps' | 'default'
@@ -112,7 +114,11 @@ interface CloudFilterOption {
       </div>
 
       @if (!rows.length) {
-        <app-empty-state icon="cloud_off" title="Sin instancias" message="Carga datos demo o conecta una cuenta cloud" />
+        <app-empty-state
+          icon="cloud_off"
+          title="Sin instancias"
+          [description]="emptyMessage()"
+        />
       } @else if (!filtered().length) {
         <app-empty-state icon="filter_alt_off" title="Sin coincidencias" message="Prueba otro cloud o ajusta los filtros" />
       } @else {
@@ -511,9 +517,17 @@ interface CloudFilterOption {
   `,
 })
 export class InstanceOverviewTableComponent {
+  private readonly pro = inject(ProModeService)
+
   @Input({ required: true }) rows: DashboardInstanceRow[] = []
   readonly threeColumn = input(false)
   readonly select = output<DashboardInstanceRow>()
+
+  readonly emptyMessage = computed(() =>
+    allowsDemoDataFrom(this.pro)
+      ? 'Carga datos de demostración o conecta una cuenta cloud'
+      : 'Conecta una cuenta cloud o registra un VPS para ver instancias',
+  )
 
   readonly selectedCloud = signal<CloudFilterValue>('AWS')
   readonly selectedInstance = signal<DashboardInstanceRow | null>(null)

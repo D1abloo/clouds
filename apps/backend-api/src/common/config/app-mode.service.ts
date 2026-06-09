@@ -62,6 +62,6 @@ export class AppModeService {
     },
     message: this.isProMode()
       ? 'Modo PRO activo — datos desde PostgreSQL y proveedores configurados'
-      : 'Modo demo activo — datos simulados para pruebas',
+      : 'Entorno de desarrollo — datos simulados para pruebas locales',
   })
 }

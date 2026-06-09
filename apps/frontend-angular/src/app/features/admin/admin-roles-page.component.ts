@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core'
+import { Component, inject, signal, computed, ChangeDetectionStrategy, OnInit } from '@angular/core'
 import { DatePipe } from '@angular/common'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
@@ -19,16 +19,15 @@ import {
   adminRelativeTime,
   downloadBlob,
 } from './admin.config'
+import type { AdminRoleRow, AdminRoleAssignmentRow, AdminPermissionRow } from './admin-roles.types'
 import {
-  ADMIN_ROLES,
-  ADMIN_PERMISSIONS,
-  ADMIN_ROLE_ASSIGNMENTS,
-  adminRolesUserDistribution,
-  adminPermissionCategoryMix,
-  permissionDonutSegments,
-  type AdminRoleRow,
-  type AdminRoleAssignmentRow,
-} from './admin-roles.demo'
+  assignmentsFromApiUsers,
+  mapApiRoleToRow,
+  permissionsFromApiRoles,
+} from './admin-roles.pro-api'
+import { ApiClientService } from '../../core/services/api-client.service'
+import { ProModeService } from '../../core/services/pro-mode.service'
+import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { AdminRoleDetailDialogComponent } from './admin-role-detail-dialog.component'
 import { AdminRoleAssignmentEditDialogComponent } from './admin-role-assignment-edit-dialog.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
@@ -105,7 +104,7 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
                   <circle cx="60" cy="60" r="48" fill="none" [attr.stroke]="seg.color" stroke-width="12" [attr.stroke-dasharray]="seg.dash + ' 302'" [attr.stroke-dashoffset]="seg.offset" stroke-linecap="round" transform="rotate(-90 60 60)" />
                 }
               </svg>
-              <div class="rol-donut__center"><strong>{{ ADMIN_PERMISSIONS.length }}</strong><span>permisos</span></div>
+              <div class="rol-donut__center"><strong>{{ permissions().length }}</strong><span>permisos</span></div>
             </div>
             <ul class="rol-legend">
               @for (s of permMix(); track s.label) {
@@ -174,7 +173,7 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
                   </tr>
                 </thead>
                 <tbody>
-                  @for (p of ADMIN_PERMISSIONS; track p.id) {
+                  @for (p of permissions(); track p.id) {
                     <tr>
                       <td><code>{{ p.resource }}</code></td>
                       <td><code>{{ p.action }}</code></td>
@@ -295,13 +294,16 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
     @media (max-width: 900px) { .rol-charts { grid-template-columns: 1fr; } .rol-bar { flex-direction: column; align-items: stretch; } .rol-search { max-width: none; margin-left: 0; } }
   `,
 })
-export class AdminRolesPageComponent {
+export class AdminRolesPageComponent implements OnInit {
   private readonly actions = inject(PlatformActionService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly api = inject(ApiClientService)
+  private readonly pro = inject(ProModeService)
 
-  readonly ADMIN_PERMISSIONS = ADMIN_PERMISSIONS
-  readonly assignments = signal<AdminRoleAssignmentRow[]>([...ADMIN_ROLE_ASSIGNMENTS])
+  readonly roles = signal<AdminRoleRow[]>([])
+  readonly permissions = signal<AdminPermissionRow[]>([])
+  readonly assignments = signal<AdminRoleAssignmentRow[]>([])
   readonly selectedRole = signal<AdminRoleRow | null>(null)
   readonly selectedAssignment = signal<AdminRoleAssignmentRow | null>(null)
   readonly view = signal<RoleTab>('roles')
@@ -321,12 +323,49 @@ export class AdminRolesPageComponent {
   readonly searchControl = new FormControl('', { nonNullable: true })
   private readonly searchTerm = toSignal(this.searchControl.valueChanges.pipe(startWith(''), debounceTime(200)), { initialValue: '' })
 
-  readonly roleDistribution = computed(() => adminRolesUserDistribution(this.assignments()))
-  readonly permMix = computed(() => adminPermissionCategoryMix())
-  readonly permDonutSegments = computed(() => permissionDonutSegments(this.permMix()))
+  readonly roleDistribution = computed(() => {
+    const colors = ['#2563eb', '#4f46e5', '#0d9488', '#64748b', '#9333ea']
+    const counts = new Map<string, number>()
+    for (const a of this.assignments()) {
+      if (a.status !== 'running') continue
+      counts.set(a.role, (counts.get(a.role) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([role, count], i) => ({ role, count, color: colors[i % colors.length] }))
+  })
+
+  readonly permMix = computed(() => {
+    const perms = this.permissions()
+    const categories = new Map<string, number>()
+    for (const p of perms) {
+      const cat = p.resource.split('.')[0] ?? p.resource
+      categories.set(cat, (categories.get(cat) ?? 0) + 1)
+    }
+    const total = perms.length || 1
+    const colors = ['#2563eb', '#4f46e5', '#0d9488', '#64748b', '#9333ea', '#dc2626']
+    return [...categories.entries()].map(([label, count], i) => ({
+      label,
+      count,
+      color: colors[i % colors.length],
+      pct: Math.round((count / total) * 100),
+    }))
+  })
+
+  readonly permDonutSegments = computed(() => {
+    const mix = this.permMix()
+    const circumference = 302
+    let offset = 0
+    return mix.map((s) => {
+      const dash = (s.pct / 100) * circumference
+      const seg = { color: s.color, dash, offset: -offset }
+      offset += dash
+      return seg
+    })
+  })
   readonly maxRoleCount = computed(() => Math.max(...this.roleDistribution().map((r) => r.count), 1))
 
-  readonly filteredRoles = computed(() => this.filterRoles(ADMIN_ROLES))
+  readonly filteredRoles = computed(() => this.filterRoles(this.roles()))
   readonly filteredAssignments = computed(() => this.filterAssignments(this.assignments()))
 
   relativeTime = adminRelativeTime
@@ -337,10 +376,51 @@ export class AdminRolesPageComponent {
 
   tabCount = (id: RoleTab): number => {
     switch (id) {
-      case 'roles': return ADMIN_ROLES.length
-      case 'permissions': return ADMIN_PERMISSIONS.length
+      case 'roles': return this.roles().length
+      case 'permissions': return this.permissions().length
       case 'assignments': return this.assignments().filter((a) => a.status === 'running').length
     }
+  }
+
+  ngOnInit(): void {
+    if (allowsDemoDataFrom(this.pro)) {
+      void import('./admin-roles.demo').then((m) => {
+        this.roles.set(m.ADMIN_ROLES)
+        this.permissions.set(m.ADMIN_PERMISSIONS)
+        this.assignments.set([...m.ADMIN_ROLE_ASSIGNMENTS])
+      })
+      return
+    }
+
+    this.api.get<Array<{
+      id: string
+      name: string
+      description: string | null
+      createdAt: string
+      updatedAt: string
+      permissions?: { permission: { id: string; resource: string; action: string; description: string | null } }[]
+    }>>('roles').subscribe({
+      next: (apiRoles) => {
+        this.permissions.set(permissionsFromApiRoles(apiRoles))
+        this.roles.set(apiRoles.map((r) => mapApiRoleToRow(r)))
+      },
+      error: () => {
+        this.roles.set([])
+        this.permissions.set([])
+      },
+    })
+
+    this.api.get<Array<{
+      id: string
+      email: string
+      name: string | null
+      isActive: boolean
+      createdAt: string
+      userRoles?: { role: { name: string }; project?: { name: string } | null }[]
+    }>>('users').subscribe({
+      next: (users) => this.assignments.set(assignmentsFromApiUsers(users)),
+      error: () => this.assignments.set([]),
+    })
   }
 
   private filterRoles(rows: AdminRoleRow[]): AdminRoleRow[] {
@@ -374,10 +454,11 @@ export class AdminRolesPageComponent {
   }
 
   handleExport = (): void => {
+    const perms = this.permissions()
     const header = 'resource,action,super_admin,admin,operator,viewer\n'
-    const body = ADMIN_PERMISSIONS.map((p) => `${p.resource},${p.action},${p.superAdmin},${p.admin},${p.operator},${p.viewer}`).join('\n')
+    const body = perms.map((p) => `${p.resource},${p.action},${p.superAdmin},${p.admin},${p.operator},${p.viewer}`).join('\n')
     downloadBlob(header + body, `permisos-rbac-${Date.now()}.csv`, 'text/csv')
-    this.toast.success(`Exportados ${ADMIN_PERMISSIONS.length} permisos (CSV)`)
+    this.toast.success(`Exportados ${perms.length} permisos (CSV)`)
   }
 
   openRoleDetail = (row: AdminRoleRow): void => {
