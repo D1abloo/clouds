@@ -110,10 +110,10 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
       </nav>
 
       <div class="vps-section-body">
-        @if (data().servers === 0 && (section() === 'overview' || section() === 'servers' || section() === 'accounts')) {
+        @if (data().servers === 0 && data().accounts === 0) {
           <app-empty-state
             title="Sin servidores VPS conectados"
-            description="Añade un servidor VPS o Bare Metal para gestionar SSH, servicios y métricas desde este proveedor."
+            description="Añade un servidor VPS o Bare Metal para comenzar a gestionarlo desde el panel."
             actionLabel="Añadir servidor VPS"
             (actionClick)="handleAddVps()"
           />
@@ -443,9 +443,11 @@ export class VpsProviderPageComponent implements OnInit {
       const filteredHosts = hosts.filter((h) => {
         if ((h as { isDemo?: boolean }).isDemo) return false
         if (h.id.startsWith('demo-vps')) return false
+        const name = (h.name ?? '').toLowerCase()
+        if (/demo|mock|fake|sample|ejemplo/.test(name)) return false
         const meta = (h as { metadata?: Record<string, unknown> }).metadata ?? {}
         const provider = String(meta['provider'] ?? meta['vpsProvider'] ?? '').toLowerCase()
-        if (!provider) return true
+        if (!provider) return false
         return provider.includes(slug)
       })
       const serverRows = filteredHosts.map(mapServerRow)

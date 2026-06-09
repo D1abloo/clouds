@@ -14,7 +14,11 @@ DELETE FROM instances WHERE id LIKE 'demo-inst-%' OR external_id ILIKE '%demo%';
 DELETE FROM cloud_credentials WHERE cloud_account_id LIKE 'demo-%';
 DELETE FROM cloud_regions WHERE cloud_account_id LIKE 'demo-%';
 DELETE FROM cloud_accounts WHERE id LIKE 'demo-%';
-DELETE FROM vps_servers WHERE id LIKE 'demo-vps%';
+DELETE FROM vps_servers WHERE id LIKE 'demo-vps%'
+  OR name ILIKE '%demo%'
+  OR hostname ILIKE '%demo%'
+  OR name ~* '^(api|worker|db)-(digitalocean|hetzner|linode|ovh)-';
+DELETE FROM ssh_sessions WHERE vps_server_id NOT IN (SELECT id FROM vps_servers);
 DELETE FROM alerts WHERE id LIKE 'demo-alert%';
 DELETE FROM notifications WHERE title ILIKE '%demo%';
 DELETE FROM billing_records WHERE billing_account_id LIKE 'demo-billing%';
@@ -37,6 +41,7 @@ COMMIT;
 
 SELECT 'instances' AS tbl, COUNT(*)::text AS n FROM instances
 UNION ALL SELECT 'cloud_accounts', COUNT(*)::text FROM cloud_accounts
+UNION ALL SELECT 'vps_servers', COUNT(*)::text FROM vps_servers
 UNION ALL SELECT 'alerts', COUNT(*)::text FROM alerts;
 SQL
 
