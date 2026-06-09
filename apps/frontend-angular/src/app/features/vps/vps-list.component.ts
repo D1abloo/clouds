@@ -1,7 +1,7 @@
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
-import { RouterLink } from '@angular/router'
+import { Router, RouterLink } from '@angular/router'
 import { MatTabsModule } from '@angular/material/tabs'
 import { MatTableModule } from '@angular/material/table'
 import { MatFormFieldModule } from '@angular/material/form-field'
@@ -39,14 +39,14 @@ import { VpsAddDialogComponent, type VpsAddDialogResult } from '../infrastructur
   standalone: true,
   imports: [MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule, ReactiveFormsModule],
   template: `
-    <h2 mat-dialog-title>Execute command</h2>
+    <h2 mat-dialog-title>Ejecutar comando</h2>
     <mat-dialog-content>
-      <mat-form-field appearance="outline" class="full"><mat-label>Command</mat-label><input matInput [formControl]="cmd" /></mat-form-field>
+      <mat-form-field appearance="outline" class="full"><mat-label>Comando</mat-label><input matInput [formControl]="cmd" /></mat-form-field>
       <pre class="output mono">{{ output }}</pre>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close type="button">Close</button>
-      <button mat-flat-button color="primary" type="button" (click)="run()">Run</button>
+      <button mat-button mat-dialog-close type="button">Cerrar</button>
+      <button mat-flat-button color="primary" type="button" (click)="run()">Ejecutar</button>
     </mat-dialog-actions>
   `,
   styles: `
@@ -58,9 +58,9 @@ export class VpsCommandDialogComponent {
   private readonly actions = inject(PlatformActionService)
 
   readonly cmd = new FormControl('uname -a', { nonNullable: true })
-  output = '$ uname -a\nLinux demo-vps 6.1.0 #1 SMP x86_64 GNU/Linux'
+  output = ''
   run = (): void => {
-    this.output = `$ ${this.cmd.value}\nLinux demo-vps 6.1.0 #1 SMP x86_64 GNU/Linux\n(demo output)`
+    this.output = `$ ${this.cmd.value}\n(sin salida — ejecuta en terminal SSH)`
   }
 }
 
@@ -87,10 +87,10 @@ export class VpsCommandDialogComponent {
     <div class="page-container">
       <app-page-header
         title="VPS / Bare Metal"
-        description="SSH servers, Docker, Kubernetes and systemd services"
+        description="Servidores SSH, Docker, Kubernetes y servicios systemd"
         [actions]="[
-          { label: 'Add VPS', icon: 'add', primary: true },
-          { label: 'Validate all', icon: 'verified' },
+          { label: 'Añadir VPS', icon: 'add', primary: true },
+          { label: 'Validar todos', icon: 'verified' },
         ]"
         (actionClick)="handleHeader($event)"
       />
@@ -110,7 +110,12 @@ export class VpsCommandDialogComponent {
                 <mat-hint>Filtra por nombre del host o dirección IP</mat-hint>
               </mat-form-field>
               @if (filtered().length === 0) {
-                <app-empty-state title="No VPS hosts" description="Add a VPS or load demo data." />
+                <app-empty-state
+                  title="Sin servidores VPS conectados"
+                  description="Añade un servidor VPS o Bare Metal para gestionar SSH y servicios."
+                  actionLabel="Añadir servidor VPS"
+                  (actionClick)="handleAddVps()"
+                />
               } @else {
                 <div class="data-table-wrap">
                 <table mat-table [dataSource]="filtered()" class="premium-table table-row-hover">
@@ -161,6 +166,7 @@ export class VpsListComponent implements OnInit {
   private readonly service = inject(VpsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
+  private readonly router = inject(Router)
   private readonly actions = inject(PlatformActionService)
 
   readonly searchControl = new FormControl('', { nonNullable: true })
@@ -199,12 +205,16 @@ export class VpsListComponent implements OnInit {
             disk: 55 + (i * 5) % 30,
           })),
         ),
-      errorMessage: 'Failed to load VPS hosts',
+      errorMessage: 'No se pudieron cargar los hosts VPS',
     })
   }
 
+  handleAddVps = (): void => {
+    void this.router.navigate(['/admin/infraestructura/vps/nuevo'])
+  }
+
   handleHeader = (label: string): void => {
-    if (label === 'Add VPS') {
+    if (label === 'Añadir VPS') {
       this.dialog
         .open(VpsAddDialogComponent, {
           width: '860px',

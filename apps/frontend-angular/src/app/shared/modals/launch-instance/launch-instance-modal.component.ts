@@ -10,7 +10,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { DecimalPipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog'
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog'
 import { MatIconModule } from '@angular/material/icon'
 import { MatButtonModule } from '@angular/material/button'
 import { CloudProvider } from '../../../core/models/api.models'
@@ -62,6 +62,10 @@ interface TypeGroup {
   open: boolean
 }
 
+export interface LaunchInstanceModalData {
+  initialProvider?: LaunchProvider
+}
+
 @Component({
   selector: 'app-launch-instance-modal',
   standalone: true,
@@ -79,7 +83,8 @@ interface TypeGroup {
   styleUrl: './launch-instance-modal.component.scss',
 })
 export class LaunchInstanceModalComponent implements OnInit {
-  private readonly dialogRef = inject(MatDialogRef<LaunchInstanceModalComponent>)
+  private readonly dialogRef = inject(MatDialogRef<LaunchInstanceModalComponent>, { optional: true })
+  private readonly dialogData = inject<LaunchInstanceModalData | null>(MAT_DIALOG_DATA, { optional: true })
   private readonly destroyRef = inject(DestroyRef)
   private readonly cloudStore = inject(CloudAccountsStore)
   private readonly cloudSvc = inject(CloudAccountsService)
@@ -340,6 +345,11 @@ export class LaunchInstanceModalComponent implements OnInit {
   })
 
   ngOnInit(): void {
+    const initial = this.dialogData?.initialProvider
+    if (initial) {
+      this.selectProvider(initial)
+      return
+    }
     const accounts = this.cloudStore.accountsByProvider('AWS')
     if (accounts.length > 0) {
       this.patchForm({ accountId: accounts[0].id, region: accounts[0].defaultRegion ?? 'eu-west-1' })
@@ -483,7 +493,7 @@ export class LaunchInstanceModalComponent implements OnInit {
   }
 
   cancel = (): void => {
-    this.dialogRef.close()
+    this.dialogRef?.close()
   }
 
   generatePlan = (): void => {
@@ -702,7 +712,7 @@ export class LaunchInstanceModalComponent implements OnInit {
     setTimeout(() => {
       this.launching.set(false)
       this.runStore.setLaunchProgress(null)
-      this.dialogRef.close({ applied: true, launch: this.buildLaunchRecord() })
+      this.dialogRef?.close({ applied: true, launch: this.buildLaunchRecord() })
     }, 1400)
   }
 

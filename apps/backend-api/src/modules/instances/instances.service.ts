@@ -198,9 +198,8 @@ export class InstancesService {
 
   private async runAction(id: string, action: 'start' | 'stop' | 'restart', userId?: string) {
     const instance = await this.findOne(id)
-    const isVps = Boolean((instance as { isVps?: unknown }).isVps === true)
     const isDemo = Boolean((instance as { isDemo?: unknown }).isDemo === true)
-    if (isVps || isDemo) {
+    if (isDemo) {
       await this.audit.create({
         userId,
         action: `instance.${action}.demo`,

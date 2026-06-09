@@ -53,19 +53,7 @@ export const buildDemoDashboard = (): DashboardData => {
       alertCount: i === 4 ? 1 : 0,
     }),
   )
-  const vps = Array.from({ length: 8 }, (_, i) =>
-    mkInstance(`vps-${i + 1}`, `vps-monitoring-${i + 1}`, 'VPS', {
-      accountName: 'Bare Metal',
-      instanceType: 'bare-metal',
-      region: `dc-${i + 1}`,
-      isVps: true,
-      status: i === 7 ? 'STOPPED' : 'RUNNING',
-      hasDocker: true,
-      hasKubernetes: i < 3,
-    }),
-  )
-
-  const instanceList = [...aws, ...gcp, ...azure, ...vps]
+  const instanceList = [...aws, ...gcp, ...azure]
 
   return {
     totalInstances: instanceList.length,
@@ -73,9 +61,9 @@ export const buildDemoDashboard = (): DashboardData => {
     stoppedInstances: instanceList.filter((i) => i.status === 'STOPPED').length,
     warningInstances: instanceList.filter((i) => i.status === 'WARNING').length,
     errorInstances: instanceList.filter((i) => i.status === 'ERROR').length,
-    vpsHosts: 8,
-    vpsConnected: 7,
-    vpsDisconnected: 1,
+    vpsHosts: 0,
+    vpsConnected: 0,
+    vpsDisconnected: 0,
     alertsOpen: 9,
     monthlySpend: 4820,
     byProvider: { AWS: 12, GCP: 6, AZURE: 6, VPS: 8 },

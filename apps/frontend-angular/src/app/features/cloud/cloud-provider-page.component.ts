@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
-import { ActivatedRoute, RouterLink } from '@angular/router'
+import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { catchError, delay, forkJoin, of } from 'rxjs'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { debounceTime, startWith } from 'rxjs'
@@ -30,12 +30,12 @@ import { CloudServiceInvoiceDialogComponent } from './cloud-service-invoice-dial
 import { CloudComputeDetailDialogComponent } from './cloud-compute-detail-dialog.component'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { InstancesService } from '../../core/services/instances.service'
+import { LiveCloudSyncService } from '../../core/services/live-cloud-sync.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from '../cloud-accounts/cloud-account-form-dialog.component'
 import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
-import { LaunchInstanceDialogComponent } from '../cloud-accounts/launch-instance-dialog.component'
 import type { Instance } from '../../core/models/api.models'
 import {
   CLOUD_PROVIDER_CONFIGS,
@@ -2071,8 +2071,10 @@ export class CloudProviderPageComponent implements OnInit {
   private readonly actions = inject(PlatformActionService)
 
   private readonly route = inject(ActivatedRoute)
+  private readonly router = inject(Router)
   private readonly accountsSvc = inject(CloudAccountsService)
   private readonly instancesSvc = inject(InstancesService)
+  readonly liveSync = inject(LiveCloudSyncService)
   private readonly pro = inject(ProModeService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
@@ -2403,6 +2405,10 @@ export class CloudProviderPageComponent implements OnInit {
       this.connections.openForProviderAlias(connect).subscribe()
     }
     this.load()
+    this.liveSync.startPolling(() => {
+      this.liveSync.syncAllAccounts().subscribe({ next: () => this.load() })
+    }, 15000)
+    this.destroyRef.onDestroy(() => this.liveSync.stopPolling())
   }
 
   private load = (): void => {
@@ -2482,20 +2488,7 @@ export class CloudProviderPageComponent implements OnInit {
   }
 
   handleLaunch = (): void => {
-    const acc = this.data().accountRows[0]
-    if (!acc) {
-      this.toast.error(`Añade una ${this.cfg().accountsLabel.toLowerCase()} primero`)
-      return
-    }
-    this.dialog
-      .open(LaunchInstanceDialogComponent, {
-        width: '440px',
-        data: { accountId: acc.id, accountName: acc.name },
-      })
-      .afterClosed()
-      .subscribe((res) => {
-        if (res?.launched) this.load()
-      })
+    void this.router.navigate(['/cloud', this.slug(), 'launch'])
   }
 
   handleValidateAccount = (acc: CloudAccountRow): void => {

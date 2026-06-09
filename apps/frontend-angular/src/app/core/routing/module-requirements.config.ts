@@ -71,10 +71,10 @@ export const EXTERNAL_CONNECTION_COPY: Record<ExternalProvider, ExternalConnecti
     actionRoute: '/jenkins/jobs',
   },
   vps: {
-    title: 'Sin proveedores VPS conectados',
-    description: 'Conecta DigitalOcean, Hetzner, Linode u OVH para gestionar tus servidores.',
-    actionLabel: 'Conectar VPS',
-    actionRoute: '/vps/digitalocean/accounts',
+    title: 'Sin servidores VPS conectados',
+    description: 'Añade un servidor VPS o Bare Metal para gestionar SSH, servicios y métricas.',
+    actionLabel: 'Añadir servidor VPS',
+    actionRoute: '/admin/infraestructura/vps/nuevo',
   },
   docker: {
     title: 'Sin motores Docker conectados',

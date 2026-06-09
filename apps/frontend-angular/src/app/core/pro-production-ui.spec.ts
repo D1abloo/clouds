@@ -30,13 +30,11 @@ describe('PRO production UI — sin referencias demo visibles', () => {
     expect(allowsDemoDataFrom(pro)).toBe(false)
   })
 
-  it('allowsDemoDataFrom siempre devuelve false', () => {
-    const pro = {
-      loaded: () => true,
-      proMode: () => false,
-      demoMode: () => true,
-    } as ProModeServiceType
-    expect(allowsDemoDataFrom(pro)).toBe(false)
+  it('buildVpsSnapshot no incluye servidores demo en PRO', async () => {
+    const { buildVpsSnapshot } = await import('../features/infrastructure/vps-provider.data')
+    const snap = buildVpsSnapshot('digitalocean')
+    expect(snap.servers).toBe(0)
+    expect(snap.serverRows.some((r) => r.name.includes('demo') || r.id.includes('demo'))).toBeFalse()
   })
 
   it('proDemoGuard redirige a configuración en PRO', () => {

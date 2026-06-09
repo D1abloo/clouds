@@ -19,7 +19,7 @@ export class VpsStore {
   private load(): void {
     this.vpsSvc.list().subscribe({
       next: (hosts) => this._total.set(hosts.length),
-      error: () => this._total.set(8),
+      error: () => this._total.set(0),
     })
   }
 }

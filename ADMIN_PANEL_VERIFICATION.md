@@ -427,6 +427,10 @@ npm run deploy:spendlyx
 | Seed PRO sin usuarios `@demo.local` | ✅ |
 | `admin@spendlyx.com` preservado en seed y cleanup | ✅ |
 | Tests `pro-production-ui.spec.ts`, `pro-demo.guard.spec.ts` | ✅ |
+| `buildVpsSnapshot` vacío en PRO (sin VPS demo) | ✅ |
+| Script `cleanup:vps-demo:dry-run` / `cleanup:vps-demo:production` | ✅ |
+| Rutas lanzamiento instancia `/cloud/:provider/launch`, `/admin/infraestructura/instancias/lanzar` | ✅ |
+| `LiveCloudSyncService` polling 15s en cloud e instancias | ✅ |
 
 ### Avisos menores
 

@@ -26,15 +26,15 @@ export interface LaunchInstanceDialogData {
     MatButtonModule,
   ],
   template: `
-    <h2 mat-dialog-title>Launch instance — {{ data.accountName }}</h2>
+    <h2 mat-dialog-title>Lanzar instancia — {{ data.accountName }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form" class="form-grid">
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Instance name</mat-label>
+          <mat-label>Nombre de instancia</mat-label>
           <input matInput formControlName="name" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Region</mat-label>
+          <mat-label>Región</mat-label>
           <mat-select formControlName="region">
             @for (r of regions(); track r.id) {
               <mat-option [value]="r.id">{{ r.name }}</mat-option>
@@ -42,7 +42,7 @@ export interface LaunchInstanceDialogData {
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Instance type</mat-label>
+          <mat-label>Tipo de instancia</mat-label>
           <mat-select formControlName="instanceType">
             @for (t of types(); track t.id) {
               <mat-option [value]="t.id">{{ t.name }}</mat-option>
@@ -50,7 +50,7 @@ export interface LaunchInstanceDialogData {
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Image</mat-label>
+          <mat-label>Imagen</mat-label>
           <mat-select formControlName="imageId">
             @for (img of images(); track img.id) {
               <mat-option [value]="img.id">{{ img.name }}</mat-option>
@@ -60,9 +60,9 @@ export interface LaunchInstanceDialogData {
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button type="button" (click)="dialogRef.close()">Cancel</button>
+      <button mat-button type="button" (click)="dialogRef.close()">Cancelar</button>
       <button mat-flat-button color="primary" type="button" [disabled]="form.invalid || launching()" (click)="handleLaunch()">
-        Launch
+        Lanzar
       </button>
     </mat-dialog-actions>
   `,

@@ -338,10 +338,24 @@ CONFIRM_DELETE_DEMO_DATA=true npm run cleanup:demo:production
 
 # En VPS (contenedor backend)
 docker compose exec -T backend-api sh -c 'cd /app && npm run cleanup:demo:dry-run'
-docker compose exec -T backend-api sh -c 'cd /app && npm run cleanup:demo:production'
+docker compose exec -T backend-api sh -c 'cd /app && CONFIRM_DELETE_DEMO_DATA=true npm run cleanup:demo:production'
 ```
 
-La limpieza:
+### Limpieza VPS demo (servidores SSH mock)
+
+```bash
+# Simulación
+npm run cleanup:vps-demo:dry-run
+
+# Ejecución real (APP_ENV=production, PRO_MODE=true, DEMO_MODE=false)
+CONFIRM_DELETE_DEMO_VPS=true npm run cleanup:vps-demo:production
+
+# En VPS (contenedor backend)
+docker compose exec -T backend-api sh -c 'cd /app && npm run cleanup:vps-demo:dry-run'
+docker compose exec -T backend-api sh -c 'cd /app && CONFIRM_DELETE_DEMO_VPS=true npm run cleanup:vps-demo:production'
+```
+
+La limpieza demo general:
 - Elimina registros operativos con prefijo `demo-` (instancias, VPS, cuentas cloud, Jenkins, etc.)
 - Soft-delete de usuarios `@demo.local` y nombres con demo/mock/fake/sample
 - **Preserva** `admin@spendlyx.com` y usuarios preset `@spendlyx.com`

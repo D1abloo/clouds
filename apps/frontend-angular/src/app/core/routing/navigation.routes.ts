@@ -111,6 +111,22 @@ export const NAVIGATION_ROUTES: Routes = [
     data: { breadcrumb: 'Roles' },
   },
   {
+    path: 'cloud/:provider/launch',
+    loadComponent: () =>
+      import('../../features/instances/launch-instance-wizard-page.component').then(
+        (m) => m.LaunchInstanceWizardPageComponent,
+      ),
+    data: { breadcrumb: 'Lanzar instancia' },
+  },
+  {
+    path: 'admin/infraestructura/instancias/lanzar',
+    loadComponent: () =>
+      import('../../features/instances/launch-instance-wizard-page.component').then(
+        (m) => m.LaunchInstanceWizardPageComponent,
+      ),
+    data: { breadcrumb: 'Lanzar instancia' },
+  },
+  {
     path: 'cloud/:provider/:section',
     loadComponent: () =>
       import('../../features/cloud/cloud-provider-page.component').then(

@@ -93,34 +93,13 @@ export const K8S_DEMO_EVENTS = [
   { type: 'Warning', reason: 'FailedMount', object: 'pod/worker-crash', message: 'Timeout montando volumen PVC uploads' },
 ]
 
-export const VPS_DEMO_SSH_KEYS = [
-  { name: 'ops-team-ed25519', fingerprint: 'SHA256:ab12…f9', users: 6, lastUsed: infraTs(120), status: 'running' },
-  { name: 'ci-deploy-rsa', fingerprint: 'SHA256:cd34…a1', users: 2, lastUsed: infraTs(45), status: 'running' },
-  { name: 'legacy-root', fingerprint: 'SHA256:ef56…b2', users: 1, lastUsed: infraTs(86400), status: 'warning' },
-]
+export const VPS_DEMO_SSH_KEYS: Record<string, unknown>[] = []
 
-export const VPS_DEMO_SERVICES = [
-  { host: 'vps-prod-web-01', unit: 'nginx.service', state: 'active', since: '14 días', port: '80,443', status: 'running' },
-  { host: 'vps-prod-web-01', unit: 'docker.service', state: 'active', since: '14 días', port: '—', status: 'running' },
-  { host: 'vps-db-primary', unit: 'postgresql@16-main', state: 'active', since: '32 días', port: '5432', status: 'running' },
-  { host: 'vps-bastion-01', unit: 'ssh.service', state: 'active', since: '90 días', port: '22', status: 'running' },
-  { host: 'vps-staging-app', unit: 'kubelet.service', state: 'active', since: '8 días', port: '10250', status: 'running' },
-  { host: 'bare-metal-ci-01', unit: 'jenkins-agent.service', state: 'failed', since: '2 h', port: '—', status: 'failed' },
-]
+export const VPS_DEMO_SERVICES: Record<string, unknown>[] = []
 
-export const VPS_DEMO_PORTS = [
-  { host: 'vps-prod-web-01', port: 22, service: 'ssh', exposure: 'VPN 10.8.0.0/24', status: 'running' },
-  { host: 'vps-prod-web-01', port: 443, service: 'https', exposure: 'Público (LB)', status: 'running' },
-  { host: 'vps-bastion-01', port: 22, service: 'ssh', exposure: '0.0.0.0/0', status: 'warning' },
-  { host: 'vps-db-primary', port: 5432, service: 'postgresql', exposure: 'Subred privada', status: 'running' },
-  { host: 'vps-staging-app', port: 6443, service: 'kubernetes-api', exposure: 'Oficina + VPN', status: 'running' },
-]
+export const VPS_DEMO_PORTS: Record<string, unknown>[] = []
 
-export const VPS_DEMO_AUDIT = [
-  { user: 'ops@cloudops', host: 'vps-bastion-01', action: 'SSH login', duration: '12 min', at: infraTs(30), status: 'success' },
-  { user: 'ci-bot', host: 'bare-metal-ci-01', action: 'Deploy script', duration: '4 min', at: infraTs(90), status: 'success' },
-  { user: 'admin@cloudops', host: 'vps-db-primary', action: 'sudo systemctl restart postgresql', duration: '1 min', at: infraTs(240), status: 'warning' },
-]
+export const VPS_DEMO_AUDIT: Record<string, unknown>[] = []
 
 const emptyDockerPageData = (): Record<string, unknown> => ({
   hosts: 0,
