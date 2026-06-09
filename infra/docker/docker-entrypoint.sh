@@ -46,4 +46,4 @@ NODE
 fi
 
 echo "==> Starting API on port ${API_PORT:-3000}..."
-exec node dist/src/main.js
+exec node dist/main.js
