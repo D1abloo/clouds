@@ -17,7 +17,7 @@ import {
   defaultIamPolicies,
   defaultSshAccess,
   type AccessAssignment,
-} from './access-control.demo'
+} from './access-control.data'
 import { AccessGrantDialogComponent } from './access-grant-dialog.component'
 import { AccessDetailDialogComponent } from './access-detail-dialog.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'

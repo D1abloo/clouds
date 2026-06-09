@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { ToastService } from '../../core/services/toast.service'
 import { SECURITY_ACCENT, SECURITY_ACCENT_BORDER, SECURITY_ACCENT_LIGHT, securitySeverityLabel } from './security.config'
-import type { ComplianceViolation } from './compliance.demo'
+import type { ComplianceViolation } from './compliance.data'
 
 export interface ComplianceViolationDetailData {
   violation: ComplianceViolation

@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { ToastService } from '../../core/services/toast.service'
 import { AUDIT_ACCENT, AUDIT_ACCENT_BORDER, AUDIT_ACCENT_LIGHT, downloadBlob } from './audit.config'
-import type { AuditExport } from './audit.demo'
+import type { AuditExport } from './audit.data'
 
 export interface AuditExportDetailData {
   export: AuditExport

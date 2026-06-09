@@ -4,8 +4,6 @@ import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { NotificationItem } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
-import { demoNotifications } from '../demo/demo-fallback.data'
-import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 import { emptyNotifications } from '../demo/pro-empty.data'
 
 type RawNotification = {
@@ -34,10 +32,10 @@ export class NotificationsService {
           createdAt: n.createdAt,
         }))
         if (mapped.length) return mapped
-        return allowsDemoDataFrom(this.pro) ? demoNotifications() : emptyNotifications()
+        return emptyNotifications()
       }),
       catchError(() =>
-        of(allowsDemoDataFrom(this.pro) ? demoNotifications() : emptyNotifications()),
+        of(emptyNotifications()),
       ),
     )
 

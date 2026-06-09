@@ -14,7 +14,7 @@ import {
   type TopologyConnection,
   type TopologyNode,
   type TopologyNodeKind,
-} from './topology-map.demo'
+} from './topology-map.data'
 
 export interface TopologyNodeDetailDialogData {
   node: TopologyNode

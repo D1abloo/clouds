@@ -14,7 +14,7 @@ import {
   ADMIN_TOKENS_ACCENT_LIGHT,
   adminRelativeTime,
 } from './admin.config'
-import { enrichAuditEntry, type ApiTokenRow } from './admin-api-tokens.demo'
+import { enrichAuditEntry, type ApiTokenRow } from './admin-api-tokens.data'
 
 export type ApiTokenAuditActionMode = 'block-ip' | 'copy-endpoint'
 

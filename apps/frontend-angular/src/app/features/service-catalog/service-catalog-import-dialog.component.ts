@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
-import type { ServiceCatalogTemplate } from './service-catalog.demo'
+import type { ServiceCatalogTemplate } from './service-catalog.types'
 import { CATEGORY_TECH_LOGO } from './service-catalog.config'
 import { buildTemplateFromImport, type ServiceCatalogImportPayload } from './service-catalog.util'
 

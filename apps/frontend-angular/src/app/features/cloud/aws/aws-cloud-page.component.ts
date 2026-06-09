@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../../shared/platform/platform-action.service'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -26,7 +27,6 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 import { DetailDialogComponent } from '../../../shared/components/detail-dialog/detail-dialog.component'
 import { CloudAccountsService } from '../../../core/services/cloud-accounts.service'
 import { InstancesService } from '../../../core/services/instances.service'
-import { DemoActionsService } from '../../../core/services/demo-actions.service'
 import { ToastService } from '../../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from '../../cloud-accounts/cloud-account-form-dialog.component'
 import { LaunchInstanceDialogComponent } from '../../cloud-accounts/launch-instance-dialog.component'
@@ -39,7 +39,7 @@ import {
   sparkPath,
   type AwsEc2Row,
   type AwsSection,
-} from './aws-cloud.demo'
+} from './aws-cloud.data'
 
 @Component({
   selector: 'app-aws-cloud-page',
@@ -903,10 +903,11 @@ import {
   `,
 })
 export class AwsCloudPageComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly route = inject(ActivatedRoute)
   private readonly accountsSvc = inject(CloudAccountsService)
   private readonly instancesSvc = inject(InstancesService)
-  private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly destroyRef = inject(DestroyRef)
@@ -995,7 +996,7 @@ export class AwsCloudPageComponent implements OnInit {
 
   handleSync = (): void => {
     this.loading.set(true)
-    this.demo.simulate('Sync AWS', 900, 'Inventario AWS actualizado').subscribe(() => this.load())
+    this.actions.simulate('Sync AWS', 900, 'Inventario AWS actualizado').subscribe(() => this.load())
   }
 
   handleAddAccount = (): void => {
@@ -1030,11 +1031,11 @@ export class AwsCloudPageComponent implements OnInit {
   }
 
   handleValidateAccount = (name: string): void => {
-    this.demo.simulate(`Validar ${name}`, 600, 'Credenciales válidas').subscribe()
+    this.actions.simulate(`Validar ${name}`, 600, 'Credenciales válidas').subscribe()
   }
 
   handleSyncAccount = (name: string): void => {
-    this.demo.simulate(`Sync ${name}`, 800, 'Inventario sincronizado').subscribe(() => this.load())
+    this.actions.simulate(`Sync ${name}`, 800, 'Inventario sincronizado').subscribe(() => this.load())
   }
 
   showEc2Detail = (row: AwsEc2Row): void => {

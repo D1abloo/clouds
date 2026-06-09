@@ -11,7 +11,7 @@ import {
   SERVICE_CATALOG_CLOUD_LABELS,
   SERVICE_CATALOG_ENVIRONMENT_LABELS,
   type ServiceCatalogTemplate,
-} from './service-catalog.demo'
+} from './service-catalog.types'
 
 export interface ServiceCatalogPublishDialogData {
   drafts: ServiceCatalogTemplate[]

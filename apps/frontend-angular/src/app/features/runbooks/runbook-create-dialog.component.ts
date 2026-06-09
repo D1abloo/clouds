@@ -19,7 +19,7 @@ import {
   type RunbookCategory,
   type RunbookStep,
   type RunbookTrigger,
-} from './runbooks.demo'
+} from './runbooks.types'
 import type { CloudAccount } from '../../core/models/api.models'
 import {
   formatRunbookTargetLabel,

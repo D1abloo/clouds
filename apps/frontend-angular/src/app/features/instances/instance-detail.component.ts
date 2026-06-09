@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, RouterLink } from '@angular/router'
@@ -10,7 +11,6 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { MatTabsModule } from '@angular/material/tabs'
 import { MiniChartComponent } from '../../shared/components/mini-chart/mini-chart.component'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { MatDialog } from '@angular/material/dialog'
 import {
@@ -149,11 +149,12 @@ import { createPageLoader } from '../../core/utils/page-load.util'
   `,
 })
 export class InstanceDetailComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly route = inject(ActivatedRoute)
   private readonly service = inject(InstancesService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly destroyRef = inject(DestroyRef)
 
   readonly page = createPageLoader(true)
@@ -246,13 +247,13 @@ export class InstanceDetailComponent implements OnInit {
       },
       error: () => {
         this.discovering.set(false)
-        this.demoActions.simulate('Instance discovery', 800).subscribe()
+        this.actions.simulate('Instance discovery', 800).subscribe()
         this.toast.error('Discovery failed')
       },
     })
   }
 
   demoTab = (tab: string): void => {
-    this.demoActions.simulate(`${tab} refresh`, 400).subscribe()
+    this.actions.simulate(`${tab} refresh`, 400).subscribe()
   }
 }

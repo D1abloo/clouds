@@ -1,4 +1,3 @@
-import { DEMO_GITHUB_ACCOUNT_ID, DEMO_GITHUB_ACCOUNT_PROFILE } from './github-demo.data'
 import type {
   GithubAccount,
   GithubBranch,
@@ -16,38 +15,24 @@ const statusLabelEs = (status: string): string => {
   return status
 }
 
-export const isDemoGithubAccount = (a: Pick<GithubAccount, 'id' | 'tokenRef'>): boolean =>
-  a.id === DEMO_GITHUB_ACCOUNT_ID || a.tokenRef?.startsWith('demo:') || a.tokenRef === 'demo'
+export const isDemoGithubAccount = (a: Pick<GithubAccount, 'tokenRef'>): boolean =>
+  a.tokenRef?.startsWith('demo:') === true || a.tokenRef === 'demo'
 
-export const mapAccount = (a: GithubAccount) => {
-  const isDemo = isDemoGithubAccount(a)
-  return {
-    id: a.id,
-    label: a.label,
-    username: a.username,
-    organization: isDemo ? DEMO_GITHUB_ACCOUNT_PROFILE.organization : '—',
-    accountType: isDemo ? 'demo' : 'standard',
-    accountTypeLabel: isDemo ? DEMO_GITHUB_ACCOUNT_PROFILE.accountTypeLabel : 'Estándar',
-    status: a.status,
-    statusLabel: statusLabelEs(a.status),
-    avatarUrl: a.avatarUrl,
-    lastValidatedAt: a.lastValidatedAt?.toISOString() ?? null,
-    lastSyncAt: a.lastSyncAt?.toISOString() ?? null,
-    createdAt: a.createdAt.toISOString(),
-    demoMode: isDemo,
-  }
-}
-
-export const mapDemoAccountProfile = () => {
-  const now = new Date().toISOString()
-  return {
-    ...DEMO_GITHUB_ACCOUNT_PROFILE,
-    lastValidatedAt: now,
-    lastSyncAt: now,
-    createdAt: now,
-    demoMode: true,
-  }
-}
+export const mapAccount = (a: GithubAccount) => ({
+  id: a.id,
+  label: a.label,
+  username: a.username,
+  organization: '—',
+  accountType: 'standard',
+  accountTypeLabel: 'Estándar',
+  status: a.status,
+  statusLabel: statusLabelEs(a.status),
+  avatarUrl: a.avatarUrl,
+  lastValidatedAt: a.lastValidatedAt?.toISOString() ?? null,
+  lastSyncAt: a.lastSyncAt?.toISOString() ?? null,
+  createdAt: a.createdAt.toISOString(),
+  demoMode: false,
+})
 
 export const mapRepo = (r: GithubRepository) => ({
   id: r.id,
@@ -61,7 +46,7 @@ export const mapRepo = (r: GithubRepository) => ({
   visibility: r.visibility,
   htmlUrl: r.htmlUrl,
   updatedAt: r.lastSyncAt?.toISOString() ?? r.createdAt.toISOString(),
-  isDemo: r.accountId === DEMO_GITHUB_ACCOUNT_ID || r.id.startsWith('gh-repo-'),
+  isDemo: false,
 })
 
 export const mapBranch = (b: GithubBranch) => ({

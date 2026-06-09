@@ -1,5 +1,5 @@
-import type { GlobalBranchRow, GlobalCommitRow } from './repositories-global-demo.util'
-import { buildBranchDemoCommits } from './repositories-global-demo.util'
+import type { GlobalBranchRow, GlobalCommitRow } from './repositories-global.util'
+import { buildBranchDemoCommits } from './repositories-global.util'
 
 export type RepoOpStatus = 'ok' | 'warn' | 'fail'
 

@@ -3,8 +3,6 @@ import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { BillingSummary, CloudProvider } from '../models/api.models'
-import { demoBillingSummary } from '../demo/demo-fallback.data'
-import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 import { emptyBillingSummary } from '../demo/pro-empty.data'
 
 @Injectable({ providedIn: 'root' })
@@ -33,7 +31,7 @@ export class BillingService {
         } satisfies BillingSummary
       }),
       catchError(() =>
-        of(allowsDemoDataFrom(this.pro) ? demoBillingSummary() : emptyBillingSummary()),
+        of(emptyBillingSummary()),
       ),
     )
 

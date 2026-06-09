@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
@@ -20,8 +21,6 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { InstancesService } from '../../core/services/instances.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
-import { DemoService } from '../../core/services/demo.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ToastService } from '../../core/services/toast.service'
@@ -134,22 +133,10 @@ import { createPageLoader } from '../../core/utils/page-load.util'
             description="Clear filters to see {{ instances().length }} instances."
           />
         } @else if (filtered().length === 0) {
-          @if (showDemoExtras()) {
-            <app-empty-state
-              title="Sin instancias"
-              description="Carga datos de demostración desde Configuración o el banner demo (requiere admin)."
-            />
-            @if (demo.canManageDemo()) {
-              <button mat-flat-button color="primary" type="button" class="empty-action" (click)="demo.loadDemo()">
-                Cargar datos de demostración
-              </button>
-            }
-          } @else {
-            <app-empty-state
-              title="Sin instancias"
-              description="Conecta una cuenta cloud o registra un VPS para ver recursos en la flota."
-            />
-          }
+          <app-empty-state
+            title="Sin instancias"
+            description="Conecta una cuenta cloud o registra un VPS para ver recursos en la flota."
+          />
         } @else if (viewMode() === 'grid') {
           <div class="instance-grid">
             @for (row of filtered(); track row.id) {
@@ -234,11 +221,11 @@ import { createPageLoader } from '../../core/utils/page-load.util'
   `,
 })
 export class InstancesListComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly service = inject(InstancesService)
   private readonly pro = inject(ProModeService)
-  readonly demoActions = inject(DemoActionsService)
-  readonly demo = inject(DemoService)
-  private readonly toast = inject(ToastService)
+    private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
 
   readonly showDemoExtras = (): boolean => allowsDemoDataFrom(this.pro)
@@ -318,19 +305,19 @@ export class InstancesListComponent implements OnInit {
   }
 
   bulkAction = (action: string): void => {
-    this.demoActions.simulate(`Bulk ${action} (${this.selected().size} instances)`, 1000).subscribe(() => this.load())
+    this.actions.simulate(`Bulk ${action} (${this.selected().size} instances)`, 1000).subscribe(() => this.load())
   }
 
   instanceAction = (row: Instance, action: 'start' | 'stop'): void => {
     const fn = action === 'start' ? this.service.start : this.service.stop
     fn(row.id).subscribe({
       next: () => this.toast.success(`${action} requested`),
-      error: () => this.demoActions.simulate(`${action} ${row.name}`, 500).subscribe(),
+      error: () => this.actions.simulate(`${action} ${row.name}`, 500).subscribe(),
     })
   }
 
   viewMetrics = (row: Instance): void => {
-    this.demoActions.simulate(`Metrics ${row.name}`, 400).subscribe()
+    this.actions.simulate(`Metrics ${row.name}`, 400).subscribe()
   }
 
   showDetail = (row: Instance): void => {

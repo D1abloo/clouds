@@ -10,7 +10,7 @@ import {
   buildIncidentDetail,
   severityLabel,
   type InstanceHealthRecord,
-} from './health-center.demo'
+} from './health-center.data'
 
 export interface HealthIncidentDetailDialogData {
   record: InstanceHealthRecord

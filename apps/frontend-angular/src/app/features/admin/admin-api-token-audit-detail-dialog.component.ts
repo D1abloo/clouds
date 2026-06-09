@@ -15,7 +15,7 @@ import {
   enrichAuditEntry,
   findTokenForAudit,
   type ApiTokenRow,
-} from './admin-api-tokens.demo'
+} from './admin-api-tokens.data'
 import { AdminApiTokenDetailDialogComponent } from './admin-api-token-detail-dialog.component'
 import {
   AdminApiTokenAuditActionDialogComponent,

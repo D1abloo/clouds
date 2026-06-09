@@ -5,54 +5,39 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
 import { IntegrationsService } from '../integrations/integrations.service'
 import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
-import { AppModeService } from '../../common/config/app-mode.service'
 import { connectionRequired } from '../../common/utils/pro-connection.util'
-import { GithubDemoService } from './github-demo.service'
 import { mapDeployment } from './github-mappers'
+
+const buildDeployLogs = (repoName: string, branch: string, targetType: string, targetName: string): string =>
+  `[${new Date().toISOString()}] Iniciando despliegue de ${repoName}@${branch}\n` +
+  `→ Destino: ${targetType} / ${targetName}\n` +
+  `[Pipeline] Checkout ${branch}\n` +
+  `[Pipeline] Build artifact\n` +
+  `[Pipeline] Deploy to ${targetName}\n`
 
 @Injectable()
 export class GithubDeploymentsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly demo: GithubDemoService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeGateway,
     private readonly integrations: IntegrationsService,
-    private readonly mode: AppModeService,
   ) {}
 
   async listAll() {
-    const demoAllowed = this.mode.canUseDemoFallback()
-
-    if (!this.demo.isDbReady()) {
-      if (!demoAllowed) {
-        return {
-          ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
-          demoMode: false,
-        }
+    const items = await this.prisma.githubDeployment.findMany({
+      include: { repo: true },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    })
+    if (!items.length) {
+      return {
+        ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
+        demoMode: false,
       }
-      return { items: this.demo.listMemoryDeployments(), demoMode: true }
     }
-    try {
-      const items = await this.prisma.githubDeployment.findMany({
-        include: { repo: true },
-        orderBy: { createdAt: 'desc' },
-        take: 100,
-      })
-      if (items.length) {
-        return { items: items.map((d) => mapDeployment(d, d.repo.fullName)), demoMode: false }
-      }
-      if (!demoAllowed) {
-        return {
-          ...connectionRequired('GitHub', 'Conecte una cuenta GitHub con token OAuth o PAT'),
-          demoMode: false,
-        }
-      }
-    } catch {
-      if (!demoAllowed) return { items: [], demoMode: false }
-    }
-    return { items: this.demo.listMemoryDeployments(), demoMode: true }
+    return { items: items.map((d) => mapDeployment(d, d.repo.fullName)), demoMode: false }
   }
 
   async deploy(
@@ -65,65 +50,11 @@ export class GithubDeploymentsService {
       targetName?: string
     },
   ) {
-    const demoAllowed = this.mode.canUseDemoFallback()
     const targetName = body.targetName ?? body.targetId
-    const memRepo = demoAllowed ? this.demo.getMemoryRepo(repoId) : null
-    if (memRepo && !this.demo.isDbReady()) {
-      const deployment = this.demo.pushMemoryDeployment(memRepo.fullName, repoId, {
-        ...body,
-        targetName,
-      })
-      await this.audit.create({
-        userId,
-        action: 'github.deploy',
-        resource: 'github_repo',
-        resourceId: repoId,
-        metadata: body,
-      }).catch(() => undefined)
-      this.scheduleDeployIntegrationEvents(
-        memRepo.fullName,
-        body.branch,
-        targetName,
-        body.targetType,
-        deployment.id,
-        userId,
-        false,
-      )
-      return {
-        queued: true,
-        deployment,
-        demoMode: true,
-        message: `Despliegue demo de ${memRepo.name}@${body.branch} hacia ${body.targetType}`,
-      }
-    }
-
     const repo = await this.prisma.githubRepository.findUnique({ where: { id: repoId } })
-    if (!repo) {
-      if (memRepo && demoAllowed) {
-        const deployment = this.demo.pushMemoryDeployment(memRepo.fullName, repoId, {
-          ...body,
-          targetName,
-        })
-        this.scheduleDeployIntegrationEvents(
-          memRepo.fullName,
-          body.branch,
-          targetName,
-          body.targetType,
-          deployment.id,
-          userId,
-          false,
-        )
-        return {
-          queued: true,
-          deployment,
-          demoMode: true,
-          message: `Despliegue demo de ${memRepo.name}@${body.branch}`,
-        }
-      }
-      throw new NotFoundException('Repositorio no encontrado')
-    }
+    if (!repo) throw new NotFoundException('Repositorio no encontrado')
 
-    const logs = this.demo.buildDeployLogs(repo.name, body.branch, body.targetType, targetName)
+    const logs = buildDeployLogs(repo.name, body.branch, body.targetType, targetName)
     const deployment = await this.prisma.githubDeployment.create({
       data: {
         repoId,
@@ -186,20 +117,6 @@ export class GithubDeploymentsService {
     }
   }
 
-  private scheduleDeployIntegrationEvents(
-    repoFullName: string,
-    branch: string,
-    targetName: string,
-    targetType: string,
-    deploymentId: string,
-    userId: string,
-    success: boolean,
-  ) {
-    setTimeout(() => {
-      this.emitDeployIntegrationEvents(repoFullName, branch, targetName, targetType, deploymentId, userId, success)
-    }, 1200)
-  }
-
   private emitDeployIntegrationEvents(
     repoFullName: string,
     branch: string,
@@ -235,9 +152,6 @@ export class GithubDeploymentsService {
   }
 
   async getLogs(deploymentId: string) {
-    const demoAllowed = this.mode.canUseDemoFallback()
-    const mem = demoAllowed ? this.demo.getMemoryDeploymentLogs(deploymentId) : null
-    if (mem) return mem
     const d = await this.prisma.githubDeployment.findUnique({
       where: { id: deploymentId },
       include: { repo: true },

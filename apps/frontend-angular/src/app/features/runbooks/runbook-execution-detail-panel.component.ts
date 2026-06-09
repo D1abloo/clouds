@@ -10,7 +10,7 @@ import {
   type Runbook,
   type RunbookExecution,
   type RunbookExecutionStepLog,
-} from './runbooks.demo'
+} from './runbooks.types'
 import { buildExecutionStepLogs } from './runbook-execution.util'
 
 export type ExecutionDetailTab = 'resumen' | 'pasos' | 'registro'

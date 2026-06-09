@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core'
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { MatDialog } from '@angular/material/dialog'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { RepositoriesActionDialogComponent } from './components/repositories-action-dialog.component'
 import { BranchCommitsDialogComponent } from './components/branch-commits-dialog.component'
@@ -12,8 +12,8 @@ import { PrPreviewDialogComponent } from './components/pr-preview-dialog.compone
 import { PrReviewDialogComponent } from './components/pr-review-dialog.component'
 import { PrMergeDialogComponent } from './components/pr-merge-dialog.component'
 import { PrOpenGithubDialogComponent } from './components/pr-open-github-dialog.component'
-import type { GitlabProject } from './utils/gitlab-demo-catalog'
-import type { GlobalBranchRow, GlobalCommitRow } from './utils/repositories-global-demo.util'
+import type { GitlabProject } from './utils/gitlab.types'
+import type { GlobalBranchRow, GlobalCommitRow } from './utils/repositories-global.util'
 import {
   buildBranchCompareReport,
   buildBranchDeployReport,
@@ -47,9 +47,10 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class RepositoriesActionService {
+
   private readonly dialog = inject(MatDialog)
-  private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
+  private readonly actions = inject(PlatformActionService)
 
   open(report: RepoActionReport): void {
     this.dialog.open(RepositoriesActionDialogComponent, {
@@ -62,7 +63,7 @@ export class RepositoriesActionService {
 
   run(label: string, report: RepoActionReport, successMsg?: string): void {
     this.toast.info(`${label} en curso…`)
-    this.demo.simulate(label, 500, successMsg ?? `${label} completado`).subscribe({
+    this.actions.simulate(label, 500, successMsg ?? `${label} completado`).subscribe({
       next: () => {
         this.open(report)
         this.toast.success(successMsg ?? `${label} completado`)
@@ -84,7 +85,7 @@ export class RepositoriesActionService {
   compareBranches = (a?: GlobalBranchRow): void => this.run('Comparar ramas', buildBranchCompareReport(a))
   viewBranchCommits = (row: GlobalBranchRow): void => {
     this.toast.info(`Cargando commits · ${row.name}…`)
-    this.demo.simulate('Ver commits de rama', 400).subscribe({
+    this.actions.simulate('Ver commits de rama', 400).subscribe({
       next: () => {
         this.dialog.open(BranchCommitsDialogComponent, {
           width: '920px',

@@ -13,7 +13,7 @@ import {
   type TopologyConnection,
   type TopologyNode,
   type TopologyNodeKind,
-} from './topology-map.demo'
+} from './topology-map.data'
 
 @Component({
   selector: 'app-topology-node-inspector',

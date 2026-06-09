@@ -42,7 +42,7 @@ import {
   type CopilotContextId,
   type CopilotMessage,
   type CopilotQuickPrompt,
-} from '../../shared/platform/advanced-modules.demo'
+} from '../../shared/platform/advanced-modules.data'
 
 type MessageSegment = { kind: 'text' | 'bold'; value: string }
 

@@ -1,4 +1,4 @@
-import type { RunbookExecution } from './runbooks.demo'
+import type { RunbookExecution } from './runbooks.types'
 
 export interface CalendarCell {
   dateKey: string

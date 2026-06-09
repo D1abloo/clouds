@@ -11,7 +11,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { ModuleOptionalCtaComponent } from '../../shared/components/module-optional-cta/module-optional-cta.component'
 import { getInternalEmptyCopy, shouldShowOptionalCloudCta } from '../../core/routing/module-requirements.util'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
-import { metricsHubDescription, metricsHubRows, type MetricsHubRow } from '../../shared/platform/metrics-hub.demo'
+import { metricsHubDescription, metricsHubRows, type MetricsHubRow } from '../../shared/platform/metrics-hub.data'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
 @Component({

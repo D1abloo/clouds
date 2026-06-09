@@ -1,4 +1,4 @@
-import { CLIENT_DEMO_GITHUB_REPOS } from './github-demo-catalog'
+import { CLIENT_DEMO_GITHUB_REPOS } from './github.data'
 import type { GithubRepoScope } from './github-account-form.config'
 
 export type GithubSyncPermissionInput = {

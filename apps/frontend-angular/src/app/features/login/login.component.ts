@@ -28,7 +28,7 @@ import {
   LOGIN_DEMO_USER_EMAIL,
   LOGIN_DEMO_USER_PASSWORD,
   SHOW_LOGIN_DEMO_PANEL,
-} from './login-demo.panel'
+} from './login-demo.panel.production'
 
 @Component({
   selector: 'app-login',

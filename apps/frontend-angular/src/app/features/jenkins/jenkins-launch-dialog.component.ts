@@ -15,8 +15,8 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { JenkinsLaunchDetailPanelComponent } from './jenkins-launch-detail-panel.component'
-import type { JobRow } from './jenkins.demo'
-export type { JobRow } from './jenkins.demo'
+import type { JobRow } from './jenkins.util'
+export type { JobRow } from './jenkins.util'
 import { isJobProdLaunchReady, targetsProduction } from './jenkins-prod-readiness'
 
 export interface JenkinsLaunchDialogData {

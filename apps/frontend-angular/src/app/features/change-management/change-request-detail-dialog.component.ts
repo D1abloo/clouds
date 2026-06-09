@@ -10,7 +10,7 @@ import {
   canCancelChange,
   canExecuteChange,
 } from './change-management.config'
-import type { ChangeRequest } from './change-management.demo'
+import type { ChangeRequest } from './change-management.data'
 
 export interface ChangeRequestDetailDialogData {
   change: ChangeRequest

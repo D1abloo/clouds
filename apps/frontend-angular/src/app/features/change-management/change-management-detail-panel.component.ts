@@ -12,7 +12,7 @@ import {
   canExecuteChange,
   isChangeProcessable,
 } from './change-management.config'
-import type { ChangeRequest, ChangeStatus } from './change-management.demo'
+import type { ChangeRequest, ChangeStatus } from './change-management.data'
 import { changeLogos } from './change-management-logo.util'
 
 @Component({

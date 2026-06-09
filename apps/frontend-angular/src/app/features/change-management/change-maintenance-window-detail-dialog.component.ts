@@ -4,7 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { CHANGE_STATUS_LABELS, CHANGE_TYPE_LABELS } from './change-management.config'
-import type { ChangeRequest, MaintenanceWindow } from './change-management.demo'
+import type { ChangeRequest, MaintenanceWindow } from './change-management.data'
 import { primaryChangeLogo } from './change-management-logo.util'
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 

@@ -7,7 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { ToastService } from '../../core/services/toast.service'
-import type { ExplorerResourceRich } from '../overview/overview-pages.demo'
+import type { ExplorerResourceRich } from '../overview/overview-pages.data'
 
 export interface ResourceExplorerDetailDialogData {
   resource: ExplorerResourceRich

@@ -11,7 +11,7 @@ import { NavIconComponent } from '../../../shared/components/nav-icon/nav-icon.c
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
 import { GitlabAccountCardComponent } from '../components/gitlab-account-card.component'
 import { GitlabSyncStatusComponent } from '../components/gitlab-sync-status.component'
-import type { GitlabAccount, GitlabGroup, GitlabProject } from '../utils/gitlab-demo-catalog'
+import type { GitlabAccount, GitlabGroup, GitlabProject } from '../utils/gitlab.data'
 import {
   CLIENT_DEMO_GITLAB_CI_VARS,
   CLIENT_DEMO_GITLAB_DEPLOYMENTS,
@@ -22,7 +22,7 @@ import {
   CLIENT_DEMO_GITLAB_RELEASES,
   CLIENT_DEMO_GITLAB_RUNNERS,
   CLIENT_DEMO_GITLAB_WEBHOOKS,
-} from '../utils/gitlab-demo-catalog'
+} from '../utils/gitlab.data'
 import { repoRoute } from '../repositories-section.config'
 import { RepositoriesQuickLinksComponent } from '../components/repositories-quick-links.component'
 

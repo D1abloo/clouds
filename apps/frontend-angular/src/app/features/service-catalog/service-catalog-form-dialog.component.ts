@@ -16,7 +16,7 @@ import {
   type ServiceCatalogCloud,
   type ServiceCatalogEnvironment,
   type ServiceCatalogTemplate,
-} from './service-catalog.demo'
+} from './service-catalog.types'
 import {
   CATEGORY_HINTS,
   CATEGORY_OPTIONS,

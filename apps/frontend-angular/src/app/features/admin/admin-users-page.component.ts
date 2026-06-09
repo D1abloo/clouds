@@ -473,7 +473,7 @@ export class AdminUsersPageComponent implements OnInit {
 
   ngOnInit(): void {
     if (allowsDemoDataFrom(this.pro)) {
-      void import('./admin-users.demo').then((m) => {
+      void import('./admin-users.config').then((m) => {
         this.activeUsers.set(m.ADMIN_USERS_ACTIVE)
         this.invitedUsers.set(m.ADMIN_USERS_INVITED)
         this.suspendedUsers.set(m.ADMIN_USERS_SUSPENDED)

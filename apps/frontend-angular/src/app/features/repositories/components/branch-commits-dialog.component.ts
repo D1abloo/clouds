@@ -10,7 +10,7 @@ import {
   buildBranchDemoCommits,
   type GlobalBranchRow,
   type GlobalCommitRow,
-} from '../utils/repositories-global-demo.util'
+} from '../utils/repositories-global.util'
 
 export type BranchCommitsDialogData = {
   branch: GlobalBranchRow

@@ -10,7 +10,7 @@ import {
   RUNBOOK_TRIGGER_LABELS,
   type Runbook,
   type RunbookCategory,
-} from './runbooks.demo'
+} from './runbooks.types'
 
 export interface RunbookDetailDialogData {
   runbook: Runbook

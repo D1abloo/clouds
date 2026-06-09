@@ -14,14 +14,14 @@ import {
   CLIENT_DEMO_DEPLOYMENTS,
   CLIENT_DEMO_GITHUB_PRS,
   CLIENT_DEMO_WEBHOOKS,
-} from './utils/github-demo-catalog'
-import { CLIENT_DEMO_GITLAB_DEPLOYMENTS, CLIENT_DEMO_GITLAB_WEBHOOKS } from './utils/gitlab-demo-catalog'
+} from './utils/github.data'
+import { CLIENT_DEMO_GITLAB_DEPLOYMENTS, CLIENT_DEMO_GITLAB_WEBHOOKS } from './utils/gitlab.data'
 import {
   buildGlobalDemoBranches,
   buildGlobalDemoCommits,
   type GlobalBranchRow,
   type GlobalCommitRow,
-} from './utils/repositories-global-demo.util'
+} from './utils/repositories-global.util'
 import {
   REPOSITORIES_SECTION_META,
   type RepositoriesSectionId,

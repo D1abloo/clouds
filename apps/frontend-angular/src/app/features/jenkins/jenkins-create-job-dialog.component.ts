@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, computed, signal } from '@angular/core'
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms'
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog'
@@ -12,9 +13,8 @@ import { MatChipsModule } from '@angular/material/chips'
 import { MatTooltipModule } from '@angular/material/tooltip'
 import { startWith, map } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import type { CreateJenkinsJobForm, JenkinsFolder, JenkinsJobType, JenkinsServer } from './jenkins.models'
-import { createJobFromForm } from './jenkins.demo'
+import { createJobFromForm } from './jenkins.util'
 import {
   evaluateProdReadiness,
   isProdReadinessComplete,
@@ -871,10 +871,11 @@ const JOB_TEMPLATES: JobTemplate[] = [
   `,
 })
 export class JenkinsCreateJobDialogComponent {
+  private readonly actions = inject(PlatformActionService)
+
   readonly data = inject<JenkinsCreateJobDialogData>(MAT_DIALOG_DATA)
   private readonly dialogRef = inject(MatDialogRef<JenkinsCreateJobDialogComponent, JenkinsJob | undefined>)
   private readonly fb = inject(FormBuilder)
-  private readonly demoActions = inject(DemoActionsService)
 
   readonly templates = JOB_TEMPLATES
   readonly selectedTemplate = signal<JobTemplateId>('deploy-api')
@@ -1071,7 +1072,7 @@ export class JenkinsCreateJobDialogComponent {
     if (this.form.controls.scmUrl.invalid) return
     this.scmValidating.set(true)
     this.scmValidated.set(false)
-    this.demoActions.simulate('Validar repositorio', 700, 'Credencial OK · rama accesible (demo)').subscribe({
+    this.actions.simulate('Validar repositorio', 700, 'Credencial OK · rama accesible (demo)').subscribe({
       complete: () => {
         this.scmValidating.set(false)
         this.scmValidated.set(true)

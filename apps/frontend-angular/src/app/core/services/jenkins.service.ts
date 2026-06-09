@@ -4,7 +4,6 @@ import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { JenkinsServer } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
-import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 
 @Injectable({ providedIn: 'root' })
 export class JenkinsService {
@@ -24,7 +23,7 @@ export class JenkinsService {
 
   listJobs = (serverId?: string): Observable<Record<string, unknown>[]> => {
     if (!serverId) {
-      return allowsDemoDataFrom(this.pro)
+      return false
         ? this.api.get<Record<string, unknown>[]>('jenkins/servers/mock/jobs')
         : of([])
     }

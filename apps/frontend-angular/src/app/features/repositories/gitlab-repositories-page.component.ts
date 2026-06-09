@@ -4,17 +4,7 @@ import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { GitlabService } from '../../core/services/gitlab.service'
-import { ProModeService } from '../../core/services/pro-mode.service'
-import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
-import {
-  buildGitlabDemoBootstrap,
-  CLIENT_DEMO_GITLAB_MRS,
-  CLIENT_DEMO_GITLAB_WEBHOOKS,
-  type GitlabAccount,
-  type GitlabGroup,
-  type GitlabProject,
-} from './utils/gitlab-demo-catalog'
+import type { GitlabAccount, GitlabGroup, GitlabProject } from './utils/gitlab.types'
 import { GitlabProjectDetailDrawerComponent } from './components/gitlab-project-detail-drawer.component'
 import { GitlabSectionComponent } from './sections/gitlab-section.component'
 import { GitlabDeployDialogComponent } from './components/gitlab-deploy-dialog.component'
@@ -23,6 +13,7 @@ import { GithubLogsPanelComponent } from './components/github-logs-panel.compone
 import { REPOSITORIES_SECTION_META } from './repositories-section.config'
 import { RepositoriesActionService } from './repositories-action.service'
 import { RepositoriesCrossNavComponent } from './components/repositories-cross-nav.component'
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 
 @Component({
   selector: 'app-gitlab-repositories-page',
@@ -53,11 +44,11 @@ import { RepositoriesCrossNavComponent } from './components/repositories-cross-n
           [projects]="projects()"
           [groups]="groups()"
           [account]="account()"
-          [demoMode]="demoMode()"
+          [demoMode]="false"
           [syncStatus]="syncStatus()"
           [projectControl]="projectControl"
           (addAccount)="openAddAccount()"
-          (connectDemo)="connectDemo()"
+          (connectDemo)="openAddAccount()"
           (validate)="validate()"
           (sync)="syncProjects()"
           (openDetail)="openDrawer($event)"
@@ -92,11 +83,11 @@ import { RepositoriesCrossNavComponent } from './components/repositories-cross-n
   `,
 })
 export class GitlabRepositoriesPageComponent implements OnInit {
+
   private readonly gitlab = inject(GitlabService)
-  private readonly pro = inject(ProModeService)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   private readonly connections = inject(IntegrationConnectionService)
+  private readonly actions = inject(PlatformActionService)
   readonly repoActions = inject(RepositoriesActionService)
 
   readonly meta = REPOSITORIES_SECTION_META.gitlab
@@ -105,7 +96,6 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   readonly account = signal<GitlabAccount | null>(null)
   readonly projects = signal<GitlabProject[]>([])
   readonly groups = signal<GitlabGroup[]>([])
-  readonly demoMode = signal(allowsDemoDataFrom(this.pro))
   readonly drawerOpen = signal(false)
   readonly drawerProject = signal<GitlabProject | null>(null)
   readonly drawerWebhooks = signal<Record<string, unknown>[]>([])
@@ -118,10 +108,6 @@ export class GitlabRepositoriesPageComponent implements OnInit {
   )
 
   ngOnInit(): void {
-    if (allowsDemoDataFrom(this.pro)) {
-      this.connectDemo()
-      return
-    }
     this.loadPro()
   }
 
@@ -142,37 +128,11 @@ export class GitlabRepositoriesPageComponent implements OnInit {
     })
   }
 
-  connectDemo = (): void => {
-    this.loading.set(true)
-    this.gitlab.connectDemo().subscribe({
-      next: (state) => {
-        this.account.set(state.account)
-        this.projects.set(state.projects)
-        this.groups.set(state.groups)
-        if (state.projects[0]) this.projectControl.setValue(state.projects[0].id)
-        this.demoMode.set(true)
-        this.loading.set(false)
-      },
-      error: () => {
-        if (!allowsDemoDataFrom(this.pro)) {
-          this.loading.set(false)
-          return
-        }
-        const boot = buildGitlabDemoBootstrap()
-        this.account.set(boot.account)
-        this.projects.set(boot.projects)
-        this.groups.set(boot.groups)
-        if (boot.projects[0]) this.projectControl.setValue(boot.projects[0].id)
-        this.loading.set(false)
-      },
-    })
-  }
-
   validate = (): void => {
     const id = this.account()?.id
     if (!id) return
     this.gitlab.validateAccount(id).subscribe({
-      next: (r) => this.runDemo('Validación GitLab', r.message),
+      next: (r) => this.runAction('Validación GitLab', r.message),
     })
   }
 
@@ -181,7 +141,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
       next: (r) => {
         if (r.projects?.length) this.projects.set(r.projects)
         this.account.update((a) => (a ? { ...a, lastSyncAt: r.lastSyncAt } : a))
-        this.runDemo('Sincronización GitLab', r.message)
+        this.runAction('Sincronización GitLab', r.message)
       },
     })
   }
@@ -192,11 +152,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
 
   openDrawer = (project: GitlabProject): void => {
     this.drawerProject.set(project)
-    this.drawerWebhooks.set(
-      allowsDemoDataFrom(this.pro)
-        ? CLIENT_DEMO_GITLAB_WEBHOOKS.filter((w) => w['projectPath'] === project.fullPath)
-        : [],
-    )
+    this.drawerWebhooks.set([])
     this.drawerOpen.set(true)
   }
 
@@ -208,13 +164,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
 
   openGitlabLogs = (): void => {
     this.logsTitle.set('Logs GitLab — plataforma')
-    this.logsText.set(
-      `[GitLab] ${new Date().toISOString()} sync proyectos OK\n` +
-        '[GitLab] pipeline cloudops-platform/gitlab-payment-service #1842 success\n' +
-        '[GitLab] runner shared-runner-01 online · tags docker,linux\n' +
-        '[GitLab] MR !42 opened · feat: idempotencia en cobros\n' +
-        '[GitLab] environment production actualizado',
-    )
+    this.logsText.set('Sin registros disponibles.')
     this.logsOpen.set(true)
   }
 
@@ -226,7 +176,7 @@ export class GitlabRepositoriesPageComponent implements OnInit {
         this.logsOpen.set(true)
       },
       error: () => {
-        this.logsText.set('[GitLab] Registros demo del despliegue\n[OK] Pipeline deploy\n[OK] Environment actualizado')
+        this.logsText.set('Sin registros de despliegue disponibles.')
         this.logsOpen.set(true)
       },
     })
@@ -248,26 +198,18 @@ export class GitlabRepositoriesPageComponent implements OnInit {
         result.strategy,
         result.targetName,
       ].join(' · ')
-      this.runDemo('Despliegue GitLab', summary)
-      this.gitlab.deploymentLogs('gl-dep-demo').subscribe({
-        next: (r) => {
-          this.logsText.set(r.logs)
-          this.logsTitle.set(`${project.fullPath} → ${result.environment}`)
-          this.logsOpen.set(true)
-        },
-      })
+      this.runAction('Despliegue GitLab', summary)
     })
   }
 
   handleHeader = (label: string): void => {
-    if (label.includes('Conectar demo')) this.connectDemo()
-    else if (label.includes('Sincronizar')) this.syncProjects()
+    if (label.includes('Sincronizar')) this.syncProjects()
     else if (label.includes('Validar')) this.validate()
     else if (label.includes('Añadir')) this.openAddAccount()
-    else this.runDemo(label)
+    else this.runAction(label)
   }
 
-  runDemo = (label: string, msg?: string): void => {
-    this.demoActions.simulate(label, 450, msg ?? `${label} (demo)`).subscribe()
+  runAction = (label: string, msg?: string): void => {
+    this.actions.simulate(label, 450, msg ?? label).subscribe()
   }
 }

@@ -1,11 +1,11 @@
-import type { GitlabProject } from './gitlab-demo-catalog'
+import type { GitlabProject } from './gitlab.data'
 import {
   CLIENT_DEMO_GITLAB_CI_VARS,
   CLIENT_DEMO_GITLAB_DEPLOYMENTS,
   CLIENT_DEMO_GITLAB_ENVIRONMENTS,
   CLIENT_DEMO_GITLAB_PIPELINES,
   CLIENT_DEMO_GITLAB_RELEASES,
-} from './gitlab-demo-catalog'
+} from './gitlab.data'
 
 export type GitlabDeployTarget = {
   id: string

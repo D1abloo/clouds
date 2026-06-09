@@ -6,7 +6,7 @@ import type {
   ApprovalRisk,
   ApprovalSource,
   ApprovalStatus,
-} from './approvals.demo'
+} from './approvals.types'
 
 export const APPROVAL_SOURCE_LABELS: Record<ApprovalSource, string> = {
   terraform: 'Terraform',

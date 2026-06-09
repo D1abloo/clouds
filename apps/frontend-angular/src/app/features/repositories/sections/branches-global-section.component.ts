@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTabsModule } from '@angular/material/tabs'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
-import { type GlobalBranchRow } from '../utils/repositories-global-demo.util'
+import { type GlobalBranchRow } from '../utils/repositories-global.util'
 import { RepositoriesQuickLinksComponent } from '../components/repositories-quick-links.component'
 import { repoRoute } from '../repositories-section.config'
 

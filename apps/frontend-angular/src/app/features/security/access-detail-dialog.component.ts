@@ -4,7 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import type { AccessAssignment } from './access-control.demo'
+import type { AccessAssignment } from './access-control.data'
 
 export interface AccessDetailData {
   assignment: AccessAssignment

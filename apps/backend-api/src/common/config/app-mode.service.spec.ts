@@ -18,17 +18,8 @@ describe('AppModeService', () => {
     expect(mode.canUseDemoFallback()).toBe(false)
   })
 
-  it('canUseDemoFallback es true solo con DEMO_MODE=true', () => {
+  it('canUseDemoFallback siempre es false', () => {
     const mode = build({ DEMO_MODE: 'true', PRO_MODE: 'false' })
-    expect(mode.canUseDemoFallback()).toBe(true)
-  })
-
-  it('canUseDemoFallback es true con DEMO_MODE y PRO_MODE en producción', () => {
-    const mode = build({
-      DEMO_MODE: 'true',
-      PRO_MODE: 'true',
-      APP_ENV: 'production',
-    })
-    expect(mode.canUseDemoFallback()).toBe(true)
+    expect(mode.canUseDemoFallback()).toBe(false)
   })
 })

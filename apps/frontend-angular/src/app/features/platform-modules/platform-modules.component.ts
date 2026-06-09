@@ -20,7 +20,7 @@ import {
   CHANGE_MANAGEMENT_CONFIG,
   API_TOKENS_CONFIG,
   ADMIN_WEBHOOKS_CONFIG,
-} from '../../shared/platform/platform-modules.demo'
+} from '../../shared/platform/platform-modules.data'
 import { SecurityCenterPageComponent } from '../security/security-center-page.component'
 import { SecretsManagerPageComponent } from '../security/secrets-manager-page.component'
 import { CompliancePageComponent } from '../security/compliance-page.component'

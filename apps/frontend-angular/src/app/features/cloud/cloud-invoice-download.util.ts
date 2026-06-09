@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmtUsd, type CloudBillingRow, type CloudProviderUiConfig } from './cloud-provider.demo'
+import { fmtUsd, type CloudBillingRow, type CloudProviderUiConfig } from './cloud-provider.data'
 
 const STATUS_LABELS: Record<NonNullable<CloudBillingRow['invoiceStatus']>, string> = {
   paid: 'Pagada',

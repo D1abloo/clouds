@@ -1,6 +1,6 @@
 import type { CloudProvider } from '../core/models/api.models'
 import type { TerraformRunItem, TerraformWorkspaceItem } from '../core/stores/terraform-run.store'
-import { defaultTerraformLaunchDetails, launchRecordsFromDetails } from './terraform-launches.demo'
+import { defaultTerraformLaunchDetails, launchRecordsFromDetails } from './terraform-launches.data'
 
 export interface TerraformFolder {
   id: string

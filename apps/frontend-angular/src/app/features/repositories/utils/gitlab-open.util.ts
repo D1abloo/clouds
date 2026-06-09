@@ -1,8 +1,8 @@
-import type { GitlabProject } from './gitlab-demo-catalog'
+import type { GitlabProject } from './gitlab.data'
 import {
   CLIENT_DEMO_GITLAB_MRS,
   CLIENT_DEMO_GITLAB_PIPELINES,
-} from './gitlab-demo-catalog'
+} from './gitlab.data'
 
 export type GitlabHostConfig = {
   baseUrl: string

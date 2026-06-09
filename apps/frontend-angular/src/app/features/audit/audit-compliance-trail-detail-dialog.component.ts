@@ -4,7 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { AUDIT_ACCENT, AUDIT_ACCENT_BORDER, AUDIT_ACCENT_LIGHT } from './audit.config'
-import type { ComplianceTrailEntry } from './audit.demo'
+import type { ComplianceTrailEntry } from './audit.data'
 
 export interface AuditComplianceTrailDetailData {
   entry: ComplianceTrailEntry

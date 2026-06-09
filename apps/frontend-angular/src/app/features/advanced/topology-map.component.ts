@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,7 +26,6 @@ import { DecimalPipe } from '@angular/common'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountsStore } from '../../core/stores/cloud-accounts.store'
@@ -34,7 +34,7 @@ import { InstancesService } from '../../core/services/instances.service'
 import { VpsService } from '../../core/services/vps.service'
 import type { CloudAccount, CloudProvider, Instance } from '../../core/models/api.models'
 import { RunbookExecuteDialogComponent } from '../runbooks/runbook-execute-dialog.component'
-import { defaultRunbooks } from '../runbooks/runbooks.demo'
+import { defaultRunbooks } from '../runbooks/runbooks.data'
 import { buildRunbookTargets } from '../runbooks/runbook-target.util'
 import {
   TopologyNodeDetailDialogComponent,
@@ -80,7 +80,7 @@ import {
   type TopologyEdge,
   type TopologyNodeKind,
   type TopologyColumnMeta,
-} from './topology-map.demo'
+} from './topology-map.data'
 
 @Component({
   selector: 'app-topology-map',
@@ -1341,7 +1341,8 @@ import {
   `,
 })
 export class TopologyMapComponent implements OnInit, AfterViewInit, OnDestroy {
-  private readonly demo = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
   private readonly toast = inject(ToastService)
   private readonly cloudStore = inject(CloudAccountsStore)
   private readonly cloudAccountsSvc = inject(CloudAccountsService)
@@ -1879,7 +1880,7 @@ export class TopologyMapComponent implements OnInit, AfterViewInit, OnDestroy {
       this.exportTopology()
       return
     }
-    this.demo.simulate(`Topología: ${label}`, 600).subscribe()
+    this.actions.simulate(`Topología: ${label}`, 600).subscribe()
   }
 
   private exportTopology = (): void => {
@@ -1965,7 +1966,7 @@ export class TopologyMapComponent implements OnInit, AfterViewInit, OnDestroy {
       this.openRunbookForNode(node)
       return
     }
-    this.demo.simulate(`${node.label}: ${label}`, 500).subscribe()
+    this.actions.simulate(`${node.label}: ${label}`, 500).subscribe()
   }
 
   openRunbookForNode = (node: TopologyNode): void => {

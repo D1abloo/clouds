@@ -11,7 +11,7 @@ import {
   SERVICE_CATALOG_ENVIRONMENT_LABELS,
   SERVICE_CATALOG_STATUS_LABELS,
   type ServiceCatalogTemplate,
-} from './service-catalog.demo'
+} from './service-catalog.types'
 
 export type ServiceCatalogDetailAction = 'edit' | 'launch' | null
 

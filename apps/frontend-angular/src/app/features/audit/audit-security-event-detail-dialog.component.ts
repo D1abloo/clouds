@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { AUDIT_ACCENT, AUDIT_ACCENT_BORDER, AUDIT_ACCENT_LIGHT, auditSeverityLabel } from './audit.config'
-import type { SecurityEvent } from './audit.demo'
+import type { SecurityEvent } from './audit.data'
 
 export interface AuditSecurityEventDetailData {
   event: SecurityEvent

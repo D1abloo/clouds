@@ -19,7 +19,7 @@ import {
   type SchedulerTaskType,
   type SchedulerTimeoutAction,
   type SchedulerRetryBackoff,
-} from './scheduler.demo'
+} from './scheduler.data'
 import {
   ENVIRONMENT_HINTS,
   EXECUTOR_OPTIONS,

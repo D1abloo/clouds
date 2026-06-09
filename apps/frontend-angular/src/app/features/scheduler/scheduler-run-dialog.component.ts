@@ -17,7 +17,7 @@ import {
   type SchedulerTask,
   type SchedulerTaskStatus,
   type SchedulerTaskType,
-} from './scheduler.demo'
+} from './scheduler.data'
 import {
   ENVIRONMENT_LABELS,
   formatNextRunFromCron,

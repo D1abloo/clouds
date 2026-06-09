@@ -22,13 +22,12 @@ import {
   ADMIN_WEBHOOK_DELIVERIES,
   ADMIN_WEBHOOK_FAILURES,
   ADMIN_WEBHOOK_PAYLOADS,
-  ADMIN_WEBHOOK_CONFIG,
-  ADMIN_WEBHOOK_EVENT_TYPES,
   type AdminWebhookRow,
   type WebhookDeliveryRow,
   type WebhookFailureRow,
   type WebhookPayloadRow,
-} from './admin-webhooks.demo'
+} from './admin-webhooks.data'
+import { ADMIN_WEBHOOK_CONFIG, ADMIN_WEBHOOK_EVENT_TYPES } from './admin-webhooks.config'
 import { AdminWebhookDetailDialogComponent } from './admin-webhook-detail-dialog.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { AdminWebhookDeliveryDetailDialogComponent } from './admin-webhook-delivery-detail-dialog.component'

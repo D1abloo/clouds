@@ -1,4 +1,4 @@
-import type { Runbook, RunbookExecution, RunbookExecutionStepLog, RunbookExecutionStepStatus } from './runbooks.demo'
+import type { Runbook, RunbookExecution, RunbookExecutionStepLog, RunbookExecutionStepStatus } from './runbooks.types'
 
 const STEP_DURATIONS = ['3s', '8s', '12s', '5s', '18s', '22s', '4s', '9s']
 

@@ -9,7 +9,7 @@ import type {
   SchedulerTaskType,
   SchedulerTimeoutAction,
   SchedulerRetryBackoff,
-} from './scheduler.demo'
+} from './scheduler.data'
 import { NOTIFY_CHANNEL_DEFS } from './scheduler-form.config'
 
 export interface SchedulerTaskFormValue {

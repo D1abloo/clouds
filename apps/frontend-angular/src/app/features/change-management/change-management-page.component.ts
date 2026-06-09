@@ -34,7 +34,7 @@ import {
   type ChangeTemplate,
   type ChangeType,
   type MaintenanceWindow,
-} from './change-management.demo'
+} from './change-management.data'
 import { primaryChangeLogo, templateLogo } from './change-management-logo.util'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'

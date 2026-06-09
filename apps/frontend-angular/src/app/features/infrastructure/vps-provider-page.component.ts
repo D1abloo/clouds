@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,7 +14,6 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import {
   IntegrationConnectionService,
@@ -28,7 +28,7 @@ import {
   vpsSlugFromParam,
   type VpsProviderSlug,
   type VpsSection,
-} from './vps-provider.demo'
+} from './vps-provider.data'
 
 @Component({
   selector: 'app-vps-provider-page',
@@ -356,10 +356,11 @@ import {
   `,
 })
 export class VpsProviderPageComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly route = inject(ActivatedRoute)
   private readonly destroyRef = inject(DestroyRef)
   private readonly connections = inject(IntegrationConnectionService)
-  private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
 
   readonly fmtUsd = fmtUsd
@@ -379,7 +380,7 @@ export class VpsProviderPageComponent implements OnInit {
   }
 
   handleSync = (): void => {
-    this.demo.simulate(`Sync ${this.cfg().title}`, 900, 'Inventario VPS actualizado').subscribe(() => {
+    this.actions.simulate(`Sync ${this.cfg().title}`, 900, 'Inventario VPS actualizado').subscribe(() => {
       this.toast.success('Inventario sincronizado')
     })
   }

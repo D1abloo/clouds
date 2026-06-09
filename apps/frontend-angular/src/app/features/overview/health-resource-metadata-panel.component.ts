@@ -10,7 +10,7 @@ import {
   healthResourceSections,
   severityLabel,
   type InstanceHealthRecord,
-} from './health-center.demo'
+} from './health-center.data'
 
 type DetailTab = 'resource' | 'incident' | 'metadata'
 

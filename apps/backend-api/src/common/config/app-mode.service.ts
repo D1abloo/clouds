@@ -38,11 +38,7 @@ export class AppModeService {
   getAppUrl = (): string =>
     this.config.get<string>('APP_URL') ?? this.getAuthUrl()
 
-  canUseDemoFallback = (): boolean => {
-    if (this.isProMode() && !this.isDemoMode()) return false
-    if (this.getAppEnv() === 'production' && !this.isDemoMode()) return false
-    return this.isDemoMode()
-  }
+  canUseDemoFallback = (): boolean => false
 
   getAppEnv = (): string => {
     const explicit = this.config.get<string>('APP_ENV')?.trim()
@@ -60,10 +56,8 @@ export class AppModeService {
       google: !!this.config.get<string>('GOOGLE_CLIENT_ID'),
       github: !!this.config.get<string>('GITHUB_CLIENT_ID'),
     },
-    message: this.isDemoMode()
-      ? 'Modo demo activo — datos simulados disponibles en el panel'
-      : this.isProMode()
-        ? 'Modo PRO activo — datos desde PostgreSQL y proveedores configurados'
-        : 'Entorno de desarrollo — datos simulados para pruebas locales',
+    message: this.isProMode()
+      ? 'Modo PRO activo — datos desde PostgreSQL y proveedores configurados'
+      : 'Entorno de desarrollo — datos simulados para pruebas locales',
   })
 }

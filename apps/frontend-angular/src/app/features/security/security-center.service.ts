@@ -9,7 +9,7 @@ import {
   defaultSecurityRisks,
   defaultSshKeys,
   type SecurityRisk,
-} from './security-center.demo'
+} from './security-center.data'
 import type { SecurityScanReport } from './security-scan-report.util'
 
 const SCAN_REPORTS_STORAGE_KEY = 'cloudops-security-scan-reports'

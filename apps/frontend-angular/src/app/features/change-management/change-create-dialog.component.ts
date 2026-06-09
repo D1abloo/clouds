@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { CHANGE_RISK_LABELS, CHANGE_TYPE_LABELS } from './change-management.config'
 import { CHANGE_FORM_DIALOG_STYLES } from './change-form-dialog.shared'
-import type { ChangeRisk, ChangeTemplate, ChangeType, MaintenanceWindow } from './change-management.demo'
+import type { ChangeRisk, ChangeTemplate, ChangeType, MaintenanceWindow } from './change-management.data'
 import type { CreateChangeInput } from './change-management.service'
 
 export type ChangeCreateDialogResult = CreateChangeInput

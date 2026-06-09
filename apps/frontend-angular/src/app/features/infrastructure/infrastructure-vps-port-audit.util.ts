@@ -1,5 +1,5 @@
 import type { VpsHostRow } from './infrastructure-workspace.builders'
-import { VPS_DEMO_PORTS } from './infrastructure.demo'
+import { VPS_DEMO_PORTS } from './infrastructure.data'
 import {
   buildPortScanReport,
   mapPortCatalog,

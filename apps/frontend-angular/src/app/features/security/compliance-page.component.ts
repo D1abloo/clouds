@@ -17,7 +17,7 @@ import {
   defaultViolations,
   type ComplianceReport,
   type ComplianceViolation,
-} from './compliance.demo'
+} from './compliance.data'
 import { ComplianceViolationDetailDialogComponent } from './compliance-violation-detail-dialog.component'
 import { ComplianceReportDialogComponent } from './compliance-report-dialog.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'

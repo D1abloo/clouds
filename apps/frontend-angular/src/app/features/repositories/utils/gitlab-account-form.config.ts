@@ -1,4 +1,4 @@
-import { CLIENT_DEMO_GITLAB_PROJECTS } from './gitlab-demo-catalog'
+import { CLIENT_DEMO_GITLAB_PROJECTS } from './gitlab.data'
 
 export type GitlabProjectScope = 'all' | 'group' | 'selected'
 

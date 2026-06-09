@@ -19,7 +19,7 @@ import {
   auditRiskLabel,
   auditUserInitials,
 } from './audit.config'
-import type { AuditActivityEntry } from './audit.demo'
+import type { AuditActivityEntry } from './audit.data'
 
 interface ActivityDateGroup {
   label: string

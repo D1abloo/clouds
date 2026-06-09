@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core'
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import type { Runbook, RunbookExecution } from './runbooks.demo'
+import type { Runbook, RunbookExecution } from './runbooks.types'
 import { RunbookExecutionDetailPanelComponent } from './runbook-execution-detail-panel.component'
 
 export interface RunbookExecutionDetailDialogData {

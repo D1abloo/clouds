@@ -25,10 +25,10 @@ import {
   API_TOKENS_AUDIT,
   API_TOKENS_EXPIRING,
   API_TOKENS_REVOKED,
-  API_TOKEN_SCOPES,
   API_TOKEN_ROTATION_POLICIES,
   type ApiTokenRow,
-} from './admin-api-tokens.demo'
+} from './admin-api-tokens.data'
+import { API_TOKEN_SCOPES } from './admin-api-tokens.config'
 import { AdminApiTokenDetailDialogComponent } from './admin-api-token-detail-dialog.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import { AdminApiTokenAuditDetailDialogComponent } from './admin-api-token-audit-detail-dialog.component'

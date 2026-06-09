@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
 import { ActivatedRoute } from '@angular/router'
 import { bindSectionTabs } from '../../core/routing/section-tab.util'
@@ -20,12 +21,11 @@ import {
 } from './jenkins-launch-dialog.component'
 import { launchDetailKey } from './jenkins-launch-detail-panel.component'
 import { InventoryService } from '../../core/services/inventory.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import {
   JenkinsCreateJobDialogComponent,
 } from './jenkins-create-job-dialog.component'
-import { jobToRow, normalizeJenkinsInventory } from './jenkins.demo'
+import { jobToRow, normalizeJenkinsInventory } from './jenkins.util'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ConnectionRequiredComponent } from '../../shared/components/connection-required/connection-required.component'
@@ -127,9 +127,10 @@ import { jenkinsSectionToTab } from './jenkins.models'
   `,
 })
 export class JenkinsPageComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly inventorySvc = inject(InventoryService)
   private readonly pro = inject(ProModeService)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   private readonly route = inject(ActivatedRoute)
   private readonly destroyRef = inject(DestroyRef)
@@ -213,10 +214,9 @@ export class JenkinsPageComponent implements OnInit {
   }
 
   load = (): void => {
-    const allowDemo = allowsDemoDataFrom(this.pro)
     this.page.run(this.inventorySvc.jenkins(), {
       onSuccess: (d) => {
-        const inv = normalizeJenkinsInventory(d, allowDemo)
+        const inv = normalizeJenkinsInventory(d)
         this.inventory.set(inv)
         const jobs = inv.jobItems
         if (jobs.length > 0 && !this.selectedJob()) {
@@ -225,7 +225,7 @@ export class JenkinsPageComponent implements OnInit {
           const build = inv.builds.find((b) => b.jobName === pick.name)
           if (build) this.selectedBuild.set(build)
         }
-        this.seedDemoLaunch(jobs, inv.demoMode)
+        this.seedDemoLaunch(jobs, false)
       },
       errorMessage: 'No se pudo cargar Jenkins',
     })
@@ -289,7 +289,7 @@ export class JenkinsPageComponent implements OnInit {
         })
         this.selectedJob.set(job)
         this.selectedServerId.set(job.serverId)
-        this.demoActions.simulate(`Job ${job.name} creado`, 800, 'Configuración guardada (demo)').subscribe()
+        this.actions.simulate(`Job ${job.name} creado`, 800, 'Configuración guardada (demo)').subscribe()
       })
   }
 
@@ -299,11 +299,11 @@ export class JenkinsPageComponent implements OnInit {
       return
     }
     if (label === 'Añadir controlador') {
-      this.demoActions.simulate('Añadir controlador Jenkins', 700).subscribe()
+      this.actions.simulate('Añadir controlador Jenkins', 700).subscribe()
       return
     }
     if (label === 'Validar conexión') {
-      this.demoActions.simulate('Validación Jenkins', 900, 'Conexión OK (demo)').subscribe()
+      this.actions.simulate('Validación Jenkins', 900, 'Conexión OK (demo)').subscribe()
       return
     }
     this.load()
@@ -338,7 +338,7 @@ export class JenkinsPageComponent implements OnInit {
         this.pushLaunch(detail)
         this.registerLaunchBuild(detail)
         this.openLaunchDetailDialog(detail)
-        this.demoActions.simulate(`Build ${detail.jobName}`, 900, `#${detail.buildNum} en cola`).subscribe()
+        this.actions.simulate(`Build ${detail.jobName}`, 900, `#${detail.buildNum} en cola`).subscribe()
       })
   }
 
@@ -365,7 +365,7 @@ export class JenkinsPageComponent implements OnInit {
 
   handleJobAction = (ev: { job: JenkinsJob; type: 'poll' | 'stop' | 'replay' }): void => {
     const labels = { poll: 'Poll SCM', stop: 'Detener build', replay: 'Replay' }
-    this.demoActions.simulate(`${labels[ev.type]} — ${ev.job.name}`, 800).subscribe()
+    this.actions.simulate(`${labels[ev.type]} — ${ev.job.name}`, 800).subscribe()
   }
 
   openLaunchDetailDialog = (detail?: JenkinsLaunchDetailData): void => {

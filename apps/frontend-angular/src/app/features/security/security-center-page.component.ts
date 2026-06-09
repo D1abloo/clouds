@@ -28,7 +28,7 @@ import type {
   SecurityRecommendation,
   SecurityRisk,
   SshKeyRecord,
-} from './security-center.demo'
+} from './security-center.data'
 import type { SecurityScanReport } from './security-scan-report.util'
 import { SecurityCenterService } from './security-center.service'
 import { SecurityFindingDetailDialogComponent } from './security-finding-detail-dialog.component'

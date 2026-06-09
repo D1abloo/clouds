@@ -1,5 +1,5 @@
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
-import type { ServiceCatalogCategory, ServiceCatalogCloud, ServiceCatalogEnvironment } from './service-catalog.demo'
+import type { ServiceCatalogCategory, ServiceCatalogCloud, ServiceCatalogEnvironment } from './service-catalog.types'
 
 export const CATEGORY_TECH_LOGO: Record<ServiceCatalogCategory, NavLogoKey> = {
   instance: 'aws',

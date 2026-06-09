@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,7 +32,6 @@ import { CloudAccountsService } from '../../core/services/cloud-accounts.service
 import { InstancesService } from '../../core/services/instances.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from '../cloud-accounts/cloud-account-form-dialog.component'
 import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
@@ -56,7 +56,7 @@ import {
   type CloudNetworkRow,
   type CloudSection,
   type CloudSlug,
-} from './cloud-provider.demo'
+} from './cloud-provider.data'
 import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-invoice-download.util'
 
 @Component({
@@ -2068,11 +2068,12 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
   `,
 })
 export class CloudProviderPageComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly route = inject(ActivatedRoute)
   private readonly accountsSvc = inject(CloudAccountsService)
   private readonly instancesSvc = inject(InstancesService)
   private readonly pro = inject(ProModeService)
-  private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly connections = inject(IntegrationConnectionService)
@@ -2455,7 +2456,7 @@ export class CloudProviderPageComponent implements OnInit {
       .pipe(
         catchError(() => {
           if (allowsDemoDataFrom(this.pro)) {
-            this.demo.simulate(`Sync ${this.cfg().title}`, 900, 'Inventario actualizado').subscribe()
+            this.actions.simulate(`Sync ${this.cfg().title}`, 900, 'Inventario actualizado').subscribe()
           }
           return of({ accounts: 0, instances: 0 })
         }),
@@ -2502,7 +2503,7 @@ export class CloudProviderPageComponent implements OnInit {
       .validate(acc.id)
       .pipe(
         catchError(() => {
-          this.demo.simulate(`Validar ${acc.name}`, 600, 'Credenciales válidas').subscribe()
+          this.actions.simulate(`Validar ${acc.name}`, 600, 'Credenciales válidas').subscribe()
           return of({ valid: true, message: 'Demo: credenciales válidas' })
         }),
       )
@@ -2517,7 +2518,7 @@ export class CloudProviderPageComponent implements OnInit {
       .sync(acc.id)
       .pipe(
         catchError(() => {
-          this.demo.simulate(`Sync ${acc.name}`, 800, 'Inventario sincronizado').subscribe()
+          this.actions.simulate(`Sync ${acc.name}`, 800, 'Inventario sincronizado').subscribe()
           return of({ synced: 1, regions: acc.regions, instances: acc.instances })
         }),
       )
@@ -2532,7 +2533,7 @@ export class CloudProviderPageComponent implements OnInit {
       .syncBilling(acc.id)
       .pipe(
         catchError(() => {
-          this.demo.simulate(`Facturación ${acc.name}`, 700, 'CUR actualizado').subscribe()
+          this.actions.simulate(`Facturación ${acc.name}`, 700, 'CUR actualizado').subscribe()
           return of({})
         }),
       )
@@ -2547,7 +2548,7 @@ export class CloudProviderPageComponent implements OnInit {
       .syncMetrics(acc.id)
       .pipe(
         catchError(() => {
-          this.demo.simulate(`Métricas ${acc.name}`, 700, 'Métricas actualizadas').subscribe()
+          this.actions.simulate(`Métricas ${acc.name}`, 700, 'Métricas actualizadas').subscribe()
           return of({})
         }),
       )

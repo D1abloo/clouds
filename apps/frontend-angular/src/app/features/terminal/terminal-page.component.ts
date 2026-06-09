@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { DatePipe } from '@angular/common'
 import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
@@ -8,7 +9,6 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { debounceTime, startWith, delay, of, map } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { VpsService } from '../../core/services/vps.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import type { VpsHost } from '../../core/models/api.models'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
@@ -20,7 +20,7 @@ import {
   defaultTerminalHistory,
   defaultTerminalSessions,
   type TerminalSession,
-} from './terminal.demo'
+} from './terminal.data'
 
 @Component({
   selector: 'app-terminal-page',
@@ -680,9 +680,10 @@ import {
   `,
 })
 export class TerminalPageComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly route = inject(ActivatedRoute)
   private readonly vps = inject(VpsService)
-  private readonly demo = inject(DemoActionsService)
   private readonly destroyRef = inject(DestroyRef)
 
   readonly hostSearch = new FormControl('', { nonNullable: true })
@@ -851,7 +852,7 @@ export class TerminalPageComponent implements OnInit {
                 : s,
             ),
           )
-          this.demo.simulate(`Conectado a ${h.name}`, 400).subscribe()
+          this.actions.simulate(`Conectado a ${h.name}`, 400).subscribe()
         },
       })
   }
@@ -923,7 +924,7 @@ export class TerminalPageComponent implements OnInit {
     this.activeSessionId.set(id)
     this.connected.set(false)
     this.bootstrapLinesForSelection()
-    this.demo.simulate(`Sesión nueva en ${h.name}`, 400).subscribe()
+    this.actions.simulate(`Sesión nueva en ${h.name}`, 400).subscribe()
   }
 
   private bootstrapLinesForSelection = (): void => {

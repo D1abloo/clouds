@@ -20,7 +20,7 @@ import {
 } from './terraform-projects'
 import { complianceTierLabel, stateBackendLabel } from './terraform-create-project.meta'
 import { TerraformLaunchStudioComponent } from './terraform-launch-studio.component'
-import type { TerraformLaunchDetail } from './terraform-launches.demo'
+import type { TerraformLaunchDetail } from './terraform-launches.data'
 
 @Component({
   selector: 'app-terraform-workspace-hub',

@@ -10,7 +10,7 @@ import {
   ADMIN_WEBHOOKS_ACCENT_BORDER,
   ADMIN_WEBHOOKS_ACCENT_LIGHT,
 } from './admin.config'
-import type { AdminWebhookRow } from './admin-webhooks.demo'
+import type { AdminWebhookRow } from './admin-webhooks.data'
 
 export interface AdminWebhookDetailData {
   webhook: AdminWebhookRow

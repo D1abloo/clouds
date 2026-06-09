@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../../shared/platform/platform-action.service'
 import { Component, Input, inject, output } from '@angular/core'
 import { DatePipe } from '@angular/common'
 import { MatButtonModule } from '@angular/material/button'
@@ -6,7 +7,6 @@ import { MatTabsModule } from '@angular/material/tabs'
 import { MatProgressBarModule } from '@angular/material/progress-bar'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
 import { NavIconComponent } from '../../../shared/components/nav-icon/nav-icon.component'
-import { DemoActionsService } from '../../../core/services/demo-actions.service'
 import type { GithubRepo } from '../../../core/services/github.service'
 import {
   buildRepositoryDrawerOverview,
@@ -15,7 +15,7 @@ import {
   prStateBadge,
   visibilityLabel,
   type RepoDrawerOverview,
-} from '../utils/repository-drawer-demo.util'
+} from '../utils/repository-drawer.util'
 
 @Component({
   selector: 'app-repository-detail-drawer',
@@ -582,7 +582,8 @@ import {
   `,
 })
 export class RepositoryDetailDrawerComponent {
-  private readonly demoActions = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
 
   @Input() open = false
   @Input() repo: GithubRepo | null = null
@@ -664,13 +665,13 @@ export class RepositoryDetailDrawerComponent {
   commitDate = (c: Record<string, unknown>): string => String(c['date'] ?? '')
 
   runDemo = (label: string): void => {
-    this.demoActions.simulate(label, 500, `${label} completado (demo)`).subscribe()
+    this.actions.simulate(label, 500, `${label} completado (demo)`).subscribe()
   }
 
   handleCopyLogs = (): void => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(this.overview.logs).catch(() => undefined)
     }
-    this.demoActions.simulate('Registros copiados', 300).subscribe()
+    this.actions.simulate('Registros copiados', 300).subscribe()
   }
 }

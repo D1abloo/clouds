@@ -1,15 +1,15 @@
 import { Injectable, computed, signal } from '@angular/core'
 import type { RunbookExecuteDialogResult } from '../runbooks/runbook-execute-dialog.component'
-import type { Runbook } from '../runbooks/runbooks.demo'
+import type { Runbook } from '../runbooks/runbooks.types'
 import type {
   ServiceCatalogLaunch,
   ServiceCatalogTemplate,
-} from '../service-catalog/service-catalog.demo'
+} from '../service-catalog/service-catalog.types'
 import type { ServiceCatalogLaunchOptions } from '../service-catalog/service-catalog.util'
 import {
   defaultApprovalRequestsSnapshot,
   type ApprovalRequest,
-} from './approvals.demo'
+} from './approvals.data'
 import {
   buildLaunchFromApproval,
   buildRunbookApproval,

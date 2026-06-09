@@ -1,10 +1,10 @@
 import type { RunbookExecuteDialogResult } from '../runbooks/runbook-execute-dialog.component'
-import type { Runbook } from '../runbooks/runbooks.demo'
+import type { Runbook } from '../runbooks/runbooks.types'
 import type {
   ServiceCatalogLaunch,
   ServiceCatalogTemplate,
   ServiceCatalogCategory,
-} from '../service-catalog/service-catalog.demo'
+} from '../service-catalog/service-catalog.types'
 import {
   simulateLaunchOutput,
   type ServiceCatalogLaunchOptions,
@@ -15,7 +15,7 @@ import type {
   ApprovalPendingExecution,
   ApprovalRequest,
   ApprovalRisk,
-} from './approvals.demo'
+} from './approvals.data'
 
 const CURRENT_USER = 'ops@cloudops.local'
 const CURRENT_TEAM = 'Platform Engineering'

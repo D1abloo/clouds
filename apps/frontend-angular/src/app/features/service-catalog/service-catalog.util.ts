@@ -6,7 +6,7 @@ import type {
   ServiceCatalogLaunch,
   ServiceCatalogStatus,
   ServiceCatalogTemplate,
-} from './service-catalog.demo'
+} from './service-catalog.types'
 import { CATEGORY_TECH_LOGO, CATEGORY_PROVISION_STEPS } from './service-catalog.config'
 
 export interface ServiceCatalogFormValue {

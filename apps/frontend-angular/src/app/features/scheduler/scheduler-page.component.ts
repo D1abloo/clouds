@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { DatePipe } from '@angular/common'
 import { Component, computed, effect, inject, signal } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
@@ -16,9 +17,8 @@ import {
   type SchedulerTask,
   type SchedulerTaskStatus,
   type SchedulerTaskType,
-} from './scheduler.demo'
+} from './scheduler.data'
 import { MatDialog } from '@angular/material/dialog'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { SchedulerRunDialogComponent } from './scheduler-run-dialog.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
@@ -1102,7 +1102,8 @@ const TYPE_ICON: Record<SchedulerTaskType, string> = {
   `,
 })
 export class SchedulerPageComponent {
-  private readonly demo = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
   private readonly dialog = inject(MatDialog)
   private readonly toast = inject(ToastService)
 
@@ -1283,7 +1284,7 @@ export class SchedulerPageComponent {
 
   private performRun = (task: SchedulerTask, opts: SchedulerRunOptions): void => {
     const label = opts.dryRun ? `Simulando: ${task.name}` : `Ejecutando: ${task.name}`
-    this.demo.simulate(label, 550).subscribe({
+    this.actions.simulate(label, 550).subscribe({
       next: () => {
         const { result, duration, output } = simulateRunOutput(task, opts)
         const run = buildHistoryFromRun(task, result, duration, output, 'manual')

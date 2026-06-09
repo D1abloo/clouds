@@ -2,7 +2,7 @@ import { Component, Input, output } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 import { MatProgressBarModule } from '@angular/material/progress-bar'
 import { BrandLogoComponent } from '../shared/components/brand-logo/brand-logo.component'
-import type { TerraformPageSummary } from './terraform.demo'
+import type { TerraformPageSummary } from './terraform.util'
 
 export interface TerraformProviderChip {
   provider: string

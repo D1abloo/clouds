@@ -4,7 +4,7 @@ import { BRAND_LOGO_SVG } from '../theme/brand-logo-svg.data'
 import type { NavLogoKey } from '../theme/nav-logo.types'
 import { slugifyFilename, downloadTextFile, triggerBlobDownload } from '../../features/infrastructure/infrastructure-report-export.util'
 import { cloudMeta } from './report-cloud.util'
-import { reportDocumentText, type ReportDocument } from './reports-demo.util'
+import { reportDocumentText, type ReportDocument } from './reports.util'
 
 const logoToGrayscaleDataUrl = (logo: NavLogoKey, size = 96): Promise<string> => {
   const def = BRAND_LOGO_SVG[logo]

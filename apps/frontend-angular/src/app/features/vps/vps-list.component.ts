@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
@@ -17,7 +18,6 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { VpsService } from '../../core/services/vps.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { VpsHost } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
@@ -55,6 +55,8 @@ import { VpsAddDialogComponent, type VpsAddDialogResult } from '../infrastructur
   `,
 })
 export class VpsCommandDialogComponent {
+  private readonly actions = inject(PlatformActionService)
+
   readonly cmd = new FormControl('uname -a', { nonNullable: true })
   output = '$ uname -a\nLinux demo-vps 6.1.0 #1 SMP x86_64 GNU/Linux'
   run = (): void => {
@@ -158,8 +160,8 @@ export class VpsCommandDialogComponent {
 export class VpsListComponent implements OnInit {
   private readonly service = inject(VpsService)
   private readonly toast = inject(ToastService)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
+  private readonly actions = inject(PlatformActionService)
 
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly page = createPageLoader(true)
@@ -213,17 +215,17 @@ export class VpsListComponent implements OnInit {
         .afterClosed()
         .subscribe((payload: VpsAddDialogResult | undefined) => {
           if (!payload) return
-          this.demoActions.simulate(`Add VPS ${payload.name}`, 900, 'VPS added (demo)').subscribe(() => this.load())
+          this.actions.simulate(`Add VPS ${payload.name}`, 900, 'VPS added (demo)').subscribe(() => this.load())
         })
       return
     }
-    this.demoActions.simulate('Validate all VPS', 1500).subscribe()
+    this.actions.simulate('Validate all VPS', 1500).subscribe()
   }
 
   handleValidate = (host: VpsHost): void => {
     this.service.validate(host.id).subscribe({
       next: () => this.toast.success(`Validated ${host.name}`),
-      error: () => this.demoActions.simulate(`Validate ${host.name}`, 600).subscribe(),
+      error: () => this.actions.simulate(`Validate ${host.name}`, 600).subscribe(),
     })
   }
 
@@ -232,14 +234,14 @@ export class VpsListComponent implements OnInit {
   }
 
   detectDocker = (row: VpsRow): void => {
-    this.demoActions.simulate(`Detect Docker on ${row.name}`, 900, 'Docker 24.0 detected').subscribe()
+    this.actions.simulate(`Detect Docker on ${row.name}`, 900, 'Docker 24.0 detected').subscribe()
   }
 
   detectK8s = (row: VpsRow): void => {
-    this.demoActions.simulate(`Detect K8s on ${row.name}`, 900, 'k3s v1.28 detected').subscribe()
+    this.actions.simulate(`Detect K8s on ${row.name}`, 900, 'k3s v1.28 detected').subscribe()
   }
 
   viewMetrics = (row: VpsRow): void => {
-    this.demoActions.simulate(`Metrics ${row.name}`, 500).subscribe()
+    this.actions.simulate(`Metrics ${row.name}`, 500).subscribe()
   }
 }

@@ -20,7 +20,7 @@ import {
   type SecretAuditEntry,
   type SecretRecord,
   type SecretRotation,
-} from './secrets-manager.demo'
+} from './secrets-manager.data'
 import { SecretDetailDialogComponent } from './secret-detail-dialog.component'
 import { SecretAddDialogComponent } from './secret-add-dialog.component'
 import { SecretPolicyDetailDialogComponent } from './secret-policy-detail-dialog.component'

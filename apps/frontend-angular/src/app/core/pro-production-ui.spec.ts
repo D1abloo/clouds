@@ -6,19 +6,19 @@ import { proDemoGuard } from './guards/pro-demo.guard'
 import { ProModeService } from './services/pro-mode.service'
 import type { ProModeService as ProModeServiceType } from './services/pro-mode.service'
 
-describe('PRO production UI — modo demo habilitado', () => {
-  it('environment.production.ts activa demoMode junto a PRO', async () => {
+describe('PRO production UI — sin referencias demo visibles', () => {
+  it('environment.production.ts desactiva demoMode', async () => {
     const { environment: prodEnv } = await import('../../environments/environment.production')
     expect(prodEnv.production).toBe(true)
-    expect(prodEnv.demoMode).toBe(true)
+    expect(prodEnv.demoMode).toBe(false)
     expect(prodEnv.proMode).toBe(true)
   })
 
-  it('sidebar config incluye pestaña Modo demo', () => {
+  it('sidebar config no incluye pestaña demo-mode', () => {
     const admin = SIDEBAR_MAIN_MODULES.find((m) => m.id === 'admin')
     expect(admin).toBeTruthy()
-    expect(admin!.tabs.some((t) => t.id === 'demo-mode')).toBe(true)
-    expect(admin!.tabs.some((t) => t.label === 'Modo demo')).toBe(true)
+    expect(admin!.tabs.some((t) => t.id === 'demo-mode')).toBe(false)
+    expect(admin!.tabs.some((t) => t.label === 'Modo demo')).toBe(false)
   })
 
   it('allowsDemoDataFrom devuelve false en PRO sin demo', () => {
@@ -30,44 +30,16 @@ describe('PRO production UI — modo demo habilitado', () => {
     expect(allowsDemoDataFrom(pro)).toBe(false)
   })
 
-  it('allowsDemoDataFrom devuelve true con demo activo en PRO', () => {
+  it('allowsDemoDataFrom siempre devuelve false', () => {
     const pro = {
       loaded: () => true,
-      proMode: () => true,
+      proMode: () => false,
       demoMode: () => true,
     } as ProModeServiceType
-    expect(allowsDemoDataFrom(pro)).toBe(true)
+    expect(allowsDemoDataFrom(pro)).toBe(false)
   })
 
-  it('proDemoGuard permite demo-mode cuando DEMO_MODE está activo', () => {
-    TestBed.configureTestingModule({
-      providers: [
-        {
-          provide: ProModeService,
-          useValue: {
-            loaded: () => true,
-            proMode: () => true,
-            demoMode: () => true,
-          },
-        },
-        {
-          provide: Router,
-          useValue: {
-            createUrlTree: (segments: string[]) =>
-              ({ toString: () => segments.join('/') }) as UrlTree,
-          },
-        },
-      ],
-    })
-
-    const result = TestBed.runInInjectionContext(() =>
-      proDemoGuard({} as never, {} as never),
-    )
-
-    expect(result).toBe(true)
-  })
-
-  it('proDemoGuard redirige a configuración en PRO sin demo', () => {
+  it('proDemoGuard redirige a configuración en PRO', () => {
     TestBed.configureTestingModule({
       providers: [
         {

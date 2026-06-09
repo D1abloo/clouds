@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core'
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms'
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog'
@@ -8,7 +9,6 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import { startWith } from 'rxjs'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { ToastService } from '../../core/services/toast.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { resolveReportCloud, cloudMeta } from '../../shared/platform/report-cloud.util'
 import {
   REPORT_SCHEDULE_FREQUENCIES,
@@ -471,10 +471,11 @@ export type ReportScheduleDialogData = {
   `,
 })
 export class ReportScheduleDialogComponent {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly dialogRef = inject(MatDialogRef<ReportScheduleDialogComponent>)
   private readonly fb = inject(FormBuilder)
   private readonly toast = inject(ToastService)
-  private readonly demo = inject(DemoActionsService)
   readonly data = inject<ReportScheduleDialogData>(MAT_DIALOG_DATA)
 
   readonly frequencies = REPORT_SCHEDULE_FREQUENCIES
@@ -542,7 +543,7 @@ export class ReportScheduleDialogComponent {
     if (this.form.invalid) return
     this.saving.set(true)
     const label = `Programación · ${this.reportName()}`
-    this.demo.simulate(label, 700, 'Programación guardada').subscribe({
+    this.actions.simulate(label, 700, 'Programación guardada').subscribe({
       next: () => {
         this.saving.set(false)
         this.toast.success(

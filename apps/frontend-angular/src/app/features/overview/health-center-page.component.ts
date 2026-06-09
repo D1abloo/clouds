@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core'
 import { Router, RouterLink } from '@angular/router'
 import { catchError, delay, of } from 'rxjs'
@@ -7,7 +8,6 @@ import { MatDialog } from '@angular/material/dialog'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { InstancesService } from '../../core/services/instances.service'
 import type { Instance } from '../../core/models/api.models'
@@ -27,7 +27,7 @@ import {
   summarizeHealth,
   type InstanceHealthRecord,
   type InstanceHealthSeverity,
-} from './health-center.demo'
+} from './health-center.data'
 
 const nowTime = (): string =>
   new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
@@ -589,7 +589,8 @@ const nowTime = (): string =>
   `,
 })
 export class HealthCenterPageComponent implements OnInit {
-  private readonly demo = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly instancesSvc = inject(InstancesService)
@@ -690,7 +691,7 @@ export class HealthCenterPageComponent implements OnInit {
       })
       return
     }
-    this.demo.simulate(`Centro de salud: ${label}`, 600, `${label} completado`).subscribe()
+    this.actions.simulate(`Centro de salud: ${label}`, 600, `${label} completado`).subscribe()
   }
 
   viewDetail = (row: InstanceHealthRecord): void => {

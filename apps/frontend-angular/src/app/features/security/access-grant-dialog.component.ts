@@ -3,7 +3,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import type { AccessAssignment } from './access-control.demo'
+import type { AccessAssignment } from './access-control.data'
 
 @Component({
   selector: 'app-access-grant-dialog',

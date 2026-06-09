@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatTabsModule } from '@angular/material/tabs'
 import { MatMenuModule } from '@angular/material/menu'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
-import { type GlobalCommitRow } from '../utils/repositories-global-demo.util'
+import { type GlobalCommitRow } from '../utils/repositories-global.util'
 import { repoRoute } from '../repositories-section.config'
 import { RepositoriesQuickLinksComponent } from '../components/repositories-quick-links.component'
 

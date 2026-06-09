@@ -8,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatRadioModule } from '@angular/material/radio'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
-import { COMMAND_CENTER_ACTION_PRESETS, COMMAND_CENTER_PLATFORMS } from './overview-pages.demo'
+import { COMMAND_CENTER_ACTION_PRESETS, COMMAND_CENTER_PLATFORMS } from './overview-pages.data'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
 export interface CommandCenterActionDialogData {

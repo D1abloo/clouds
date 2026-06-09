@@ -3,7 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
-import { buildResourceInspect, type SecurityRisk } from './security-center.demo'
+import { buildResourceInspect, type SecurityRisk } from './security-center.data'
 
 export interface SecurityResourceInspectData {
   finding: SecurityRisk

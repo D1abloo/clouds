@@ -20,9 +20,9 @@ import {
 import {
   ADMIN_ROLE_NAMES,
   ADMIN_ROLE_SCOPES,
-  ASSIGNABLE_USERS,
   type AdminRoleAssignmentRow,
-} from './admin-roles.demo'
+} from './admin-roles.data'
+import { ASSIGNABLE_USERS } from './admin-roles.config'
 
 export type RoleAssignmentDialogMode = 'edit' | 'assign'
 

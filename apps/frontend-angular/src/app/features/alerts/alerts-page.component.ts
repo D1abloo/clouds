@@ -32,7 +32,7 @@ import {
   ALERTS_NOTIFICATIONS,
   ALERTS_RULES,
   ALERTS_SILENCED,
-} from './alerts.demo'
+} from './alerts.types'
 
 @Component({
   selector: 'app-alert-rule-dialog',

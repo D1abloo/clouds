@@ -11,7 +11,7 @@ import {
   ADMIN_WEBHOOKS_ACCENT_BORDER,
   ADMIN_WEBHOOKS_ACCENT_LIGHT,
 } from './admin.config'
-import type { WebhookDeliveryRow } from './admin-webhooks.demo'
+import type { WebhookDeliveryRow } from './admin-webhooks.data'
 
 export interface AdminWebhookDeliveryDetailData {
   delivery: WebhookDeliveryRow

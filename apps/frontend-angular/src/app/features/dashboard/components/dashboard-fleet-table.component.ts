@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../../shared/platform/platform-action.service'
 import { Component, Input, inject, signal, computed, output } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatFormFieldModule } from '@angular/material/form-field'
@@ -10,7 +11,6 @@ import { debounceTime, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component'
-import { DemoActionsService } from '../../../core/services/demo-actions.service'
 import { DashboardInstanceRow } from '../dashboard.models'
 import {
   computeInstanceCostPerMinute,
@@ -665,7 +665,8 @@ const PROVIDER_META: Record<string, ProviderMeta> = {
   `,
 })
 export class DashboardFleetTableComponent {
-  private readonly demoActions = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
 
   readonly instanceSelect = output<DashboardInstanceRow>()
 
@@ -784,11 +785,11 @@ export class DashboardFleetTableComponent {
   }
 
   handleExport = (): void => {
-    this.demoActions.simulate('Exportar instancias multi-cloud', 600, 'Inventario exportado (demo CSV)').subscribe()
+    this.actions.simulate('Exportar instancias multi-cloud', 600, 'Inventario exportado (demo CSV)').subscribe()
   }
 
   handleViewDetails = (): void => {
-    this.demoActions.simulate('Ver listado completo de instancias', 300).subscribe()
+    this.actions.simulate('Ver listado completo de instancias', 300).subscribe()
   }
 
   private buildInstanceId = (row: DashboardInstanceRow, i: number): string => {

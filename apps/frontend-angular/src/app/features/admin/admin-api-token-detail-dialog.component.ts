@@ -11,7 +11,7 @@ import {
   adminRelativeTime,
   adminScopeLabel,
 } from './admin.config'
-import { enrichTokenProfile, type ApiTokenRow } from './admin-api-tokens.demo'
+import { enrichTokenProfile, type ApiTokenRow } from './admin-api-tokens.data'
 import {
   AdminApiTokenActionDialogComponent,
   type ApiTokenActionMode,

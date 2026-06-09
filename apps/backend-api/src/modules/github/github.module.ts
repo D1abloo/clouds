@@ -12,7 +12,6 @@ import { GithubCommitsService } from './github-commits.service'
 import { GithubPullRequestsService } from './github-pull-requests.service'
 import { GithubWebhooksService } from './github-webhooks.service'
 import { GithubDeploymentsService } from './github-deployments.service'
-import { GithubDemoService } from './github-demo.service'
 import { GithubSummaryService } from './github-summary.service'
 import { GithubApiClient } from './github-api.client'
 
@@ -26,7 +25,6 @@ import { GithubApiClient } from './github-api.client'
   ],
   controllers: [GithubController],
   providers: [
-    GithubDemoService,
     GithubApiClient,
     GithubAccountsService,
     GithubRepositoriesService,

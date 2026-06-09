@@ -7,7 +7,7 @@ import { MatSelectModule } from '@angular/material/select'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { CHANGE_FORM_DIALOG_STYLES } from './change-form-dialog.shared'
-import type { MaintenanceWindow } from './change-management.demo'
+import type { MaintenanceWindow } from './change-management.data'
 
 export type MaintenanceWindowDialogResult = Omit<
   MaintenanceWindow,

@@ -4,8 +4,6 @@ import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { CloudAccount, CloudProvider } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
-import { demoCloudAccounts } from '../demo/demo-fallback.data'
-import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 
 export interface CreateCloudAccountPayload {
   projectId: string
@@ -39,9 +37,9 @@ export class CloudAccountsService {
       map((res) => {
         const rows = unwrapList<CloudAccount>(res)
         if (rows.length) return rows
-        return allowsDemoDataFrom(this.pro) ? demoCloudAccounts(provider) : []
+        return []
       }),
-      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoCloudAccounts(provider) : [])),
+      catchError(() => of([])),
     )
 
   get = (id: string): Observable<CloudAccount> => this.api.get<CloudAccount>(`cloud-accounts/${id}`)

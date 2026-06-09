@@ -5,26 +5,16 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { InventoryService } from '../../core/services/inventory.service'
-import { ProModeService } from '../../core/services/pro-mode.service'
-import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import {
   GithubService,
   type GithubAccount,
   type GithubConnection,
   type GithubRepo,
 } from '../../core/services/github.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { catchError, map, of, type Observable } from 'rxjs'
 import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
 import { buildGithubInventoryFallback } from './utils/github-inventory-fallback'
-import {
-  buildClientGithubDemoState,
-  CLIENT_DEMO_DEPLOYMENTS,
-  CLIENT_DEMO_GITHUB_PRS,
-  CLIENT_DEMO_WEBHOOKS,
-} from './utils/github-demo-catalog'
-import type { GithubDemoConnectResult } from '../../core/services/github.service'
 import { DeployProjectDialogComponent } from './components/deploy-project-dialog.component'
 import { RepositoryDetailDrawerComponent } from './components/repository-detail-drawer.component'
 import { GithubLogsPanelComponent } from './components/github-logs-panel.component'
@@ -32,6 +22,7 @@ import { GithubSectionComponent } from './sections/github-section.component'
 import { REPOSITORIES_SECTION_META } from './repositories-section.config'
 import { RepositoriesActionService } from './repositories-action.service'
 import { RepositoriesCrossNavComponent } from './components/repositories-cross-nav.component'
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 
 @Component({
   selector: 'app-github-repositories-page',
@@ -65,11 +56,11 @@ import { RepositoriesCrossNavComponent } from './components/repositories-cross-n
           [repos]="repos()"
           [account]="primaryAccount()"
           [connection]="connection()"
-          [demoMode]="demoMode()"
+          [demoMode]="false"
           [syncStatus]="syncStatus()"
           [repoControl]="repoControl"
           (addAccount)="openAddAccount()"
-          (connectDemo)="handleQuickConnect()"
+          (connectDemo)="openAddAccount()"
           (validate)="handleValidate()"
           (sync)="handleSync()"
           (viewActions)="repoActions.viewGithubActions()"
@@ -91,7 +82,7 @@ import { RepositoriesCrossNavComponent } from './components/repositories-cross-n
       [webhooks]="drawerWebhooks()"
       [deployments]="githubDeployments()"
       [lastSyncAt]="connection()?.lastSyncAt ?? primaryAccount()?.lastSyncAt ?? null"
-      [demoMode]="demoMode()"
+      [demoMode]="false"
       (close)="closeDrawer()"
       (sync)="handleRepoSync($event)"
       (deploy)="openDeploy($event)"
@@ -107,12 +98,12 @@ import { RepositoriesCrossNavComponent } from './components/repositories-cross-n
   `,
 })
 export class GithubRepositoriesPageComponent implements OnInit {
+
   private readonly github = inject(GithubService)
   private readonly inventory = inject(InventoryService)
-  private readonly pro = inject(ProModeService)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   private readonly connections = inject(IntegrationConnectionService)
+  private readonly actions = inject(PlatformActionService)
   readonly repoActions = inject(RepositoriesActionService)
 
   readonly meta = REPOSITORIES_SECTION_META.github
@@ -122,19 +113,14 @@ export class GithubRepositoriesPageComponent implements OnInit {
   readonly repos = signal<GithubRepo[]>([])
   readonly branches = signal<Record<string, unknown>[]>([])
   readonly commits = signal<Record<string, unknown>[]>([])
-  readonly githubPullRequests = signal(
-    allowsDemoDataFrom(this.pro) ? CLIENT_DEMO_GITHUB_PRS : [],
-  )
-  readonly githubDeployments = signal<Record<string, unknown>[]>(
-    allowsDemoDataFrom(this.pro) ? CLIENT_DEMO_DEPLOYMENTS : [],
-  )
+  readonly githubPullRequests = signal<Record<string, unknown>[]>([])
+  readonly githubDeployments = signal<Record<string, unknown>[]>([])
   readonly drawerOpen = signal(false)
   readonly drawerRepo = signal<GithubRepo | null>(null)
   readonly drawerWebhooks = signal<Record<string, unknown>[]>([])
   readonly logsOpen = signal(false)
   readonly logsText = signal('')
   readonly logsTitle = signal('Logs GitHub')
-  readonly demoMode = signal(allowsDemoDataFrom(this.pro))
   readonly repoControl = new FormControl<string>('', { nonNullable: true })
 
   readonly primaryAccount = computed(() => this.accounts()[0] ?? null)
@@ -149,12 +135,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
   })
 
   ngOnInit(): void {
-    if (allowsDemoDataFrom(this.pro)) {
-      this.bootstrapGithubDemo()
-      this.refreshDemoFromApi()
-    } else {
-      this.loadAccounts()
-    }
+    this.loadAccounts()
     this.load()
     this.repoControl.valueChanges.subscribe((id) => {
       if (id) this.loadRepoDetails(id)
@@ -170,55 +151,24 @@ export class GithubRepositoriesPageComponent implements OnInit {
     })
   }
 
-  bootstrapGithubDemo = (): void => {
-    const state = buildClientGithubDemoState()
-    this.demoMode.set(true)
-    this.accounts.set([state.account])
-    this.connection.set(state.connection)
-    this.repos.set(state.repos)
-    if (state.repos.length) {
-      this.repoControl.setValue(state.repos[0].id)
-      this.loadRepoDetails(state.repos[0].id)
-    }
-  }
-
-  refreshDemoFromApi = (): void => {
-    this.github
-      .connectDemo()
-      .pipe(catchError(() => of(buildClientGithubDemoState())))
-      .subscribe((state) => {
-        this.accounts.set([state.account])
-        this.connection.set(state.connection)
-        this.repos.set(state.repos)
-      })
-  }
-
   load = (): void => {
     this.page.run(this.inventory.github(), {
       onSuccess: (d) => {
         const items = (d['repoItems'] as GithubRepo[]) ?? []
         if (items.length) this.repos.set(items)
       },
-      fallback: () => buildGithubInventoryFallback(allowsDemoDataFrom(this.pro)),
+      fallback: () => buildGithubInventoryFallback(),
       errorMessage: 'No se pudo cargar GitHub',
     })
   }
 
   loadRepoDetails = (repoId: string): void => {
-    const repo = this.drawerRepo() ?? this.repos().find((r) => r.id === repoId) ?? null
     this.github.branches(repoId).pipe(catchError(() => of({ items: [] }))).subscribe((b) => this.branches.set(b.items))
     this.github.commits(repoId).pipe(catchError(() => of({ items: [] }))).subscribe((c) => this.commits.set(c.items))
     this.github
       .repoWebhooks(repoId)
-      .pipe(
-        catchError(() => of({ items: [] })),
-        map((w) => {
-          if (w.items.length) return w.items
-          if (!allowsDemoDataFrom(this.pro)) return []
-          return CLIENT_DEMO_WEBHOOKS.filter((wh) => wh['repoFullName'] === repo?.fullName)
-        }),
-      )
-      .subscribe((items) => this.drawerWebhooks.set(items))
+      .pipe(catchError(() => of({ items: [] })))
+      .subscribe((w) => this.drawerWebhooks.set(w.items))
   }
 
   openDrawer = (repo: GithubRepo): void => {
@@ -242,13 +192,13 @@ export class GithubRepositoriesPageComponent implements OnInit {
     ref.afterClosed().subscribe((result) => {
       if (!result) return
       this.github.deployRepository(repo.id, result).subscribe({
-        next: (res) => this.runDemo('Despliegue GitHub', res.message),
+        next: (res) => this.runAction('Despliegue GitHub', res.message),
       })
     })
   }
 
   openGithubLogs = (): void => {
-    this.logsText.set('[GitHub] Sync OK\n[GitHub] Actions workflow success\n[GitHub] Webhook delivered')
+    this.logsText.set('[GitHub] Sin registros disponibles')
     this.logsOpen.set(true)
   }
 
@@ -261,11 +211,7 @@ export class GithubRepositoriesPageComponent implements OnInit {
         this.logsOpen.set(true)
       },
       error: () => {
-        this.logsText.set(
-          allowsDemoDataFrom(this.pro)
-            ? '[GitHub] Registros demo del despliegue'
-            : 'Sin registros de despliegue disponibles.',
-        )
+        this.logsText.set('Sin registros de despliegue disponibles.')
         this.logsOpen.set(true)
       },
     })
@@ -275,50 +221,32 @@ export class GithubRepositoriesPageComponent implements OnInit {
     this.connections.openGithub().subscribe()
   }
 
-  handleQuickConnect = (): void => {
-    if (!allowsDemoDataFrom(this.pro)) return
-    this.bootstrapGithubDemo()
-    this.runDemo('Demo GitHub conectada')
-    this.refreshDemoFromApi()
-  }
-
   handleValidate = (): void => {
     const acc = this.primaryAccount()
     if (!acc) return
-    this.github.validateAccount(acc.id).pipe(catchError(() => of({ message: 'OK demo' }))).subscribe({
-      next: (r) => this.runDemo('Validación GitHub', (r as { message?: string }).message),
+    this.github.validateAccount(acc.id).pipe(catchError(() => of({ message: 'Validación completada' }))).subscribe({
+      next: (r) => this.runAction('Validación GitHub', (r as { message?: string }).message),
     })
   }
 
   handleSync = (): void => {
     const acc = this.primaryAccount()
-    const allowDemo = allowsDemoDataFrom(this.pro)
     const sync$: Observable<{ synced: number; repos?: GithubRepo[] }> = acc
       ? this.github.syncAccount(acc.id).pipe(map((r) => ({ synced: r.synced, repos: this.repos() })))
-      : allowDemo
-        ? this.github.connectDemo().pipe(map((s) => ({ synced: s.synced, repos: s.repos })))
-        : of({ synced: 0, repos: [] })
-    sync$
-      .pipe(
-        catchError(() =>
-          allowDemo
-            ? this.github.demoRepos().pipe(map((r) => ({ synced: r.count, repos: r.items })))
-            : of({ synced: 0, repos: [] }),
-        ),
-      )
-      .subscribe({
-        next: (res) => {
-          if (res.repos?.length) this.repos.set(res.repos)
-          this.runDemo('Sincronización GitHub', `${res.synced} repositorios`)
-        },
-      })
+      : of({ synced: 0, repos: [] })
+    sync$.pipe(catchError(() => of({ synced: 0, repos: [] }))).subscribe({
+      next: (res) => {
+        if (res.repos?.length) this.repos.set(res.repos)
+        this.runAction('Sincronización GitHub', `${res.synced} repositorios`)
+      },
+    })
   }
 
   handleRepoSync = (repoId: string): void => {
     this.github.syncRepository(repoId).subscribe({
       next: () => {
         this.loadRepoDetails(repoId)
-        this.runDemo('Repositorio GitHub sincronizado')
+        this.runAction('Repositorio GitHub sincronizado')
       },
     })
   }
@@ -329,10 +257,10 @@ export class GithubRepositoriesPageComponent implements OnInit {
     else if (label === 'Desplegar') {
       const repo = this.repos()[0]
       if (repo) this.openDeploy(repo)
-    } else this.runDemo(label)
+    } else this.runAction(label)
   }
 
-  runDemo = (label: string, msg?: string): void => {
-    this.demoActions.simulate(label, 450, msg ?? `${label} (demo)`).subscribe()
+  runAction = (label: string, msg?: string): void => {
+    this.actions.simulate(label, 450, msg ?? label).subscribe()
   }
 }

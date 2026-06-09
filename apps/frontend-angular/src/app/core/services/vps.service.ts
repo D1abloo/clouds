@@ -4,8 +4,6 @@ import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { VpsHost } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
-import { demoVpsHosts } from '../demo/demo-fallback.data'
-import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 
 @Injectable({ providedIn: 'root' })
 export class VpsService {
@@ -17,9 +15,9 @@ export class VpsService {
       map((res) => {
         const rows = unwrapList<VpsHost>(res)
         if (rows.length) return rows
-        return allowsDemoDataFrom(this.pro) ? demoVpsHosts() : []
+        return []
       }),
-      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoVpsHosts() : [])),
+      catchError(() => of([])),
     )
 
   getOne = (id: string): Observable<VpsHost> =>

@@ -10,7 +10,7 @@ import {
   sparkPath,
   type CloudComputeRow,
   type CloudProviderUiConfig,
-} from './cloud-provider.demo'
+} from './cloud-provider.data'
 
 export interface CloudComputeDetailDialogData {
   instance: CloudComputeRow

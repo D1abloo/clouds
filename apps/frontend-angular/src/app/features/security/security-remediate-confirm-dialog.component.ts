@@ -6,7 +6,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar'
 import { ToastService } from '../../core/services/toast.service'
 import { SecurityCenterService } from './security-center.service'
 import { securitySeverityLabel } from './security.config'
-import type { SecurityRisk } from './security-center.demo'
+import type { SecurityRisk } from './security-center.data'
 
 export interface SecurityRemediateConfirmData {
   finding: SecurityRisk

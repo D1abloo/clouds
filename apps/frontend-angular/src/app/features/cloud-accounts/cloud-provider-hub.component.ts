@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { ActivatedRoute, RouterLink } from '@angular/router'
@@ -23,7 +24,6 @@ import { DetailDialogComponent } from '../../shared/components/detail-dialog/det
 import { InventoryService } from '../../core/services/inventory.service'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { InstancesService } from '../../core/services/instances.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.component'
@@ -328,7 +328,7 @@ type InstanceRow = Record<string, unknown>
           <mat-tab label="Audit">
             <div class="tab-panel">
               <p>Provider-scoped audit events appear in the global <a routerLink="/audit">Audit log</a>.</p>
-              <button mat-stroked-button type="button" (click)="demoActions.simulate('Audit export', 500).subscribe()">Export CSV</button>
+              <button mat-stroked-button type="button" (click)="actions.simulate('Audit export', 500).subscribe()">Export CSV</button>
             </div>
           </mat-tab>
         </mat-tab-group>
@@ -341,11 +341,12 @@ type InstanceRow = Record<string, unknown>
   `,
 })
 export class CloudProviderHubComponent implements OnInit {
+  readonly actions = inject(PlatformActionService)
+
   private readonly route = inject(ActivatedRoute)
   private readonly inventory = inject(InventoryService)
   private readonly accountsService = inject(CloudAccountsService)
   private readonly instancesService = inject(InstancesService)
-  readonly demoActions = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly destroyRef = inject(DestroyRef)
@@ -549,7 +550,7 @@ export class CloudProviderHubComponent implements OnInit {
             this.load()
             this.loadAccounts()
           },
-          error: () => this.demoActions.simulate('Inventory sync', 1200).subscribe(() => this.load()),
+          error: () => this.actions.simulate('Inventory sync', 1200).subscribe(() => this.load()),
         })
         return
       }
@@ -564,7 +565,7 @@ export class CloudProviderHubComponent implements OnInit {
   validateAccount = (account: Record<string, unknown>): void => {
     this.accountsService.validate(String(account['id'])).subscribe({
       next: () => this.toast.success(`Validated ${account['name']}`),
-      error: () => this.demoActions.simulate(`Validate ${account['name']}`, 600).subscribe(),
+      error: () => this.actions.simulate(`Validate ${account['name']}`, 600).subscribe(),
     })
   }
 
@@ -575,7 +576,7 @@ export class CloudProviderHubComponent implements OnInit {
         this.load()
         this.loadAccounts()
       },
-      error: () => this.demoActions.simulate('Account sync', 800).subscribe(() => this.load()),
+      error: () => this.actions.simulate('Account sync', 800).subscribe(() => this.load()),
     })
   }
 
@@ -588,7 +589,7 @@ export class CloudProviderHubComponent implements OnInit {
         this.toast.success(`${action} requested for ${row['name']}`)
         this.load()
       },
-      error: () => this.demoActions.simulate(`${action} ${row['name']}`, 500).subscribe(() => this.load()),
+      error: () => this.actions.simulate(`${action} ${row['name']}`, 500).subscribe(() => this.load()),
     })
   }
 
@@ -612,16 +613,16 @@ export class CloudProviderHubComponent implements OnInit {
   }
 
   demoMetric = (row: InstanceRow): void => {
-    this.demoActions.simulate(`Metrics ${row['name']}`, 500, 'Metrics loaded (demo)').subscribe()
+    this.actions.simulate(`Metrics ${row['name']}`, 500, 'Metrics loaded (demo)').subscribe()
   }
 
   demoTerraform = (row?: InstanceRow): void => {
     const name = row ? String(row['name']) : 'new-instance'
-    this.demoActions.simulate(`Terraform launch ${name}`, 1500, 'Plan generated — review in Terraform panel').subscribe()
+    this.actions.simulate(`Terraform launch ${name}`, 1500, 'Plan generated — review in Terraform panel').subscribe()
   }
 
   syncBilling = (): void => {
-    this.demoActions.simulate(`${this.provider} billing sync`, 1000, 'Billing data updated (estimated)').subscribe()
+    this.actions.simulate(`${this.provider} billing sync`, 1000, 'Billing data updated (estimated)').subscribe()
   }
 
   mockSecurity = (): { name: string; rules: number; vpc: string }[] => [

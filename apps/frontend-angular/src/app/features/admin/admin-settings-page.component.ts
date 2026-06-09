@@ -42,7 +42,7 @@ import {
   type SettingsNotificationChannel,
   type SettingsSecurityPolicy,
   type SettingsTabId,
-} from './admin-settings.demo'
+} from './admin-settings.data'
 import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integration-dialog.component'
 
 @Component({
@@ -912,9 +912,7 @@ export class AdminSettingsPageComponent implements OnInit {
   readonly integrations = signal<SettingsIntegration[]>([])
   readonly integrationsStatus = signal<IntegrationsStatusDto | null>(null)
   readonly integrationDeliveries = signal<IntegrationDeliveryDto[]>([])
-  readonly platformSources = signal<IntegrationPlatformSourceDto[]>(
-    SETTINGS_PLATFORM_SOURCES.map((s) => ({ ...s, events: [...s.events] })),
-  )
+  readonly platformSources = signal<IntegrationPlatformSourceDto[]>([])
   readonly notificationChannels = signal<SettingsNotificationChannel[]>([])
   readonly securityPolicies = signal<SettingsSecurityPolicy[]>([])
 

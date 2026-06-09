@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core'
 import { ActivatedRoute } from '@angular/router'
 import { bindSectionTabs } from '../../core/routing/section-tab.util'
@@ -6,7 +7,6 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { VpsService } from '../../core/services/vps.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { InfrastructureActionService } from './infrastructure-action.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
@@ -15,7 +15,7 @@ import {
   VPS_DEMO_PORTS,
   VPS_DEMO_SERVICES,
   VPS_DEMO_SSH_KEYS,
-} from './infrastructure.demo'
+} from './infrastructure.data'
 import { InfrastructureWorkspaceComponent } from './infrastructure-workspace.component'
 import { buildVpsWorkspace, type VpsHostRow } from './infrastructure-workspace.builders'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
@@ -46,9 +46,10 @@ type DemoRow = Record<string, unknown>
   `,
 })
 export class VpsPageComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly service = inject(VpsService)
   private readonly pro = inject(ProModeService)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly infraActions = inject(InfrastructureActionService)
   private readonly discovery = inject(VpsAddDiscoveryService)
@@ -190,7 +191,7 @@ export class VpsPageComponent implements OnInit {
       .subscribe({
         next: (created) => finishRegistration(created.id),
         error: () => {
-          this.demoActions.simulate(`Añadir VPS ${payload.name}`, 900, `${payload.name} registrado (demo)`).subscribe(() => {
+          this.actions.simulate(`Añadir VPS ${payload.name}`, 900, `${payload.name} registrado (demo)`).subscribe(() => {
             finishRegistration(`vps-${Date.now()}`)
           })
         },

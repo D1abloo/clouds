@@ -23,7 +23,7 @@ import {
   sparkPath,
   type IntegrationEventType,
   type SettingsIntegration,
-} from './admin-settings.demo'
+} from './admin-settings.data'
 
 export interface AdminSettingsIntegrationDialogData {
   integration: SettingsIntegration

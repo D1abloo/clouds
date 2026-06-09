@@ -15,7 +15,7 @@ import {
   CLIENT_DEMO_GITHUB_ACTIONS,
   CLIENT_DEMO_GITHUB_ISSUES,
   CLIENT_DEMO_DEPLOYMENTS,
-} from '../utils/github-demo-catalog'
+} from '../utils/github.data'
 import { repoRoute } from '../repositories-section.config'
 import { RepositoriesQuickLinksComponent } from '../components/repositories-quick-links.component'
 

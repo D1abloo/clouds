@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { DatePipe } from '@angular/common'
 import { Component, inject, computed, signal, effect, OnInit } from '@angular/core'
 import { Router, NavigationEnd } from '@angular/router'
@@ -24,7 +25,6 @@ import {
   enrichRunbookExecution,
   inferFinishedAt,
 } from './runbook-execution.util'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { InstancesService } from '../../core/services/instances.service'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
@@ -46,8 +46,6 @@ import {
   type RunbookImportPayload,
 } from './runbook-import-dialog.component'
 import {
-  defaultRunbookExecutions,
-  defaultRunbooks,
   RUNBOOK_CATEGORY_LABELS,
   RUNBOOK_EXECUTION_RESULT_LABELS,
   RUNBOOK_TRIGGER_LABELS,
@@ -55,7 +53,8 @@ import {
   type RunbookCategory,
   type RunbookExecution,
   type RunbookStep,
-} from './runbooks.demo'
+} from './runbooks.types'
+import { defaultRunbookExecutions, defaultRunbooks } from './runbooks.data'
 import { ApprovalsService } from '../approvals/approvals.service'
 import { needsApprovalBeforeRunbook } from '../approvals/approvals.util'
 
@@ -722,7 +721,8 @@ type RunbooksView = 'catalog' | 'executions'
   ],
 })
 export class RunbooksPageComponent implements OnInit {
-  private readonly demo = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly router = inject(Router)
@@ -964,7 +964,7 @@ export class RunbooksPageComponent implements OnInit {
     if (!rb) return
 
     const label = result.dryRun ? `Simulando: ${rb.name}` : `Ejecutando: ${rb.name}`
-    this.demo.simulate(label, 700).subscribe({
+    this.actions.simulate(label, 700).subscribe({
       next: () => {
         const stepsTotal = rb.steps.length
         const stepsCompleted = result.dryRun ? stepsTotal : stepsTotal

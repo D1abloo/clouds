@@ -5,7 +5,7 @@ import {
   type ChangeRequest,
   type ChangeStatus,
   type MaintenanceWindow,
-} from './change-management.demo'
+} from './change-management.data'
 import { OPEN_CHANGE_STATUSES, TERMINAL_CHANGE_STATUSES } from './change-management.config'
 
 export interface CreateChangeInput {

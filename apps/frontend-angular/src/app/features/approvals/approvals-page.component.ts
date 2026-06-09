@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { ToastService } from '../../core/services/toast.service'
 import { ApprovalsService } from '../approvals/approvals.service'
-import { defaultServiceCatalogTemplates } from '../service-catalog/service-catalog.demo'
+import { defaultServiceCatalogTemplates } from '../service-catalog/service-catalog.types'
 import { ApprovalsDetailPanelComponent } from './approvals-detail-panel.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
 import {
@@ -24,7 +24,7 @@ import {
   type ApprovalRequest,
   type ApprovalRisk,
   type ApprovalStatus,
-} from './approvals.demo'
+} from './approvals.data'
 
 type ApprovalsView = 'pending' | 'history' | 'policies'
 

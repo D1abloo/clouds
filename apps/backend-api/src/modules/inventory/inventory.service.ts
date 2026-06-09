@@ -152,9 +152,7 @@ export class InventoryService {
         this.kubernetesSummary(),
         this.jenkinsSummary(),
         this.terraformSummary(),
-        this.githubSummarySvc.summaryForInventory().catch(() =>
-          this.mode.canUseDemoFallback() ? this.githubSummarySvc.demoSummary() : emptyGithubSummary(),
-        ),
+        this.githubSummarySvc.summaryForInventory().catch(() => emptyGithubSummary()),
       ])
 
     const byProvider = instances.reduce(

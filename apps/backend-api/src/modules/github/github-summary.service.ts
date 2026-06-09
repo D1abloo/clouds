@@ -1,36 +1,19 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
-import { AppModeService } from '../../common/config/app-mode.service'
-import { GithubDemoService } from './github-demo.service'
 import { mapRepo } from './github-mappers'
 import { emptyGithubInventorySummary } from '../../common/utils/demo-runtime.util'
 
 @Injectable()
 export class GithubSummaryService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly demo: GithubDemoService,
-    private readonly mode: AppModeService,
-  ) {}
-
-  demoSummary() {
-    return this.demo.demoSummary()
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   async summaryForInventory() {
-    const demoAllowed = this.mode.canUseDemoFallback()
-
-    if (!this.demo.isDbReady()) {
-      return demoAllowed ? this.demo.demoSummary() : emptyGithubInventorySummary()
-    }
     try {
       const account = await this.prisma.githubAccount.findFirst({
         orderBy: { lastSyncAt: 'desc' },
       })
       const repos = await this.prisma.githubRepository.findMany({ orderBy: { name: 'asc' } })
-      if (!repos.length) {
-        return demoAllowed ? this.demo.demoSummary() : emptyGithubInventorySummary()
-      }
+      if (!repos.length) return emptyGithubInventorySummary()
       const [branchCount, commitCount, openPrs, webhookCount, deploymentCount] = await Promise.all([
         this.prisma.githubBranch.count(),
         this.prisma.githubCommit.count(),
@@ -52,7 +35,7 @@ export class GithubSummaryService {
         lastSyncAt: account?.lastSyncAt?.toISOString() ?? null,
       }
     } catch {
-      return demoAllowed ? this.demo.demoSummary() : emptyGithubInventorySummary()
+      return emptyGithubInventorySummary()
     }
   }
 }

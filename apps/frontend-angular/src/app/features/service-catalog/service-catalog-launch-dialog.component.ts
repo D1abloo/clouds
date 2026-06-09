@@ -16,7 +16,7 @@ import {
   type ServiceCatalogEnvironment,
   type ServiceCatalogLaunch,
   type ServiceCatalogTemplate,
-} from './service-catalog.demo'
+} from './service-catalog.types'
 import { ENVIRONMENT_OPTIONS } from './service-catalog.config'
 import {
   simulateLaunchOutput,

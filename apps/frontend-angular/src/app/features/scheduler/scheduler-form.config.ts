@@ -1,4 +1,4 @@
-import type { SchedulerCloudProvider, SchedulerEnvironment, SchedulerTaskType } from './scheduler.demo'
+import type { SchedulerCloudProvider, SchedulerEnvironment, SchedulerTaskType } from './scheduler.data'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
 export interface SchedulerTypeDefaults {

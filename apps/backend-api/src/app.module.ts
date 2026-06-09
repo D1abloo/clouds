@@ -27,7 +27,6 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AuditModule } from './modules/audit/audit.module'
 import { RealtimeModule } from './modules/realtime/realtime.module'
 import { HealthModule } from './modules/health/health.module'
-import { DemoModule } from './modules/demo/demo.module'
 import { InventoryModule } from './modules/inventory/inventory.module'
 import { DockerModule } from './modules/docker/docker.module'
 import { CommandCenterModule } from './modules/command-center/command-center.module'
@@ -69,7 +68,6 @@ import { UserShortcutsModule } from './modules/user-shortcuts/user-shortcuts.mod
     AuditModule,
     RealtimeModule,
     HealthModule,
-    DemoModule,
     InventoryModule,
     DockerModule,
     KubernetesApiModule,

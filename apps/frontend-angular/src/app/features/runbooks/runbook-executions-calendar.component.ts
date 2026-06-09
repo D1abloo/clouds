@@ -1,7 +1,7 @@
 import { Component, computed, input, output } from '@angular/core'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import type { RunbookExecution } from './runbooks.demo'
+import type { RunbookExecution } from './runbooks.types'
 import {
   buildExecutionDayMap,
   buildMonthGrid,

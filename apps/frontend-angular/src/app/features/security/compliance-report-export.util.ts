@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { triggerBlobDownload, downloadTextFile, slugifyFilename } from '../infrastructure/infrastructure-report-export.util'
 import { securitySeverityLabel } from './security.config'
-import type { ComplianceReport, ComplianceViolation } from './compliance.demo'
+import type { ComplianceReport, ComplianceViolation } from './compliance.data'
 
 const frameworkMeta: Record<string, { label: string; color: [number, number, number]; subtitle: string }> = {
   SOC2: { label: 'SOC 2 Type II', color: [37, 99, 235], subtitle: 'AICPA Trust Services Criteria' },

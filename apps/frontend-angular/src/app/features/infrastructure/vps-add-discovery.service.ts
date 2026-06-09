@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core'
 import { concatMap, delay, from, last, map, Observable, of, tap } from 'rxjs'
 import { ToastService } from '../../core/services/toast.service'
 import type { VpsAddDialogResult } from './vps-add.dialog'
-import { infraTs } from './infrastructure.demo'
+import { infraTs } from './infrastructure.data'
 import type { VpsHostRow } from './infrastructure-workspace.builders'
 import { hashSeed } from './infrastructure-vps-operations.util'
 

@@ -8,7 +8,7 @@ import {
   buildReportDocument,
   reportDocumentText,
   type ReportDocument,
-} from './reports-demo.util'
+} from './reports.util'
 import { downloadReportPdf, downloadReportTxt } from './report-export.util'
 
 export type ReportDocumentDialogData = {

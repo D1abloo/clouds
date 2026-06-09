@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTabsModule } from '@angular/material/tabs'
 import { securitySeverityLabel, securityStatusLabel, downloadBlob } from './security.config'
-import type { SecurityRisk } from './security-center.demo'
+import type { SecurityRisk } from './security-center.data'
 
 export interface SecurityEvidenceDialogData {
   finding: SecurityRisk

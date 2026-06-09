@@ -384,7 +384,7 @@ export class AdminRolesPageComponent implements OnInit {
 
   ngOnInit(): void {
     if (allowsDemoDataFrom(this.pro)) {
-      void import('./admin-roles.demo').then((m) => {
+      void import('./admin-roles.config').then((m) => {
         this.roles.set(m.ADMIN_ROLES)
         this.permissions.set(m.ADMIN_PERMISSIONS)
         this.assignments.set([...m.ADMIN_ROLE_ASSIGNMENTS])

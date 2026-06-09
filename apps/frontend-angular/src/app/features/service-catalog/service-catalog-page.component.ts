@@ -15,7 +15,7 @@ import {
   type ServiceCatalogCategory,
   type ServiceCatalogLaunch,
   type ServiceCatalogTemplate,
-} from './service-catalog.demo'
+} from './service-catalog.types'
 import { ServiceCatalogFormDialogComponent } from './service-catalog-form-dialog.component'
 import { ServiceCatalogImportDialogComponent } from './service-catalog-import-dialog.component'
 import { ServiceCatalogPublishDialogComponent } from './service-catalog-publish-dialog.component'

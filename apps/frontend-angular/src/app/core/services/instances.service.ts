@@ -4,8 +4,6 @@ import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { CloudProvider, Instance } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
-import { demoInstances } from '../demo/demo-fallback.data'
-import { allowsDemoDataFrom } from '../utils/demo-runtime.util'
 import { emptyInstances } from '../demo/pro-empty.data'
 
 @Injectable({ providedIn: 'root' })
@@ -25,9 +23,9 @@ export class InstancesService {
         if (list.length) return list
         const grouped = flattenGroupedInstances(res)
         if (grouped.length) return grouped
-        return allowsDemoDataFrom(this.pro) ? demoInstances() : emptyInstances()
+        return emptyInstances()
       }),
-      catchError(() => of(allowsDemoDataFrom(this.pro) ? demoInstances() : emptyInstances())),
+      catchError(() => of(emptyInstances())),
     )
 
   getOne = (id: string): Observable<Instance> =>

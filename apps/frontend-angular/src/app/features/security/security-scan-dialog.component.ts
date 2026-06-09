@@ -24,7 +24,7 @@ import {
   type SecurityScanReport,
 } from './security-scan-report.util'
 import { SecurityScanReportDialogComponent } from './security-scan-report-dialog.component'
-import type { SecurityRisk } from './security-center.demo'
+import type { SecurityRisk } from './security-center.data'
 
 type ScanPhase = 'config' | 'running' | 'results'
 type ScanScope = 'full' | 'critical' | 'targeted'

@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { ChangeDetectionStrategy, Component, inject, signal, computed, OnInit } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
@@ -19,7 +20,6 @@ import {
   ResourceExplorerDetailDialogComponent,
   type ResourceExplorerDetailDialogResult,
 } from './resource-explorer-detail-dialog.component'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { ToastService } from '../../core/services/toast.service'
 import { ModuleOptionalCtaComponent } from '../../shared/components/module-optional-cta/module-optional-cta.component'
@@ -27,9 +27,9 @@ import { getInternalEmptyCopy } from '../../core/routing/module-requirements.uti
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import {
   EXPLORER_RESOURCES_RICH,
-  EXPLORER_TYPE_FILTERS,
   type ExplorerResourceRich,
-} from '../overview/overview-pages.demo'
+} from '../overview/overview-pages.data'
+import { EXPLORER_TYPE_FILTERS } from '../overview/overview-pages.config'
 
 const nowTime = (): string =>
   new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
@@ -495,7 +495,8 @@ const nowTime = (): string =>
   `,
 })
 export class ResourceExplorerComponent implements OnInit {
-  private readonly demo = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   readonly pro = inject(ProModeService)
@@ -605,7 +606,7 @@ export class ResourceExplorerComponent implements OnInit {
       })
       return
     }
-    this.demo.simulate('Exportar CSV del explorador', 600, 'CSV exportado con ' + this.filtered().length + ' recursos').subscribe()
+    this.actions.simulate('Exportar CSV del explorador', 600, 'CSV exportado con ' + this.filtered().length + ' recursos').subscribe()
   }
 
   viewDetail = (row: ExplorerResourceRich): void => {

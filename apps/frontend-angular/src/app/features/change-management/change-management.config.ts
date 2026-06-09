@@ -1,4 +1,4 @@
-import type { ChangeCloud, ChangeRequest, ChangeRisk, ChangeStatus, ChangeType } from './change-management.demo'
+import type { ChangeCloud, ChangeRequest, ChangeRisk, ChangeStatus, ChangeType } from './change-management.data'
 
 export const CHANGE_TYPE_LABELS: Record<ChangeType, string> = {
   standard: 'Estándar',

@@ -1,5 +1,5 @@
 import type { InfraResourceRow } from './infrastructure-workspace.types'
-import { VPS_DEMO_PORTS, VPS_DEMO_SSH_KEYS } from './infrastructure.demo'
+import { VPS_DEMO_PORTS, VPS_DEMO_SSH_KEYS } from './infrastructure.data'
 import type { VpsHostRow } from './infrastructure-workspace.builders'
 import type { VpsAddDialogResult } from './vps-add.dialog'
 

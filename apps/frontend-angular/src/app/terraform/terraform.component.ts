@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../shared/platform/platform-action.service'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,7 +26,6 @@ import { CloudAccountsStore } from '../core/stores/cloud-accounts.store'
 import { SettingsStore } from '../core/stores/settings.store'
 import { RealtimeService } from '../core/services/realtime.service'
 import { ToastService } from '../core/services/toast.service'
-import { DemoActionsService } from '../core/services/demo-actions.service'
 import { LaunchInstanceModalComponent } from '../shared/modals/launch-instance/launch-instance-modal.component'
 import { TerraformOverviewComponent } from './terraform-overview.component'
 import { TerraformWorkspaceHubComponent } from './terraform-workspace-hub.component'
@@ -67,7 +67,7 @@ import {
   TERRAFORM_DEMO_SUMMARY,
   TERRAFORM_FOLDERS,
   type TerraformPageSummary,
-} from './terraform.demo'
+} from './terraform.util'
 import { ProModeService } from '../core/services/pro-mode.service'
 import type { TerraformLaunchRecord } from './terraform-folders'
 import {
@@ -75,7 +75,7 @@ import {
   launchRecordsFromDetails,
   type TerraformLaunchDetail,
   launchDetailFromRecord,
-} from './terraform-launches.demo'
+} from './terraform-launches.data'
 import { LoadingStateComponent } from '../shared/components/loading-state/loading-state.component'
 import { RunDetailDrawerComponent } from '../features/terraform/components/run-detail-drawer.component'
 import { CloudProvider } from '../core/models/api.models'
@@ -103,6 +103,8 @@ import { CloudProvider } from '../core/models/api.models'
   styleUrl: './terraform.component.scss',
 })
 export class TerraformComponent implements OnInit {
+  private readonly platformActions = inject(PlatformActionService)
+
   private readonly terraform = inject(TerraformService)
   readonly runStore = inject(TerraformRunStore)
   private readonly cloudStore = inject(CloudAccountsStore)
@@ -110,7 +112,6 @@ export class TerraformComponent implements OnInit {
   private readonly realtime = inject(RealtimeService)
   private readonly dialog = inject(MatDialog)
   private readonly toast = inject(ToastService)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly destroyRef = inject(DestroyRef)
   private readonly route = inject(ActivatedRoute)
   private readonly pro = inject(ProModeService)
@@ -478,7 +479,7 @@ export class TerraformComponent implements OnInit {
       this.toast.info('Selecciona un proyecto para guardar')
       return
     }
-    this.demoActions.simulate('Guardar proyecto', 900, 'Estado y HCL persistidos').subscribe(() => {
+    this.platformActions.simulate('Guardar proyecto', 900, 'Estado y HCL persistidos').subscribe(() => {
       this.projects.update((list) =>
         list.map((p) =>
           p.id === proj.id ? { ...p, savedAt: new Date().toISOString(), status: p.status === 'draft' ? 'healthy' : p.status } : p,

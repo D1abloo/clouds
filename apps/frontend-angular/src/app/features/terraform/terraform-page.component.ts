@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { MatTabsModule } from '@angular/material/tabs'
@@ -17,7 +18,6 @@ import { ErrorStateComponent } from '../../shared/components/error-state/error-s
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { RealtimeStatusBadgeComponent } from '../../shared/components/realtime-status-badge/realtime-status-badge.component'
 import { TerraformService } from '../../core/services/terraform.service'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
@@ -224,8 +224,9 @@ type RunRow = Record<string, unknown>
   `,
 })
 export class TerraformPageComponent implements OnInit {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly terraform = inject(TerraformService)
-  private readonly demoActions = inject(DemoActionsService)
   private readonly dialog = inject(MatDialog)
   private readonly toast = inject(ToastService)
 
@@ -285,7 +286,7 @@ export class TerraformPageComponent implements OnInit {
 
   handleHeader = (label: string): void => {
     if (label === 'New plan') {
-      this.demoActions.simulate('Terraform plan', 1500, 'Plan ready — 1 resource to add').subscribe(() => this.load())
+      this.actions.simulate('Terraform plan', 1500, 'Plan ready — 1 resource to add').subscribe(() => this.load())
     }
   }
 

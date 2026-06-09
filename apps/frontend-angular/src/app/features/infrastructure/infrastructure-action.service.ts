@@ -1,10 +1,10 @@
+import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { inject, Injectable } from '@angular/core'
 import { Router } from '@angular/router'
 import { MatDialog } from '@angular/material/dialog'
 import { Observable, forkJoin, of } from 'rxjs'
 import { catchError, switchMap } from 'rxjs/operators'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
 import { ToastService } from '../../core/services/toast.service'
 import { VpsService } from '../../core/services/vps.service'
 import {
@@ -67,8 +67,9 @@ export interface InfraActionContext {
 
 @Injectable({ providedIn: 'root' })
 export class InfrastructureActionService {
+  private readonly actions = inject(PlatformActionService)
+
   private readonly dialog = inject(MatDialog)
-  private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
   private readonly vps = inject(VpsService)
   private readonly router = inject(Router)
@@ -84,7 +85,7 @@ export class InfrastructureActionService {
 
   validateAddPayload(payload: VpsAddDialogResult): Observable<void> {
     return new Observable((subscriber) => {
-      this.demo.simulate(`Validar SSH · ${payload.name}`, 650).subscribe({
+      this.actions.simulate(`Validar SSH · ${payload.name}`, 650).subscribe({
         next: () => {
           this.openValidateDialog(buildValidateResultFromAdd(payload))
           this.toast.success(`Conexión SSH validada · ${payload.name}`)
@@ -166,7 +167,7 @@ export class InfrastructureActionService {
       return
     }
 
-    this.demo.simulate(`${op.label} · ${row.title}`, 700, `${op.label} completado`).subscribe(() => {
+    this.actions.simulate(`${op.label} · ${row.title}`, 700, `${op.label} completado`).subscribe(() => {
       this.toast.success(`${op.label}: ${row.title}`)
     })
   }
@@ -280,7 +281,7 @@ export class InfrastructureActionService {
         this.toast.success(`SSH validado: ${host.hostName}`)
       },
       error: () => {
-        this.demo.simulate(`Validar ${host.hostName}`, 650).subscribe(() => {
+        this.actions.simulate(`Validar ${host.hostName}`, 650).subscribe(() => {
           this.openValidateDialog(buildValidateResult(row))
           this.toast.success(`SSH validado (demo): ${host.hostName}`)
         })
@@ -324,7 +325,7 @@ export class InfrastructureActionService {
   runPortAudit(hosts: VpsHostRow[], portCatalog: Record<string, unknown>[]): void {
     const duration = 1800 + hosts.length * 400
     this.toast.info(`Auditoría de puertos en curso · ${hosts.length} hosts…`)
-    this.demo.simulate('Auditoría de puertos', duration, 'Escaneo de flota completado').subscribe({
+    this.actions.simulate('Auditoría de puertos', duration, 'Escaneo de flota completado').subscribe({
       next: () => {
         const report = buildPortAuditReport(hosts, portCatalog)
         this.dialog.open(VpsPortAuditDialogComponent, {
@@ -386,7 +387,7 @@ export class InfrastructureActionService {
 
     validations$.subscribe()
 
-    this.demo.simulate('Validar todos los VPS', duration, 'Validación batch completada').subscribe({
+    this.actions.simulate('Validar todos los VPS', duration, 'Validación batch completada').subscribe({
       next: () => this.openBatchValidateReport(hosts),
       error: () => this.openBatchValidateReport(hosts),
     })
@@ -414,7 +415,7 @@ export class InfrastructureActionService {
   ): void {
     const duration = 2400 + hosts.length * 380
     this.toast.info(`Análisis de claves SSH en curso · ${hosts.length} hosts…`)
-    this.demo.simulate('Rotar claves SSH', duration, 'Análisis SSH completado').subscribe({
+    this.actions.simulate('Rotar claves SSH', duration, 'Análisis SSH completado').subscribe({
       next: () => this.openSshRotationReport(hosts, sshKeys, onKeyRotated),
       error: () => this.openSshRotationReport(hosts, sshKeys, onKeyRotated),
     })
@@ -462,7 +463,7 @@ export class InfrastructureActionService {
 
   private runModuleOperationSimulate(label: string, target: string, onDone: () => void): void {
     this.toast.info(`${label} en curso…`)
-    this.demo.simulate(`${label} · ${target}`, 900, `${label} completado`).subscribe({
+    this.actions.simulate(`${label} · ${target}`, 900, `${label} completado`).subscribe({
       next: () => {
         onDone()
         this.toast.success(`${label} completado`)
@@ -495,7 +496,7 @@ export class InfrastructureActionService {
       switchMap((result: InfrastructureActionInfoDialogResult | undefined) => {
         if (result !== 'run') return of(undefined)
         return new Observable<void>((subscriber) => {
-          this.demo.simulate(label, 900, `${label} completado`).subscribe({
+          this.actions.simulate(label, 900, `${label} completado`).subscribe({
             next: () => {
               this.toast.success(`${label} ejecutado correctamente`)
               onRun?.()

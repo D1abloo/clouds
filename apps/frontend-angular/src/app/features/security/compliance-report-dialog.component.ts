@@ -12,7 +12,7 @@ import {
   downloadComplianceReportPdf,
   downloadComplianceReportTxt,
 } from './compliance-report-export.util'
-import type { ComplianceReport, ComplianceViolation } from './compliance.demo'
+import type { ComplianceReport, ComplianceViolation } from './compliance.data'
 
 export interface ComplianceReportDialogData {
   report: ComplianceReport

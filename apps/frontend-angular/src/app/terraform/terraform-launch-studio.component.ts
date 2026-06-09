@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { StatusBadgeComponent } from '../shared/components/status-badge/status-badge.component'
 import { BrandLogoComponent } from '../shared/components/brand-logo/brand-logo.component'
 import type { NavLogoKey } from '../shared/theme/nav-logo.types'
-import type { TerraformLaunchDetail } from './terraform-launches.demo'
+import type { TerraformLaunchDetail } from './terraform-launches.data'
 
 @Component({
   selector: 'app-terraform-launch-studio',

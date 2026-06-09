@@ -1,5 +1,5 @@
 import { securitySeverityLabel } from './security.config'
-import type { SecurityRisk } from './security-center.demo'
+import type { SecurityRisk } from './security-center.data'
 
 export interface SecurityScanReportTarget {
   provider: string

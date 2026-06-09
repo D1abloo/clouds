@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../../shared/platform/platform-action.service'
 import { Component, Input, inject, output } from '@angular/core'
 import { DatePipe } from '@angular/common'
 import { MatButtonModule } from '@angular/material/button'
@@ -6,8 +7,7 @@ import { MatTabsModule } from '@angular/material/tabs'
 import { MatProgressBarModule } from '@angular/material/progress-bar'
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
-import { DemoActionsService } from '../../../core/services/demo-actions.service'
-import type { GitlabProject } from '../utils/gitlab-demo-catalog'
+import type { GitlabProject } from '../utils/gitlab.data'
 import {
   buildGitlabDrawerOverview,
   gitlabMrBadge,
@@ -15,7 +15,7 @@ import {
   gitlabVisibilityBadge,
   gitlabVisibilityLabel,
   type GitlabDrawerOverview,
-} from '../utils/gitlab-drawer-demo.util'
+} from '../utils/gitlab-drawer.util'
 
 @Component({
   selector: 'app-gitlab-project-detail-drawer',
@@ -667,7 +667,8 @@ import {
   `,
 })
 export class GitlabProjectDetailDrawerComponent {
-  private readonly demoActions = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
 
   @Input() open = false
   @Input() project: GitlabProject | null = null
@@ -712,7 +713,7 @@ export class GitlabProjectDetailDrawerComponent {
   }
 
   runDemo = (label: string): void => {
-    this.demoActions.simulate(label, 450, `${label} (demo GitLab)`).subscribe()
+    this.actions.simulate(label, 450, `${label} (demo GitLab)`).subscribe()
   }
 
   handleCopyLogs = (): void => {

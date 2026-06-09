@@ -1,5 +1,5 @@
 import type { CreateJenkinsJobForm, JenkinsJob, JenkinsJobType } from './jenkins.models'
-import type { JobRow } from './jenkins.demo'
+import type { JobRow } from './jenkins.util'
 
 export interface ProdReadinessCheck {
   id: string

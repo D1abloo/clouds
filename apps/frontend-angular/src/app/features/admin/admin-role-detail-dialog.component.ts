@@ -19,7 +19,7 @@ import {
   adminPermissionCategoryMix,
   type AdminRoleRow,
   type AdminRoleAssignmentRow,
-} from './admin-roles.demo'
+} from './admin-roles.data'
 import { AdminRoleAssignmentEditDialogComponent } from './admin-role-assignment-edit-dialog.component'
 
 export interface AdminRoleDetailData {

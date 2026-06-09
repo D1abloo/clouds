@@ -1,6 +1,6 @@
 import { providerToLogo } from '../overview/utils/provider-logo.util'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
-import type { ChangeCloud, ChangeRequest, ChangeTemplate } from './change-management.demo'
+import type { ChangeCloud, ChangeRequest, ChangeTemplate } from './change-management.data'
 
 const uniqueLogos = (keys: (NavLogoKey | null | undefined)[]): NavLogoKey[] => {
   const seen = new Set<NavLogoKey>()

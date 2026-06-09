@@ -12,7 +12,7 @@ import {
   APPROVAL_SOURCE_LOGO,
   APPROVAL_STATUS_LABELS,
 } from './approvals.config'
-import type { ApprovalRequest, ApprovalStatus } from './approvals.demo'
+import type { ApprovalRequest, ApprovalStatus } from './approvals.data'
 
 type DetailTab = 'resumen' | 'cadena' | 'payload' | 'actividad'
 

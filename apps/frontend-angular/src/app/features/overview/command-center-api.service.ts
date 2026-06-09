@@ -7,7 +7,7 @@ import type {
   ExecuteActionPayload,
 } from './command-center.types'
 import type { CommandCenterActionDialogResult } from './command-center-action-dialog.component'
-import type { CommandCenterQuickAction } from './overview-pages.demo'
+import type { CommandCenterQuickAction } from './overview-pages.data'
 
 const normalizeActionLabel = (action: string): string => action.toLowerCase()
 

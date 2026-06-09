@@ -8,7 +8,7 @@ import {
   GLOBAL_WEBHOOK_ERRORS,
   GLOBAL_WEBHOOK_PAYLOADS,
   GLOBAL_WEBHOOK_RETRIES,
-} from '../utils/repositories-global-demo.util'
+} from '../utils/repositories-global.util'
 import { RepositoriesQuickLinksComponent } from '../components/repositories-quick-links.component'
 
 @Component({

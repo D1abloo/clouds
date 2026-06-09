@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { ToastService } from '../../core/services/toast.service'
 import { downloadCloudInvoicePdf } from './cloud-invoice-download.util'
-import { fmtUsd, type CloudBillingRow, type CloudProviderUiConfig } from './cloud-provider.demo'
+import { fmtUsd, type CloudBillingRow, type CloudProviderUiConfig } from './cloud-provider.data'
 
 export interface CloudServiceInvoiceDialogData {
   invoice: CloudBillingRow

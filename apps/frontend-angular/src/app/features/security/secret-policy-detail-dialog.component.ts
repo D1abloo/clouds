@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component'
 import { ToastService } from '../../core/services/toast.service'
 import { SECURITY_ACCENT, SECURITY_ACCENT_BORDER, SECURITY_ACCENT_LIGHT } from './security.config'
-import type { RotationPolicy } from './secrets-manager.demo'
+import type { RotationPolicy } from './secrets-manager.data'
 
 export interface SecretPolicyDetailData {
   policy: RotationPolicy

@@ -1,3 +1,4 @@
+import { PlatformActionService } from '../../../shared/platform/platform-action.service'
 import { Component, Input, output, inject } from '@angular/core'
 import { DatePipe } from '@angular/common'
 import { RouterLink } from '@angular/router'
@@ -9,7 +10,6 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component'
 import { MiniChartComponent } from '../../../shared/components/mini-chart/mini-chart.component'
 import { DashboardInstanceRow } from '../dashboard.models'
-import { DemoActionsService } from '../../../core/services/demo-actions.service'
 import { buildInstanceTrendChart } from '../utils/dashboard-instance-charts.util'
 import {
   computeInstanceCostPerMinute,
@@ -661,7 +661,8 @@ import {
   `,
 })
 export class InstanceDetailDrawerComponent {
-  private readonly demoActions = inject(DemoActionsService)
+  private readonly actions = inject(PlatformActionService)
+
 
   @Input() open = false
   @Input() instance: DashboardInstanceRow | null = null
@@ -731,6 +732,6 @@ export class InstanceDetailDrawerComponent {
   }
 
   demo = (action: string): void => {
-    this.demoActions.simulate(`${action} — ${this.instance?.name}`, 350).subscribe()
+    this.actions.simulate(`${action} — ${this.instance?.name}`, 350).subscribe()
   }
 }

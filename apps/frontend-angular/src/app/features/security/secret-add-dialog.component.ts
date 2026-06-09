@@ -4,8 +4,8 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { SECURITY_ACCENT, SECURITY_ACCENT_BORDER } from './security.config'
-import type { SecretRecord, SecretType } from './secrets-manager.demo'
-import { SECRET_TYPE_LABELS } from './secrets-manager.demo'
+import type { SecretRecord, SecretType } from './secrets-manager.data'
+import { SECRET_TYPE_LABELS } from './secrets-manager.data'
 
 @Component({
   selector: 'app-secret-add-dialog',

@@ -1,4 +1,4 @@
-import { CLIENT_DEMO_GITHUB_ACTIONS } from './github-demo-catalog'
+import { CLIENT_DEMO_GITHUB_ACTIONS } from './github.data'
 
 export type GithubPr = Record<string, unknown>
 

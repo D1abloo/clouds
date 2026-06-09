@@ -56,6 +56,9 @@ docker-compose.override.yml
 *.pem
 *.key
 !*.key.example
+gcp.txt
+*_accessKeys.csv
+project-*.json
 secrets/
 certificado/
 infra/certs/

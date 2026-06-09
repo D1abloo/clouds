@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common'
 import { MatIconModule } from '@angular/material/icon'
 import { BrandLogoComponent } from '../../../shared/components/brand-logo/brand-logo.component'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
-import type { GitlabAccount } from '../utils/gitlab-demo-catalog'
+import type { GitlabAccount } from '../utils/gitlab.data'
 
 @Component({
   selector: 'app-gitlab-account-card',

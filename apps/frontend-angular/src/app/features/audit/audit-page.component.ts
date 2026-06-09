@@ -30,7 +30,7 @@ import {
   type AuditExport,
   type ComplianceTrailEntry,
   type SecurityEvent,
-} from './audit.demo'
+} from './audit.data'
 import { AuditActivityLogComponent } from './audit-activity-log.component'
 import { AuditActivityDetailDialogComponent } from './audit-activity-detail-dialog.component'
 import { AuditSecurityEventDetailDialogComponent } from './audit-security-event-detail-dialog.component'

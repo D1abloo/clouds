@@ -10,7 +10,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
-import { REPORTS_CONFIG } from '../../shared/platform/platform-modules.demo'
+import { REPORTS_CONFIG } from '../../shared/platform/platform-modules.data'
 import { REPORT_CLOUD_META, type ReportCloudProvider } from '../../shared/platform/report-cloud.util'
 import { REPORT_TYPE_ICONS, REPORT_TYPE_LABELS } from './reports.config'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'

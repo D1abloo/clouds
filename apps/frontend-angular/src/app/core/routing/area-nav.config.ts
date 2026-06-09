@@ -338,7 +338,6 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
       { id: 'roles', label: 'Roles', route: '/admin/roles', icon: 'manage_accounts' },
       { id: 'api-tokens', label: 'Tokens API', route: '/admin/api-tokens', icon: 'vpn_key', badgeKey: 'tokens' },
       { id: 'webhooks', label: 'Webhooks', route: '/admin/webhooks', icon: 'webhook', badgeKey: 'admin-webhooks' },
-      { id: 'demo-mode', label: 'Modo demo', route: '/admin/demo-mode', icon: 'science' },
       { id: 'settings', label: 'Configuración', route: '/settings/general', icon: 'settings' },
       { id: 'ai-assistant', label: 'Asistente IA', route: '/ai-assistant', icon: 'auto_awesome', badgeKey: 'copilot' },
     ],

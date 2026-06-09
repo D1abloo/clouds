@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core'
 import { MatDialog } from '@angular/material/dialog'
-import { DemoActionsService } from '../../core/services/demo-actions.service'
+import { delay, Observable, of, tap } from 'rxjs'
 import { ToastService } from '../../core/services/toast.service'
 import { PlatformActionDialogComponent } from './platform-action-dialog.component'
 import { ReportDocumentDialogComponent } from './report-document-dialog.component'
@@ -16,8 +16,17 @@ import { getPlatformQuickActionId, resolveHeaderActionId } from './platform-modu
 @Injectable({ providedIn: 'root' })
 export class PlatformActionService {
   private readonly dialog = inject(MatDialog)
-  private readonly demo = inject(DemoActionsService)
   private readonly toast = inject(ToastService)
+
+  simulate = (
+    label: string,
+    ms = 600,
+    successMsg?: string,
+  ): Observable<{ ok: true; action: string }> =>
+    of({ ok: true as const, action: label }).pipe(
+      delay(ms),
+      tap(() => this.toast.success(successMsg ?? `${label} completado`)),
+    )
 
   open(report: PlatformActionReport): void {
     this.dialog.open(PlatformActionDialogComponent, {
@@ -50,16 +59,10 @@ export class PlatformActionService {
 
   run(label: string, report: PlatformActionReport, successMsg?: string): void {
     this.toast.info(`${label} en curso…`)
-    this.demo.simulate(label, 500, successMsg ?? `${label} completado`).subscribe({
-      next: () => {
-        this.open(report)
-        this.toast.success(successMsg ?? `${label} completado`)
-      },
-      error: () => {
-        this.open(report)
-        this.toast.info(`${label} (demo)`)
-      },
-    })
+    setTimeout(() => {
+      this.open(report)
+      this.toast.success(successMsg ?? `${label} completado`)
+    }, 500)
   }
 
   runModuleAction(
