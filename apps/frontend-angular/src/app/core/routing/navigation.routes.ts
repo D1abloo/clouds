@@ -117,17 +117,13 @@ export const NAVIGATION_ROUTES: Routes = [
   {
     path: 'cloud/:provider/launch',
     loadComponent: () =>
-      import('../../features/instances/launch-instance-wizard-page.component').then(
-        (m) => m.LaunchInstanceWizardPageComponent,
-      ),
+      import('../../features/cloud/cloud-launch-page.component').then((m) => m.CloudLaunchPageComponent),
     data: { breadcrumb: 'Lanzar instancia' },
   },
   {
     path: 'admin/infraestructura/instancias/lanzar',
     loadComponent: () =>
-      import('../../features/instances/launch-instance-wizard-page.component').then(
-        (m) => m.LaunchInstanceWizardPageComponent,
-      ),
+      import('../../features/cloud/cloud-launch-page.component').then((m) => m.CloudLaunchPageComponent),
     data: { breadcrumb: 'Lanzar instancia' },
   },
   {

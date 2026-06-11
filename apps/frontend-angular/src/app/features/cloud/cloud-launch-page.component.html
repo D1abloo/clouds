@@ -1,0 +1,46 @@
+<div class="clp">
+  @if (!activeSlug()) {
+    <header class="clp__hero">
+      <h1>Lanzar instancia cloud</h1>
+      <p>Selecciona el proveedor donde quieres aprovisionar la instancia.</p>
+    </header>
+    <div class="clp__providers" role="list">
+      @for (p of providers; track p.slug) {
+        <button type="button" class="clp__provider-card" role="listitem" (click)="selectProvider(p.slug)">
+          <app-brand-logo [logo]="p.logo" size="lg" />
+          <strong>{{ p.label }}</strong>
+          <span>{{ p.tagline }}</span>
+        </button>
+      }
+    </div>
+  } @else if (loading()) {
+    <app-loading-state message="Cargando cuenta cloud…" />
+  } @else if (wizardData()) {
+    <header class="clp__bar">
+      <div class="clp__bar-brand">
+        <app-brand-logo [logo]="activeProvider()!.logo" size="md" />
+        <div>
+          <h1>Lanzar instancia · {{ activeProvider()!.label }}</h1>
+          <p>Cuenta: {{ wizardData()!.accountName }}</p>
+        </div>
+      </div>
+      <nav class="clp__provider-tabs" aria-label="Proveedor cloud">
+        @for (p of providers; track p.slug) {
+          <a
+            class="clp__provider-tab"
+            [class.clp__provider-tab--on]="p.slug === activeSlug()"
+            [routerLink]="['/cloud', p.slug, 'launch']"
+          >
+            {{ p.slug | uppercase }}
+          </a>
+        }
+      </nav>
+    </header>
+    <app-cloud-launch-wizard
+      [data]="wizardData()!"
+      [embedded]="true"
+      (launched)="handleLaunched()"
+      (cancelled)="handleCancel()"
+    />
+  }
+</div>

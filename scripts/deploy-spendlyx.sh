@@ -86,6 +86,9 @@ for i in $(seq 1 48); do
     echo "==> API lista"
     break
   fi
+  if [ "$i" -eq 48 ]; then
+    echo "==> AVISO: API no respondió a tiempo; continuando con frontend"
+  fi
   sleep 5
 done
 

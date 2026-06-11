@@ -71,11 +71,11 @@ export const defaultZonesForRegion = (slug: CloudSlug, region: string): string[]
 export const cloudLaunchSteps = (slug: CloudSlug): CloudLaunchStep[] => {
   if (slug === 'aws') {
     return [
-      { id: 'account', label: 'Account & permissions', shortLabel: 'Account', icon: 'verified_user' },
-      { id: 'region', label: 'Region & network', shortLabel: 'Network', icon: 'device_hub' },
-      { id: 'compute', label: 'Instance type & storage', shortLabel: 'Compute', icon: 'memory' },
-      { id: 'image', label: 'Choose AMI', shortLabel: 'AMI', icon: 'image' },
-      { id: 'review', label: 'Review and launch', shortLabel: 'Review', icon: 'fact_check' },
+      { id: 'account', label: 'Cuenta', shortLabel: 'Cuenta', icon: 'verified_user' },
+      { id: 'region', label: 'Región y red', shortLabel: 'Región', icon: 'device_hub' },
+      { id: 'compute', label: 'Compute', shortLabel: 'Compute', icon: 'memory' },
+      { id: 'image', label: 'Imagen', shortLabel: 'Imagen', icon: 'image' },
+      { id: 'review', label: 'Lanzar', shortLabel: 'Lanzar', icon: 'rocket_launch' },
     ]
   }
   if (slug === 'gcp') {

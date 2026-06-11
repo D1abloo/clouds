@@ -29,7 +29,7 @@ import { CloudAccountsService } from '../../../core/services/cloud-accounts.serv
 import { InstancesService } from '../../../core/services/instances.service'
 import { ToastService } from '../../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from '../../cloud-accounts/cloud-account-form-dialog.component'
-import { LaunchInstanceDialogComponent } from '../../cloud-accounts/launch-instance-dialog.component'
+import { CloudLaunchDialogComponent } from '../cloud-launch-dialog.component'
 import type { Instance } from '../../../core/models/api.models'
 import {
   AWS_SECTIONS,
@@ -1027,9 +1027,18 @@ export class AwsCloudPageComponent implements OnInit {
       return
     }
     this.dialog
-      .open(LaunchInstanceDialogComponent, {
-        width: '440px',
-        data: { accountId: acc.id, accountName: acc.name },
+      .open(CloudLaunchDialogComponent, {
+        width: '960px',
+        maxWidth: '96vw',
+        maxHeight: '92vh',
+        panelClass: 'cloud-launch-panel',
+        data: {
+          accountId: acc.id,
+          accountName: acc.name,
+          provider: 'AWS',
+          slug: 'aws',
+          defaultRegion: 'eu-west-1',
+        },
       })
       .afterClosed()
       .subscribe((res) => {

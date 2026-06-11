@@ -242,7 +242,9 @@ export class CloudAccountsService {
 
   async listAvailabilityZones(id: string, region: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    return this.registry.listAvailabilityZones(id, region)
+    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
+    const resolved = region || account?.defaultRegion || 'us-east-1'
+    return this.registry.listAvailabilityZones(id, resolved)
   }
 
   async remove(id: string, userId?: string) {

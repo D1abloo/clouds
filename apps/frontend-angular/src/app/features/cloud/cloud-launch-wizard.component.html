@@ -1,5 +1,6 @@
 <div
   class="cld"
+  [class.cld--embedded]="embedded"
   [class.cld--aws]="data.slug === 'aws'"
   [class.cld--azure]="data.slug === 'azure'"
   [class.cld--gcp]="data.slug === 'gcp'"
@@ -46,6 +47,42 @@
       </nav>
       <div class="cld__main">
         <ng-container *ngTemplateOutlet="bodyTpl" />
+        <aside class="cld__copilot" aria-label="Panel de ayuda">
+          <header>
+            <mat-icon>assistant</mat-icon>
+            <strong>Copiloto de lanzamiento</strong>
+          </header>
+          <p>Configura la instancia paso a paso. Los errores de red se detectan antes de lanzar.</p>
+          <ul>
+            <li><strong>Paso actual:</strong> {{ options().steps[stepIndex()].label }}</li>
+            <li><strong>Región:</strong> {{ form.value.region || '—' }}</li>
+            <li><strong>Zona:</strong> {{ form.value.availabilityZone || '—' }}</li>
+            <li><strong>Subnet:</strong> {{ networkLabel() }}</li>
+            <li><strong>Coste est.:</strong> {{ costHint() }}</li>
+          </ul>
+          @if (subnetIssue(); as issue) {
+            <div class="cld__copilot-alert" [class.cld__copilot-alert--err]="issue.level === 'error'">
+              <mat-icon>info</mat-icon>
+              <span>{{ issue.title }}</span>
+            </div>
+          }
+          <app-cloud-launch-infra-preview
+            [slug]="data.slug"
+            [region]="form.value.region ?? ''"
+            [network]="networkLabel()"
+            [securityGroup]="sgLabel()"
+            [instanceType]="form.value.instanceType ?? ''"
+            [imageName]="selectedImage()?.name ?? ''"
+            [instanceName]="form.value.name ?? ''"
+            [specs]="typeSpecs()"
+            [monthlyCost]="costHint()"
+            [launchPercent]="progressPct()"
+            [diskGb]="form.value.diskGb ?? undefined"
+            [diskType]="form.value.diskType ?? ''"
+            [keyPair]="form.value.keyPair ?? ''"
+            [publicIp]="form.value.publicIp ?? false"
+          />
+        </aside>
         <ng-container *ngTemplateOutlet="actionsTpl" />
       </div>
     </div>
@@ -221,9 +258,27 @@
                   }
                 </ul>
                 <div class="cld__resolution-actions">
-                  <button mat-stroked-button type="button" (click)="showCreateSubnet.set(!showCreateSubnet())">
+                  @if (availabilityZones().length > 1) {
+                    <button mat-stroked-button type="button" (click)="handleCycleAz()">
+                      <mat-icon>swap_horiz</mat-icon>
+                      Cambiar zona
+                    </button>
+                  }
+                  @if (subnetsForAz().length) {
+                    <button mat-stroked-button type="button" (click)="handleSelectFirstSubnet()">
+                      <mat-icon>checklist</mat-icon>
+                      Elegir subnet
+                    </button>
+                  }
+                  @if (vpcs().length > 1) {
+                    <button mat-stroked-button type="button" (click)="handleCycleVpc()">
+                      <mat-icon>hub</mat-icon>
+                      Otra VPC
+                    </button>
+                  }
+                  <button mat-stroked-button type="button" (click)="handleToggleCreateSubnet()">
                     <mat-icon>add</mat-icon>
-                    Crear subnet en esta VPC
+                    Crear subnet
                   </button>
                 </div>
               </aside>
@@ -235,7 +290,8 @@
                 <div class="cld__form-grid">
                   <mat-form-field appearance="outline">
                     <mat-label>CIDR block</mat-label>
-                    <input matInput formControlName="newSubnetCidr" placeholder="10.0.1.0/24" />
+                    <input matInput formControlName="newSubnetCidr" [placeholder]="suggestedSubnetCidr()" />
+                    <mat-hint>Dentro del CIDR de la VPC · sugerido: {{ suggestedSubnetCidr() }}</mat-hint>
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Nombre</mat-label>
@@ -517,7 +573,7 @@
     <button
       mat-button
       type="button"
-      (click)="dialogRef.close()"
+      (click)="handleCancel()"
       [disabled]="launching()"
       [class.cld__btn-cancel--link]="theme().cancelStyle === 'link'"
     >

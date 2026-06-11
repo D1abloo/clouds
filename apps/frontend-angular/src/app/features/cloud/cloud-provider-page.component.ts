@@ -2588,7 +2588,7 @@ export class CloudProviderPageComponent implements OnInit {
   }
 
   handleLaunch = (): void => {
-    this.openLaunchDialog()
+    void this.router.navigate(['/cloud', this.slug(), 'launch'])
   }
 
   openLaunchDialog = (preselectedImageId?: string): void => {

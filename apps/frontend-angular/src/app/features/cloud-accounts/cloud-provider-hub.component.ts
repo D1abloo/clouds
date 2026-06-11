@@ -27,7 +27,8 @@ import { InstancesService } from '../../core/services/instances.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.component'
-import { LaunchInstanceDialogComponent } from './launch-instance-dialog.component'
+import { CloudLaunchDialogComponent } from '../cloud/cloud-launch-dialog.component'
+import type { CloudSlug } from '../cloud/cloud-provider.data'
 import {
   ConfirmDialogComponent,
   type ConfirmDialogData,
@@ -366,6 +367,7 @@ export class CloudProviderHubComponent implements OnInit {
   readonly statusControl = new FormControl('', { nonNullable: true })
 
   provider: CloudProvider = 'AWS'
+  slug: CloudSlug = 'aws'
   title = 'AWS'
   providerLabel = 'AWS'
   accountLabel = 'AWS accounts'
@@ -444,7 +446,8 @@ export class CloudProviderHubComponent implements OnInit {
     combineLatest([this.route.paramMap, this.route.data])
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([params, data]) => {
-        const slug = params.get('provider')
+        const slug = params.get('provider') as CloudSlug | null
+        this.slug = slug ?? 'aws'
         this.provider = slug ? providerFromSlug(slug) : ((data['provider'] as CloudProvider) ?? 'AWS')
         const section = params.get('section')
         if (section) {
@@ -534,9 +537,18 @@ export class CloudProviderHubComponent implements OnInit {
         return
       }
       this.dialog
-        .open(LaunchInstanceDialogComponent, {
-          width: '440px',
-          data: { accountId: String(acc['id']), accountName: String(acc['name']) },
+        .open(CloudLaunchDialogComponent, {
+          width: '960px',
+          maxWidth: '96vw',
+          maxHeight: '92vh',
+          panelClass: 'cloud-launch-panel',
+          data: {
+            accountId: String(acc['id']),
+            accountName: String(acc['name']),
+            provider: this.provider,
+            slug: this.slug,
+            defaultRegion: typeof acc['defaultRegion'] === 'string' ? acc['defaultRegion'] : undefined,
+          },
         })
         .afterClosed()
         .subscribe((res) => {

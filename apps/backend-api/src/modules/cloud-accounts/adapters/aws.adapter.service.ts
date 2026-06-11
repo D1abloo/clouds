@@ -44,6 +44,7 @@ import {
   listAwsAvailabilityZones,
   pickSubnetForLaunch,
   validateAwsLaunchPreflight,
+  validateSubnetCidrForVpc,
 } from './sdk/aws-network.util'
 import { AWS_STATIC_INSTANCE_CATALOG } from './sdk/aws-static-instance-catalog'
 import { fetchAllAwsInstanceTypes } from './sdk/aws-instance-types.util'
@@ -158,17 +159,41 @@ export class AwsAdapterService implements CloudProviderAdapter {
       }
     }
     const ec2 = await createEc2Client(ctx, input.region)
-    return createAwsSubnet(ec2, input.region, input)
+    const networks = await fetchAwsNetworks(ec2, input.region)
+    const vpc = networks.find((n) => n.id === input.vpcId && n.type === 'vpc')
+    const existing = networks
+      .filter((n) => n.vpcId === input.vpcId && n.cidr)
+      .map((n) => n.cidr!)
+    const cidrCheck = validateSubnetCidrForVpc(input.cidrBlock, vpc?.cidr, existing)
+    if (!cidrCheck.ok) {
+      throw new BadRequestException(
+        cidrCheck.suggestion
+          ? `${cidrCheck.message} Prueba con ${cidrCheck.suggestion}.`
+          : (cidrCheck.message ?? 'CIDR de subnet inválido'),
+      )
+    }
+    try {
+      return await createAwsSubnet(ec2, input.region, input)
+    } catch (err) {
+      throw new BadRequestException(sdkErrorMessage(err))
+    }
   }
 
   async validateLaunchPreflight(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<LaunchPreflightResult> {
     if (isDemoMode(ctx)) {
       return { valid: true, checks: [{ id: 'demo', level: 'ok', message: 'Demo mode — validación simulada' }] }
     }
-    const ec2 = await createEc2Client(ctx, input.region)
-    const networks = await fetchAwsNetworks(ec2, input.region)
-    const sgs = await this.listSecurityGroups(ctx, input.region)
-    return validateAwsLaunchPreflight(ec2, input, networks, sgs)
+    try {
+      const ec2 = await createEc2Client(ctx, input.region)
+      const networks = await fetchAwsNetworks(ec2, input.region)
+      const sgs = await this.listSecurityGroups(ctx, input.region)
+      return await validateAwsLaunchPreflight(ec2, input, networks, sgs)
+    } catch (err) {
+      return {
+        valid: false,
+        checks: [{ id: 'preflight', level: 'error', message: sdkErrorMessage(err) }],
+      }
+    }
   }
 
   async listSecurityGroups(ctx: CloudAdapterContext, region?: string): Promise<CloudSecurityGroup[]> {
