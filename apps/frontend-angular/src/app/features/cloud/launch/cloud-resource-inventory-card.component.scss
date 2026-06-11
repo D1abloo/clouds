@@ -1,0 +1,39 @@
+.inv {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+    span { display: block; font-size: 0.76rem; color: var(--text-muted); font-weight: 400; }
+  }
+  dl {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0 0 0.85rem;
+    div { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.8rem; }
+    dt { color: var(--text-soft); }
+    dd { margin: 0; color: var(--text-main); font-family: ui-monospace, monospace; }
+  }
+}
+
+.inv__status {
+  margin-left: auto;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--border-soft);
+  color: var(--text-muted);
+  &--ok { background: #dcfce7; color: var(--success); }
+}
+
+.inv__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

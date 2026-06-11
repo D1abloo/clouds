@@ -1,157 +1,74 @@
 <div
-  class="cld"
-  [class.cld--embedded]="embedded"
-  [class.cld--aws]="data.slug === 'aws'"
-  [class.cld--azure]="data.slug === 'azure'"
-  [class.cld--gcp]="data.slug === 'gcp'"
-  [class.cld--clouding]="data.slug === 'clouding'"
-  [style.--cld-accent]="theme().accent"
-  [style.--cld-accent-dark]="theme().accentDark"
-  [style.--cld-accent-muted]="theme().accentMuted"
-  [style.--cld-header-text]="theme().headerText"
+  class="clw"
+  [class.clw--embedded]="embedded"
+  [class.clw--dialog]="!embedded && !studioMode"
+  [class.clw--aws]="effectiveSlug() === 'aws'"
+  [class.clw--gcp]="effectiveSlug() === 'gcp'"
+  [class.clw--clouding]="effectiveSlug() === 'clouding'"
 >
-  <header class="cld__hero" [style.background]="theme().headerBg">
-    <div class="cld__hero-brand">
-      <app-brand-logo [logo]="theme().logo" size="lg" />
-      <div class="cld__hero-copy">
-        <p class="cld__hero-eyebrow">{{ theme().consoleSubtitle }} · {{ data.accountName }}</p>
-        <h2 mat-dialog-title class="cld__hero-title">{{ theme().consoleTitle }}</h2>
-        @if (form.value.region) {
-          <p class="cld__hero-sub">{{ theme().regionLabel }}: {{ form.value.region }}</p>
-        }
-      </div>
+  <header class="clw__hero">
+    <div>
+      <p class="clw__hero-eyebrow">AI Infra Studio · {{ effectiveData().accountName }}</p>
+      <h2>{{ theme().consoleTitle }}</h2>
+      @if (form.value.region) {
+        <p>{{ theme().regionLabel }}: {{ form.value.region }}</p>
+      }
     </div>
-    <div class="cld__hero-meta" aria-hidden="true">
-      <span>{{ data.provider }}</span>
-      <span>{{ progressPct() }}%</span>
-    </div>
+    <span class="clw__hero-pct" aria-hidden="true">{{ progressPct() }}%</span>
   </header>
 
-  @if (theme().stepLayout === 'sidebar') {
-    <div class="cld__shell">
-      <nav class="cld__sidebar" aria-label="Pasos del asistente de lanzamiento">
-        @for (s of options().steps; track s.id; let i = $index) {
-          <button
-            type="button"
-            class="cld__sidebar-step"
-            [class.cld__sidebar-step--on]="activeStep() === s.id"
-            [class.cld__sidebar-step--done]="stepIndex() > i"
-            [disabled]="launching()"
-            (click)="goToStep(s.id)"
-            [attr.aria-current]="activeStep() === s.id ? 'step' : null"
-          >
-            <span class="cld__sidebar-num">{{ i + 1 }}</span>
-            <span class="cld__sidebar-label">{{ s.label }}</span>
-          </button>
-        }
-      </nav>
-      <div class="cld__main">
-        <ng-container *ngTemplateOutlet="bodyTpl" />
-        <aside class="cld__copilot" aria-label="Panel de ayuda">
-          <header>
-            <mat-icon>assistant</mat-icon>
-            <strong>Copiloto de lanzamiento</strong>
-          </header>
-          <p>Configura la instancia paso a paso. Los errores de red se detectan antes de lanzar.</p>
-          <ul>
-            <li><strong>Paso actual:</strong> {{ options().steps[stepIndex()].label }}</li>
-            <li><strong>Región:</strong> {{ form.value.region || '—' }}</li>
-            <li><strong>Zona:</strong> {{ form.value.availabilityZone || '—' }}</li>
-            <li><strong>Subnet:</strong> {{ networkLabel() }}</li>
-            <li><strong>Coste est.:</strong> {{ costHint() }}</li>
-          </ul>
-          @if (subnetIssue(); as issue) {
-            <div class="cld__copilot-alert" [class.cld__copilot-alert--err]="issue.level === 'error'">
-              <mat-icon>info</mat-icon>
-              <span>{{ issue.title }}</span>
-            </div>
-          }
-          <app-cloud-launch-infra-preview
-            [slug]="data.slug"
-            [region]="form.value.region ?? ''"
-            [network]="networkLabel()"
-            [securityGroup]="sgLabel()"
-            [instanceType]="form.value.instanceType ?? ''"
-            [imageName]="selectedImage()?.name ?? ''"
-            [instanceName]="form.value.name ?? ''"
-            [specs]="typeSpecs()"
-            [monthlyCost]="costHint()"
-            [launchPercent]="progressPct()"
-            [diskGb]="form.value.diskGb ?? undefined"
-            [diskType]="form.value.diskType ?? ''"
-            [keyPair]="form.value.keyPair ?? ''"
-            [publicIp]="form.value.publicIp ?? false"
-          />
-        </aside>
-        <ng-container *ngTemplateOutlet="actionsTpl" />
-      </div>
-    </div>
-  } @else {
-    <nav
-      class="cld__steps"
-      [class.cld__steps--azure]="data.slug === 'azure'"
-      [class.cld__steps--gcp]="data.slug === 'gcp'"
-      [class.cld__steps--clouding]="data.slug === 'clouding'"
-      aria-label="Pasos del asistente de lanzamiento"
-    >
-      @for (s of options().steps; track s.id; let i = $index) {
-        <button
-          type="button"
-          class="cld__step"
-          [class.cld__step--on]="activeStep() === s.id"
-          [class.cld__step--done]="stepIndex() > i"
-          [disabled]="launching()"
-          (click)="goToStep(s.id)"
-          [attr.aria-current]="activeStep() === s.id ? 'step' : null"
-        >
-          <mat-icon>{{ s.icon }}</mat-icon>
-          <span>{{ s.shortLabel ?? s.label }}</span>
-        </button>
-      }
-      @if (data.slug === 'clouding') {
-        <div class="cld__steps-bar" role="progressbar" [attr.aria-valuenow]="progressPct()" aria-valuemin="0" aria-valuemax="100">
-          <span [style.width.%]="progressPct()"></span>
-        </div>
-      }
-    </nav>
-    <ng-container *ngTemplateOutlet="bodyTpl" />
-    <ng-container *ngTemplateOutlet="actionsTpl" />
-  }
-</div>
-
-<ng-template #bodyTpl>
-  <mat-dialog-content class="cld__body">
-    @if (launchProgress()) {
-      <app-cloud-launch-progress [progress]="launchProgress()" />
+  <nav class="clw__stepper" aria-label="Pasos del asistente de lanzamiento">
+    @for (s of steps(); track s.id; let i = $index) {
+      <button
+        type="button"
+        class="clw__step"
+        [class.clw__step--current]="activeStep() === s.id"
+        [class.clw__step--on]="activeStep() === s.id"
+        [class.clw__step--done]="stepIndex() > i"
+        [disabled]="launching()"
+        (click)="goToStep(s.id)"
+        [attr.aria-current]="activeStep() === s.id ? 'step' : null"
+      >
+        <mat-icon>{{ s.icon }}</mat-icon>
+        <span>{{ s.shortLabel }}</span>
+      </button>
     }
+  </nav>
 
-    @switch (activeStep()) {
-      @case ('account') {
-        <section class="cld__section" aria-labelledby="cld-account-h">
-          <header class="cld__panel-head">
-            <div>
-              <h3 id="cld-account-h">{{ options().accountSectionTitle }}</h3>
-              <p>{{ options().accountSectionHint }}</p>
-            </div>
-          </header>
+  <div class="clw__grid">
+    <main class="clw__card">
+      @switch (activeStep()) {
+        @case ('provider') {
+          <h3 class="clw__section-title">Selecciona proveedor cloud</h3>
+          <p class="clw__section-hint">Elige AWS EC2, Google Compute Engine o IONOS VPS para iniciar el asistente.</p>
+          <app-cloud-provider-selector
+            [providers]="launchProviders"
+            [selected]="selectedProviderSlug()"
+            (selectedChange)="selectProvider($event)"
+          />
+        }
+
+        @case ('account') {
+          <h3 class="clw__section-title">{{ options().accountSectionTitle }}</h3>
+          <p class="clw__section-hint">{{ options().accountSectionHint }}</p>
           @if (accountLoading()) {
             <app-loading-state message="Validando credenciales…" />
           } @else {
-            <div class="cld__account-card">
-              <div class="cld__account-row">
+            <div class="clw__account-card">
+              <div class="clw__account-row">
                 <mat-icon>{{ accountValid() ? 'verified' : 'error_outline' }}</mat-icon>
                 <div>
-                  <strong>{{ data.accountName }}</strong>
-                  <span>{{ data.provider }} · {{ data.accountId | slice:0:12 }}…</span>
+                  <strong>{{ effectiveData().accountName }}</strong>
+                  <span>{{ effectiveData().provider }} · {{ effectiveData().accountId | slice:0:12 }}…</span>
                 </div>
-                <span class="cld__badge" [class.cld__badge--ok]="accountValid()" [class.cld__badge--err]="!accountValid()">
+                <span class="clw__badge" [class.clw__badge--ok]="accountValid()" [class.clw__badge--err]="!accountValid()">
                   {{ accountValid() ? 'Conectada' : 'Error' }}
                 </span>
               </div>
-              <p class="cld__account-msg">{{ accountMessage() }}</p>
-              <ul class="cld__perm-list" aria-label="Permisos requeridos">
-                @for (perm of options().permissionLabels; track perm; let i = $index) {
-                  <li [class.cld__perm--ok]="accountValid()">
+              <p>{{ accountMessage() }}</p>
+              <ul class="clw__perm-list">
+                @for (perm of options().permissionLabels; track perm) {
+                  <li>
                     <mat-icon>{{ accountValid() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
                     {{ perm }}
                   </li>
@@ -165,21 +82,15 @@
               }
             </div>
           }
-        </section>
-      }
+        }
 
-      @case ('region') {
-        <section class="cld__section" aria-labelledby="cld-region-h">
-          <header class="cld__panel-head">
-            <div>
-              <h3 id="cld-region-h">{{ options().regionSectionTitle }}</h3>
-              <p>{{ options().regionSectionHint }}</p>
-            </div>
-          </header>
+        @case ('region') {
+          <h3 class="clw__section-title">{{ options().regionSectionTitle }}</h3>
+          <p class="clw__section-hint">{{ options().regionSectionHint }}</p>
           @if (catalogLoading() || azLoading()) {
-            <app-loading-state message="Cargando red y zonas…" />
+            <app-loading-state message="Cargando regiones y zonas…" />
           } @else {
-            <div class="cld__form-grid" [formGroup]="form">
+            <div class="clw__form-grid" [formGroup]="form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ theme().regionLabel }}</mat-label>
                 <mat-select formControlName="region" (selectionChange)="onRegionChange()">
@@ -196,7 +107,7 @@
                   }
                 </mat-select>
               </mat-form-field>
-              @if (options().resourceGroups?.length) {
+              @if (!studioMode && options().resourceGroups?.length) {
                 <mat-form-field appearance="outline">
                   <mat-label>{{ options().resourceGroupLabel }}</mat-label>
                   <mat-select formControlName="resourceGroup">
@@ -206,58 +117,41 @@
                   </mat-select>
                 </mat-form-field>
               }
-              @if (vpcs().length) {
-                <mat-form-field appearance="outline">
-                  <mat-label>{{ options().vpcLabel }}</mat-label>
-                  <mat-select formControlName="vpcId" (selectionChange)="onVpcChange()">
-                    @for (v of vpcs(); track v.id) {
-                      <mat-option [value]="v.id">{{ v.name }} ({{ v.cidr ?? v.id }})</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-              }
-              <mat-form-field appearance="outline">
-                <mat-label>{{ options().subnetLabel }}</mat-label>
-                <mat-select formControlName="subnetId">
-                  @for (n of subnetsForAz(); track n.id) {
-                    <mat-option [value]="n.id">
-                      {{ n.name }} ({{ n.cidr ?? n.id }})
-                      @if (n.isDefaultForAz) { · default }
-                    </mat-option>
-                  }
-                </mat-select>
-                @if (!subnetsForAz().length) {
-                  <mat-hint>Sin subnets en esta zona — crea una o cambia de AZ</mat-hint>
-                }
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>{{ theme().sgLabel }}</mat-label>
-                <mat-select formControlName="securityGroupId">
-                  @for (sg of securityGroups(); track sg.id) {
-                    <mat-option [value]="sg.id">{{ sg.name }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-              <div class="cld__toggle-row cld__span-2">
-                <mat-slide-toggle formControlName="publicIp" color="primary">
-                  {{ options().publicIpLabel }}
-                </mat-slide-toggle>
-              </div>
             </div>
-
-            @if (subnetIssue(); as issue) {
-              <aside class="cld__resolution" [class.cld__resolution--error]="issue.level === 'error'" [class.cld__resolution--warn]="issue.level === 'warning'" role="alert">
-                <header>
-                  <mat-icon>{{ issue.level === 'error' ? 'error' : 'warning' }}</mat-icon>
-                  <strong>{{ issue.title }}</strong>
-                </header>
-                <p>{{ issue.message }}</p>
-                <ul>
-                  @for (s of issue.suggestions; track s) {
-                    <li>{{ s }}</li>
-                  }
-                </ul>
-                <div class="cld__resolution-actions">
+            @if (!studioMode) {
+              @if (effectiveSlug() === 'aws') {
+                <app-aws-launch-form
+                  [form]="form"
+                  [regions]="regions()"
+                  [zones]="availabilityZones()"
+                  [vpcs]="vpcs()"
+                  [subnets]="subnetsForAz()"
+                  [securityGroups]="securityGroups()"
+                  [keyPairs]="keyPairs()"
+                  (regionChange)="onRegionChange()"
+                  (azChange)="onAzChange()"
+                  (vpcChange)="onVpcChange()"
+                />
+              } @else if (effectiveSlug() === 'gcp') {
+                <app-gcp-launch-form
+                  [form]="form"
+                  [regions]="regions()"
+                  [zones]="availabilityZones()"
+                  [vpcs]="vpcs()"
+                  [subnets]="subnetsForAz()"
+                  [securityGroups]="securityGroups()"
+                  [keyPairs]="keyPairs()"
+                  (regionChange)="onRegionChange()"
+                />
+              }
+              @if (subnetIssue(); as issue) {
+                <app-launch-error-card
+                  [title]="issue.title"
+                  [message]="issue.message"
+                  [level]="issue.level"
+                  [suggestions]="issue.suggestions"
+                />
+                <div class="clw__resolution-actions">
                   @if (availabilityZones().length > 1) {
                     <button mat-stroked-button type="button" (click)="handleCycleAz()">
                       <mat-icon>swap_horiz</mat-icon>
@@ -270,61 +164,135 @@
                       Elegir subnet
                     </button>
                   }
-                  @if (vpcs().length > 1) {
-                    <button mat-stroked-button type="button" (click)="handleCycleVpc()">
-                      <mat-icon>hub</mat-icon>
-                      Otra VPC
-                    </button>
-                  }
                   <button mat-stroked-button type="button" (click)="handleToggleCreateSubnet()">
                     <mat-icon>add</mat-icon>
                     Crear subnet
                   </button>
                 </div>
-              </aside>
-            }
-
-            @if (showCreateSubnet()) {
-              <div class="cld__create-subnet" [formGroup]="form">
-                <h4>Crear subnet en {{ form.value.availabilityZone }}</h4>
-                <div class="cld__form-grid">
-                  <mat-form-field appearance="outline">
-                    <mat-label>CIDR block</mat-label>
-                    <input matInput formControlName="newSubnetCidr" [placeholder]="suggestedSubnetCidr()" />
-                    <mat-hint>Dentro del CIDR de la VPC · sugerido: {{ suggestedSubnetCidr() }}</mat-hint>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Nombre</mat-label>
-                    <input matInput formControlName="newSubnetName" placeholder="subnet-launch" />
-                  </mat-form-field>
-                </div>
-                <button mat-flat-button type="button" [class]="theme().primaryBtnClass" [disabled]="creatingSubnet()" (click)="handleCreateSubnet()">
-                  @if (creatingSubnet()) {
-                    <mat-spinner diameter="18" />
-                  } @else {
-                    <mat-icon>add_circle</mat-icon>
-                  }
-                  Crear subnet
-                </button>
-              </div>
+              }
             }
           }
-        </section>
-      }
+        }
 
-      @case ('compute') {
-        <section class="cld__section" aria-labelledby="cld-compute-h">
-          <header class="cld__panel-head">
-            <div>
-              <h3 id="cld-compute-h">{{ options().instanceSectionTitle }}</h3>
-              <p>{{ options().instanceSectionHint }} · {{ types().length }} tipos</p>
+        @case ('network') {
+          <h3 class="clw__section-title">Configuración de red</h3>
+          <p class="clw__section-hint">VPC, subnet, security groups y acceso público.</p>
+          @if (catalogLoading()) {
+            <app-loading-state message="Cargando redes…" />
+          } @else if (isIonos()) {
+            <app-ionos-vps-launch-form [form]="form" />
+          } @else if (effectiveSlug() === 'aws') {
+            <app-aws-launch-form
+              [form]="form"
+              [regions]="regions()"
+              [zones]="availabilityZones()"
+              [vpcs]="vpcs()"
+              [subnets]="subnetsForAz()"
+              [securityGroups]="securityGroups()"
+              [keyPairs]="keyPairs()"
+              (regionChange)="onRegionChange()"
+              (azChange)="onAzChange()"
+              (vpcChange)="onVpcChange()"
+            />
+          } @else if (effectiveSlug() === 'gcp') {
+            <app-gcp-launch-form
+              [form]="form"
+              [regions]="regions()"
+              [zones]="availabilityZones()"
+              [vpcs]="vpcs()"
+              [subnets]="subnetsForAz()"
+              [securityGroups]="securityGroups()"
+              [keyPairs]="keyPairs()"
+              (regionChange)="onRegionChange()"
+            />
+          } @else {
+            <div class="clw__form-grid" [formGroup]="form">
+              @if (vpcs().length) {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ options().vpcLabel }}</mat-label>
+                  <mat-select formControlName="vpcId" (selectionChange)="onVpcChange()">
+                    @for (v of vpcs(); track v.id) {
+                      <mat-option [value]="v.id">{{ v.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
+              <mat-form-field appearance="outline">
+                <mat-label>{{ options().subnetLabel }}</mat-label>
+                <mat-select formControlName="subnetId">
+                  @for (n of subnetsForAz(); track n.id) {
+                    <mat-option [value]="n.id">{{ n.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             </div>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cld__search">
-              <mat-label>Buscar tipo</mat-label>
-              <input matInput [value]="typeSearch()" (input)="onTypeSearch($event)" placeholder="t3.medium, m5.large…" />
-              <mat-icon matPrefix>search</mat-icon>
-            </mat-form-field>
-          </header>
+          }
+
+          @if (subnetIssue(); as issue) {
+            <app-launch-error-card
+              [title]="issue.title"
+              [message]="issue.message"
+              [level]="issue.level"
+              [suggestions]="issue.suggestions"
+            />
+            <div class="clw__resolution-actions">
+              @if (availabilityZones().length > 1) {
+                <button mat-stroked-button type="button" (click)="handleCycleAz()">
+                  <mat-icon>swap_horiz</mat-icon>
+                  Cambiar zona
+                </button>
+              }
+              @if (subnetsForAz().length) {
+                <button mat-stroked-button type="button" (click)="handleSelectFirstSubnet()">
+                  <mat-icon>checklist</mat-icon>
+                  Elegir subnet
+                </button>
+              }
+              @if (vpcs().length > 1) {
+                <button mat-stroked-button type="button" (click)="handleCycleVpc()">
+                  <mat-icon>hub</mat-icon>
+                  Otra VPC
+                </button>
+              }
+              <button mat-stroked-button type="button" (click)="handleToggleCreateSubnet()">
+                <mat-icon>add</mat-icon>
+                Crear subnet
+              </button>
+              <button mat-stroked-button type="button" (click)="handleCancel()">
+                <mat-icon>close</mat-icon>
+                Cancelar
+              </button>
+            </div>
+          }
+
+          @if (showCreateSubnet()) {
+            <div class="clw__create-subnet" [formGroup]="form">
+              <h4>Crear subnet en {{ form.value.availabilityZone }}</h4>
+              <div class="clw__form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>CIDR block</mat-label>
+                  <input matInput formControlName="newSubnetCidr" [placeholder]="suggestedSubnetCidr()" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Nombre</mat-label>
+                  <input matInput formControlName="newSubnetName" placeholder="subnet-launch" />
+                </mat-form-field>
+              </div>
+              <button mat-flat-button type="button" class="clw__btn-primary" [disabled]="creatingSubnet()" (click)="handleCreateSubnet()">
+                @if (creatingSubnet()) {
+                  <mat-spinner diameter="18" />
+                } @else {
+                  <mat-icon>add_circle</mat-icon>
+                }
+                Crear subnet
+              </button>
+            </div>
+          }
+        }
+
+        @case ('compute') {
+          <h3 class="clw__section-title">{{ options().instanceSectionTitle }}</h3>
+          <p class="clw__section-hint">{{ options().instanceSectionHint }}</p>
           @if (catalogLoading()) {
             <app-loading-state message="Cargando tipos de instancia…" />
           } @else {
@@ -334,45 +302,33 @@
                 <input matInput formControlName="name" placeholder="web-prod-01" />
               </mat-form-field>
             </div>
-            <div class="cld__type-grid" role="list">
+            <mat-form-field appearance="outline" class="clw__search">
+              <mat-label>Buscar tipo</mat-label>
+              <input matInput [value]="typeSearch()" (input)="onTypeSearch($event)" />
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+            <div class="clw__type-grid">
               @for (t of filteredTypes(); track t.id) {
                 <button
                   type="button"
-                  class="cld__type-card"
-                  role="listitem"
-                  [class.cld__type-card--on]="form.value.instanceType === t.id"
+                  class="clw__type-card"
+                  [class.clw__type-card--on]="form.value.instanceType === t.id"
                   (click)="selectType(t.id)"
                 >
-                  <mat-icon>memory</mat-icon>
                   <strong>{{ t.name }}</strong>
                   @if (t.vcpus) {
-                    <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB RAM</span>
-                    <span class="cld__type-price">
-                      <em>{{ typePriceDetail(t).hourly }}</em>
-                      <em>{{ typePriceDetail(t).minute }}</em>
-                    </span>
+                    <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB</span>
                     <small>{{ typeMonthlyCost(t) }}</small>
                   }
                 </button>
               } @empty {
-                <p class="cld__empty">No hay tipos disponibles en esta región.</p>
+                <p class="clw__empty">No hay tipos disponibles en esta región.</p>
               }
             </div>
-            <div class="cld__form-grid cld__storage-inline" [formGroup]="form">
-              <mat-form-field appearance="outline">
-                <mat-label>{{ options().keyPairLabel }}</mat-label>
-                <mat-select formControlName="keyPair">
-                  @for (kp of keyPairs(); track kp.id) {
-                    <mat-option [value]="kp.name">{{ kp.name }}</mat-option>
-                  }
-                </mat-select>
-                @if (!keyPairs().length) {
-                  <mat-hint>Sin key pairs — créalo en la consola del proveedor</mat-hint>
-                }
-              </mat-form-field>
+            <div class="clw__form-grid" [formGroup]="form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ options().diskSizeLabel }}</mat-label>
-                <input matInput type="number" formControlName="diskGb" min="8" max="2048" />
+                <input matInput type="number" formControlName="diskGb" min="8" />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ options().volumeTypeLabel }}</mat-label>
@@ -382,233 +338,212 @@
                   }
                 </mat-select>
               </mat-form-field>
-              <mat-form-field appearance="outline" class="cld__span-2">
+              <mat-form-field appearance="outline" class="clw__span-2">
                 <mat-label>{{ options().tagsLabel }}</mat-label>
                 <input matInput formControlName="tags" [placeholder]="options().tagHint" />
               </mat-form-field>
-              <div class="cld__toggle-row cld__span-2">
+              <div class="clw__toggle-row">
                 <mat-slide-toggle formControlName="monitoring" color="primary">
                   {{ options().monitoringLabel }}
                 </mat-slide-toggle>
               </div>
             </div>
           }
-        </section>
-      }
+        }
 
-      @case ('image') {
-        <section class="cld__section" aria-labelledby="cld-image-h">
-          <header class="cld__panel-head">
-            <div>
-              <h3 id="cld-image-h">{{ options().imageSectionTitle }}</h3>
-              <p>{{ options().imageSectionHint }}</p>
-              @if (data.slug === 'aws') {
-                <p class="cld__region-banner">
-                  <mat-icon>public</mat-icon>
-                  AMIs en región <strong>{{ form.value.region }}</strong>
-                </p>
-              }
-            </div>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cld__search">
-              <mat-label>{{ options().searchImageLabel }}</mat-label>
-              <input matInput [value]="imageSearch()" (input)="onImageSearch($event)" placeholder="Ubuntu, Debian, Windows…" />
-              <mat-icon matPrefix>search</mat-icon>
-            </mat-form-field>
-          </header>
+        @case ('image') {
+          <h3 class="clw__section-title">{{ options().imageSectionTitle }}</h3>
+          <p class="clw__section-hint">{{ options().imageSectionHint }}</p>
           @if (catalogLoading()) {
             <app-loading-state message="Cargando imágenes…" />
-          } @else if (data.slug === 'aws') {
-            <div class="cld__ami-browser">
-              <nav class="cld__ami-sections" aria-label="Categorías AMI">
+          } @else {
+            <mat-form-field appearance="outline" class="clw__search">
+              <mat-label>{{ options().searchImageLabel }}</mat-label>
+              <input matInput [value]="imageSearch()" (input)="onImageSearch($event)" />
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+            @if (effectiveSlug() === 'aws') {
+              <nav class="clw__ami-sections">
                 @for (sec of awsImageSections(); track sec.id) {
                   <button
                     type="button"
-                    class="cld__ami-section"
-                    [class.cld__ami-section--on]="imageSection() === sec.id"
+                    class="clw__ami-section"
+                    [class.clw__ami-section--on]="imageSection() === sec.id"
                     (click)="selectImageSection(sec.id)"
                   >
-                    @if (sec.logo) {
-                      <img [src]="sec.logo" [alt]="" width="18" height="18" />
-                    }
-                    <span>{{ sec.label }}</span>
-                    <em>{{ sectionCount(images(), sec.id) }}</em>
+                    {{ sec.label }}
                   </button>
                 }
               </nav>
-              <div class="cld__ami-grid" role="list">
-                @for (img of filteredImages(); track img.id) {
-                  <button
-                    type="button"
-                    class="cld__image-card cld__image-card--aws"
-                    role="listitem"
-                    [class.cld__image-card--on]="form.value.imageId === img.id"
-                    (click)="selectImage(img)"
-                  >
-                    <span class="cld__image-os">
-                      <img [src]="imageLogo(img)" [alt]="imageVendor(img)" width="32" height="32" loading="lazy" />
-                    </span>
-                    <strong>{{ img.name }}</strong>
-                    <span class="cld__image-vendor">{{ imageVendor(img) }}</span>
-                    <span class="cld__image-meta">{{ img.architecture ?? 'x86_64' }} · {{ img.os ?? 'Linux' }}</span>
-                    <code class="cld__image-id">{{ img.id }}</code>
-                    <span class="cld__badge">{{ imageBadgeLabel() }}</span>
-                  </button>
-                } @empty {
-                  <p class="cld__empty">Sin AMIs en esta sección para {{ form.value.region }}.</p>
-                }
-              </div>
-            </div>
-          } @else {
-            @if (gcpImageTabs().length && data.slug === 'gcp') {
-              <nav class="cld__os-tabs cld__os-tabs--gcp" aria-label="Filtrar imágenes">
-                @for (tab of gcpImageTabs(); track tab.id) {
-                  <button type="button" class="cld__os-tab" [class.cld__os-tab--on]="imageOsTab() === tab.id" (click)="imageOsTab.set(tab.id)">{{ tab.label }}</button>
-                }
-              </nav>
             }
-            @if (azureImageTabs().length && data.slug === 'azure') {
-              <nav class="cld__os-tabs cld__os-tabs--azure" aria-label="Filtrar imágenes">
-                @for (tab of azureImageTabs(); track tab.id) {
-                  <button type="button" class="cld__os-tab" [class.cld__os-tab--on]="imageOsTab() === tab.id" (click)="imageOsTab.set(tab.id)">{{ tab.label }}</button>
-                }
-              </nav>
-            }
-            <div class="cld__images" role="list">
+            <div class="clw__images">
               @for (img of filteredImages(); track img.id) {
                 <button
                   type="button"
-                  class="cld__image-card"
-                  role="listitem"
-                  [class.cld__image-card--on]="form.value.imageId === img.id"
+                  class="clw__image-card"
+                  [class.clw__image-card--on]="form.value.imageId === img.id"
                   (click)="selectImage(img)"
                 >
-                  <span class="cld__image-os">
-                    <img [src]="imageLogo(img)" [alt]="imageVendor(img)" width="32" height="32" loading="lazy" />
-                  </span>
+                  <img [src]="imageLogo(img)" [alt]="imageVendor(img)" width="32" height="32" />
                   <strong>{{ img.name }}</strong>
-                  <span class="cld__image-vendor">{{ imageVendor(img) }}</span>
-                  <span class="cld__image-meta">{{ img.architecture ?? 'x86_64' }} · {{ img.os ?? 'linux' }}</span>
-                  <code class="cld__image-id">{{ shortId(img.id) }}</code>
-                  <span class="cld__badge">{{ imageBadgeLabel() }}</span>
+                  <code>{{ shortId(img.id) }}</code>
                 </button>
               } @empty {
-                <p class="cld__empty">Sin imágenes en esta región. Cambia de región o valida la cuenta.</p>
+                <p class="clw__empty">Sin imágenes en esta región.</p>
               }
             </div>
           }
-        </section>
-      }
+        }
 
-      @case ('review') {
-        <section class="cld__section" aria-labelledby="cld-review-h">
-          <header class="cld__panel-head">
-            <div>
-              <h3 id="cld-review-h">{{ options().reviewSectionTitle }}</h3>
-              <p>{{ options().reviewSectionHint }}</p>
-            </div>
-            <button mat-stroked-button type="button" [disabled]="preflightLoading()" (click)="runPreflight()">
-              @if (preflightLoading()) {
-                <mat-spinner diameter="18" />
-              } @else {
-                <mat-icon>fact_check</mat-icon>
-              }
-              Revalidar
-            </button>
-          </header>
-
+        @case ('review') {
+          <h3 class="clw__section-title">{{ options().reviewSectionTitle }}</h3>
+          <p class="clw__section-hint">{{ options().reviewSectionHint }}</p>
           @if (preflightLoading()) {
             <app-loading-state message="Ejecutando preflight…" />
           } @else {
-            @if (preflight(); as pf) {
-              <ul class="cld__preflight" aria-label="Resultados de validación">
-                @for (c of pf.checks; track c.id) {
-                  <li [class]="'cld__preflight-item cld__preflight-item--' + c.level">
-                    <mat-icon>{{ checkIcon(c) }}</mat-icon>
-                    <div>
-                      <span>{{ c.message }}</span>
-                      @if (c.suggestion) {
-                        <small>{{ c.suggestion }}</small>
-                      }
-                    </div>
-                  </li>
-                }
-              </ul>
-            }
-          }
-
-          <div class="cld__review-grid">
-            <ul class="cld__summary">
-              @for (row of reviewRows(); track row.label) {
-                <li>
-                  <span>{{ row.label }}</span>
-                  <strong [class.cld__mono]="row.mono">{{ row.value }}</strong>
-                </li>
-              }
-            </ul>
-            <app-cloud-launch-infra-preview
-              [slug]="data.slug"
-              [region]="form.value.region ?? ''"
-              [network]="networkLabel()"
-              [securityGroup]="sgLabel()"
-              [instanceType]="form.value.instanceType ?? ''"
-              [imageName]="selectedImage()?.name ?? ''"
-              [instanceName]="form.value.name ?? ''"
-              [specs]="typeSpecs()"
-              [monthlyCost]="costHint()"
-              [launchPercent]="progressPct()"
-              [diskGb]="form.value.diskGb ?? undefined"
-              [diskType]="form.value.diskType ?? ''"
-              [keyPair]="form.value.keyPair ?? ''"
-              [publicIp]="form.value.publicIp ?? false"
+            <app-launch-review
+              [rows]="reviewRows()"
+              [checks]="preflight()?.checks ?? []"
+              [costHint]="costHint()"
             />
-          </div>
-        </section>
-      }
-    }
-  </mat-dialog-content>
-</ng-template>
+            <button mat-stroked-button type="button" [disabled]="preflightLoading()" (click)="runPreflight()">
+              <mat-icon>fact_check</mat-icon>
+              Revalidar
+            </button>
+          }
+        }
 
-<ng-template #actionsTpl>
-  <mat-dialog-actions class="cld__actions" align="end">
-    <button
-      mat-button
-      type="button"
-      (click)="handleCancel()"
-      [disabled]="launching()"
-      [class.cld__btn-cancel--link]="theme().cancelStyle === 'link'"
-    >
-      {{ options().cancelLabel }}
-    </button>
-    @if (stepIndex() > 0) {
-      <button mat-stroked-button type="button" (click)="handleBack()" [disabled]="launching()">
-        <mat-icon>arrow_back</mat-icon>
-        {{ options().backLabel }}
-      </button>
-    }
-    @if (activeStep() !== 'review') {
-      <button
-        mat-flat-button
-        color="primary"
-        type="button"
-        [class]="theme().primaryBtnClass"
-        [disabled]="!canAdvance() || launching() || (activeStep() === 'region' && (catalogLoading() || azLoading())) || (activeStep() === 'compute' && catalogLoading()) || (activeStep() === 'image' && catalogLoading()) || (activeStep() === 'account' && accountLoading())"
-        (click)="handleNext()"
-      >
-        {{ options().nextLabel }}
-        <mat-icon>arrow_forward</mat-icon>
-      </button>
-    } @else {
-      <button
-        mat-flat-button
-        color="primary"
-        type="button"
-        [class]="theme().primaryBtnClass"
-        [disabled]="!canLaunch() || launching()"
-        (click)="handleLaunch()"
-      >
-        <mat-icon>rocket_launch</mat-icon>
-        {{ options().launchLabel }}
-      </button>
-    }
-  </mat-dialog-actions>
-</ng-template>
+        @case ('launch') {
+          <h3 class="clw__section-title">Lanzar instancia</h3>
+          <p class="clw__section-hint">Provisionando recurso en {{ effectiveData().provider }}…</p>
+          <app-launch-progress-panel
+            [progress]="launchProgress()"
+            [title]="launching() ? 'Provisionando…' : 'Listo para lanzar'"
+            [idleText]="'Pulsa el botón para iniciar el despliegue en la nube.'"
+          />
+        }
+
+        @case ('test') {
+          <h3 class="clw__section-title">Prueba de conectividad</h3>
+          <p class="clw__section-hint">Verifica que la instancia responde y aparece en inventario.</p>
+          <app-cloud-resource-inventory-card
+            [resource]="launchedResource()"
+            (test)="handleTest()"
+            (remove)="handleDelete()"
+          />
+          @if (testing()) {
+            <app-loading-state message="Ejecutando prueba de conectividad…" />
+          }
+          @if (testResult()) {
+            <p class="clw__test-result">{{ testResult() }}</p>
+          }
+        }
+
+        @case ('delete') {
+          <h3 class="clw__section-title">Eliminar recurso de prueba</h3>
+          <p class="clw__section-hint">Detiene y retira la instancia creada con etiqueta auto_delete=true.</p>
+          @if (deleting()) {
+            <app-loading-state message="Eliminando recurso…" />
+          } @else if (launchedResource()) {
+            <app-cloud-resource-inventory-card
+              [resource]="launchedResource()"
+              (remove)="handleDelete()"
+            />
+          } @else {
+            <p class="clw__empty">Recurso eliminado correctamente. Puedes lanzar otra instancia.</p>
+          }
+        }
+      }
+
+      <footer class="clw__actions">
+        <button mat-button type="button" (click)="handleCancel()" [disabled]="launching()">
+          {{ options().cancelLabel }}
+        </button>
+        @if (stepIndex() > 0) {
+          <button mat-stroked-button type="button" (click)="handleBack()" [disabled]="launching()">
+            <mat-icon>arrow_back</mat-icon>
+            {{ options().backLabel }}
+          </button>
+        }
+        @if (activeStep() === 'review') {
+          @if (studioMode) {
+            <button
+              mat-flat-button
+              type="button"
+              class="clw__btn-primary"
+              [disabled]="!canAdvance()"
+              (click)="handleNext()"
+            >
+              Continuar al lanzamiento
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          } @else {
+            <button
+              mat-flat-button
+              type="button"
+              class="clw__btn-primary"
+              [disabled]="!canLaunch() || launching()"
+              (click)="handleLaunch()"
+            >
+              <mat-icon>rocket_launch</mat-icon>
+              {{ options().launchLabel }}
+            </button>
+          }
+        } @else if (activeStep() === 'launch') {
+          <button
+            mat-flat-button
+            type="button"
+            class="clw__btn-primary"
+            [disabled]="!canLaunch() || launching()"
+            (click)="handleLaunch()"
+          >
+            <mat-icon>rocket_launch</mat-icon>
+            {{ options().launchLabel }}
+          </button>
+        } @else if (activeStep() === 'test') {
+          <button mat-flat-button type="button" class="clw__btn-primary" [disabled]="testing()" (click)="handleTest()">
+            <mat-icon>network_check</mat-icon>
+            Ejecutar prueba
+          </button>
+        } @else if (activeStep() === 'delete') {
+          <button mat-flat-button color="warn" type="button" [disabled]="deleting() || !launchedResource()" (click)="handleDelete()">
+            <mat-icon>delete_forever</mat-icon>
+            Eliminar recurso
+          </button>
+        } @else if (activeStep() !== 'provider' || selectedProviderSlug()) {
+          <button
+            mat-flat-button
+            type="button"
+            class="clw__btn-primary"
+            [disabled]="!canAdvance() || launching() || accountLoading() || catalogLoading()"
+            (click)="handleNext()"
+          >
+            {{ options().nextLabel }}
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        }
+      </footer>
+    </main>
+
+    <app-infra-copilot-panel
+      [slug]="effectiveSlug()"
+      [stepLabel]="currentStepLabel()"
+      [region]="form.value.region ?? ''"
+      [zone]="form.value.availabilityZone ?? ''"
+      [network]="networkLabel()"
+      [securityGroup]="sgLabel()"
+      [instanceType]="form.value.instanceType ?? ''"
+      [imageName]="selectedImage()?.name ?? ''"
+      [instanceName]="form.value.name ?? ''"
+      [specs]="typeSpecs()"
+      [costHint]="costHint()"
+      [progressPct]="progressPct()"
+      [diskGb]="form.value.diskGb ?? undefined"
+      [diskType]="form.value.diskType ?? ''"
+      [keyPair]="form.value.keyPair ?? ''"
+      [publicIp]="form.value.publicIp ?? false"
+      [alertTitle]="subnetIssue()?.title ?? ''"
+      [alertDanger]="subnetIssue()?.level === 'error'"
+    />
+  </div>
+</div>

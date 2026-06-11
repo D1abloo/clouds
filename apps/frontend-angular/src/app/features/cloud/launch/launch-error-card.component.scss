@@ -1,0 +1,18 @@
+.lec {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  background: var(--danger-soft);
+  color: var(--danger);
+  mat-icon { flex-shrink: 0; }
+  strong { display: block; margin-bottom: 0.25rem; }
+  p { margin: 0 0 0.35rem; font-size: 0.84rem; color: var(--text-main); }
+  ul { margin: 0; padding-left: 1.1rem; font-size: 0.78rem; color: var(--text-muted); }
+  &--warn {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #b45309;
+  }
+}

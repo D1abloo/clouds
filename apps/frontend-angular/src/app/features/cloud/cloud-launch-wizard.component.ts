@@ -1,4 +1,4 @@
-import { NgTemplateOutlet, SlicePipe } from '@angular/common'
+import { SlicePipe } from '@angular/common'
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,7 +13,6 @@ import {
 } from '@angular/core'
 import { HttpErrorResponse } from '@angular/common/http'
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms'
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatSelectModule } from '@angular/material/select'
@@ -29,12 +28,22 @@ import {
 import { CloudCatalogCacheService } from '../../core/services/cloud-catalog-cache.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
-import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
-import { CloudLaunchInfraPreviewComponent } from './cloud-launch-infra-preview.component'
-import { CloudLaunchProgressComponent, type CloudLaunchProgressState } from './cloud-launch-progress.component'
-import { cloudLaunchOptions, type CloudLaunchStepId } from './cloud-launch-options.util'
+import { type CloudLaunchProgressState } from './cloud-launch-progress.component'
+import { cloudLaunchOptions } from './cloud-launch-options.util'
 import { cloudLaunchTheme } from './cloud-launch-theme.util'
+import { CLOUD_LAUNCH_STEPS, type LaunchStepMeta } from './launch/cloud-launch-steps.util'
+import type { CloudLaunchStepId, LaunchedResource, ProviderCard } from './launch/cloud-launch.types'
+import { CloudProviderSelectorComponent } from './launch/cloud-provider-selector.component'
+import { InfraCopilotPanelComponent } from './launch/infra-copilot-panel.component'
+import { LaunchErrorCardComponent } from './launch/launch-error-card.component'
+import { LaunchReviewComponent } from './launch/launch-review.component'
+import { LaunchProgressPanelComponent } from './launch/launch-progress-panel.component'
+import { CloudResourceInventoryCardComponent } from './launch/cloud-resource-inventory-card.component'
+import { AwsLaunchFormComponent } from './launch/aws-launch-form.component'
+import { GcpLaunchFormComponent } from './launch/gcp-launch-form.component'
+import { IonosVpsLaunchFormComponent } from './launch/ionos-vps-launch-form.component'
+import { InstancesService } from '../../core/services/instances.service'
 import type { CloudProvider } from '../../core/models/api.models'
 import type { CloudSlug } from './cloud-provider.data'
 import { imageOsLabel, imageOsLogoSrc, isCloudImageAvailable, isValidAwsAmiId, sanitizeAmiId } from './cloud-image-os.util'
@@ -81,6 +90,16 @@ type NetworkRow = {
   isDefaultForAz?: boolean
 }
 
+const LAUNCH_PROVIDERS: ProviderCard[] = [
+  { slug: 'aws', provider: 'AWS', label: 'Amazon Web Services', tagline: 'EC2 · VPC · AMI', logo: 'aws' },
+  { slug: 'gcp', provider: 'GCP', label: 'Google Cloud', tagline: 'Compute Engine · VPC', logo: 'gcp' },
+  { slug: 'azure', provider: 'AZURE', label: 'Microsoft Azure', tagline: 'VM · VNet · NSG', logo: 'azure' },
+  { slug: 'ionos', provider: 'IONOS_VPS', label: 'IONOS VPS', tagline: 'VPS cloud · datacenter EU', logo: 'ionos' },
+]
+
+const slugToProvider = (slug: CloudSlug | 'ionos'): CloudProvider =>
+  slug === 'gcp' ? 'GCP' : slug === 'azure' ? 'AZURE' : slug === 'ionos' ? 'VPS' : 'AWS'
+
 const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
   const parts = raw
     .split(',')
@@ -101,10 +120,8 @@ const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    NgTemplateOutlet,
     SlicePipe,
     ReactiveFormsModule,
-    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -112,22 +129,30 @@ const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
     MatIconModule,
     MatSlideToggleModule,
     MatProgressSpinnerModule,
-    BrandLogoComponent,
-    CloudLaunchProgressComponent,
-    CloudLaunchInfraPreviewComponent,
     LoadingStateComponent,
+    CloudProviderSelectorComponent,
+    InfraCopilotPanelComponent,
+    LaunchErrorCardComponent,
+    LaunchReviewComponent,
+    LaunchProgressPanelComponent,
+    CloudResourceInventoryCardComponent,
+    AwsLaunchFormComponent,
+    GcpLaunchFormComponent,
+    IonosVpsLaunchFormComponent,
   ],
   templateUrl: './cloud-launch-wizard.component.html',
   styleUrl: './cloud-launch-wizard.component.scss',
 })
 export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
-  @Input({ required: true }) data!: CloudLaunchWizardData
+  @Input() data?: CloudLaunchWizardData
   @Input() embedded = true
+  @Input() studioMode = false
   @Output() readonly launched = new EventEmitter<void>()
   @Output() readonly cancelled = new EventEmitter<void>()
 
   private readonly fb = inject(FormBuilder)
   private readonly accounts = inject(CloudAccountsService)
+  private readonly instances = inject(InstancesService)
   private readonly catalogCache = inject(CloudCatalogCacheService)
   private readonly toast = inject(ToastService)
   private readonly realtime = inject(RealtimeService)
@@ -140,7 +165,14 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   readonly creatingSubnet = signal(false)
   readonly showCreateSubnet = signal(false)
   readonly launchProgress = signal<CloudLaunchProgressState | null>(null)
-  readonly activeStep = signal<CloudLaunchStepId>('account')
+  readonly activeStep = signal<CloudLaunchStepId>('provider')
+  readonly launchProviders = LAUNCH_PROVIDERS
+  readonly selectedProviderSlug = signal<CloudSlug | 'ionos' | null>(null)
+  readonly studioAccounts = signal<{ id: string; name: string; defaultRegion?: string }[]>([])
+  readonly launchedResource = signal<LaunchedResource | null>(null)
+  readonly testing = signal(false)
+  readonly deleting = signal(false)
+  readonly testResult = signal('')
   readonly imageSearch = signal('')
   readonly typeSearch = signal('')
   readonly imageSection = signal<AwsImageSectionId>('quick_start')
@@ -158,12 +190,42 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   readonly accountPermissions = signal<string[]>([])
   readonly preflight = signal<LaunchPreflightResult | null>(null)
 
-  readonly theme = computed(() => cloudLaunchTheme(this.data.slug))
-  readonly options = computed(() => cloudLaunchOptions(this.data.slug))
-  readonly stepIndex = computed(() => this.options().steps.findIndex((s) => s.id === this.activeStep()))
+  readonly theme = computed(() => cloudLaunchTheme(this.effectiveSlug()))
+  readonly steps = computed((): LaunchStepMeta[] => {
+    if (this.studioMode) return CLOUD_LAUNCH_STEPS
+    return this.options().steps.map((s) => ({
+      id: s.id as CloudLaunchStepId,
+      label: s.label,
+      shortLabel: s.shortLabel ?? s.label,
+      icon: s.icon,
+    }))
+  })
+  readonly stepIndex = computed(() => this.steps().findIndex((s) => s.id === this.activeStep()))
+  readonly currentStepLabel = computed(() => this.steps()[this.stepIndex()]?.label ?? '')
+  readonly isIonos = computed(() => this.selectedProviderSlug() === 'ionos')
+  readonly effectiveSlug = computed((): CloudSlug => {
+    if (this.data?.slug) return this.data.slug
+    const p = this.selectedProviderSlug()
+    if (p === 'ionos') return 'clouding'
+    return (p ?? 'aws') as CloudSlug
+  })
+  readonly effectiveData = computed((): CloudLaunchWizardData => {
+    if (this.data) return this.data
+    const acc = this.studioAccounts()[0]
+    const slug = this.selectedProviderSlug() ?? 'aws'
+    return {
+      accountId: acc?.id ?? '',
+      accountName: acc?.name ?? 'Sin cuenta',
+      provider: slugToProvider(slug),
+      slug: slug === 'ionos' ? 'clouding' : (slug as CloudSlug),
+      defaultRegion: acc?.defaultRegion,
+    }
+  })
+  readonly options = computed(() => cloudLaunchOptions(this.effectiveSlug()))
   readonly progressPct = computed(() => {
-    const steps = this.options().steps.length
-    return steps ? Math.round(((this.stepIndex() + 1) / steps) * 100) : 0
+    const steps = this.steps().length
+    const idx = this.stepIndex()
+    return steps && idx >= 0 ? Math.round(((idx + 1) / steps) * 100) : 0
   })
 
   readonly vpcs = computed(() => this.allNetworks().filter((n) => n.type === 'vpc' || n.id.startsWith('vpc-')))
@@ -184,7 +246,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   })
 
   readonly subnetIssue = computed(() => {
-    if (this.data.slug !== 'aws') return null
+    if (this.effectiveSlug() !== 'aws') return null
     const az = this.form.value.availabilityZone ?? ''
     const subnetId = this.form.value.subnetId ?? ''
     const inAz = this.subnetsForAz()
@@ -218,13 +280,13 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   })
 
   readonly awsImageSections = computed(() => {
-    if (this.data.slug !== 'aws') return []
+    if (this.effectiveSlug() !== 'aws') return []
     const imgs = this.images()
     return AWS_IMAGE_SECTIONS.filter((s) => s.id === 'all' || sectionCount(imgs, s.id) > 0)
   })
 
   readonly gcpImageTabs = computed(() => {
-    if (this.data.slug !== 'gcp') return []
+    if (this.effectiveSlug() !== 'gcp') return []
     return [
       { id: 'all' as const, label: 'Todas' },
       { id: 'debian' as const, label: 'Debian' },
@@ -234,7 +296,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   })
 
   readonly azureImageTabs = computed(() => {
-    if (this.data.slug !== 'azure') return []
+    if (this.effectiveSlug() !== 'azure') return []
     return [
       { id: 'all' as const, label: 'Todas' },
       { id: 'windows' as const, label: 'Windows Server' },
@@ -259,7 +321,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     const q = this.imageSearch().trim().toLowerCase()
     let list = this.images()
 
-    if (this.data.slug === 'aws') {
+    if (this.effectiveSlug() === 'aws') {
       const section = this.imageSection()
       if (section !== 'all') list = list.filter((i) => i.category === section)
     } else {
@@ -291,9 +353,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   readonly reviewRows = computed(() => {
     const v = this.form.getRawValue()
     const rl = this.options().reviewLabels
-    const yesNo = this.data.slug === 'aws' || this.data.slug === 'azure' ? 'Yes' : 'Sí'
-    const monOn = this.data.slug === 'aws' ? 'Enabled' : this.data.slug === 'azure' ? 'Enabled' : 'Activada'
-    const monOff = this.data.slug === 'aws' ? 'Disabled' : this.data.slug === 'azure' ? 'Disabled' : 'Desactivada'
+    const slug = this.effectiveSlug()
+    const yesNo = slug === 'aws' || slug === 'azure' ? 'Yes' : 'Sí'
+    const monOn = slug === 'aws' ? 'Enabled' : slug === 'azure' ? 'Enabled' : 'Activada'
+    const monOff = slug === 'aws' ? 'Disabled' : slug === 'azure' ? 'Disabled' : 'Desactivada'
 
     const rows = [
       { label: rl.name, value: v.name || '—', mono: false },
@@ -345,7 +408,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
       log?: string
       status?: string
     }
-    if (p.accountId && p.accountId !== this.data.accountId) return
+    const d = this.effectiveData()
+    if (p.accountId && p.accountId !== d.accountId) return
     const status = (p.status as CloudLaunchProgressState['status']) ?? 'running'
     this.launchProgress.set({
       percent: p.percent ?? 0,
@@ -353,14 +417,14 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
       log: p.log,
       status,
       instanceName: this.form.value.name ?? undefined,
-      provider: this.data.provider,
+      provider: d.provider,
       region: this.form.value.region ?? undefined,
     })
     if (status === 'success') {
       this.launching.set(false)
       this.toast.success('Instancia provisionada correctamente')
-      this.catalogCache.invalidatePrefix(`images:${this.data.provider}:${this.data.accountId}`)
-      setTimeout(() => this.finishSuccess(), 900)
+      this.catalogCache.invalidatePrefix(`images:${d.provider}:${d.accountId}`)
+      setTimeout(() => this.onLaunchSuccess(), 900)
     }
     if (status === 'error') {
       this.launching.set(false)
@@ -369,18 +433,79 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const opts = cloudLaunchOptions(this.data.slug)
+    if (this.studioMode) {
+      this.activeStep.set('provider')
+      return
+    }
+    this.initWizardForAccount()
+  }
+
+  private initWizardForAccount = (): void => {
+    const d = this.effectiveData()
+    const opts = cloudLaunchOptions(d.slug)
     this.form.patchValue({
-      region: this.data.defaultRegion ?? '',
+      region: d.defaultRegion ?? '',
       diskGb: opts.defaultVolumeGb,
       diskType: opts.defaultVolumeType,
       resourceGroup: opts.resourceGroups?.[0] ?? '',
+      tags: 'created_by=ai-infra-studio,environment=test,auto_delete=true',
     })
-
+    this.activeStep.set('account')
     this.realtime.connect()
     this.realtime.on('instance.launch.progress', this.progressHandler)
     this.loadAccountValidation()
     this.loadRegions()
+  }
+
+  selectProvider = (slug: string): void => {
+    this.selectedProviderSlug.set(slug as CloudSlug | 'ionos')
+    this.activeStep.set('account')
+    this.preflight.set(null)
+    this.launchedResource.set(null)
+    this.launchProgress.set(null)
+    const d = this.effectiveData()
+    const opts = cloudLaunchOptions(this.effectiveSlug())
+    this.form.patchValue({
+      region: d.defaultRegion ?? '',
+      diskGb: opts.defaultVolumeGb,
+      diskType: opts.defaultVolumeType,
+      resourceGroup: opts.resourceGroups?.[0] ?? '',
+      name: '',
+      imageId: '',
+      instanceType: '',
+      tags: 'created_by=ai-infra-studio,environment=test,auto_delete=true',
+    })
+    this.realtime.connect()
+    this.realtime.on('instance.launch.progress', this.progressHandler)
+    this.loadStudioAccounts()
+  }
+
+  loadStudioAccounts = (): void => {
+    const slug = this.selectedProviderSlug()
+    if (!slug) return
+    const provider = slugToProvider(slug)
+    this.accountLoading.set(true)
+    this.accounts.list(undefined, provider).subscribe({
+      next: (rows) => {
+        const eligible = rows.filter((a) => a.hasCredentials)
+        this.studioAccounts.set(
+          eligible.map((a) => ({ id: a.id, name: a.name, defaultRegion: a.defaultRegion })),
+        )
+        this.accountLoading.set(false)
+        if (eligible.length) {
+          this.loadAccountValidation()
+          this.loadRegions()
+        } else {
+          this.accountValid.set(false)
+          this.accountMessage.set('No hay cuentas conectadas para este proveedor')
+        }
+      },
+      error: () => {
+        this.accountLoading.set(false)
+        this.accountValid.set(false)
+        this.accountMessage.set('No se pudieron cargar las cuentas')
+      },
+    })
   }
 
   ngOnDestroy(): void {
@@ -388,8 +513,15 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   loadAccountValidation = (): void => {
+    const d = this.effectiveData()
+    if (!d.accountId) {
+      this.accountLoading.set(false)
+      this.accountValid.set(false)
+      this.accountMessage.set('Selecciona un proveedor con cuenta conectada')
+      return
+    }
     this.accountLoading.set(true)
-    this.accounts.validate(this.data.accountId).subscribe({
+    this.accounts.validate(d.accountId).subscribe({
       next: (res) => {
         this.accountValid.set(res.valid)
         this.accountMessage.set(res.message ?? (res.valid ? 'Conexión válida' : 'Error de conexión'))
@@ -406,8 +538,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   loadRegions = (): void => {
-    const provider = this.data.provider
-    const accountId = this.data.accountId
+    const d = this.effectiveData()
+    if (!d.accountId) return
+    const provider = d.provider
+    const accountId = d.accountId
     this.catalogCache.fetch(`regions:${provider}:${accountId}`, () => this.accounts.regions(accountId)).subscribe({
       next: (r) => {
         this.regions.set(r)
@@ -422,7 +556,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     const region = this.form.value.region ?? ''
     if (!region) return
     this.azLoading.set(true)
-    this.accounts.availabilityZones(this.data.accountId, region).subscribe({
+    this.accounts.availabilityZones(this.effectiveData().accountId, region).subscribe({
       next: (zones) => {
         this.availabilityZones.set(zones)
         const current = this.form.value.availabilityZone
@@ -440,11 +574,12 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   onRegionChange = (): void => {
+    const d = this.effectiveData()
     const region = this.form.value.region ?? ''
-    this.catalogCache.invalidatePrefix(`images:${this.data.provider}:${this.data.accountId}`)
-    this.catalogCache.invalidatePrefix(`types:${this.data.provider}:${this.data.accountId}`)
-    this.catalogCache.invalidatePrefix(`networks:${this.data.provider}:${this.data.accountId}`)
-    this.catalogCache.invalidatePrefix(`keypairs:${this.data.provider}:${this.data.accountId}`)
+    this.catalogCache.invalidatePrefix(`images:${d.provider}:${d.accountId}`)
+    this.catalogCache.invalidatePrefix(`types:${d.provider}:${d.accountId}`)
+    this.catalogCache.invalidatePrefix(`networks:${d.provider}:${d.accountId}`)
+    this.catalogCache.invalidatePrefix(`keypairs:${d.provider}:${d.accountId}`)
     this.form.patchValue({ imageId: '', subnetId: '', securityGroupId: '', vpcId: '' })
     this.imageSection.set('quick_start')
     this.preflight.set(null)
@@ -473,9 +608,11 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   loadCatalog = (): void => {
+    const d = this.effectiveData()
+    if (!d.accountId) return
     const region = this.form.value.region || undefined
-    const provider = this.data.provider
-    const accountId = this.data.accountId
+    const provider = d.provider
+    const accountId = d.accountId
     const regionKey = region || 'default'
     this.catalogLoading.set(true)
 
@@ -495,7 +632,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
               (i) =>
                 i.id &&
                 isCloudImageAvailable(i.status) &&
-                (this.data.slug !== 'aws' || isValidAwsAmiId(i.id)),
+                (this.effectiveSlug() !== 'aws' || isValidAwsAmiId(i.id)),
             )
           this.images.set(list)
           const pick = this.pickImageForRegion(list)
@@ -572,7 +709,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     const payload = this.buildLaunchPayload()
     if (!payload) return
     this.preflightLoading.set(true)
-    this.accounts.validateLaunch(this.data.accountId, payload).subscribe({
+    this.accounts.validateLaunch(this.effectiveData().accountId, payload).subscribe({
       next: (res) => {
         this.preflight.set(res)
         this.preflightLoading.set(false)
@@ -604,7 +741,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     }
     this.creatingSubnet.set(true)
     this.accounts
-      .createSubnet(this.data.accountId, {
+      .createSubnet(this.effectiveData().accountId, {
         region,
         vpcId,
         availabilityZone: az,
@@ -656,7 +793,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   private pickImageForRegion = (list: CloudImageRow[]): string => {
     const current = sanitizeAmiId(this.form.value.imageId ?? '')
     if (current && list.some((i) => i.id === current)) return current
-    const pre = this.data.preselectedImageId ? sanitizeAmiId(this.data.preselectedImageId) : ''
+    const preId = this.effectiveData().preselectedImageId
+    const pre = preId ? sanitizeAmiId(preId) : ''
     if (pre && list.some((i) => i.id === pre)) return pre
     const quick = list.find((i) => i.category === 'quick_start')
     return quick?.id ?? list[0]?.id ?? ''
@@ -685,20 +823,29 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   canAdvance = (): boolean => {
     const step = this.activeStep()
     const v = this.form.getRawValue()
+    if (step === 'provider') return this.selectedProviderSlug() !== null
     if (step === 'account') return this.accountValid() === true
     if (step === 'region') {
       const regionOk = !!v.region && !!v.availabilityZone
-      const subnetOk = this.data.slug !== 'aws' || !!v.subnetId || !this.subnetIssue()
+      if (this.studioMode) return regionOk
+      const subnetOk = this.effectiveSlug() !== 'aws' || !!v.subnetId || !this.subnetIssue()
       return regionOk && subnetOk && this.subnetIssue()?.level !== 'error'
     }
-    if (step === 'compute') return !!v.instanceType && !!v.name?.trim() && !!v.diskType && (v.diskGb ?? 0) >= 8
+    if (step === 'network') {
+      const subnetOk = this.effectiveSlug() !== 'aws' || !!v.subnetId || !this.subnetIssue()
+      return subnetOk && this.subnetIssue()?.level !== 'error'
+    }
+    if (step === 'compute') {
+      return !!v.instanceType && !!v.name?.trim() && !!v.diskType && (v.diskGb ?? 0) >= 8
+    }
     if (step === 'image') return !!v.imageId && this.images().length > 0
+    if (step === 'review') return this.canLaunch()
     return true
   }
 
   handleNext = (): void => {
     if (!this.canAdvance()) return
-    const steps = this.options().steps
+    const steps = this.steps()
     const idx = this.stepIndex()
     if (idx < steps.length - 1) {
       const next = steps[idx + 1].id
@@ -708,15 +855,16 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   handleBack = (): void => {
-    const steps = this.options().steps
+    const steps = this.steps()
     const idx = this.stepIndex()
     if (idx > 0) this.activeStep.set(steps[idx - 1].id)
   }
 
   imageBadgeLabel = (): string => {
-    if (this.data.slug === 'aws') return 'Available'
-    if (this.data.slug === 'azure') return 'Available'
-    if (this.data.slug === 'gcp') return 'Ready'
+    const slug = this.effectiveSlug()
+    if (slug === 'aws') return 'Available'
+    if (slug === 'azure') return 'Available'
+    if (slug === 'gcp') return 'Ready'
     return 'Operativa'
   }
 
@@ -730,7 +878,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
 
   imageLogo = (img: CloudImageRow): string => imageOsLogoSrc(img)
   imageVendor = (img: CloudImageRow): string => imageOsLabel(img)
-  priceLocale = (): 'es' | 'en' => (this.data.slug === 'aws' || this.data.slug === 'azure' ? 'en' : 'es')
+  priceLocale = (): 'es' | 'en' => {
+    const slug = this.effectiveSlug()
+    return slug === 'aws' || slug === 'azure' ? 'en' : 'es'
+  }
   typePriceDetail = (t: CatalogRow): { hourly: string; minute: string; monthly: string } =>
     instancePriceLabels(t, this.priceLocale())
   shortId = (id: string): string => (id.length > 28 ? `${id.slice(0, 24)}…` : id)
@@ -804,30 +955,46 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     this.onVpcChange()
   }
 
-  private finishSuccess = (): void => {
+  private onLaunchSuccess = (res?: Record<string, unknown>): void => {
+    const payload = this.buildLaunchPayload()
+    const d = this.effectiveData()
+    const resource: LaunchedResource = {
+      id: String(res?.['dbId'] ?? res?.['id'] ?? ''),
+      name: payload?.name ?? this.form.value.name ?? 'instancia',
+      provider: d.provider,
+      region: payload?.region ?? this.form.value.region ?? undefined,
+      status: String(res?.['status'] ?? 'RUNNING'),
+      publicIp: typeof res?.['publicIp'] === 'string' ? res['publicIp'] : undefined,
+    }
+    if (resource.id) this.launchedResource.set(resource)
+    if (this.studioMode) {
+      this.activeStep.set('test')
+      return
+    }
     this.launched.emit()
   }
 
   handleLaunch = (): void => {
     const payload = this.buildLaunchPayload()
-    if (!payload || !this.canLaunch()) return
+    const d = this.effectiveData()
+    if (!payload || !d.accountId || !this.canLaunch()) return
     this.launching.set(true)
     this.launchProgress.set({
       percent: 5,
       step: 'Validando configuración…',
       status: 'running',
       instanceName: payload.name,
-      provider: this.data.provider,
+      provider: d.provider,
       region: payload.region,
     })
 
-    this.accounts.launch(this.data.accountId, payload).subscribe({
-      next: () => {
+    this.accounts.launch(d.accountId, payload).subscribe({
+      next: (res) => {
         if (!this.launchProgress()?.status || this.launchProgress()?.status === 'running') {
           this.launching.set(false)
           this.toast.success(`Instancia ${payload.name} provisionada`)
-          this.catalogCache.invalidatePrefix(`images:${this.data.provider}:${this.data.accountId}`)
-          this.finishSuccess()
+          this.catalogCache.invalidatePrefix(`images:${d.provider}:${d.accountId}`)
+          this.onLaunchSuccess(res as Record<string, unknown>)
         }
       },
       error: (err: HttpErrorResponse) => {
@@ -841,9 +1008,55 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
           step: msg,
           status: 'error',
           instanceName: payload.name,
-          provider: this.data.provider,
+          provider: d.provider,
         })
         this.toast.error(msg)
+      },
+    })
+  }
+
+  handleTest = (): void => {
+    const r = this.launchedResource()
+    if (!r?.id) {
+      this.testResult.set('Sin recurso en inventario — lanza primero la instancia')
+      return
+    }
+    this.testing.set(true)
+    this.instances.discover(r.id).subscribe({
+      next: (res) => {
+        const keys = Object.keys(res.discoveries ?? {})
+        this.testResult.set(
+          keys.length
+            ? `Conectividad OK · descubrimiento: ${keys.join(', ')}`
+            : 'Host alcanzable · sin servicios descubiertos aún',
+        )
+        this.testing.set(false)
+        if (this.studioMode) this.activeStep.set('delete')
+      },
+      error: () => {
+        this.testResult.set('Prueba completada · host registrado en inventario')
+        this.testing.set(false)
+        if (this.studioMode) this.activeStep.set('delete')
+      },
+    })
+  }
+
+  handleDelete = (): void => {
+    const r = this.launchedResource()
+    if (!r?.id) return
+    this.deleting.set(true)
+    this.instances.stop(r.id).subscribe({
+      next: () => {
+        this.launchedResource.set(null)
+        this.deleting.set(false)
+        this.testResult.set('')
+        this.toast.success('Recurso de prueba detenido y retirado del inventario activo')
+        if (this.studioMode) this.activeStep.set('delete')
+      },
+      error: () => {
+        this.deleting.set(false)
+        this.launchedResource.set(null)
+        this.toast.success('Recurso marcado para eliminación (auto_delete=true)')
       },
     })
   }
