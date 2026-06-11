@@ -7,6 +7,8 @@ import { LoginDto, RegisterDto } from './dto/login.dto'
 import { MfaSetupDto } from './dto/mfa.dto'
 import { Public } from '../../common/decorators/auth.decorators'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
+import { GithubOAuthService } from '../github/github-oauth.service'
+import { GitlabOAuthService } from '../gitlab/gitlab-oauth.service'
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -14,6 +16,8 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private config: ConfigService,
+    private githubOAuth: GithubOAuthService,
+    private gitlabOAuth: GitlabOAuthService,
   ) {}
 
   @Public()
@@ -88,11 +92,20 @@ export class AuthController {
   async oauthCallback(
     @Param('provider') provider: string,
     @Query('code') code: string,
+    @Query('state') state: string,
     @Query('error') oauthError: string,
     @Ip() ip: string,
     @Res() res: Response,
   ) {
     const authUrl = this.config.get<string>('AUTH_URL', 'http://localhost:4200').replace(/\/$/, '')
+
+    const normalized = provider.toLowerCase()
+    const repoOAuthFallback =
+      normalized === 'gitlab'
+        ? `${authUrl}/admin/configuracion/integraciones/gitlab/conectar`
+        : normalized === 'github'
+          ? `${authUrl}/admin/configuracion/integraciones/github/conectar`
+          : `${authUrl}/login`
 
     if (oauthError) {
       const message =
@@ -103,7 +116,34 @@ export class AuthController {
             : oauthError.startsWith('No se ') || oauthError.startsWith('GitHub ') || oauthError.startsWith('Google ')
               ? oauthError
               : 'No se pudo completar el inicio de sesión con OAuth. Inténtalo de nuevo.'
-      return res.redirect(`${authUrl}/login?oauth_error=${encodeURIComponent(message)}`)
+      const target = state?.trim() ? repoOAuthFallback : `${authUrl}/login`
+      return res.redirect(`${target}?oauth_error=${encodeURIComponent(message)}`)
+    }
+
+    if (state?.trim() && normalized === 'github') {
+      try {
+        const { redirectUrl } = await this.githubOAuth.handleCallback(code, state)
+        return res.redirect(redirectUrl)
+      } catch (err) {
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : 'No se pudo completar la autorización con GitHub.'
+        return res.redirect(`${repoOAuthFallback}?oauth_error=${encodeURIComponent(message)}`)
+      }
+    }
+
+    if (state?.trim() && normalized === 'gitlab') {
+      try {
+        const { redirectUrl } = await this.gitlabOAuth.handleCallback(code, state)
+        return res.redirect(redirectUrl)
+      } catch (err) {
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : 'No se pudo completar la autorización con GitLab.'
+        return res.redirect(`${repoOAuthFallback}?oauth_error=${encodeURIComponent(message)}`)
+      }
     }
 
     try {

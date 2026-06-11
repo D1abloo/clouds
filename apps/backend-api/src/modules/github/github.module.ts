@@ -14,18 +14,27 @@ import { GithubWebhooksService } from './github-webhooks.service'
 import { GithubDeploymentsService } from './github-deployments.service'
 import { GithubSummaryService } from './github-summary.service'
 import { GithubApiClient } from './github-api.client'
+import { GithubRepoResourcesService } from './github-repo-resources.service'
+import { GithubOAuthService } from './github-oauth.service'
+import { GithubWorkflowsService } from './github-workflows.service'
+import { OrganizationScopeModule } from '../../common/organization/organization-scope.module'
+import { RepoOAuthModule } from '../../common/oauth/repo-oauth.module'
 
 @Module({
   imports: [
+    RepoOAuthModule,
     AuditModule,
     NotificationsModule,
     IntegrationsModule,
     CloudAccountsModule,
+    OrganizationScopeModule,
     forwardRef(() => RealtimeModule),
   ],
   controllers: [GithubController],
   providers: [
+    GithubOAuthService,
     GithubApiClient,
+    GithubRepoResourcesService,
     GithubAccountsService,
     GithubRepositoriesService,
     GithubBranchesService,
@@ -33,8 +42,9 @@ import { GithubApiClient } from './github-api.client'
     GithubPullRequestsService,
     GithubWebhooksService,
     GithubDeploymentsService,
+    GithubWorkflowsService,
     GithubSummaryService,
   ],
-  exports: [GithubSummaryService, GithubAccountsService],
+  exports: [GithubOAuthService, GithubSummaryService, GithubAccountsService],
 })
 export class GithubModule {}

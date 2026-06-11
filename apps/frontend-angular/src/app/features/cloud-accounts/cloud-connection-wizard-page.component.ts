@@ -72,7 +72,7 @@ export class CloudConnectionWizardPageComponent implements OnInit {
         ? 'platform'
         : resolved && ['DIGITALOCEAN', 'HETZNER', 'LINODE', 'OVH'].includes(resolved)
           ? 'vps'
-          : resolved && ['AWS', 'GCP', 'AZURE'].includes(resolved)
+          : resolved && ['AWS', 'GCP', 'AZURE', 'CLOUDING'].includes(resolved)
             ? 'cloud'
             : 'all'
 

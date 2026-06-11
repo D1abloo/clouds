@@ -62,15 +62,24 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
             <button mat-flat-button class="gitlab-primary" type="button" (click)="addAccount.emit()">
               <mat-icon>person_add</mat-icon> Añadir cuenta
             </button>
-            <button mat-stroked-button type="button" (click)="connectDemo.emit()">
-              <mat-icon>science</mat-icon> Demo
-            </button>
-            <button mat-stroked-button type="button" (click)="validate.emit()">
-              <mat-icon>verified</mat-icon> Validar
-            </button>
-            <button mat-stroked-button type="button" (click)="sync.emit()">
-              <mat-icon>sync</mat-icon> Sincronizar
-            </button>
+            @if (!demoMode) {
+              <button mat-stroked-button type="button" (click)="validate.emit()">
+                <mat-icon>verified</mat-icon> Validar
+              </button>
+              <button mat-stroked-button type="button" (click)="sync.emit()">
+                <mat-icon>sync</mat-icon> Sincronizar
+              </button>
+            } @else {
+              <button mat-stroked-button type="button" (click)="connectDemo.emit()">
+                <mat-icon>science</mat-icon> Demo
+              </button>
+              <button mat-stroked-button type="button" (click)="validate.emit()">
+                <mat-icon>verified</mat-icon> Validar
+              </button>
+              <button mat-stroked-button type="button" (click)="sync.emit()">
+                <mat-icon>sync</mat-icon> Sincronizar
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -170,7 +179,7 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
             <div class="repo-subblock">
               <h4><mat-icon>timeline</mat-icon> Pipelines</h4>
               <ul class="repo-inline-list">
-                @for (p of pipelines; track p['id']) {
+                @for (p of pipelinesList; track p['id']) {
                   <li>
                     <strong>{{ p['projectPath'] }}</strong>
                     <span class="repo-muted">{{ p['ref'] }} · {{ p['stage'] }} · {{ p['duration'] }}</span>
@@ -203,7 +212,7 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
         <mat-tab label="Merge Requests">
           <div class="repo-data-block">
             <ul class="repo-inline-list">
-              @for (mr of mergeRequests; track mr['id']) {
+              @for (mr of mergeRequestsList; track mr['id']) {
                 <li>
                   <strong>!{{ mr['iid'] }} {{ mr['title'] }}</strong>
                   <span class="repo-muted">{{ mr['projectPath'] }}</span>
@@ -275,7 +284,7 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
             <div class="repo-subblock">
               <h4><mat-icon>webhook</mat-icon> Webhooks GitLab</h4>
               <ul class="repo-inline-list">
-                @for (wh of gitlabWebhooks; track wh['id']) {
+                @for (wh of gitlabWebhooksList; track wh['id']) {
                   <li>
                     <strong>{{ wh['event'] }}</strong>
                     <span class="repo-muted">{{ wh['projectPath'] }}</span>
@@ -293,7 +302,7 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
             <div class="repo-subblock">
               <h4><mat-icon>rocket_launch</mat-icon> Despliegues recientes</h4>
               <ul class="repo-inline-list">
-                @for (d of gitlabDeployments; track d['id']) {
+                @for (d of gitlabDeploymentsList; track d['id']) {
                   <li>
                     <strong>{{ d['projectPath'] }}</strong>
                     <span class="repo-muted">{{ d['targetName'] }} · {{ d['branch'] }}</span>
@@ -350,15 +359,31 @@ export class GitlabSectionComponent {
   readonly groupCols = ['name', 'path', 'projects', 'subgroups']
   readonly varCols = ['key', 'project', 'env']
   readonly routes = {
-    webhooks: repoRoute('webhooks'),
-    commits: repoRoute('commits'),
-    branches: repoRoute('branches'),
-    deployments: repoRoute('deployments'),
-    github: repoRoute('github'),
+    webhooks: repoRoute('webhooks', 'gitlab'),
+    commits: repoRoute('commits', 'gitlab'),
+    branches: repoRoute('branches', 'gitlab'),
+    deployments: repoRoute('deployments', 'gitlab'),
+    github: repoRoute('github', 'github'),
+  }
+
+  get mergeRequestsList(): Record<string, unknown>[] {
+    return this.demoMode ? this.mergeRequests : []
+  }
+
+  get pipelinesList(): Record<string, unknown>[] {
+    return this.demoMode ? this.pipelines : []
+  }
+
+  get gitlabWebhooksList(): Record<string, unknown>[] {
+    return this.demoMode ? this.gitlabWebhooks : []
+  }
+
+  get gitlabDeploymentsList(): Record<string, unknown>[] {
+    return this.demoMode ? this.gitlabDeployments : []
   }
 
   get openMrsCount(): number {
-    return this.mergeRequests.filter((m) => m['state'] === 'opened').length
+    return this.mergeRequestsList.filter((m) => m['state'] === 'opened' || m['state'] === 'open').length
   }
 
   readonly addAccount = output<void>()

@@ -1,4 +1,8 @@
 import { Routes } from '@angular/router'
+import {
+  isGithubResourceSection,
+  isGitlabResourceSection,
+} from '../../features/repositories/repositories-route-matchers'
 const hub = (module: string, parentTitle: string, breadcrumb?: string) => ({
   loadComponent: () =>
     import('../../features/section-hub/section-hub.component').then((m) => m.SectionHubComponent),
@@ -176,6 +180,24 @@ export const NAVIGATION_ROUTES: Routes = [
     data: { breadcrumb: 'Kubernetes', module: 'kubernetes' },
   },
   {
+    path: 'repositories/github/:section',
+    canMatch: [isGithubResourceSection],
+    loadComponent: () =>
+      import('../../features/repositories/repositories-global-page.component').then(
+        (m) => m.RepositoriesGlobalPageComponent,
+      ),
+    data: { breadcrumb: 'GitHub', module: 'repositories', provider: 'github' },
+  },
+  {
+    path: 'repositories/gitlab/:section',
+    canMatch: [isGitlabResourceSection],
+    loadComponent: () =>
+      import('../../features/repositories/repositories-global-page.component').then(
+        (m) => m.RepositoriesGlobalPageComponent,
+      ),
+    data: { breadcrumb: 'GitLab', module: 'repositories', provider: 'gitlab' },
+  },
+  {
     path: 'repositories/github/:connectionId',
     loadComponent: () =>
       import('../../features/repositories/integrations/repository-connection-detail.component').then(
@@ -207,15 +229,19 @@ export const NAVIGATION_ROUTES: Routes = [
       ),
     data: { breadcrumb: 'GitLab', module: 'repositories' },
   },
+  { path: 'repositories/webhooks', redirectTo: 'repositories/github/webhooks', pathMatch: 'full' },
+  { path: 'repositories/branches', redirectTo: 'repositories/github/branches', pathMatch: 'full' },
+  { path: 'repositories/commits', redirectTo: 'repositories/github/commits', pathMatch: 'full' },
+  { path: 'repositories/pull-requests', redirectTo: 'repositories/github/pull-requests', pathMatch: 'full' },
+  { path: 'repositories/deployments', redirectTo: 'repositories/github/deployments', pathMatch: 'full' },
   {
-    path: 'repositories/:section',
+    path: 'repositories',
     loadComponent: () =>
-      import('../../features/repositories/repositories-global-page.component').then(
-        (m) => m.RepositoriesGlobalPageComponent,
+      import('../../features/repositories/repositories-hub-page.component').then(
+        (m) => m.RepositoriesHubPageComponent,
       ),
     data: { breadcrumb: 'Repositorios', module: 'repositories' },
   },
-  { path: 'repositories', redirectTo: 'repositories/github', pathMatch: 'full' },
   { path: 'jenkins/overview', redirectTo: 'jenkins/jobs', pathMatch: 'full' },
   { path: 'jenkins/servers', ...hub('jenkins', 'Jenkins', 'Servidores') },
   { path: 'jenkins/pipelines', ...hub('jenkins', 'Jenkins', 'Pipelines') },
@@ -225,25 +251,70 @@ export const NAVIGATION_ROUTES: Routes = [
       import('../../features/jenkins/jenkins-page.component').then((m) => m.JenkinsPageComponent),
     data: { breadcrumb: 'Jenkins', module: 'jenkins' },
   },
+  { path: 'terraform/launch-instance', redirectTo: 'infra/ai-studio', pathMatch: 'full' },
+  { path: 'terraform/overview', redirectTo: 'infra/ai-studio', pathMatch: 'full' },
+  { path: 'terraform/workspaces', redirectTo: 'infra/ai-studio', pathMatch: 'full' },
+  { path: 'terraform/:section', redirectTo: 'infra/ai-studio', pathMatch: 'full' },
   {
-    path: 'terraform/launch-instance',
+    path: 'infra/ai-studio',
     loadComponent: () =>
-      import('../../terraform/terraform.component').then((m) => m.TerraformComponent),
-    data: { breadcrumb: 'Lanzar instancia', openLaunch: true },
+      import('../../features/infra/ai-infra-studio.component').then((m) => m.AiInfraStudioComponent),
+    data: { breadcrumb: 'AI Infra Studio' },
   },
   {
-    path: 'terraform/overview',
+    path: 'finops',
     loadComponent: () =>
-      import('../../terraform/terraform.component').then((m) => m.TerraformComponent),
-    data: { breadcrumb: 'Terraform' },
+      import('../../features/finops/finops-hub.component').then((m) => m.FinopsHubComponent),
+    data: { breadcrumb: 'FinOps' },
   },
   {
-    path: 'terraform/workspaces',
+    path: 'finops/dashboard',
     loadComponent: () =>
-      import('../../terraform/terraform.component').then((m) => m.TerraformComponent),
-    data: { breadcrumb: 'Workspaces Terraform' },
+      import('../../features/finops/finops-dashboard.component').then((m) => m.FinopsDashboardComponent),
+    data: { breadcrumb: 'Panel FinOps' },
   },
-  { path: 'terraform/:section', ...hub('terraform', 'Terraform') },
+  {
+    path: 'finops/billing',
+    loadComponent: () =>
+      import('../../features/finops/finops-billing-page.component').then((m) => m.FinopsBillingPageComponent),
+    data: { breadcrumb: 'Facturación FinOps' },
+  },
+  {
+    path: 'finops/instances',
+    loadComponent: () =>
+      import('../../features/finops/finops-instances-page.component').then((m) => m.FinopsInstancesPageComponent),
+    data: { breadcrumb: 'Instancias FinOps' },
+  },
+  {
+    path: 'finops/cost-centers',
+    loadComponent: () =>
+      import('../../features/finops/finops-cost-centers-page.component').then((m) => m.FinopsCostCentersPageComponent),
+    data: { breadcrumb: 'Centros de coste' },
+  },
+  {
+    path: 'finops/alerts',
+    loadComponent: () =>
+      import('../../features/finops/finops-alerts-page.component').then((m) => m.FinopsAlertsPageComponent),
+    data: { breadcrumb: 'Alertas FinOps' },
+  },
+  {
+    path: 'finops/recommendations',
+    loadComponent: () =>
+      import('../../features/finops/finops-recommendations-page.component').then((m) => m.FinopsRecommendationsPageComponent),
+    data: { breadcrumb: 'Insights IA' },
+  },
+  {
+    path: 'finops/reports',
+    loadComponent: () =>
+      import('../../features/finops/finops-reports-page.component').then((m) => m.FinopsReportsPageComponent),
+    data: { breadcrumb: 'Informes FinOps' },
+  },
+  {
+    path: 'finops/settings',
+    loadComponent: () =>
+      import('../../features/finops/finops-settings-page.component').then((m) => m.FinopsSettingsPageComponent),
+    data: { breadcrumb: 'Configuración FinOps' },
+  },
   {
     path: 'terminal/:section',
     loadComponent: () =>
@@ -278,6 +349,14 @@ export const NAVIGATION_ROUTES: Routes = [
     loadComponent: () =>
       import('../../features/audit/audit-page.component').then((m) => m.AuditPageComponent),
     data: { breadcrumb: 'Auditoría', module: 'audit' },
+  },
+  {
+    path: 'settings/copilot',
+    loadComponent: () =>
+      import('../../features/admin/copilot-settings-page.component').then(
+        (m) => m.CopilotSettingsPageComponent,
+      ),
+    data: { breadcrumb: 'Copilot IA', module: 'settings' },
   },
   {
     path: 'settings/:section',
@@ -347,17 +426,21 @@ export const NAVIGATION_ROUTES: Routes = [
   { path: 'cloud/aws', redirectTo: 'cloud/aws/overview', pathMatch: 'full' },
   { path: 'cloud/gcp', redirectTo: 'cloud/gcp/overview', pathMatch: 'full' },
   { path: 'cloud/azure', redirectTo: 'cloud/azure/overview', pathMatch: 'full' },
+  { path: 'cloud/clouding', redirectTo: 'cloud/clouding/overview', pathMatch: 'full' },
   { path: 'vps/digitalocean', redirectTo: 'vps/digitalocean/overview', pathMatch: 'full' },
   { path: 'vps/hetzner', redirectTo: 'vps/hetzner/overview', pathMatch: 'full' },
   { path: 'vps/linode', redirectTo: 'vps/linode/overview', pathMatch: 'full' },
   { path: 'vps/ovh', redirectTo: 'vps/ovh/overview', pathMatch: 'full' },
+  { path: 'vps/ionos', redirectTo: 'vps/ionos/overview', pathMatch: 'full' },
+  { path: 'vps/vultr', redirectTo: 'vps/vultr/overview', pathMatch: 'full' },
+  { path: 'vps/scaleway', redirectTo: 'vps/scaleway/overview', pathMatch: 'full' },
   { path: 'vps/overview', redirectTo: 'vps/digitalocean/overview', pathMatch: 'full' },
   { path: 'vps', redirectTo: 'vps/digitalocean/overview', pathMatch: 'full' },
   { path: 'instances', redirectTo: 'instances/all-instances', pathMatch: 'full' },
   { path: 'docker', redirectTo: 'docker/containers', pathMatch: 'full' },
   { path: 'kubernetes', redirectTo: 'kubernetes/pods', pathMatch: 'full' },
   { path: 'jenkins', redirectTo: 'jenkins/jobs', pathMatch: 'full' },
-  { path: 'terraform', redirectTo: 'terraform/workspaces', pathMatch: 'full' },
+  { path: 'terraform', redirectTo: 'infra/ai-studio', pathMatch: 'full' },
   { path: 'billing', redirectTo: 'billing/overview', pathMatch: 'full' },
   { path: 'alerts', redirectTo: 'alerts/active', pathMatch: 'full' },
   { path: 'notifications', redirectTo: 'notifications/all', pathMatch: 'full' },

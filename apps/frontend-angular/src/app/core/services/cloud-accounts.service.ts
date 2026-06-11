@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable, catchError, map, of } from 'rxjs'
+import { Observable, catchError, map, of, shareReplay } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { ProModeService } from './pro-mode.service'
 import { CloudAccount, CloudProvider } from '../models/api.models'
@@ -22,15 +22,31 @@ export interface LaunchInstancePayload {
   imageId: string
   subnetId?: string
   securityGroupIds?: string[]
+  tags?: Record<string, string>
+  availabilityZone?: string
+  resourceGroup?: string
+  keyPair?: string
+  publicIp?: boolean
+  diskGb?: number
+  diskType?: string
+  userData?: string
+  monitoring?: boolean
 }
 
 @Injectable({ providedIn: 'root' })
 export class CloudAccountsService {
   private readonly api = inject(ApiClientService)
   private readonly pro = inject(ProModeService)
+  private defaultProject$?: Observable<{ id: string; name: string; slug: string }>
 
-  defaultProject = (): Observable<{ id: string; name: string; slug: string }> =>
-    this.api.get('cloud-accounts/meta/default-project')
+  defaultProject = (): Observable<{ id: string; name: string; slug: string }> => {
+    if (!this.defaultProject$) {
+      this.defaultProject$ = this.api
+        .get<{ id: string; name: string; slug: string }>('cloud-accounts/meta/default-project')
+        .pipe(shareReplay(1))
+    }
+    return this.defaultProject$
+  }
 
   list = (projectId?: string, provider?: CloudProvider): Observable<CloudAccount[]> =>
     this.api.get<unknown>('cloud-accounts', { projectId, provider }).pipe(
@@ -87,4 +103,7 @@ export class CloudAccountsService {
   syncMetrics = (id: string): Observable<unknown> => this.api.post(`cloud-accounts/${id}/sync-metrics`)
 
   syncBilling = (id: string): Observable<unknown> => this.api.post(`cloud-accounts/${id}/sync-billing`)
+
+  delete = (id: string): Observable<{ deleted: boolean; message: string }> =>
+    this.api.delete<{ deleted: boolean; message: string }>(`cloud-accounts/${id}`)
 }

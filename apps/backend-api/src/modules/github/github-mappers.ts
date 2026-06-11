@@ -84,16 +84,65 @@ export const mapWebhook = (w: GithubWebhook, repoFullName?: string | null) => ({
   active: w.isActive,
 })
 
-export const mapDeployment = (d: GithubDeployment, repoFullName: string) => ({
-  id: d.id,
-  repoId: d.repoId,
+export type DeploymentExtras = {
+  commitSha?: string | null
+  commitMessage?: string | null
+  environment?: string
+}
+
+export const mapDeployment = (
+  d: GithubDeployment,
+  repoFullName: string,
+  extras?: DeploymentExtras,
+) => {
+  const commitSha = extras?.commitSha ?? null
+  const env =
+    extras?.environment ??
+    (d.targetName?.toLowerCase().includes('prod') ? 'production' : 'staging')
+  return {
+    id: d.id,
+    repoId: d.repoId,
+    repoFullName,
+    provider: 'github' as const,
+    branch: d.branch,
+    targetType: d.targetType,
+    targetId: d.targetId,
+    targetName: d.targetName,
+    environment: env,
+    status: d.status,
+    logs: d.logs,
+    commitSha,
+    commitMessage: extras?.commitMessage ?? null,
+    version: commitSha ? commitSha.slice(0, 7) : null,
+    stages: ['checkout', 'build', 'test', 'publish', 'deploy'],
+    createdAt: d.createdAt.toISOString(),
+    finishedAt: d.finishedAt?.toISOString() ?? null,
+  }
+}
+
+export const mapWorkflowRun = (
+  run: {
+    id: number
+    name: string
+    status: string
+    conclusion: string | null
+    head_branch: string
+    head_sha: string
+    html_url: string
+    created_at: string
+    updated_at: string
+  },
+  repoFullName: string,
+) => ({
+  id: `gh-wf-${run.id}`,
+  workflow: run.name,
   repoFullName,
-  branch: d.branch,
-  targetType: d.targetType,
-  targetId: d.targetId,
-  targetName: d.targetName,
-  status: d.status,
-  logs: d.logs,
-  createdAt: d.createdAt.toISOString(),
-  finishedAt: d.finishedAt?.toISOString() ?? null,
+  provider: 'github',
+  status: run.conclusion ?? run.status,
+  branch: run.head_branch,
+  commitSha: run.head_sha,
+  version: run.head_sha?.slice(0, 7),
+  htmlUrl: run.html_url,
+  createdAt: run.created_at,
+  updatedAt: run.updated_at,
 })

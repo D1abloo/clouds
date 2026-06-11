@@ -121,6 +121,16 @@ describe('cloud-account-wizard.validation', () => {
     expect(isWizardFormValid('AZURE', v as never)).toBe(true)
   })
 
+  it('valida Clouding con API token y región', () => {
+    const v = {
+      ...baseForm(),
+      defaultRegion: 'eu-central',
+      credentialType: 'api_token',
+      apiToken: 'clouding-token',
+    }
+    expect(isWizardFormValid('CLOUDING', v as never)).toBe(true)
+  })
+
   it('buildCredentialsPayload no incluye demoMode', () => {
     const v = {
       ...baseForm(),

@@ -38,6 +38,7 @@ import { PlatformModule } from './modules/platform/platform.module'
 import { EmailModule } from './modules/email/email.module'
 import { PublicModule } from './modules/public/public.module'
 import { UserShortcutsModule } from './modules/user-shortcuts/user-shortcuts.module'
+import { CopilotModule } from './modules/copilot/copilot.module'
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { UserShortcutsModule } from './modules/user-shortcuts/user-shortcuts.mod
     EmailModule,
     PublicModule,
     UserShortcutsModule,
+    CopilotModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

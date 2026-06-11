@@ -22,6 +22,8 @@ export class InstancesService {
     provider?: string
     cloudAccountId?: string
     region?: string
+    includeTerminated?: boolean
+    status?: string
   }) {
     if (filters?.projectIds && !filters.projectIds.length) {
       return []
@@ -30,9 +32,21 @@ export class InstancesService {
       return this.findAllVpsAsInstances(filters)
     }
 
+    const statusFilter = filters?.status as InstanceStatus | undefined
+    const includeTerminated = filters?.includeTerminated === true
+
+    const lifecycleWhere =
+      statusFilter === 'TERMINATED'
+        ? { status: 'TERMINATED' as InstanceStatus }
+        : statusFilter
+          ? { deletedAt: null, status: statusFilter }
+          : includeTerminated
+            ? {}
+            : { deletedAt: null, status: { not: 'TERMINATED' as InstanceStatus } }
+
     const rows = await this.prisma.instance.findMany({
       where: {
-        deletedAt: null,
+        ...lifecycleWhere,
         ...(filters?.projectId && { projectId: filters.projectId }),
         ...(filters?.projectIds?.length && { projectId: { in: filters.projectIds } }),
         ...(filters?.provider &&
@@ -44,14 +58,29 @@ export class InstancesService {
       orderBy: [{ provider: 'asc' }, { region: 'asc' }, { name: 'asc' }],
     })
 
-    const cloud = rows.map((row) => this.enrichInstance(row))
+    const cloud = rows
+      .map((row) => this.enrichInstance(row))
+      .filter((row) => !this.isSyntheticInstance(row))
 
     if (filters?.provider) {
       return cloud
     }
 
-    const vps = await this.findAllVpsAsInstances(filters)
+    const vps = (await this.findAllVpsAsInstances(filters)).filter((row) => !this.isSyntheticInstance(row))
     return [...cloud, ...vps]
+  }
+
+  private isSyntheticInstance(row: Record<string, unknown>): boolean {
+    const id = String(row['id'] ?? '')
+    const externalId = String(row['externalId'] ?? '')
+    const name = String(row['name'] ?? '')
+    const meta = (row['metadata'] as Record<string, unknown>) ?? {}
+    if (row['isDemo'] === true || meta['isDemo'] === true) return true
+    if (id.startsWith('demo-inst-') || id.startsWith('demo-')) return true
+    if (/demo|mock|fake|sample|ejemplo/i.test(externalId)) return true
+    if (/aws-producci[oó]n-vm-/i.test(name)) return true
+    if (/^demo[-_]/i.test(name)) return true
+    return false
   }
 
   private async findAllVpsAsInstances(filters?: {
@@ -111,17 +140,27 @@ export class InstancesService {
     }
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, projectIds: string[] = []) {
     const instance = await this.prisma.instance.findUnique({
       where: { id, deletedAt: null },
       include: { cloudAccount: true, project: true },
     })
-    if (instance) return this.enrichInstance(instance)
+    if (instance) {
+      if (projectIds.length && !projectIds.includes(instance.projectId)) {
+        throw new NotFoundException('Instance not found')
+      }
+      return this.enrichInstance(instance)
+    }
 
     const vps = await this.prisma.vpsServer.findUnique({
       where: { id, deletedAt: null },
     })
-    if (vps) return this.enrichVpsAsInstance(vps as unknown as Record<string, unknown>)
+    if (vps) {
+      if (projectIds.length && !projectIds.includes(vps.projectId)) {
+        throw new NotFoundException('Instance not found')
+      }
+      return this.enrichVpsAsInstance(vps as unknown as Record<string, unknown>)
+    }
 
     throw new NotFoundException('Instance not found')
   }
@@ -149,20 +188,20 @@ export class InstancesService {
     }
   }
 
-  async start(id: string, userId?: string) {
-    return this.runAction(id, 'start', userId)
+  async start(id: string, userId?: string, projectIds: string[] = []) {
+    return this.runAction(id, 'start', userId, projectIds)
   }
 
-  async stop(id: string, userId?: string) {
-    return this.runAction(id, 'stop', userId)
+  async stop(id: string, userId?: string, projectIds: string[] = []) {
+    return this.runAction(id, 'stop', userId, projectIds)
   }
 
-  async restart(id: string, userId?: string) {
-    return this.runAction(id, 'restart', userId)
+  async restart(id: string, userId?: string, projectIds: string[] = []) {
+    return this.runAction(id, 'restart', userId, projectIds)
   }
 
-  async discover(id: string, userId?: string) {
-    const instance = await this.findOne(id)
+  async discover(id: string, userId?: string, projectIds: string[] = []) {
+    const instance = await this.findOne(id, projectIds)
     const meta = (instance as { metadata?: Record<string, unknown> }).metadata ?? {}
     const hostRef = String(
       meta['publicIp'] ?? meta['hostname'] ?? (instance as { name?: string }).name ?? id,
@@ -196,8 +235,13 @@ export class InstancesService {
     }
   }
 
-  private async runAction(id: string, action: 'start' | 'stop' | 'restart', userId?: string) {
-    const instance = await this.findOne(id)
+  private async runAction(
+    id: string,
+    action: 'start' | 'stop' | 'restart',
+    userId?: string,
+    projectIds: string[] = [],
+  ) {
+    const instance = await this.findOne(id, projectIds)
     const isDemo = Boolean((instance as { isDemo?: unknown }).isDemo === true)
     if (isDemo) {
       await this.audit.create({

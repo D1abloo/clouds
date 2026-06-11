@@ -18,7 +18,7 @@ if [ ! -f "${SOURCE}" ]; then
   exit 1
 fi
 
-grep -E '^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_ID|GITHUB_CLIENT_SECRET|AUTH_URL|APP_URL|OAUTH_CALLBACK_URL)=' "${SOURCE}" > "${PATCH_FILE}"
+grep -E '^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_ID|GITHUB_CLIENT_SECRET|GITLAB_CLIENT_ID|GITLAB_CLIENT_SECRET|AUTH_URL|APP_URL|OAUTH_CALLBACK_URL)=' "${SOURCE}" > "${PATCH_FILE}"
 
 echo "==> Parche OAuth ($(wc -l < "${PATCH_FILE}") vars) → ${REMOTE_HOST}"
 
@@ -64,4 +64,4 @@ for i in $(seq 1 24); do
 done
 
 echo "==> OAuth en platform/status"
-curl -sS -m 20 https://spendlyx.com/api/v1/platform/status | python3 -c "import sys,json; d=json.load(sys.stdin); o=d.get('oauth',{}); print('google:', o.get('google')); print('github:', o.get('github')); print('authUrl:', d.get('authUrl'))"
+curl -sS -m 20 https://spendlyx.com/api/v1/platform/status | python3 -c "import sys,json; d=json.load(sys.stdin); o=d.get('oauth',{}); print('google:', o.get('google')); print('github:', o.get('github')); print('gitlab:', o.get('gitlab')); print('authUrl:', d.get('authUrl'))"

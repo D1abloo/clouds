@@ -395,8 +395,8 @@ export class AdminSettingsIntegrationDialogComponent {
       const { result, liveMode } = res
       if (result.status === 'failed') {
         this.toast.error(`${this.profile().label}: ${result.error ?? 'Error de conexión'}`)
-      } else if (result.status === 'simulated') {
-        this.toast.info(`${this.profile().label}: simulación OK (${result.latencyMs} ms). En PRO: INTEGRATIONS_LIVE=true`)
+      } else if (result.status === 'simulated' || result.status === 'routed' || result.status === 'logged') {
+        this.toast.success(`${this.profile().label}: ${result.status === 'simulated' ? 'simulación OK' : 'conexión en vivo'} (${result.latencyMs} ms)`)
       } else {
         this.toast.success(`${this.profile().label}: entregado en PRO (${result.latencyMs} ms)`)
       }

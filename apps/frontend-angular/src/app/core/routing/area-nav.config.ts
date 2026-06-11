@@ -8,6 +8,7 @@ export interface AreaNavTab {
   icon?: string
   logo?: NavLogoKey
   badgeKey?: string
+  hint?: string
 }
 
 /** Segundo nivel desplegable (p. ej. AWS → EC2, Red). Nubes y VPS. */
@@ -19,6 +20,7 @@ export interface SidebarNavBranch {
   tone?: NavIconTone
   badgeKey?: string
   defaultRoute?: string
+  description?: string
   children: AreaNavTab[]
 }
 
@@ -35,13 +37,19 @@ export interface SidebarMainModule {
 }
 
 const cloudProviderBranch = (
-  provider: 'aws' | 'gcp' | 'azure',
+  provider: 'aws' | 'gcp' | 'azure' | 'clouding',
   label: string,
   brand: SidebarBrand,
 ): SidebarNavBranch => {
   const base = `/cloud/${provider}`
   const instancesLabel =
-    provider === 'gcp' ? 'Compute' : provider === 'azure' ? 'Máquinas virtuales' : 'EC2'
+    provider === 'gcp'
+      ? 'Compute'
+      : provider === 'azure'
+        ? 'Máquinas virtuales'
+        : provider === 'clouding'
+          ? 'Instancias'
+          : 'EC2'
   const accountsLabel =
     provider === 'gcp' ? 'Proyectos' : provider === 'azure' ? 'Suscripciones' : 'Cuentas'
   return {
@@ -74,11 +82,12 @@ export const CLOUD_SIDEBAR_BRANCHES: SidebarNavBranch[] = [
   cloudProviderBranch('aws', 'AWS', 'aws'),
   cloudProviderBranch('gcp', 'GCP', 'gcp'),
   cloudProviderBranch('azure', 'Azure', 'azure'),
+  cloudProviderBranch('clouding', 'Clouding', 'clouding'),
 ]
 
-export const resolveCloudProviderFromPath = (path: string): 'aws' | 'gcp' | 'azure' | null => {
-  const m = path.match(/^\/cloud\/(aws|gcp|azure)(?:\/|$)/)
-  return m ? (m[1] as 'aws' | 'gcp' | 'azure') : null
+export const resolveCloudProviderFromPath = (path: string): 'aws' | 'gcp' | 'azure' | 'clouding' | null => {
+  const m = path.match(/^\/cloud\/(aws|gcp|azure|clouding)(?:\/|$)/)
+  return m ? (m[1] as 'aws' | 'gcp' | 'azure' | 'clouding') : null
 }
 
 export const cloudSectionTabs = (provider: string): AreaNavTab[] => {
@@ -87,7 +96,7 @@ export const cloudSectionTabs = (provider: string): AreaNavTab[] => {
 }
 
 const vpsProviderBranch = (
-  provider: 'digitalocean' | 'hetzner' | 'linode' | 'ovh',
+  provider: 'digitalocean' | 'hetzner' | 'linode' | 'ovh' | 'ionos' | 'vultr' | 'scaleway',
   label: string,
   brand: SidebarBrand,
 ): SidebarNavBranch => {
@@ -99,9 +108,7 @@ const vpsProviderBranch = (
     defaultRoute: `${base}/overview`,
     children: [
       { id: `${provider}-overview`, label: 'Resumen', route: `${base}/overview`, icon: 'space_dashboard' },
-      { id: `${provider}-accounts`, label: 'Cuentas', route: `${base}/accounts`, icon: 'corporate_fare' },
       { id: `${provider}-servers`, label: 'Servidores', route: `${base}/servers`, icon: 'dns' },
-      { id: `${provider}-billing`, label: 'Facturación', route: `${base}/billing`, icon: 'account_balance_wallet' },
       { id: `${provider}-metrics`, label: 'Métricas', route: `${base}/metrics`, icon: 'show_chart' },
     ],
   }
@@ -112,12 +119,15 @@ export const VPS_SIDEBAR_BRANCHES: SidebarNavBranch[] = [
   vpsProviderBranch('hetzner', 'Hetzner', 'hetzner'),
   vpsProviderBranch('linode', 'Linode', 'linode'),
   vpsProviderBranch('ovh', 'OVH', 'ovh'),
+  vpsProviderBranch('ionos', 'IONOS', 'ionos'),
+  vpsProviderBranch('vultr', 'Vultr', 'vultr'),
+  vpsProviderBranch('scaleway', 'Scaleway', 'scaleway'),
 ]
 
-export type VpsProviderSlug = 'digitalocean' | 'hetzner' | 'linode' | 'ovh'
+export type VpsProviderSlug = 'digitalocean' | 'hetzner' | 'linode' | 'ovh' | 'ionos' | 'vultr' | 'scaleway'
 
 export const resolveVpsProviderFromPath = (path: string): VpsProviderSlug | null => {
-  const m = path.match(/^\/vps\/(digitalocean|hetzner|linode|ovh)(?:\/|$)/)
+  const m = path.match(/^\/vps\/(digitalocean|hetzner|linode|ovh|ionos|vultr|scaleway)(?:\/|$)/)
   return m ? (m[1] as VpsProviderSlug) : null
 }
 
@@ -180,6 +190,7 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
       { id: 'aws', label: 'AWS', route: '/cloud/aws/overview', logo: 'aws' },
       { id: 'gcp', label: 'GCP', route: '/cloud/gcp/overview', logo: 'gcp' },
       { id: 'azure', label: 'Azure', route: '/cloud/azure/overview', logo: 'azure' },
+      { id: 'clouding', label: 'Clouding', route: '/cloud/clouding/overview', logo: 'clouding' },
     ],
     branches: CLOUD_SIDEBAR_BRANCHES,
     match: prefix('/cloud', '/accounts'),
@@ -196,6 +207,9 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
       { id: 'hetzner', label: 'Hetzner', route: '/vps/hetzner/overview', logo: 'hetzner' },
       { id: 'linode', label: 'Linode', route: '/vps/linode/overview', logo: 'linode' },
       { id: 'ovh', label: 'OVH', route: '/vps/ovh/overview', logo: 'ovh' },
+      { id: 'ionos', label: 'IONOS', route: '/vps/ionos/overview', logo: 'ionos' },
+      { id: 'vultr', label: 'Vultr', route: '/vps/vultr/overview', logo: 'vultr' },
+      { id: 'scaleway', label: 'Scaleway', route: '/vps/scaleway/overview', logo: 'scaleway' },
     ],
     branches: VPS_SIDEBAR_BRANCHES,
     match: prefix('/vps'),
@@ -232,10 +246,10 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     icon: 'build_circle',
     tone: 'amber',
     route: '/jenkins/jobs',
-    description: 'CI/CD, Terraform, despliegues y runbooks',
+    description: 'CI/CD, AI Infra Studio, despliegues y runbooks',
     tabs: [
       { id: 'jenkins', label: 'Jenkins', route: '/jenkins/jobs', logo: 'jenkins', badgeKey: 'jenkins' },
-      { id: 'terraform', label: 'Terraform', route: '/terraform/workspaces', logo: 'terraform' },
+      { id: 'ai-studio', label: 'AI Infra Studio', route: '/infra/ai-studio', icon: 'auto_awesome' },
       { id: 'deployments', label: 'Despliegues', route: '/deployments', icon: 'rocket_launch', badgeKey: 'deployments' },
       { id: 'active-sessions', label: 'Sesiones activas', route: '/terminal/active-sessions', icon: 'terminal' },
       { id: 'history', label: 'Historial', route: '/terminal/history', icon: 'history' },
@@ -246,7 +260,7 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     ],
     match: prefix(
       '/jenkins',
-      '/terraform',
+      '/infra',
       '/deployments',
       '/terminal',
       '/runbooks',
@@ -266,13 +280,38 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     tabs: [
       { id: 'github', label: 'GitHub', route: '/repositories/github', logo: 'github', badgeKey: 'github-repos' },
       { id: 'gitlab', label: 'GitLab', route: '/repositories/gitlab', logo: 'gitlab', badgeKey: 'gitlab-projects' },
-      { id: 'webhooks', label: 'Webhooks', route: '/repositories/webhooks', icon: 'webhook', badgeKey: 'github-webhooks' },
-      { id: 'branches', label: 'Ramas', route: '/repositories/branches', icon: 'account_tree' },
-      { id: 'commits', label: 'Commits', route: '/repositories/commits', icon: 'history_edu' },
-      { id: 'pull-requests', label: 'Pull Requests', route: '/repositories/pull-requests', icon: 'merge' },
-      { id: 'deployments', label: 'Despliegues', route: '/repositories/deployments', icon: 'rocket_launch', badgeKey: 'github-deployments' },
+      { id: 'webhooks-gl', label: 'Webhooks GL', route: '/repositories/gitlab/webhooks', icon: 'webhook' },
+      { id: 'webhooks', label: 'Webhooks GH', route: '/repositories/github/webhooks', icon: 'webhook', badgeKey: 'github-webhooks' },
+      { id: 'branches', label: 'Ramas GH', route: '/repositories/github/branches', icon: 'account_tree' },
+      { id: 'commits', label: 'Commits GH', route: '/repositories/github/commits', icon: 'history_edu' },
+      { id: 'pull-requests', label: 'Pull Requests', route: '/repositories/github/pull-requests', icon: 'merge' },
+      { id: 'deployments', label: 'Despliegues GH', route: '/repositories/github/deployments', icon: 'rocket_launch', badgeKey: 'github-deployments' },
+      { id: 'branches-gl', label: 'Ramas GL', route: '/repositories/gitlab/branches', icon: 'account_tree' },
+      { id: 'commits-gl', label: 'Commits GL', route: '/repositories/gitlab/commits', icon: 'history_edu' },
+      { id: 'merge-requests', label: 'Merge Requests', route: '/repositories/gitlab/merge-requests', icon: 'call_merge' },
+      { id: 'deployments-gl', label: 'Despliegues GL', route: '/repositories/gitlab/deployments', icon: 'rocket_launch' },
     ],
     match: prefix('/repositories'),
+  },
+  {
+    id: 'finops',
+    label: 'FinOps',
+    icon: 'savings',
+    tone: 'green',
+    route: '/finops',
+    description: 'Gestión financiera cloud, costes y optimización IA',
+    tabs: [
+      { id: 'hub', label: 'Inicio', route: '/finops', icon: 'home' },
+      { id: 'dashboard', label: 'Panel', route: '/finops/dashboard', icon: 'dashboard' },
+      { id: 'billing', label: 'Facturación', route: '/finops/billing', icon: 'receipt_long' },
+      { id: 'instances', label: 'Instancias', route: '/finops/instances', icon: 'dns' },
+      { id: 'cost-centers', label: 'Centros de coste', route: '/finops/cost-centers', icon: 'account_tree' },
+      { id: 'alerts', label: 'Alertas FinOps', route: '/finops/alerts', icon: 'warning_amber' },
+      { id: 'recommendations', label: 'Insights IA', route: '/finops/recommendations', icon: 'auto_awesome' },
+      { id: 'reports', label: 'Informes', route: '/finops/reports', icon: 'summarize' },
+      { id: 'settings', label: 'Configuración', route: '/finops/settings', icon: 'settings' },
+    ],
+    match: prefix('/finops'),
   },
   {
     id: 'observability',

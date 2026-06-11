@@ -48,6 +48,17 @@ export const PROVIDER_LAUNCH_META: Record<LaunchCloudProvider, ProviderLaunchMet
     imageLabel: 'Image SKU',
     networkLabel: 'Virtual Network',
   },
+  CLOUDING: {
+    id: 'CLOUDING',
+    label: 'Clouding Instance',
+    subtitle: 'Instancias cloud europeas',
+    icon: 'cloud',
+    accent: '#6366f1',
+    defaultRegion: 'eu-central',
+    instanceTypeLabel: 'Tipo de instancia',
+    imageLabel: 'Imagen SO',
+    networkLabel: 'Red privada',
+  },
 }
 
 export const ENVIRONMENT_OPTIONS = ['dev', 'staging', 'prod'] as const

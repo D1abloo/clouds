@@ -13,7 +13,7 @@ export class LiveCloudSyncService implements OnDestroy {
   readonly lastSyncAt = signal<Date | null>(null)
   readonly error = signal<string | null>(null)
 
-  startPolling = (syncFn: () => void, intervalMs = 15000): void => {
+  startPolling = (syncFn: () => void, intervalMs = 60_000): void => {
     this.stopPolling()
     this.pollFn = syncFn
 
@@ -48,6 +48,12 @@ export class LiveCloudSyncService implements OnDestroy {
       finalize(() => this.syncing.set(false)),
     )
   }
+
+  syncAllAccountsSilent = (): Observable<{ accounts: number; instances: number }> =>
+    this.accounts.syncAll().pipe(
+      tap(() => this.lastSyncAt.set(new Date())),
+      catchError(() => of({ accounts: 0, instances: 0 })),
+    )
 
   ngOnDestroy(): void {
     this.stopPolling()

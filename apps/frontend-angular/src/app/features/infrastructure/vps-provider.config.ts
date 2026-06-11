@@ -2,7 +2,7 @@ import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 import type { ConnectionProviderId } from '../cloud-accounts/cloud-account-wizard.config'
 
 export type VpsProviderSlug = 'digitalocean' | 'hetzner' | 'linode' | 'ovh'
-export type VpsSection = 'overview' | 'accounts' | 'servers' | 'billing' | 'metrics'
+export type VpsSection = 'overview' | 'servers' | 'metrics'
 
 export interface VpsProviderUiConfig {
   slug: VpsProviderSlug
@@ -103,7 +103,8 @@ export const vpsSlugFromParam = (slug: string | null): VpsProviderSlug => {
 
 export const vpsSectionFromSlug = (section: string | null): VpsSection => {
   const s = (section ?? 'overview').toLowerCase()
-  if (s === 'accounts' || s === 'servers' || s === 'billing' || s === 'metrics') return s
+  if (s === 'accounts' || s === 'billing') return 'overview'
+  if (s === 'servers' || s === 'metrics') return s
   return 'overview'
 }
 
@@ -111,9 +112,7 @@ export const vpsSectionsFor = (slug: VpsProviderSlug): VpsSectionTab[] => {
   const base = `/vps/${slug}`
   return [
     { id: 'overview', label: 'Resumen', icon: 'space_dashboard', route: `${base}/overview` },
-    { id: 'accounts', label: 'Cuentas', icon: 'corporate_fare', route: `${base}/accounts` },
     { id: 'servers', label: 'Servidores', icon: 'dns', route: `${base}/servers` },
-    { id: 'billing', label: 'Facturación', icon: 'account_balance_wallet', route: `${base}/billing` },
     { id: 'metrics', label: 'Métricas', icon: 'show_chart', route: `${base}/metrics` },
   ]
 }

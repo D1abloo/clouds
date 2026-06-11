@@ -95,4 +95,30 @@ export const BRAND_LOGO_SVG: Record<NavLogoKey, BrandLogoSvgDef> = {
       },
     ],
   },
+  clouding: {
+    viewBox: '0 0 24 24',
+    paths: [
+      { d: 'M6.5 19a4.5 4.5 0 010-9 5.5 5.5 0 0110.74-2.32A4.25 4.25 0 0120.5 15.5 4 4 0 0117 19H6.5z', fill: '#6366f1' },
+      { d: 'M9 14.5h6v1.2H9v-1.2zm0 2.1h4.2v1.1H9v-1.1z', fill: '#c7d2fe' },
+    ],
+  },
+  ionos: {
+    viewBox: '0 0 24 24',
+    paths: [
+      { d: 'M3 5h18v3.2H3V5zm0 5.4h12.8V14H3v-3.6zm0 5.4H18V19H3v-5.4z', fill: '#003D8F' },
+    ],
+  },
+  vultr: {
+    viewBox: '0 0 24 24',
+    paths: [
+      { d: 'M12 2L2 7.5v9L12 22l10-5.5v-9L12 2zm0 2.2l7.2 3.96v7.68L12 19.8l-7.2-3.96V8.16L12 4.2z', fill: '#007BFC' },
+      { d: 'M12 8.4L8.4 10.4v3.2L12 15.6l3.6-2V10.4L12 8.4z', fill: '#007BFC' },
+    ],
+  },
+  scaleway: {
+    viewBox: '0 0 24 24',
+    paths: [
+      { d: 'M4 4h16v16H4V4zm2.2 2.2v11.6h11.6V6.2H6.2zm2.4 2.4h6.8v2.2H8.6V8.6zm0 4h6.8v2.8H8.6v-2.8z', fill: '#4F0599' },
+    ],
+  },
 }

@@ -10,7 +10,11 @@ export class JenkinsController {
   constructor(private service: JenkinsService) {}
 
   @Post('servers')
-  createServer(@Body() body: { name: string; url: string; secretRef: string }, @CurrentUser() user: JwtPayload) {
+  createServer(
+    @Body()
+    body: { name: string; url: string; secretRef?: string; username?: string; apiToken?: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.service.createServer(body, user.sub)
   }
 

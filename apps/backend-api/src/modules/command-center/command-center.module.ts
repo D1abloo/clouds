@@ -11,10 +11,12 @@ import { IntegrationsModule } from '../integrations/integrations.module'
 
 import { AuditModule } from '../audit/audit.module'
 import { PrismaModule } from '../../common/prisma/prisma.module'
+import { OrganizationScopeModule } from '../../common/organization/organization-scope.module'
 
 @Module({
   imports: [
     PrismaModule,
+    OrganizationScopeModule,
     AuditModule,
     IntegrationsModule,
     InstancesModule,

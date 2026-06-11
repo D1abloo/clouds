@@ -89,9 +89,9 @@ body.light-theme {
   /* Sidebar design tokens */
   --sidebar-bg: #f7f8fc;
   --sidebar-primary: #7F77DD;
-  --sidebar-text: #1a1d2e;
-  --sidebar-text-muted: #6b6f85;
-  --sidebar-text-faint: #9b9fba;
+  --sidebar-text: #000000;
+  --sidebar-text-muted: #000000;
+  --sidebar-text-faint: #333333;
   --sidebar-border: rgba(42, 45, 58, 0.06);
   --sidebar-item-hover: rgba(127, 119, 221, 0.08);
   --sidebar-item-active: rgba(127, 119, 221, 0.14);
@@ -214,6 +214,29 @@ body.dark-theme {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
+}
+
+.layout-root--sections-only .layout-main-scroll:has(.sec-host) {
+  overflow: hidden;
+}
+
+.layout-root--sections-only .layout-page:has(.sec-host) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.layout-page:has(.sec-host) app-security-center-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -1904,7 +1927,32 @@ html.pub-site body::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
+@import 'responsive';
 @import 'material-fields';
 @import 'global-flat-ui';
 @import 'app/features/repositories/repositories-layout';
+
+.cloud-account-wizard-panel .mat-mdc-dialog-container {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.cloud-account-wizard-panel .mat-mdc-dialog-surface {
+  overflow: hidden;
+  max-height: 92vh;
+}
+
+.cloud-launch-panel .mat-mdc-dialog-container {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.cloud-launch-panel .mat-mdc-dialog-surface {
+  overflow: hidden;
+  max-height: 92vh;
+  background: transparent;
+  box-shadow: none;
+}
 

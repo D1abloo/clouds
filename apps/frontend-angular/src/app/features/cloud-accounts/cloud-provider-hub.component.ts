@@ -28,6 +28,10 @@ import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.component'
 import { LaunchInstanceDialogComponent } from './launch-instance-dialog.component'
+import {
+  ConfirmDialogComponent,
+  type ConfirmDialogData,
+} from '../../shared/components/confirm-dialog/confirm-dialog.component'
 import { CloudProvider, Instance } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
 import { invNum } from '../../core/utils/inventory.util'
@@ -116,8 +120,9 @@ type InstanceRow = Record<string, unknown>
                     <td mat-cell *matCellDef="let row">
                       <button mat-icon-button [matMenuTriggerFor]="acctMenu" aria-label="Actions"><mat-icon>more_vert</mat-icon></button>
                       <mat-menu #acctMenu="matMenu">
-                        <button mat-menu-item (click)="validateAccount(row)">Validate credentials</button>
-                        <button mat-menu-item (click)="syncAccount(row)">Sync inventory</button>
+                        <button mat-menu-item (click)="validateAccount(row)">Validar credenciales</button>
+                        <button mat-menu-item (click)="syncAccount(row)">Sincronizar inventario</button>
+                        <button mat-menu-item (click)="deleteAccount(row)">Eliminar cuenta</button>
                       </mat-menu>
                     </td>
                   </ng-container>
@@ -510,10 +515,8 @@ export class CloudProviderHubComponent implements OnInit {
     if (label === 'Añadir cuenta' || label === 'Add account') {
       this.dialog
         .open(CloudAccountFormDialogComponent, {
-          width: '760px',
-          maxWidth: '95vw',
-          panelClass: 'cloud-account-wizard-panel',
-          data: { suggestedProvider: this.provider },
+          ...CloudAccountFormDialogComponent.dialogConfig,
+          data: { suggestedProvider: this.provider, scope: 'cloud' },
         })
         .afterClosed()
         .subscribe((res) => {
@@ -578,6 +581,31 @@ export class CloudProviderHubComponent implements OnInit {
       },
       error: () => this.actions.simulate('Account sync', 800).subscribe(() => this.load()),
     })
+  }
+
+  deleteAccount = (account: Record<string, unknown>): void => {
+    const name = String(account['name'] ?? 'cuenta')
+    const data: ConfirmDialogData = {
+      title: 'Eliminar cuenta cloud',
+      message: `¿Eliminar «${name}»? Las instancias vinculadas se marcarán como terminadas.`,
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+    }
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '440px' })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) return
+        this.accountsService.delete(String(account['id'])).subscribe({
+          next: (res) => {
+            this.toast.success(res.message ?? 'Cuenta eliminada')
+            this.load()
+            this.loadAccounts()
+          },
+          error: () => this.toast.error(`No se pudo eliminar ${name}`),
+        })
+      })
   }
 
   instanceAction = (row: InstanceRow, action: 'start' | 'stop' | 'restart'): void => {

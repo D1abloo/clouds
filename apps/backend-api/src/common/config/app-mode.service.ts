@@ -10,6 +10,7 @@ export type AppModeStatus = {
   oauth: {
     google: boolean
     github: boolean
+    gitlab: boolean
   }
   message: string
 }
@@ -55,6 +56,7 @@ export class AppModeService {
     oauth: {
       google: !!this.config.get<string>('GOOGLE_CLIENT_ID'),
       github: !!this.config.get<string>('GITHUB_CLIENT_ID'),
+      gitlab: !!this.config.get<string>('GITLAB_CLIENT_ID'),
     },
     message: this.isProMode()
       ? 'Modo PRO activo — datos desde PostgreSQL y proveedores configurados'

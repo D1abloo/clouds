@@ -70,13 +70,10 @@
     <section class="credentials-step">
       <h3>Credenciales · {{ providerLabel() }}</h3>
       @if (authMethod() === 'oauth') {
-        <p>OAuth permite autorizar sin pegar tokens. Requiere variables GITHUB_CLIENT_ID / GITLAB_CLIENT_ID en el servidor.</p>
+        <p>{{ oauthHint() }}</p>
         <button mat-flat-button color="primary" type="button" (click)="handleOAuth()">
           <mat-icon>login</mat-icon> Conectar con OAuth
         </button>
-        @if (!oauthAvailable()) {
-          <p class="repo-wizard__subtitle">OAuth no configurado — usa token PAT.</p>
-        }
       } @else {
         <form [formGroup]="form" class="form-grid">
           <mat-form-field appearance="outline" class="full">

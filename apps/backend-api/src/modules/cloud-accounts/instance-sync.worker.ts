@@ -13,15 +13,20 @@ export class InstanceSyncWorker {
   ) {}
 
   /** Sync all active cloud accounts (callable on interval or manually). */
-  syncAllActive = async (): Promise<{ accounts: number; instances: number }> => {
+  syncAllActive = async (
+    projectIds?: string[],
+  ): Promise<{ accounts: number; instances: number }> => {
     if (this.running) {
       this.logger.warn('Instance sync already running, skipping')
       return { accounts: 0, instances: 0 }
     }
     this.running = true
     try {
+      const projectScope = projectIds?.length
+        ? { projectId: { in: projectIds } }
+        : { projectId: { in: [] as string[] } }
       const accounts = await this.prisma.cloudAccount.findMany({
-        where: { deletedAt: null, isActive: true },
+        where: { deletedAt: null, isActive: true, ...projectScope },
       })
       let total = 0
       for (const acc of accounts) {

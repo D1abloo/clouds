@@ -28,15 +28,23 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { DetailDialogComponent } from '../../shared/components/detail-dialog/detail-dialog.component'
 import { CloudServiceInvoiceDialogComponent } from './cloud-service-invoice-dialog.component'
 import { CloudComputeDetailDialogComponent } from './cloud-compute-detail-dialog.component'
+import { CloudLaunchDialogComponent } from './cloud-launch-dialog.component'
+import { CloudLaunchProgressComponent, type CloudLaunchProgressState } from './cloud-launch-progress.component'
+import { RealtimeService } from '../../core/services/realtime.service'
 import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { InstancesService } from '../../core/services/instances.service'
 import { LiveCloudSyncService } from '../../core/services/live-cloud-sync.service'
+import { CloudPageCacheService } from '../../core/services/cloud-page-cache.service'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ToastService } from '../../core/services/toast.service'
 import { CloudAccountFormDialogComponent } from '../cloud-accounts/cloud-account-form-dialog.component'
+import {
+  ConfirmDialogComponent,
+  type ConfirmDialogData,
+} from '../../shared/components/confirm-dialog/confirm-dialog.component'
 import { IntegrationConnectionService } from '../../core/services/integration-connection.service'
-import type { Instance } from '../../core/models/api.models'
+import type { CloudProvider, Instance } from '../../core/models/api.models'
 import {
   CLOUD_PROVIDER_CONFIGS,
   buildCloudSnapshot,
@@ -77,6 +85,7 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
     MatSelectModule,
     MatMenuModule,
     MatTooltipModule,
+    CloudLaunchProgressComponent,
   ],
   template: `
     <div class="cloud-page" [style.--cloud-accent]="cfg().accent" [style.--cloud-accent-soft]="cfg().accentSoft">
@@ -109,6 +118,10 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
           </a>
         }
       </nav>
+
+      @if (pageLaunchProgress()) {
+        <app-cloud-launch-progress [progress]="pageLaunchProgress()" />
+      }
 
       @if (loading()) {
         <app-loading-state [message]="'Cargando inventario ' + cfg().title + '…'" />
@@ -286,6 +299,7 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
                       <button mat-stroked-button type="button" (click)="handleSyncAccount(acc)">Sync</button>
                       <button mat-stroked-button type="button" (click)="handleSyncBilling(acc)">Facturación</button>
                       <button mat-stroked-button type="button" (click)="handleSyncMetrics(acc)">Métricas</button>
+                      <button mat-stroked-button type="button" color="warn" (click)="handleDeleteAccount(acc)">Eliminar</button>
                     </footer>
                   </article>
                 }
@@ -333,6 +347,7 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
                     <mat-option value="RUNNING">En ejecución</mat-option>
                     <mat-option value="STOPPED">Detenida</mat-option>
                     <mat-option value="WARNING">Advertencia</mat-option>
+                    <mat-option value="TERMINATED">Borradas / Terminadas</mat-option>
                   </mat-select>
                 </mat-form-field>
               </div>
@@ -2057,13 +2072,39 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
       .cloud-billing-trends__body { grid-template-columns: 1fr; }
       .cloud-billing-hero { grid-template-columns: 1fr; }
       .cloud-metrics__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cloud-hero {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+      }
+      .cloud-hero__meta {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+      .cloud-section-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        padding-bottom: 0.25rem;
+      }
+      .cloud-section-nav__item {
+        flex-shrink: 0;
+      }
+      .cloud-filters mat-form-field {
+        min-width: min(100%, 140px);
+        flex: 1 1 140px;
+      }
     }
-    @media (max-width: 640px) {
+    @media (max-width: 767px) {
       .cloud-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .cloud-metrics__summary { grid-template-columns: 1fr; }
       .cloud-metrics__grid { grid-template-columns: 1fr; }
       .cloud-metrics__stats { grid-template-columns: repeat(2, 1fr); }
       .cloud-billing-summary { grid-template-columns: 1fr; }
+      .cloud-regions { grid-template-columns: 1fr; }
+      .cloud-vpc-config { grid-template-columns: 1fr; }
+      .cloud-billing-trends__metrics { grid-template-columns: 1fr; }
+      .cloud-hero__brand h1 { font-size: clamp(1rem, 4.5vw, 1.25rem); }
     }
   `,
 })
@@ -2075,10 +2116,12 @@ export class CloudProviderPageComponent implements OnInit {
   private readonly accountsSvc = inject(CloudAccountsService)
   private readonly instancesSvc = inject(InstancesService)
   readonly liveSync = inject(LiveCloudSyncService)
+  private readonly pageCache = inject(CloudPageCacheService)
   private readonly pro = inject(ProModeService)
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly connections = inject(IntegrationConnectionService)
+  private readonly realtime = inject(RealtimeService)
   private readonly destroyRef = inject(DestroyRef)
 
   readonly fmtUsd = fmtUsd
@@ -2094,6 +2137,7 @@ export class CloudProviderPageComponent implements OnInit {
   readonly actionLoading = signal<string | null>(null)
   readonly billingPeriod = signal<CloudBillingPeriod>('month')
   readonly invoiceDownloadBusy = signal(false)
+  readonly pageLaunchProgress = signal<CloudLaunchProgressState | null>(null)
 
   readonly billingPeriodOptions: { id: CloudBillingPeriod; label: string }[] = [
     { id: 'day', label: 'Día' },
@@ -2391,55 +2435,112 @@ export class CloudProviderPageComponent implements OnInit {
     })
   })
 
+  private readonly onLaunchProgress = (payload: unknown): void => {
+    const p = payload as {
+      accountId?: string
+      percent?: number
+      step?: string
+      log?: string
+      status?: string
+    }
+    const accountIds = this.data().accountRows.map((a) => a.id)
+    if (p.accountId && accountIds.length && !accountIds.includes(p.accountId)) return
+    const status = (p.status as CloudLaunchProgressState['status']) ?? 'running'
+    this.pageLaunchProgress.set({
+      percent: p.percent ?? 0,
+      step: p.step ?? '',
+      log: p.log,
+      status,
+      provider: this.cfg().provider,
+      region: this.data().accountRows.find((a) => a.id === p.accountId)?.primaryRegion,
+    })
+    if (status === 'success') {
+      this.toast.success('Instancia provisionada correctamente')
+      this.load({ silent: true })
+      setTimeout(() => this.pageLaunchProgress.set(null), 4000)
+    }
+    if (status === 'error') {
+      setTimeout(() => this.pageLaunchProgress.set(null), 5000)
+    }
+  }
+
   ngOnInit(): void {
+    this.realtime.connect()
+    this.realtime.on('instance.launch.progress', this.onLaunchProgress)
+    this.destroyRef.onDestroy(() => this.realtime.off('instance.launch.progress', this.onLaunchProgress))
+
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const sectionParam = params.get('section')
+      if (sectionParam === 'images') {
+        const provider = params.get('provider') ?? 'aws'
+        void this.router.navigateByUrl(`/cloud/${provider}/instances`, { replaceUrl: true })
+        return
+      }
       const nextSlug = cloudSlugFromParam(params.get('provider'))
       if (nextSlug !== this.slug()) {
         this.slug.set(nextSlug)
         this.load()
       }
-      this.section.set(cloudSectionFromSlug(params.get('section')))
+      this.section.set(cloudSectionFromSlug(sectionParam))
     })
     const connect = this.route.snapshot.queryParamMap.get('connect')?.trim().toLowerCase()
     if (connect) {
       this.connections.openForProviderAlias(connect).subscribe()
     }
     this.load()
-    this.liveSync.startPolling(() => {
-      this.liveSync.syncAllAccounts().subscribe({ next: () => this.load() })
-    }, 15000)
+    this.statusControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load())
+    this.liveSync.startPolling(() => this.load({ silent: true }), 90_000)
     this.destroyRef.onDestroy(() => this.liveSync.stopPolling())
   }
 
-  private load = (): void => {
+  private instanceListFilters = (): { provider: CloudProvider; status?: string } => {
+    const provider = CLOUD_PROVIDER_CONFIGS[this.slug()].provider
+    const status = this.statusControl.value
+    if (status === 'TERMINATED') return { provider, status: 'TERMINATED' }
+    if (status) return { provider, status }
+    return { provider }
+  }
+
+  private load = (opts?: { silent?: boolean; force?: boolean }): void => {
     const slug = this.slug()
-    const provider = CLOUD_PROVIDER_CONFIGS[slug].provider
-    this.loading.set(true)
+    const listFilters = this.instanceListFilters()
+    const cacheKey = `${listFilters.provider}:${this.statusControl.value ?? ''}`
+    if (!opts?.force) {
+      const cached = this.pageCache.get(slug, cacheKey)
+      if (cached) {
+        this.snapshot.set(cached)
+        if (!opts?.silent) this.loading.set(false)
+        return
+      }
+    }
+    if (!opts?.silent) this.loading.set(true)
     forkJoin({
-      instances: this.instancesSvc.list({ provider }).pipe(catchError(() => of([] as Instance[]))),
-      accounts: this.accountsSvc.list(undefined, provider).pipe(catchError(() => of([]))),
+      instances: this.instancesSvc.list(listFilters).pipe(catchError(() => of([] as Instance[]))),
+      accounts: this.accountsSvc.list(undefined, listFilters.provider).pipe(catchError(() => of([]))),
     }).subscribe(({ instances, accounts }) => {
-      this.snapshot.set(
-        buildCloudSnapshot(
+      const next = buildCloudSnapshot(
+        slug,
+        instances,
+        mapApiAccounts(
           slug,
-          instances,
-          mapApiAccounts(
-            slug,
-            accounts.map((a) => ({
-              id: a.id,
-              name: a.name,
-              accountId: a.accountId,
-              projectId: (a as { projectId?: string }).projectId,
-              syncStatus: (a as { syncStatus?: string }).syncStatus,
-              hasCredentials: (a as { hasCredentials?: boolean }).hasCredentials,
-            })),
-          ),
-          allowsDemoDataFrom(this.pro),
+          accounts.map((a) => ({
+            id: a.id,
+            name: a.name,
+            accountId: a.accountId,
+            projectId: (a as { projectId?: string }).projectId,
+            syncStatus: (a as { syncStatus?: string }).syncStatus,
+            hasCredentials: (a as { hasCredentials?: boolean }).hasCredentials,
+          })),
         ),
+        allowsDemoDataFrom(this.pro),
       )
-      of(true)
-        .pipe(delay(250))
-        .subscribe(() => this.loading.set(false))
+      this.pageCache.set(slug, cacheKey, next)
+      this.snapshot.set(next)
+      if (!opts?.silent) {
+        of(true)
+          .pipe(delay(250))
+          .subscribe(() => this.loading.set(false))
+      }
     })
   }
 
@@ -2457,6 +2558,7 @@ export class CloudProviderPageComponent implements OnInit {
 
   handleSync = (): void => {
     this.loading.set(true)
+    this.pageCache.invalidate()
     this.accountsSvc
       .syncAll()
       .pipe(
@@ -2469,17 +2571,15 @@ export class CloudProviderPageComponent implements OnInit {
       )
       .subscribe(() => {
         this.toast.success('Inventario sincronizado')
-        this.load()
+        this.load({ force: true })
       })
   }
 
   handleAddAccount = (): void => {
     this.dialog
       .open(CloudAccountFormDialogComponent, {
-        width: '760px',
-        maxWidth: '95vw',
-        panelClass: 'cloud-account-wizard-panel',
-        data: { suggestedProvider: this.cfg().provider },
+        ...CloudAccountFormDialogComponent.dialogConfig,
+        data: { suggestedProvider: this.cfg().provider, scope: 'cloud' },
       })
       .afterClosed()
       .subscribe((res) => {
@@ -2488,7 +2588,36 @@ export class CloudProviderPageComponent implements OnInit {
   }
 
   handleLaunch = (): void => {
-    void this.router.navigate(['/cloud', this.slug(), 'launch'])
+    this.openLaunchDialog()
+  }
+
+  openLaunchDialog = (preselectedImageId?: string): void => {
+    const acc =
+      this.data().accountRows.find((a) => a.hasCredentials) ?? this.data().accountRows[0]
+    if (!acc) {
+      this.toast.error('Conecta una cuenta cloud antes de lanzar instancias')
+      void this.router.navigate(['/cloud', this.slug(), 'accounts'])
+      return
+    }
+    this.dialog
+      .open(CloudLaunchDialogComponent, {
+        width: '960px',
+        maxWidth: '96vw',
+        maxHeight: '92vh',
+        panelClass: 'cloud-launch-panel',
+        data: {
+          accountId: acc.id,
+          accountName: acc.name,
+          provider: this.cfg().provider,
+          slug: this.slug(),
+          defaultRegion: acc.primaryRegion,
+          preselectedImageId,
+        },
+      })
+      .afterClosed()
+      .subscribe((res) => {
+        if (res?.launched) this.load()
+      })
   }
 
   handleValidateAccount = (acc: CloudAccountRow): void => {
@@ -2548,6 +2677,29 @@ export class CloudProviderPageComponent implements OnInit {
       .subscribe(() => {
         this.toast.success(`Métricas de ${acc.name} sincronizadas`)
         this.load()
+      })
+  }
+
+  handleDeleteAccount = (acc: CloudAccountRow): void => {
+    const data: ConfirmDialogData = {
+      title: 'Eliminar cuenta cloud',
+      message: `¿Eliminar «${acc.name}»? Las instancias vinculadas se marcarán como terminadas.`,
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+    }
+    this.dialog
+      .open(ConfirmDialogComponent, { width: '440px', data })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) return
+        this.accountsSvc.delete(acc.id).subscribe({
+          next: (res) => {
+            this.toast.success(res.message ?? 'Cuenta eliminada')
+            this.load()
+          },
+          error: () => this.toast.error(`No se pudo eliminar ${acc.name}`),
+        })
       })
   }
 

@@ -1,20 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
+import { SecretsVaultService } from '../cloud-accounts/secrets-vault.service'
 import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { mapRepo, isDemoGithubAccount } from './github-mappers'
+import { GithubRepoResourcesService } from './github-repo-resources.service'
 
 @Injectable()
 export class GithubRepositoriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly vault: SecretsVaultService,
+    private readonly repoResources: GithubRepoResourcesService,
   ) {}
 
-  async list(accountId?: string) {
+  async list(accountId?: string, userId?: string) {
     try {
-      const accounts = await this.prisma.githubAccount.findMany()
+      const accounts = await this.prisma.githubAccount.findMany({
+        where: userId ? { createdById: userId } : undefined,
+      })
       const liveAccounts = accounts.filter((a) => !isDemoGithubAccount(a))
+      if (accountId && userId && !liveAccounts.some((a) => a.id === accountId)) {
+        throw new ForbiddenException('Sin acceso a esta cuenta GitHub')
+      }
       const connected = liveAccounts.some((a) => a.status === 'connected')
       const liveAccountIds = liveAccounts.map((a) => a.id)
       const items = await this.prisma.githubRepository.findMany({
@@ -60,8 +69,21 @@ export class GithubRepositoriesService {
   }
 
   async syncOne(userId: string, repoId: string) {
-    const repo = await this.prisma.githubRepository.findUnique({ where: { id: repoId } })
+    const repo = await this.prisma.githubRepository.findUnique({
+      where: { id: repoId },
+      include: { account: true },
+    })
     if (!repo) throw new NotFoundException('Repositorio no encontrado')
+    const secrets = this.vault.readSecrets(repo.account.tokenRef)
+    const token = secrets.token ?? repo.account.tokenRef
+    const resources = await this.repoResources.syncRepoResources(
+      token,
+      repo.account.baseUrl,
+      repo.accountId,
+      repoId,
+      repo.fullName,
+      repo.defaultBranch,
+    )
     const updated = await this.prisma.githubRepository.update({
       where: { id: repoId },
       data: { lastSyncAt: new Date() },
@@ -71,7 +93,12 @@ export class GithubRepositoriesService {
       action: 'github.repository.sync',
       resource: 'github_repo',
       resourceId: repoId,
+      metadata: resources,
     })
-    return { repo: mapRepo(updated), message: 'Repositorio sincronizado' }
+    return {
+      repo: mapRepo(updated),
+      resources,
+      message: `Repositorio sincronizado · ${resources.branches} ramas · ${resources.commits} commits · ${resources.pullRequests} PRs`,
+    }
   }
 }

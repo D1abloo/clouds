@@ -29,6 +29,8 @@ export interface CloudImage {
   region: string
   os?: string
   architecture?: string
+  status?: string
+  description?: string
 }
 
 export interface CloudInstanceType {
@@ -80,6 +82,14 @@ export interface LaunchInstanceInput {
   subnetId?: string
   securityGroupIds?: string[]
   tags?: Record<string, string>
+  availabilityZone?: string
+  resourceGroup?: string
+  keyPair?: string
+  publicIp?: boolean
+  diskGb?: number
+  diskType?: string
+  userData?: string
+  monitoring?: boolean
 }
 
 export interface CloudAdapterContext {

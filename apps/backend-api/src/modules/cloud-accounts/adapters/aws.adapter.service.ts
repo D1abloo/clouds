@@ -10,6 +10,7 @@ import {
   DescribeVpcsCommand,
   RebootInstancesCommand,
   RunInstancesCommand,
+  type RunInstancesCommandInput,
   StartInstancesCommand,
   StopInstancesCommand,
 } from '@aws-sdk/client-ec2'
@@ -36,7 +37,13 @@ import {
   synthesizeInstances,
 } from './cloud-adapter.helpers'
 import { createEc2Client, validateAwsSts } from './sdk/aws-client.factory'
-import { isDemoMode, mapAwsState, sdkErrorMessage } from './sdk/adapter-sdk.util'
+import {
+  instancesOnSyncError,
+  isDemoMode,
+  mapAwsState,
+  resolveSyncedInstances,
+  sdkErrorMessage,
+} from './sdk/adapter-sdk.util'
 
 const AWS_PERMS = [
   'ec2:DescribeInstances',
@@ -161,13 +168,17 @@ export class AwsAdapterService implements CloudProviderAdapter {
         }),
       )
       const items =
-        res.Images?.slice(0, 25).map((img) => ({
-          id: img.ImageId ?? '',
-          name: img.Name ?? img.ImageId ?? 'ami',
-          region,
-          os: img.PlatformDetails ?? img.Platform,
-          architecture: img.Architecture,
-        })) ?? []
+        res.Images?.filter((img) => (img.State ?? 'available') === 'available')
+          .slice(0, 30)
+          .map((img) => ({
+            id: img.ImageId ?? '',
+            name: img.Name ?? img.ImageId ?? 'ami',
+            region,
+            os: img.PlatformDetails ?? img.Platform ?? 'Linux/UNIX',
+            architecture: img.Architecture ?? 'x86_64',
+            status: 'available',
+            description: img.Description,
+          })) ?? []
       return items.length ? items : mockImages(ctx, region)
     } catch (err) {
       this.logger.warn(`AWS listImages fallback: ${sdkErrorMessage(err)}`)
@@ -215,6 +226,8 @@ export class AwsAdapterService implements CloudProviderAdapter {
         for (const reservation of res.Reservations ?? []) {
           for (const inst of reservation.Instances ?? []) {
             if (!inst.InstanceId) continue
+            const stateName = (inst.State?.Name ?? '').toLowerCase()
+            if (stateName === 'terminated' || stateName === 'shutting-down') continue
             const nameTag = inst.Tags?.find((t) => t.Key === 'Name')?.Value
             instances.push({
               id: inst.InstanceId,
@@ -233,10 +246,10 @@ export class AwsAdapterService implements CloudProviderAdapter {
           }
         }
       }
-      return instances.length ? instances : synthesizeInstances(ctx)
+      return resolveSyncedInstances(ctx, instances, () => synthesizeInstances(ctx))
     } catch (err) {
       this.logger.warn(`AWS listInstances fallback: ${sdkErrorMessage(err)}`)
-      return synthesizeInstances(ctx)
+      return instancesOnSyncError(ctx, () => synthesizeInstances(ctx))
     }
   }
 
@@ -275,6 +288,20 @@ export class AwsAdapterService implements CloudProviderAdapter {
   }
 
   async launchInstance(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<CloudInstance> {
+    const launchMeta = {
+      imageId: input.imageId,
+      subnetId: input.subnetId,
+      securityGroupIds: input.securityGroupIds,
+      availabilityZone: input.availabilityZone,
+      keyPair: input.keyPair,
+      publicIp: input.publicIp,
+      diskGb: input.diskGb,
+      diskType: input.diskType,
+      userData: input.userData ? true : false,
+      monitoring: input.monitoring,
+      tags: input.tags,
+    }
+
     if (isDemoMode(ctx)) {
       return {
         id: `i-${Date.now().toString(36)}`,
@@ -283,26 +310,59 @@ export class AwsAdapterService implements CloudProviderAdapter {
         status: 'PENDING' as InstanceStatus,
         instanceType: input.instanceType,
         provider: ctx.provider,
-        metadata: { imageId: input.imageId, isDemo: true },
+        metadata: { ...launchMeta, isDemo: true },
       }
     }
     const ec2 = await createEc2Client(ctx, input.region)
-    const res = await ec2.send(
-      new RunInstancesCommand({
-        ImageId: input.imageId,
-        InstanceType: input.instanceType as never,
-        MinCount: 1,
-        MaxCount: 1,
-        SecurityGroupIds: input.securityGroupIds,
-        SubnetId: input.subnetId,
-        TagSpecifications: [
-          {
-            ResourceType: 'instance',
-            Tags: [{ Key: 'Name', Value: input.name }],
+    const tagEntries = [{ Key: 'Name', Value: input.name }]
+    if (input.tags) {
+      for (const [key, value] of Object.entries(input.tags)) {
+        if (key !== 'Name') tagEntries.push({ Key: key, Value: value })
+      }
+    }
+
+    const runInput: RunInstancesCommandInput = {
+      ImageId: input.imageId,
+      InstanceType: input.instanceType as RunInstancesCommandInput['InstanceType'],
+      MinCount: 1,
+      MaxCount: 1,
+      KeyName: input.keyPair,
+      UserData: input.userData ? Buffer.from(input.userData, 'utf8').toString('base64') : undefined,
+      Monitoring: { Enabled: input.monitoring ?? false },
+      TagSpecifications: [{ ResourceType: 'instance', Tags: tagEntries }],
+    }
+
+    if (input.diskGb || input.diskType) {
+      runInput.BlockDeviceMappings = [
+        {
+          DeviceName: '/dev/xvda',
+          Ebs: {
+            VolumeSize: input.diskGb ?? 30,
+            VolumeType: (input.diskType ?? 'gp3') as never,
+            DeleteOnTermination: true,
           },
-        ],
-      }),
-    )
+        },
+      ]
+    }
+
+    if (input.subnetId) {
+      runInput.NetworkInterfaces = [
+        {
+          DeviceIndex: 0,
+          SubnetId: input.subnetId,
+          Groups: input.securityGroupIds,
+          AssociatePublicIpAddress: input.publicIp !== false,
+        },
+      ]
+    } else {
+      runInput.SecurityGroupIds = input.securityGroupIds
+      runInput.SubnetId = input.subnetId
+      if (input.availabilityZone) {
+        runInput.Placement = { AvailabilityZone: input.availabilityZone }
+      }
+    }
+
+    const res = await ec2.send(new RunInstancesCommand(runInput))
     const inst = res.Instances?.[0]
     return {
       id: inst?.InstanceId ?? `i-pending-${Date.now()}`,
@@ -311,7 +371,7 @@ export class AwsAdapterService implements CloudProviderAdapter {
       status: mapAwsState(inst?.State?.Name ?? 'pending'),
       instanceType: input.instanceType,
       provider: CloudProvider.AWS,
-      metadata: { imageId: input.imageId, isDemo: false },
+      metadata: { ...launchMeta, isDemo: false },
     }
   }
 

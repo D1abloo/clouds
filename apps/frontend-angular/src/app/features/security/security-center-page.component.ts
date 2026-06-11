@@ -360,6 +360,7 @@ const PAGE_SIZE = 8
 
     .sec-shell {
       display: flex; flex-direction: column; gap: 0.55rem; flex: 1; min-height: 0;
+      width: 100%; max-width: none; margin: 0; padding: 0;
       overflow-y: auto; scrollbar-width: thin; color: #0f172a; font-size: 0.8125rem;
     }
 

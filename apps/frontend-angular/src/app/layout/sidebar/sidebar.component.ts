@@ -19,6 +19,7 @@ import { SidebarSearchComponent } from './sidebar-search.component'
 import { AuthStore } from '../../core/stores/auth.store'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { NavBadgeService } from '../../core/services/nav-badge.service'
+import { navHintForRoute } from './sidebar-nav-hints.config'
 
 @Component({
   selector: 'app-sidebar',
@@ -72,6 +73,7 @@ import { NavBadgeService } from '../../core/services/nav-badge.service'
             @for (fav of favoriteEntries(); track fav.route) {
               <app-sidebar-nav-leaf
                 [label]="fav.label"
+                [hint]="navHint(fav.route)"
                 [route]="fav.route"
                 [icon]="fav.icon ?? 'star'"
                 [logo]="fav.logo"
@@ -86,6 +88,7 @@ import { NavBadgeService } from '../../core/services/nav-badge.service'
             @for (hit of searchHits(); track hit.route) {
               <app-sidebar-nav-leaf
                 [label]="hit.label"
+                [hint]="navHint(hit.route)"
                 [route]="hit.route"
                 [icon]="hit.icon ?? 'chevron_right'"
                 [logo]="hit.logo"
@@ -285,17 +288,28 @@ import { NavBadgeService } from '../../core/services/nav-badge.service'
       height: 1rem !important;
       color: var(--sidebar-text-muted);
     }
-    @media (max-width: 960px) {
+    @media (max-width: 1023px) {
       .app-sidebar {
         position: fixed;
         left: 0;
         top: 0;
         bottom: 0;
-        z-index: 40;
+        z-index: 100;
+        width: min(280px, 86vw);
+        box-shadow: var(--app-shadow-lg);
+        transition: transform 0.28s ease, box-shadow 0.28s ease;
       }
       .app-sidebar--collapsed {
         transform: translateX(-100%);
-        width: 272px;
+        width: min(280px, 86vw);
+        pointer-events: none;
+      }
+      .app-sidebar:not(.app-sidebar--collapsed) {
+        transform: translateX(0);
+        pointer-events: auto;
+      }
+      .sidebar-toggle {
+        display: none;
       }
     }
   `,
@@ -411,4 +425,6 @@ export class SidebarComponent {
     if (!roles?.length) return ''
     return roles[0].replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   })
+
+  navHint = (route: string): string | undefined => navHintForRoute(route)
 }

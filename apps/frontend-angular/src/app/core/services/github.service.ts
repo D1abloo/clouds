@@ -70,6 +70,9 @@ export class GithubService {
   connectDemo = (): Observable<GithubDemoConnectResult> =>
     this.api.post('github/demo/connect', {})
 
+  startOAuth = (returnUrl?: string): Observable<{ redirectUrl: string }> =>
+    this.api.get('github/oauth/start', returnUrl ? { returnUrl } : undefined)
+
   accounts = (): Observable<{ items: GithubAccount[] }> =>
     this.api.get('github/accounts')
 
@@ -175,6 +178,15 @@ export class GithubService {
   repoWebhooks = (repoId: string): Observable<{ items: Record<string, unknown>[] }> =>
     this.api.get(`github/repositories/${repoId}/webhooks`)
 
+  allBranches = (): Observable<{ items: Record<string, unknown>[] }> =>
+    this.api.get('github/branches')
+
+  allCommits = (): Observable<{ items: Record<string, unknown>[] }> =>
+    this.api.get('github/commits')
+
+  allPullRequests = (): Observable<{ items: Record<string, unknown>[] }> =>
+    this.api.get('github/pull-requests')
+
   webhooks = (): Observable<{ items: Record<string, unknown>[] }> =>
     this.api.get('github/webhooks')
 
@@ -191,6 +203,12 @@ export class GithubService {
 
   deployments = (): Observable<{ items: Record<string, unknown>[] }> =>
     this.api.get('github/deployments')
+
+  workflowRuns = (): Observable<{ items: Record<string, unknown>[] }> =>
+    this.api.get('github/workflow-runs')
+
+  deployTargets = (): Observable<{ items: Array<{ id: string; name: string; type: DeployTargetType; subtitle?: string }> }> =>
+    this.api.get('github/deploy-targets')
 
   deploymentLogs = (id: string): Observable<{ id: string; logs: string; status: string }> =>
     this.api.get(`github/deployments/${id}/logs`)
@@ -211,6 +229,9 @@ export class GithubService {
       targetType: DeployTargetType
       targetId: string
       targetName?: string
+      environment?: string
+      strategy?: string
+      notes?: string
     },
   ): Observable<{ queued: boolean; message: string; deployment: Record<string, unknown> }> =>
     this.api.post(`github/repositories/${repoId}/deploy`, body)

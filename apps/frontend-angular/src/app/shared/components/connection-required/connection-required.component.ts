@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core'
+import { Router } from '@angular/router'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { IntegrationConnectionService } from '../../../core/services/integration-connection.service'
@@ -84,6 +85,7 @@ import { resolveConnectionCopy } from '../../../core/routing/module-requirements
 })
 export class ConnectionRequiredComponent {
   private readonly connections = inject(IntegrationConnectionService)
+  private readonly router = inject(Router)
 
   readonly moduleId = input<string>('')
   /** @deprecated use moduleId */
@@ -109,6 +111,11 @@ export class ConnectionRequiredComponent {
   readonly displayActionRoute = computed(() => this.actionRoute() || this.resolvedCopy().actionRoute)
 
   handleConnect = (): void => {
+    const route = this.displayActionRoute().trim()
+    if (route) {
+      void this.router.navigateByUrl(route)
+      return
+    }
     this.connections.openForModuleId(this.resolvedKey()).subscribe()
   }
 }

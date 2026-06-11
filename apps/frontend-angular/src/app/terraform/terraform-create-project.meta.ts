@@ -106,5 +106,10 @@ export const PROVIDER_PROJECT_INFO: Record<
     stateDefault: 'azurerm',
     modules: 'Azure/azurerm',
   },
+  CLOUDING: {
+    tagline: 'Instancias cloud, redes privadas, métricas',
+    stateDefault: 'terraform-cloud',
+    modules: 'clouding/terraform',
+  },
   VPS: { tagline: '—', stateDefault: 'terraform-cloud', modules: '—' },
 }

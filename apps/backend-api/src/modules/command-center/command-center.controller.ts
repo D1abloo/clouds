@@ -18,7 +18,13 @@ export class CommandCenterController {
 
   @Get('actions/recent')
   @ApiOperation({ summary: 'Recent command-center actions from audit log' })
-  recent(@Query('limit') limit?: string) {
-    return this.service.recentActions(limit ? +limit : 20)
+  recent(@CurrentUser() user: JwtPayload, @Query('limit') limit?: string) {
+    return this.service.recentActions(user.sub, limit ? +limit : 20)
+  }
+
+  @Get('platforms/stats')
+  @ApiOperation({ summary: 'Live platform task counts for command center tiles' })
+  platformStats(@CurrentUser() user: JwtPayload) {
+    return this.service.platformStats(user.sub)
   }
 }

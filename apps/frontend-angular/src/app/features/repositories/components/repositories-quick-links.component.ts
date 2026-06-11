@@ -29,8 +29,9 @@ import {
 })
 export class RepositoriesQuickLinksComponent {
   readonly current = input.required<RepositoriesSectionId>()
+  readonly provider = input<'github' | 'gitlab'>('github')
   readonly title = input('Ir a')
   readonly ariaLabel = input('Accesos rápidos a secciones relacionadas')
 
-  readonly links = computed(() => repoQuickLinks(this.current()))
+  readonly links = computed(() => repoQuickLinks(this.current(), this.provider()))
 }

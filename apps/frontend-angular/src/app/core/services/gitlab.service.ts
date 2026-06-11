@@ -1,11 +1,8 @@
 import { Injectable, inject } from '@angular/core'
 import { Observable, of } from 'rxjs'
+import { map, switchMap } from 'rxjs/operators'
 import { ApiClientService } from './api-client.service'
 import type { GitlabAccount, GitlabGroup, GitlabProject } from '../../features/repositories/utils/gitlab.types'
-import type {
-  GitlabAccountFormResult,
-  GitlabSyncPermissionInput,
-} from '../../features/repositories/utils/gitlab-account-form.config'
 
 export type { GitlabAccount, GitlabProject, GitlabGroup }
 
@@ -14,6 +11,9 @@ export class GitlabService {
   private readonly api = inject(ApiClientService)
 
   accounts = (): Observable<{ items: GitlabAccount[] }> => this.api.get('gitlab/accounts')
+
+  startOAuth = (returnUrl?: string): Observable<{ redirectUrl: string }> =>
+    this.api.get('gitlab/oauth/start', returnUrl ? { returnUrl } : undefined)
 
   validatePreview = (body: {
     token: string
@@ -32,6 +32,7 @@ export class GitlabService {
     token: string
     baseUrl?: string
     excludeArchived?: boolean
+    authType?: string
   }): Observable<{ items: Array<{ id: number; name: string; fullName: string; archived: boolean; description: string }> }> =>
     this.api.post('gitlab/accounts/preview-projects', body)
 
@@ -59,6 +60,11 @@ export class GitlabService {
     projects?: GitlabProject[]
     lastSyncAt: string
     message: string
+    branchesSynced?: number
+    commitsSynced?: number
+    mergeRequestsSynced?: number
+    webhooksSynced?: number
+    deploymentsSynced?: number
   }> => this.api.post(`gitlab/accounts/${id}/sync`, body ?? {})
 
   deleteAccount = (id: string): Observable<{ deleted: boolean; message: string }> =>
@@ -76,15 +82,20 @@ export class GitlabService {
 
   groups = (): Observable<{ items: GitlabGroup[] }> => of({ items: [] })
 
-  account = (): Observable<GitlabAccount | null> => of(null)
+  account = (): Observable<GitlabAccount | null> =>
+    this.accounts().pipe(map((res) => res.items.find((a) => a.status === 'connected') ?? res.items[0] ?? null))
 
-  mergeRequests = (): Observable<{ items: Record<string, unknown>[] }> => of({ items: [] })
+  branches = (): Observable<{ items: Record<string, unknown>[] }> => this.api.get('gitlab/branches')
 
-  pipelines = (): Observable<{ items: Record<string, unknown>[] }> => of({ items: [] })
+  commits = (): Observable<{ items: Record<string, unknown>[] }> => this.api.get('gitlab/commits')
 
-  webhooks = (): Observable<{ items: Record<string, unknown>[] }> => of({ items: [] })
+  mergeRequests = (): Observable<{ items: Record<string, unknown>[] }> => this.api.get('gitlab/merge-requests')
 
-  deployments = (): Observable<{ items: Record<string, unknown>[] }> => of({ items: [] })
+  pipelines = (): Observable<{ items: Record<string, unknown>[] }> => this.api.get('gitlab/deployments')
+
+  webhooks = (): Observable<{ items: Record<string, unknown>[] }> => this.api.get('gitlab/webhooks')
+
+  deployments = (): Observable<{ items: Record<string, unknown>[] }> => this.api.get('gitlab/deployments')
 
   syncProjects = (): Observable<{
     synced: number
@@ -92,13 +103,33 @@ export class GitlabService {
     lastSyncAt: string
     message: string
   }> =>
-    of({
-      synced: 0,
-      projects: [],
-      lastSyncAt: new Date().toISOString(),
-      message: 'Configuración requerida. Conecta GitLab en Configuración.',
-    })
+    this.account().pipe(
+      switchMap((acc) => {
+        if (!acc?.id) {
+          return of({
+            synced: 0,
+            projects: [],
+            lastSyncAt: new Date().toISOString(),
+            message: 'Conecta una cuenta GitLab en Configuración.',
+          })
+        }
+        return this.syncAccount(acc.id)
+      }),
+    )
 
-  deploymentLogs = (_id: string): Observable<{ logs: string }> =>
-    of({ logs: 'Sin registros de despliegue disponibles.' })
+  deploymentLogs = (id: string): Observable<{ logs: string; status?: string }> =>
+    this.api.get(`gitlab/deployments/${id}/logs`)
+
+  deployProject = (
+    projectId: string,
+    body: {
+      branch: string
+      environment: string
+      strategy?: string
+      targetName?: string
+      targetType?: string
+      notes?: string
+    },
+  ): Observable<{ queued: boolean; message: string; deployment: Record<string, unknown> }> =>
+    this.api.post(`gitlab/projects/${projectId}/deploy`, body)
 }

@@ -17,7 +17,8 @@ export const sectionToTabIndex = (module: string, section: string): number => {
       'load-balancers': 3,
       metrics: 7,
       billing: 9,
-      terraform: 10,
+      'ai-studio': 10,
+      finops: 11,
       audit: 11,
     },
     vps: {
@@ -96,11 +97,25 @@ export const sectionToTabIndex = (module: string, section: string): number => {
   return maps[module]?.[section] ?? 0
 }
 
-export const providerFromSlug = (slug: string): 'AWS' | 'GCP' | 'AZURE' => {
+export const providerFromSlug = (slug: string): 'AWS' | 'GCP' | 'AZURE' | 'CLOUDING' => {
   const s = slug.toLowerCase()
   if (s === 'gcp') return 'GCP'
   if (s === 'azure') return 'AZURE'
+  if (s === 'clouding') return 'CLOUDING'
   return 'AWS'
+}
+
+export const vpsProviderFromSlug = (
+  slug: string,
+): 'DIGITALOCEAN' | 'HETZNER' | 'LINODE' | 'OVH' | 'IONOS' | 'VULTR' | 'SCALEWAY' => {
+  const s = slug.toLowerCase()
+  if (s === 'hetzner') return 'HETZNER'
+  if (s === 'linode') return 'LINODE'
+  if (s === 'ovh') return 'OVH'
+  if (s === 'ionos') return 'IONOS'
+  if (s === 'vultr') return 'VULTR'
+  if (s === 'scaleway') return 'SCALEWAY'
+  return 'DIGITALOCEAN'
 }
 
 export const bindSectionTabs = (

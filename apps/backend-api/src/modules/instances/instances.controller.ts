@@ -22,6 +22,8 @@ export class InstancesController {
     @Query('provider') provider?: string,
     @Query('cloudAccountId') cloudAccountId?: string,
     @Query('region') region?: string,
+    @Query('includeTerminated') includeTerminated?: string,
+    @Query('status') status?: string,
   ) {
     const scope = await this.orgScope.resolveForUser(user.sub)
     const scoped = this.orgScope.projectFilter(scope, projectId)
@@ -32,36 +34,43 @@ export class InstancesController {
       provider,
       cloudAccountId,
       region,
+      includeTerminated: includeTerminated === 'true',
+      status,
     })
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get instance by ID' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id)
+  async findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const scope = await this.orgScope.resolveForUser(user.sub)
+    return this.service.findOne(id, scope.projectIds)
   }
 
   @Post(':id/discover')
   @ApiOperation({ summary: 'Discover Docker/Kubernetes on instance host' })
-  discover(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.service.discover(id, user.sub)
+  async discover(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const scope = await this.orgScope.resolveForUser(user.sub)
+    return this.service.discover(id, user.sub, scope.projectIds)
   }
 
   @Post(':id/start')
   @ApiOperation({ summary: 'Start instance' })
-  start(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.service.start(id, user.sub)
+  async start(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const scope = await this.orgScope.resolveForUser(user.sub)
+    return this.service.start(id, user.sub, scope.projectIds)
   }
 
   @Post(':id/stop')
   @ApiOperation({ summary: 'Stop instance' })
-  stop(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.service.stop(id, user.sub)
+  async stop(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const scope = await this.orgScope.resolveForUser(user.sub)
+    return this.service.stop(id, user.sub, scope.projectIds)
   }
 
   @Post(':id/restart')
   @ApiOperation({ summary: 'Restart instance' })
-  restart(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.service.restart(id, user.sub)
+  async restart(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const scope = await this.orgScope.resolveForUser(user.sub)
+    return this.service.restart(id, user.sub, scope.projectIds)
   }
 }

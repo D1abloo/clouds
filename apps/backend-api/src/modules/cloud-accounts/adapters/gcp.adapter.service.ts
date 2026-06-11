@@ -28,7 +28,14 @@ import {
   gcpZoneFromContext,
   resolveGcpProjectId,
 } from './sdk/gcp-client.factory'
-import { isDemoMode, mapGcpState, parseGcpZone, sdkErrorMessage } from './sdk/adapter-sdk.util'
+import {
+  instancesOnSyncError,
+  isDemoMode,
+  mapGcpState,
+  parseGcpZone,
+  resolveSyncedInstances,
+  sdkErrorMessage,
+} from './sdk/adapter-sdk.util'
 
 const GCP_PERMS = [
   'compute.instances.list',
@@ -90,28 +97,32 @@ export class GcpAdapterService implements CloudProviderAdapter {
 
   async listNetworks(ctx: CloudAdapterContext, region?: string): Promise<CloudNetwork[]> {
     const { region: r } = parseGcpZone(region ?? ctx.defaultRegion ?? 'us-central1-a')
-    if (isDemoMode(ctx)) return mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vpc-network' }))
     return mockNetworks(ctx, r).map((n) => ({ ...n, type: 'vpc-network' }))
   }
 
   async listSecurityGroups(ctx: CloudAdapterContext, region?: string): Promise<CloudSecurityGroup[]> {
     const { region: r } = parseGcpZone(region ?? ctx.defaultRegion ?? 'us-central1-a')
-    if (isDemoMode(ctx)) return mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `fw-${s.name}` }))
     return mockSecurityGroups(ctx, r).map((s) => ({ ...s, name: `fw-${s.name}` }))
   }
 
   async listImages(ctx: CloudAdapterContext, region: string): Promise<CloudImage[]> {
+    const { region: r } = parseGcpZone(region)
+    const project = resolveGcpProjectId(ctx) || 'ubuntu-os-cloud'
+    const operational: CloudImage[] = [
+      { id: `projects/${project}/global/images/family/ubuntu-2204-lts`, name: 'Ubuntu 22.04 LTS', region: r, os: 'linux', architecture: 'x86_64', status: 'available' },
+      { id: `projects/debian-cloud/global/images/family/debian-12`, name: 'Debian 12', region: r, os: 'linux', architecture: 'x86_64', status: 'available' },
+      { id: `projects/centos-cloud/global/images/family/centos-stream-9`, name: 'CentOS Stream 9', region: r, os: 'linux', architecture: 'x86_64', status: 'available' },
+      { id: `projects/cos-cloud/global/images/family/cos-stable`, name: 'Container-Optimized OS', region: r, os: 'linux', architecture: 'x86_64', status: 'available' },
+      { id: `projects/windows-cloud/global/images/family/windows-2022`, name: 'Windows Server 2022', region: r, os: 'windows', architecture: 'x86_64', status: 'available' },
+    ]
     if (isDemoMode(ctx)) {
       return mockImages(ctx, region).map((i) => ({
         ...i,
-        id: `projects/${resolveGcpProjectId(ctx) || 'demo'}/global/images/${i.id}`,
+        id: `projects/${project}/global/images/${i.id}`,
+        status: 'available',
       }))
     }
-    return mockImages(ctx, region).map((i) => ({
-      ...i,
-      id: `projects/${resolveGcpProjectId(ctx)}/global/images/family/ubuntu-2204-lts`,
-      name: 'Ubuntu 22.04 LTS (family)',
-    }))
+    return operational.length ? operational : mockImages(ctx, region)
   }
 
   async listInstanceTypes(ctx: CloudAdapterContext, region: string): Promise<CloudInstanceType[]> {
@@ -148,6 +159,7 @@ export class GcpAdapterService implements CloudProviderAdapter {
         const zoneScoped = scoped as { instances?: GcpInst[] }
         for (const inst of zoneScoped.instances ?? []) {
           if (!inst.id || !inst.name) continue
+          if ((inst.status ?? '').toUpperCase() === 'TERMINATED') continue
           const zoneUrl = inst.zone ?? ''
           const zone = zoneUrl.split('/').pop() ?? gcpZoneFromContext(ctx)
           const { region: reg } = parseGcpZone(zone)
@@ -169,10 +181,10 @@ export class GcpAdapterService implements CloudProviderAdapter {
           })
         }
       }
-      return items.length ? items : synthesizeInstances(ctx)
+      return resolveSyncedInstances(ctx, items, () => synthesizeInstances(ctx))
     } catch (err) {
       this.logger.warn(`GCP listInstances fallback: ${sdkErrorMessage(err)}`)
-      return synthesizeInstances(ctx)
+      return instancesOnSyncError(ctx, () => synthesizeInstances(ctx))
     }
   }
 
@@ -206,47 +218,79 @@ export class GcpAdapterService implements CloudProviderAdapter {
   }
 
   async launchInstance(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<CloudInstance> {
+    const launchMeta = {
+      imageId: input.imageId,
+      subnetId: input.subnetId,
+      securityGroupIds: input.securityGroupIds,
+      availabilityZone: input.availabilityZone,
+      keyPair: input.keyPair,
+      publicIp: input.publicIp,
+      diskGb: input.diskGb,
+      diskType: input.diskType,
+      userData: input.userData ? true : false,
+      monitoring: input.monitoring,
+      tags: input.tags,
+    }
+
+    const { region: gcpRegion, zone } = parseGcpZone(
+      input.availabilityZone || input.region,
+      ctx.defaultRegion ?? 'us-central1-a',
+    )
+
     if (isDemoMode(ctx)) {
       return {
         id: `gce-${Date.now().toString(36)}`,
         name: input.name,
-        region: input.region,
-        status: 'PENDING' as InstanceStatus,
+        region: gcpRegion,
+        status: 'RUNNING' as InstanceStatus,
         instanceType: input.instanceType,
         provider: ctx.provider,
-        metadata: { imageId: input.imageId, isDemo: true },
+        metadata: { ...launchMeta, zone, isDemo: true },
       }
     }
     const projectId = resolveGcpProjectId(ctx)
-    const zone = gcpZoneFromContext(ctx, input.region)
     const client = createGcpInstancesClient(ctx)
+    const vmName = input.name.replace(/[^a-z0-9-]/gi, '-').toLowerCase().slice(0, 63)
+    const initializeParams: Record<string, unknown> = {
+      sourceImage: input.imageId.includes('/')
+        ? input.imageId
+        : `projects/debian-cloud/global/images/${input.imageId}`,
+    }
+    if (input.diskGb) initializeParams.diskSizeGb = input.diskGb
+    if (input.diskType) initializeParams.diskType = input.diskType
+
+    const accessConfigs =
+      input.publicIp !== false ? [{ type: 'ONE_TO_ONE_NAT' as const, name: 'External NAT' }] : []
+
+    const instanceResource: Record<string, unknown> = {
+      name: vmName,
+      machineType: `zones/${zone}/machineTypes/${input.instanceType}`,
+      disks: [{ boot: true, autoDelete: true, initializeParams }],
+      networkInterfaces: [{ network: 'global/networks/default', accessConfigs }],
+    }
+
+    if (input.userData) {
+      instanceResource.metadata = { items: [{ key: 'startup-script', value: input.userData }] }
+    }
+    if (input.tags && Object.keys(input.tags).length) {
+      instanceResource.labels = Object.fromEntries(
+        Object.entries(input.tags).map(([k, v]) => [k.toLowerCase().replace(/[^a-z0-9_-]/g, '_'), v.toLowerCase().slice(0, 63)]),
+      )
+    }
+
     const [operation] = await client.insert({
       project: projectId,
       zone,
-      instanceResource: {
-        name: input.name.replace(/[^a-z0-9-]/gi, '-').toLowerCase().slice(0, 63),
-        machineType: `zones/${zone}/machineTypes/${input.instanceType}`,
-        disks: [
-          {
-            boot: true,
-            autoDelete: true,
-            initializeParams: {
-              sourceImage: input.imageId.includes('/') ? input.imageId : `projects/debian-cloud/global/images/${input.imageId}`,
-            },
-          },
-        ],
-        networkInterfaces: [{ network: 'global/networks/default', accessConfigs: [{ type: 'ONE_TO_ONE_NAT', name: 'External NAT' }] }],
-      },
+      instanceResource: instanceResource as never,
     })
-    const vmName = input.name.replace(/[^a-z0-9-]/gi, '-').toLowerCase().slice(0, 63)
     return {
       id: vmName,
       name: vmName,
-      region: parseGcpZone(zone).region,
+      region: gcpRegion,
       status: 'PENDING',
       instanceType: input.instanceType,
       provider: CloudProvider.GCP,
-      metadata: { zone, operation: operation?.latestResponse?.name, isDemo: false },
+      metadata: { ...launchMeta, zone, operation: operation?.latestResponse?.name, isDemo: false },
     }
   }
 

@@ -7,10 +7,14 @@ import { sendJira, sendPagerDuty, sendSlack } from './integrations.providers'
 import {
   CORE_INTEGRATION_IDS,
   DEFAULT_INTEGRATIONS,
+  INTEGRATION_CONNECT_ROUTES,
+  PLATFORM_INTEGRATION_IDS,
+  WEBHOOK_INTEGRATION_IDS,
   type IntegrationDispatchPayload,
   type IntegrationId,
   type IntegrationSendResult,
 } from './integrations.types'
+import { PLATFORM_EVENT_SOURCES } from './integrations.platform-events'
 
 type UpdateIntegrationInput = {
   enabled?: boolean
@@ -52,9 +56,59 @@ export class IntegrationsService {
     }
   }
 
-  async list() {
+  async list(userId?: string) {
     await this.ensureDefaults()
-    return this.prisma.integrationConfig.findMany({ orderBy: { label: 'asc' } })
+    const rows = await this.prisma.integrationConfig.findMany({ orderBy: { label: 'asc' } })
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const deliveryCounts = await this.prisma.integrationDelivery.groupBy({
+      by: ['integrationId'],
+      where: { createdAt: { gte: since } },
+      _count: { _all: true },
+    })
+    const countById = Object.fromEntries(deliveryCounts.map((d) => [d.integrationId, d._count._all]))
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const live = await this.resolveLiveConnection(row.id as IntegrationId, userId)
+        return {
+          ...row,
+          events24h: countById[row.id] ?? 0,
+          connectRoute: INTEGRATION_CONNECT_ROUTES[row.id as IntegrationId] ?? null,
+          kind: PLATFORM_INTEGRATION_IDS.includes(row.id as IntegrationId) ? 'platform' : 'webhook',
+          accountConnected: live.connected,
+          accountSummary: live.summary,
+        }
+      }),
+    )
+  }
+
+  async listSourcesLive(userId?: string) {
+    const [githubLive, alertOpen, jenkinsCount, tfCount, vpsCount] = await Promise.all([
+      this.countLiveGithubAccounts(userId),
+      this.prisma.alert.count({ where: { isResolved: false } }),
+      this.prisma.jenkinsServer.count(),
+      this.prisma.terraformWorkspace.count(),
+      this.prisma.vpsServer.count(),
+    ])
+
+    const liveBySource: Record<string, { connected: boolean; summary: string }> = {
+      alerts: { connected: true, summary: `${alertOpen} alertas abiertas` },
+      jenkins: { connected: jenkinsCount > 0, summary: `${jenkinsCount} servidor(es)` },
+      terraform: { connected: tfCount > 0, summary: `${tfCount} workspace(s)` },
+      github: {
+        connected: githubLive > 0,
+        summary: githubLive > 0 ? `${githubLive} cuenta(s) conectada(s)` : 'Sin cuentas — conectar GitHub',
+      },
+      vps: { connected: vpsCount > 0, summary: `${vpsCount} host(s) VPS` },
+      'command-center': { connected: true, summary: 'Acciones operativas en vivo' },
+      settings: { connected: true, summary: 'Bus de integraciones activo' },
+    }
+
+    return PLATFORM_EVENT_SOURCES.map((src) => ({
+      ...src,
+      connected: liveBySource[src.id]?.connected ?? false,
+      summary: liveBySource[src.id]?.summary ?? 'Módulo disponible',
+    }))
   }
 
   async findOne(id: string) {
@@ -75,13 +129,16 @@ export class IntegrationsService {
     const enabled = input.enabled ?? existing.enabled
 
     if (enabled && !wasEnabled) {
-      status = CORE_INTEGRATION_IDS.includes(id as IntegrationId) ? 'connected' : status
+      status = await this.syncPlatformStatus(id as IntegrationId, enabled, status)
+    }
+    if (enabled && wasEnabled) {
+      status = await this.syncPlatformStatus(id as IntegrationId, enabled, status)
     }
     if (!enabled) {
       status = 'disconnected'
     }
 
-    const updated = await this.prisma.integrationConfig.update({
+    let updated = await this.prisma.integrationConfig.update({
       where: { id },
       data: {
         enabled,
@@ -104,6 +161,13 @@ export class IntegrationsService {
         userId,
         id,
       )
+      const syncedStatus = await this.syncPlatformStatus(id as IntegrationId, true, updated.status)
+      if (syncedStatus !== updated.status) {
+        updated = await this.prisma.integrationConfig.update({
+          where: { id },
+          data: { status: syncedStatus },
+        })
+      }
     }
 
     return updated
@@ -145,7 +209,15 @@ export class IntegrationsService {
 
     await this.prisma.integrationConfig.update({
       where: { id },
-      data: { lastSync: new Date(), status: result.status === 'failed' ? 'error' : 'connected' },
+      data: {
+        lastSync: new Date(),
+        status:
+          result.status === 'failed'
+            ? 'error'
+            : result.status === 'routed' || result.status === 'logged'
+              ? 'connected'
+              : 'connected',
+      },
     })
 
     return { integration: await this.findOne(id), result, liveMode: this.isLiveMode() }
@@ -217,15 +289,64 @@ export class IntegrationsService {
         return sendPagerDuty(config, event, live)
       case 'jira':
         return sendJira(config, event, live)
+      case 'github':
+      case 'servicenow':
+      case 'teams':
+        return {
+          status: live ? 'routed' : 'simulated',
+          latencyMs: 18,
+          responsePreview: `${integration.label}: evento enrutado al módulo de plataforma (${event.eventType})`,
+        }
       default:
         await new Promise((r) => setTimeout(r, 30))
         return {
-          status: live ? 'failed' : 'simulated',
+          status: live ? 'logged' : 'simulated',
           latencyMs: 30,
-          error: live ? `Provider not implemented for ${integrationId}` : undefined,
-          responsePreview: `${integration.label}: event logged`,
+          responsePreview: `${integration.label}: evento registrado en el bus`,
         }
     }
+  }
+
+  private async syncPlatformStatus(
+    id: IntegrationId,
+    enabled: boolean,
+    current: string,
+  ): Promise<string> {
+    if (!enabled) return 'disconnected'
+    if (WEBHOOK_INTEGRATION_IDS.includes(id)) {
+      return CORE_INTEGRATION_IDS.includes(id) ? 'connected' : current
+    }
+    if (id === 'github') {
+      const count = await this.countLiveGithubAccounts()
+      return count > 0 ? 'connected' : 'pending'
+    }
+    return current === 'disconnected' ? 'pending' : current
+  }
+
+  private async resolveLiveConnection(id: IntegrationId, userId?: string) {
+    if (id === 'github') {
+      const count = await this.countLiveGithubAccounts(userId)
+      return {
+        connected: count > 0,
+        summary: count > 0 ? `${count} cuenta(s) GitHub` : 'Conectar cuenta GitHub',
+      }
+    }
+    if (PLATFORM_INTEGRATION_IDS.includes(id)) {
+      return { connected: false, summary: 'Configurar en el módulo del panel' }
+    }
+    const row = await this.prisma.integrationConfig.findUnique({ where: { id } })
+    return {
+      connected: row?.status === 'connected',
+      summary: row?.status === 'connected' ? 'Webhook configurado' : 'Pendiente de credenciales',
+    }
+  }
+
+  private async countLiveGithubAccounts(userId?: string): Promise<number> {
+    const items = await this.prisma.githubAccount.findMany({
+      where: userId ? { createdById: userId } : undefined,
+      select: { tokenRef: true },
+    })
+    return items.filter((a) => !a.tokenRef?.startsWith('demo:') && a.tokenRef !== 'demo').length
   }
 
   private async recordDelivery(

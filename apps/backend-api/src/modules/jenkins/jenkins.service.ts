@@ -14,8 +14,16 @@ export class JenkinsService {
     private integrations: IntegrationsService,
   ) {}
 
-  async createServer(data: { name: string; url: string; secretRef: string }, userId?: string) {
-    const server = await this.prisma.jenkinsServer.create({ data })
+  async createServer(
+    data: { name: string; url: string; secretRef?: string; username?: string; apiToken?: string },
+    userId?: string,
+  ) {
+    const secretRef =
+      data.secretRef ??
+      JSON.stringify({ username: data.username ?? '', apiToken: data.apiToken ?? '' })
+    const server = await this.prisma.jenkinsServer.create({
+      data: { name: data.name, url: data.url, secretRef },
+    })
     await this.audit.create({ userId, action: 'jenkins.server.create', resource: 'jenkins_server', resourceId: server.id })
     return { ...server, secretRef: undefined, hasToken: true }
   }
@@ -28,15 +36,57 @@ export class JenkinsService {
   async validateConnection(id: string) {
     const server = await this.prisma.jenkinsServer.findUnique({ where: { id } })
     if (!server) throw new NotFoundException('Jenkins server not found')
-    return { valid: true, message: `Mock connection to ${server.url} (integrate Jenkins REST API)` }
+
+    let creds: { username?: string; apiToken?: string } = {}
+    try {
+      creds = JSON.parse(server.secretRef) as { username?: string; apiToken?: string }
+    } catch {
+      creds = {}
+    }
+
+    const base = server.url.replace(/\/$/, '')
+    const auth =
+      creds.username && creds.apiToken
+        ? Buffer.from(`${creds.username}:${creds.apiToken}`).toString('base64')
+        : null
+
+    if (auth) {
+      try {
+        const res = await fetch(`${base}/api/json`, {
+          headers: { Authorization: `Basic ${auth}`, Accept: 'application/json' },
+          signal: AbortSignal.timeout(8000),
+        })
+        if (res.ok) {
+          const payload = (await res.json()) as { mode?: string }
+          return {
+            valid: true,
+            message: `Conexión OK — Jenkins ${payload.mode ?? 'online'} en ${base}`,
+          }
+        }
+        return { valid: false, message: `Jenkins respondió HTTP ${res.status}` }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Error de red'
+        return { valid: false, message: `No se pudo contactar Jenkins: ${msg}` }
+      }
+    }
+
+    return { valid: true, message: `Servidor registrado en ${server.url}` }
   }
 
   async listJobs(serverId: string) {
-    // TODO: Jenkins API
-    return [
-      { id: 'job-1', name: 'deploy-backend', url: '/job/deploy-backend', lastBuild: { number: 42, status: 'SUCCESS' } },
-      { id: 'job-2', name: 'terraform-apply', url: '/job/terraform-apply', lastBuild: { number: 15, status: 'FAILURE' } },
-    ]
+    const jobs = await this.prisma.jenkinsJob.findMany({
+      where: { serverId },
+      include: { builds: { orderBy: { buildNum: 'desc' }, take: 1 } },
+      orderBy: { name: 'asc' },
+    })
+    return jobs.map((j) => ({
+      id: j.id,
+      name: j.name,
+      url: j.url ?? `/job/${j.name}`,
+      lastBuild: j.builds[0]
+        ? { number: j.builds[0].buildNum, status: j.builds[0].status }
+        : null,
+    }))
   }
 
   async triggerBuild(serverId: string, jobName: string, parameters: Record<string, string>, userId?: string) {

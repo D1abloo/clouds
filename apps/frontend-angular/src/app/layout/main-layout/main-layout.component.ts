@@ -5,6 +5,8 @@ import {
   OnDestroy,
   ElementRef,
   viewChild,
+  signal,
+  HostListener,
 } from '@angular/core'
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router'
 import { filter, Subscription } from 'rxjs'
@@ -14,6 +16,7 @@ import { DemoBannerComponent } from '../../shared/components/demo-banner/demo-ba
 import { ModuleAreaTabsComponent } from '../module-area-tabs/module-area-tabs.component'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { SidebarService } from '../sidebar/sidebar.service'
+import { isCompactNavViewport } from '../layout-breakpoints'
 
 @Component({
   selector: 'app-main-layout',
@@ -22,12 +25,17 @@ import { SidebarService } from '../sidebar/sidebar.service'
   template: `
     <div
       class="layout-root layout-root--sections-only"
-      [class.layout-root--mobile-nav-open]="!sidebarSvc.collapsed() && isMobile()"
+      [class.layout-root--mobile-nav-open]="!sidebarSvc.collapsed() && compactNav()"
     >
       <app-sidebar />
 
-      @if (!sidebarSvc.collapsed() && isMobile()) {
-        <div class="sidebar-backdrop" (click)="sidebarSvc.setCollapsed(true)" role="presentation"></div>
+      @if (!sidebarSvc.collapsed() && compactNav()) {
+        <div
+          class="sidebar-backdrop"
+          (click)="sidebarSvc.setCollapsed(true)"
+          role="presentation"
+          aria-hidden="true"
+        ></div>
       }
 
       <div class="layout-main">
@@ -64,7 +72,7 @@ import { SidebarService } from '../sidebar/sidebar.service'
     .layout-main-scroll {
       flex: 1;
       min-height: 0;
-      overflow-x: hidden;
+      overflow-x: clip;
       overflow-y: auto;
       overscroll-behavior: contain;
       padding: 1.25rem 1.5rem 2rem;
@@ -80,7 +88,7 @@ import { SidebarService } from '../sidebar/sidebar.service'
       display: flex;
       flex-direction: column;
       padding: 0.5rem 0.65rem 0.65rem;
-      overflow-x: hidden;
+      overflow-x: clip;
       overflow-y: auto;
     }
     .layout-root--sections-only .layout-main-scroll:has(.hlth-page-host),
@@ -126,18 +134,14 @@ import { SidebarService } from '../sidebar/sidebar.service'
       background: rgba(15, 23, 42, 0.55);
       z-index: 99;
       backdrop-filter: blur(3px);
+      animation: fadeIn 0.2s ease;
     }
-    @media (max-width: 960px) {
-      .layout-main-scroll { padding: 1rem; }
+    @media (max-width: 1023px) {
+      .layout-main-scroll {
+        padding: 0.75rem 0.65rem 1rem;
+      }
       .layout-root--sections-only .layout-main-scroll {
-        padding: 0.5rem 0.65rem 0.65rem;
-      }
-      .layout-root--mobile-nav-open .layout-main {
-        margin-left: min(272px, 78vw);
-        min-width: 0;
-      }
-      .layout-root--mobile-nav-open .sidebar-backdrop {
-        display: none;
+        padding: 0.45rem 0.55rem 0.75rem;
       }
     }
   `,
@@ -150,25 +154,27 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   private readonly mainScrollRef = viewChild<ElementRef<HTMLElement>>('mainScroll')
   private navSub?: Subscription
 
+  readonly compactNav = signal(isCompactNavViewport())
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.compactNav.set(isCompactNavViewport())
+  }
+
   ngOnInit(): void {
     this.realtime.connect()
-    if (this.isMobile()) this.sidebarSvc.setCollapsed(true)
+    if (isCompactNavViewport()) this.sidebarSvc.setCollapsed(true)
 
     this.navSub = this.router.events
       .pipe(filter((e) => e instanceof NavigationEnd))
-      .subscribe(() => this.resetMainScroll())
+      .subscribe(() => {
+        this.resetMainScroll()
+        if (isCompactNavViewport()) this.sidebarSvc.setCollapsed(true)
+      })
   }
 
   ngOnDestroy(): void {
     this.navSub?.unsubscribe()
-  }
-
-  closeMobileSidebar(): void {
-    if (this.isMobile()) this.sidebarSvc.setCollapsed(true)
-  }
-
-  isMobile(): boolean {
-    return typeof window !== 'undefined' && window.innerWidth <= 960
   }
 
   private resetMainScroll = (): void => {

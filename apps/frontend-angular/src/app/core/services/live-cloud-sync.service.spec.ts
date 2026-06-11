@@ -50,6 +50,16 @@ describe('LiveCloudSyncService', () => {
     })
   })
 
+  it('syncAllAccountsSilent no activa syncing', (done) => {
+    service.syncAllAccountsSilent().subscribe({
+      complete: () => {
+        expect(syncAllSpy).toHaveBeenCalled()
+        expect(service.syncing()).toBeFalse()
+        done()
+      },
+    })
+  })
+
   it('startPolling invoca syncFn periódicamente', () => {
     jasmine.clock().install()
     const fn = jasmine.createSpy('pollFn')

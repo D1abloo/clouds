@@ -21,7 +21,7 @@ usage() {
 Uso: provision-spendlyx-users.sh [local] <comando> [opciones]
 
 Comandos:
-  admin     Superadministrador con acceso total (pass 10 dígitos auto si no se indica)
+  admin     Superadministrador con acceso total (contraseña robusta auto si no se indica)
   presets   Usuarios de ejemplo por rol (admin, administrador, operador, auditor, solo_lectura)
   create    Usuario concreto: --email, --name, --role [, --password]
   list      Lista usuarios en la BD

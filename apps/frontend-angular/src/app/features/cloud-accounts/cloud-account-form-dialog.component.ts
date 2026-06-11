@@ -3,6 +3,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import type { CloudProvider } from '../../core/models/api.models'
 import { CloudAccountWizardFacade } from './cloud-account-wizard.facade'
 import { CloudConnectionWizardBodyComponent } from './cloud-connection-wizard-body.component'
+import { CLOUD_ACCOUNT_WIZARD_DIALOG } from './cloud-account-wizard-dialog.config'
 import type { ConnectionProviderId } from './cloud-account-wizard.config'
 
 export interface CloudAccountFormData {
@@ -18,30 +19,40 @@ export interface CloudAccountFormData {
   providers: [CloudAccountWizardFacade],
   imports: [MatDialogModule, CloudConnectionWizardBodyComponent],
   template: `
-    <mat-dialog-content class="cloud-account-wizard-dialog">
-      <app-cloud-connection-wizard-body
-        mode="dialog"
-        [initOptions]="initOptions"
-        (cancel)="dialogRef.close()"
-        (completed)="handleCompleted($event)"
-      />
-    </mat-dialog-content>
+    <app-cloud-connection-wizard-body
+      mode="dialog"
+      [initOptions]="initOptions"
+      (cancel)="dialogRef.close()"
+      (completed)="handleCompleted($event)"
+    />
   `,
   styles: `
-    .cloud-account-wizard-dialog {
-      padding: 0 !important;
-      margin: 0;
-      max-height: 92vh;
+    :host {
+      display: block;
+      width: 100%;
+      max-width: 900px;
     }
   `,
 })
 export class CloudAccountFormDialogComponent {
+  static readonly dialogConfig = CLOUD_ACCOUNT_WIZARD_DIALOG
+
   readonly data = inject<CloudAccountFormData>(MAT_DIALOG_DATA)
   readonly dialogRef = inject(MatDialogRef<CloudAccountFormDialogComponent>)
 
   readonly initOptions = {
     suggestedProvider: this.data.suggestedProvider ?? this.data.provider,
-    scope: this.data.scope,
+    scope: this.data.scope ?? this.inferScope(this.data.suggestedProvider ?? this.data.provider),
+  }
+
+  private inferScope(
+    provider?: ConnectionProviderId | CloudProvider,
+  ): 'all' | 'cloud' | 'vps' | 'platform' {
+    if (!provider) return 'all'
+    if (provider === 'AWS' || provider === 'GCP' || provider === 'AZURE' || provider === 'CLOUDING') {
+      return 'cloud'
+    }
+    return 'all'
   }
 
   handleCompleted = (res: { created: boolean; accountId?: string; provider?: ConnectionProviderId }): void => {

@@ -1,4 +1,7 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core'
+import { APP_INITIALIZER, ApplicationConfig, inject, provideZoneChangeDetection } from '@angular/core'
+import { firstValueFrom } from 'rxjs'
+import { ProModeService } from './core/services/pro-mode.service'
+import { ServerTimeService } from './core/services/server-time.service'
 import {
   provideRouter,
   withComponentInputBinding,
@@ -22,5 +25,18 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideAnimationsAsync(),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: () => {
+        const pro = inject(ProModeService)
+        const serverTime = inject(ServerTimeService)
+        return () =>
+          Promise.all([
+            firstValueFrom(pro.loadStatus$()),
+            serverTime.init(),
+          ]).then(() => undefined)
+      },
+      multi: true,
+    },
   ],
 }

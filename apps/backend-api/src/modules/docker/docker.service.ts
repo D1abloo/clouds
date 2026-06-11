@@ -18,8 +18,8 @@ export class DockerService {
       running,
       stopped: containers.length - running,
       images: images.length,
-      networks: 3,
-      volumes: 4,
+      networks: 0,
+      volumes: 0,
       health: running === containers.length ? 'healthy' : 'degraded',
     }
   }
@@ -67,32 +67,22 @@ export class DockerService {
       byImage.set(c.image, prev)
     }
     const list = [...byImage.values()]
-    if (list.length === 0) {
-      return [
-        { image: 'nginx:latest', containers: 0, size: '133 MB' },
-        { image: 'redis:7', containers: 0, size: '117 MB' },
-        { image: 'postgres:16', containers: 0, size: '379 MB' },
-      ]
-    }
+    if (list.length === 0) return []
     return list.map((i) => ({ ...i, size: `${120 + i.containers * 10} MB` }))
   }
 
   async getNetworks() {
     const hosts = await this.prisma.dockerHost.findMany()
+    if (!hosts.length) return []
     const hostRef = hosts[0]?.hostRef ?? 'default'
     return [
       { id: 'bridge', name: 'bridge', driver: 'bridge', scope: 'local', host: hostRef },
-      { id: 'cloudops-net', name: 'cloudops-net', driver: 'bridge', scope: 'local', host: hostRef },
       { id: 'host', name: 'host', driver: 'host', scope: 'local', host: hostRef },
     ]
   }
 
   async getVolumes() {
-    return [
-      { id: 'vol-postgres', name: 'postgres_data', driver: 'local', size: '10 GB', mountpoint: '/var/lib/postgresql' },
-      { id: 'vol-redis', name: 'redis_data', driver: 'local', size: '1 GB', mountpoint: '/data' },
-      { id: 'vol-nginx', name: 'nginx_cache', driver: 'local', size: '512 MB', mountpoint: '/var/cache/nginx' },
-    ]
+    return []
   }
 
   async getMetrics() {

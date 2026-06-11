@@ -2,6 +2,7 @@ export type ExternalProvider =
   | 'aws'
   | 'gcp'
   | 'azure'
+  | 'clouding'
   | 'jenkins'
   | 'github'
   | 'gitlab'
@@ -51,6 +52,12 @@ export const EXTERNAL_CONNECTION_COPY: Record<ExternalProvider, ExternalConnecti
     description: 'Configura una aplicación registrada para sincronizar recursos.',
     actionLabel: 'Añadir cuenta Azure',
     actionRoute: '/cloud/azure/accounts',
+  },
+  clouding: {
+    title: 'Sin cuentas Clouding conectadas',
+    description: 'Añade credenciales API para sincronizar instancias, redes y facturación Clouding.',
+    actionLabel: 'Añadir cuenta Clouding',
+    actionRoute: '/cloud/clouding/accounts',
   },
   github: {
     title: 'Sin cuenta GitHub conectada',
@@ -106,7 +113,7 @@ export const AI_UNAVAILABLE_COPY: ExternalConnectionCopy = {
   title: 'Asistente no disponible',
   description: 'Configura una clave de API de IA en Configuración para habilitar el Copilot.',
   actionLabel: 'Configurar IA',
-  actionRoute: '/settings/general',
+  actionRoute: '/settings/copilot',
 }
 
 export const DATA_SOURCE_COPY: ExternalConnectionCopy = {
@@ -143,6 +150,10 @@ export const MODULE_REQUIREMENTS: Record<string, ModuleRequirement> = {
   aws: { id: 'aws', requiresExternalConnection: true, kind: 'external', provider: 'aws' },
   gcp: { id: 'gcp', requiresExternalConnection: true, kind: 'external', provider: 'gcp' },
   azure: { id: 'azure', requiresExternalConnection: true, kind: 'external', provider: 'azure' },
+  clouding: { id: 'clouding', requiresExternalConnection: true, kind: 'external', provider: 'clouding' },
+  ionos: { id: 'ionos', requiresExternalConnection: true, kind: 'external', provider: 'vps' },
+  vultr: { id: 'vultr', requiresExternalConnection: true, kind: 'external', provider: 'vps' },
+  scaleway: { id: 'scaleway', requiresExternalConnection: true, kind: 'external', provider: 'vps' },
   instances: {
     id: 'instances',
     requiresExternalConnection: false,
@@ -237,6 +248,10 @@ export const MODULE_LABEL_TO_ID: Record<string, string> = {
   AWS: 'aws',
   GCP: 'gcp',
   Azure: 'azure',
+  Clouding: 'clouding',
+  IONOS: 'ionos',
+  Vultr: 'vultr',
+  Scaleway: 'scaleway',
   GitHub: 'github',
   GitLab: 'gitlab',
   Docker: 'docker',

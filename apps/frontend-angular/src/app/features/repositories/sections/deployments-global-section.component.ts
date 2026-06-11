@@ -1,4 +1,4 @@
-import { Component, Input, output, signal, computed } from '@angular/core'
+import { Component, input, output, signal, computed } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { DatePipe, SlicePipe } from '@angular/common'
 import { MatButtonModule } from '@angular/material/button'
@@ -290,7 +290,7 @@ type DeployStage = { label: string; status: 'ok' | 'run' | 'fail' | 'wait' }
   `,
 })
 export class DeploymentsGlobalSectionComponent {
-  @Input() deployments: Record<string, unknown>[] = []
+  readonly deployments = input<Record<string, unknown>[]>([])
 
   readonly routes = {
     commits: repoRoute('commits'),
@@ -321,7 +321,7 @@ export class DeploymentsGlobalSectionComponent {
   readonly rollback = output<Record<string, unknown>>()
 
   visibleDeploys = computed(() => {
-    const d = this.deployments
+    const d = this.deployments()
     const i = this.tabIndex()
     const key = DEPLOY_TABS[i] ?? 'all'
     if (key === 'all') return d
@@ -336,7 +336,7 @@ export class DeploymentsGlobalSectionComponent {
   })
 
   deployStats = computed(() => {
-    const d = this.deployments
+    const d = this.deployments()
     return {
       total: d.length,
       success: d.filter((x) => x['status'] === 'success').length,

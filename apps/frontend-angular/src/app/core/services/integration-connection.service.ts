@@ -16,7 +16,14 @@ import {
   resolveModuleId,
 } from '../routing/module-requirements.util'
 
-export type VpsProviderId = 'DIGITALOCEAN' | 'HETZNER' | 'LINODE' | 'OVH'
+export type VpsProviderId =
+  | 'DIGITALOCEAN'
+  | 'HETZNER'
+  | 'LINODE'
+  | 'OVH'
+  | 'IONOS'
+  | 'VULTR'
+  | 'SCALEWAY'
 
 export type ConnectionOpenOptions = {
   preferDialog?: boolean
@@ -26,6 +33,7 @@ const PROVIDER_FALLBACK_ROUTES: Record<string, string> = {
   aws: '/cloud/aws/accounts',
   gcp: '/cloud/gcp/accounts',
   azure: '/cloud/azure/accounts',
+  clouding: '/cloud/clouding/accounts',
   github: '/repositories/github',
   gitlab: '/repositories/gitlab',
   jenkins: '/jenkins/jobs',
@@ -33,11 +41,14 @@ const PROVIDER_FALLBACK_ROUTES: Record<string, string> = {
   kubernetes: '/kubernetes/pods',
   k8s: '/kubernetes/pods',
   terraform: '/terraform/workspaces',
-  vps: '/vps/digitalocean/accounts',
-  digitalocean: '/vps/digitalocean/accounts',
-  hetzner: '/vps/hetzner/accounts',
-  linode: '/vps/linode/accounts',
-  ovh: '/vps/ovh/accounts',
+  vps: '/vps/digitalocean/overview',
+  digitalocean: '/vps/digitalocean/overview',
+  hetzner: '/vps/hetzner/overview',
+  linode: '/vps/linode/overview',
+  ovh: '/vps/ovh/overview',
+  ionos: '/vps/ionos/overview',
+  vultr: '/vps/vultr/overview',
+  scaleway: '/vps/scaleway/overview',
 }
 
 @Injectable({ providedIn: 'root' })
@@ -139,6 +150,8 @@ export class IntegrationConnectionService {
         return this.openCloudProvider('GCP', { preferDialog: true })
       case 'azure':
         return this.openCloudProvider('AZURE', { preferDialog: true })
+      case 'clouding':
+        return this.openCloudProvider('CLOUDING', { preferDialog: true })
       case 'github':
         return this.openGithub({ preferDialog: true })
       case 'gitlab':
@@ -162,6 +175,12 @@ export class IntegrationConnectionService {
         return this.openVpsProvider('LINODE', { preferDialog: true })
       case 'ovh':
         return this.openVpsProvider('OVH', { preferDialog: true })
+      case 'ionos':
+        return this.openVpsProvider('IONOS', { preferDialog: true })
+      case 'vultr':
+        return this.openVpsProvider('VULTR', { preferDialog: true })
+      case 'scaleway':
+        return this.openVpsProvider('SCALEWAY', { preferDialog: true })
       default:
         return this.openDataSource({ preferDialog: true })
     }
@@ -177,6 +196,27 @@ export class IntegrationConnectionService {
     const req = getModuleRequirement(id)
     const preferDialog = options?.preferDialog ?? true
 
+    const vpsByModule: Partial<Record<string, VpsProviderId>> = {
+      ionos: 'IONOS',
+      vultr: 'VULTR',
+      scaleway: 'SCALEWAY',
+      digitalocean: 'DIGITALOCEAN',
+      hetzner: 'HETZNER',
+      linode: 'LINODE',
+      ovh: 'OVH',
+    }
+    const vpsId = vpsByModule[id]
+    if (vpsId) {
+      return preferDialog
+        ? this.openVpsProvider(vpsId, { preferDialog: true })
+        : this.openVpsProvider(vpsId)
+    }
+    if (id === 'clouding') {
+      return preferDialog
+        ? this.openCloudProvider('CLOUDING', { preferDialog: true })
+        : this.openCloudProvider('CLOUDING')
+    }
+
     if (req?.provider) {
       switch (req.provider) {
         case 'aws':
@@ -191,6 +231,10 @@ export class IntegrationConnectionService {
           return preferDialog
             ? this.openCloudProvider('AZURE', { preferDialog: true })
             : this.openCloudProvider('AZURE')
+        case 'clouding':
+          return preferDialog
+            ? this.openCloudProvider('CLOUDING', { preferDialog: true })
+            : this.openCloudProvider('CLOUDING')
         case 'vps':
           return preferDialog
             ? this.openVpsProvider('DIGITALOCEAN', { preferDialog: true })
@@ -214,6 +258,11 @@ export class IntegrationConnectionService {
         case 'repository':
           return this.openGithub()
       }
+    }
+
+    if (req?.kind === 'ai') {
+      void this.router.navigateByUrl('/settings/copilot')
+      return of(null)
     }
 
     if (req?.kind === 'data-dependent' || req?.showOptionalCloudCta) {
@@ -249,9 +298,7 @@ export class IntegrationConnectionService {
     }
     return this.dialog
       .open(CloudAccountFormDialogComponent, {
-        width: '760px',
-        maxWidth: '95vw',
-        panelClass: 'cloud-account-wizard-panel',
+        ...CloudAccountFormDialogComponent.dialogConfig,
         data,
       })
       .afterClosed()

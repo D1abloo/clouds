@@ -173,9 +173,11 @@ Inicio OAuth (frontend): `GET /api/v1/auth/oauth/google` | `GET /api/v1/auth/oau
 - Tokens PAT cifrados con `SecretsVaultService` (`VAULT_ENCRYPTION_KEY` en `infra/.env`)
 - Validación previa: `POST /api/v1/github/accounts/validate-preview` | `POST /api/v1/gitlab/accounts/validate-preview`
 - Preview repos: `POST /api/v1/github/accounts/preview-repos` | `POST /api/v1/gitlab/accounts/preview-projects`
-- OAuth integración repositorios: muestra «Próximamente» si `GITHUB_CLIENT_ID` no está configurado; login OAuth sigue en `/login`
+- OAuth integración repositorios (wizard): `GET /api/v1/github/oauth/start` | `GET /api/v1/gitlab/oauth/start` (autenticado)
+- Callbacks integración (distintos del login): `https://spendlyx.com/api/v1/github/oauth/callback` | `https://spendlyx.com/api/v1/gitlab/oauth/callback`
+- `platform/status` expone `oauth.github` y `oauth.gitlab` según `GITHUB_CLIENT_ID` / `GITLAB_CLIENT_ID`
 
-Variables adicionales (opcionales para OAuth futuro de integraciones):
+Variables adicionales para OAuth de integraciones:
 
 ```env
 GITHUB_CLIENT_ID=
@@ -185,7 +187,7 @@ GITLAB_CLIENT_SECRET=
 VAULT_ENCRYPTION_KEY=
 ```
 
-> **Nota:** La URL de callback de GitHub es `/api/v1/auth/oauth/callback/github`, no `/api/v1/auth/oauth/github` (esta última es solo el inicio del flujo).
+> **Nota:** Login OAuth usa `/api/v1/auth/oauth/callback/{provider}`. La integración de repositorios usa rutas separadas en `/api/v1/github/oauth/callback` y `/api/v1/gitlab/oauth/callback`.
 
 ### Verificación OAuth en producción (2026-06-08)
 

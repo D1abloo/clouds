@@ -16,6 +16,14 @@ export type RealtimeEvent =
   | 'terraform.updated'
   | 'terraform.run.progress'
   | 'terraform.run.log'
+  | 'github.synced'
+  | 'github.sync.progress'
+  | 'github.deployment'
+  | 'github.deployment.progress'
+  | 'gitlab.synced'
+  | 'gitlab.sync.progress'
+  | 'gitlab.deployment'
+  | 'instance.launch.progress'
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeService implements OnDestroy {
@@ -43,6 +51,14 @@ export class RealtimeService implements OnDestroy {
       'terraform.updated',
       'terraform.run.progress',
       'terraform.run.log',
+      'github.synced',
+      'github.sync.progress',
+      'github.deployment',
+      'github.deployment.progress',
+      'gitlab.synced',
+      'gitlab.sync.progress',
+      'gitlab.deployment',
+      'instance.launch.progress',
     ]
     events.forEach((ev) => {
       this.socket?.on(ev, (payload: unknown) => this.lastEvent.set({ type: ev, payload }))

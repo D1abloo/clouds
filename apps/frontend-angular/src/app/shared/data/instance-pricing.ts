@@ -31,6 +31,13 @@ const GCP_PRICES: Record<string, InstancePriceRow> = {
   'n2-highmem-2': { type: 'n2-highmem-2', vcpus: 2, ramGb: 16, network: '10 Gbps', hourlyUsd: 0.1186 },
 }
 
+const CLOUDING_PRICES: Record<string, InstancePriceRow> = {
+  'cld.standard-2': { type: 'cld.standard-2', vcpus: 2, ramGb: 4, network: '1 Gbps', hourlyUsd: 0.045 },
+  'cld.standard-4': { type: 'cld.standard-4', vcpus: 4, ramGb: 8, network: '2 Gbps', hourlyUsd: 0.089 },
+  'cld.performance-8': { type: 'cld.performance-8', vcpus: 8, ramGb: 16, network: '5 Gbps', hourlyUsd: 0.168 },
+  'cld.arm-4': { type: 'cld.arm-4', vcpus: 4, ramGb: 8, network: '2 Gbps', hourlyUsd: 0.072 },
+}
+
 const AZURE_PRICES: Record<string, InstancePriceRow> = {
   'Standard_B1s': { type: 'Standard_B1s', vcpus: 1, ramGb: 1, network: 'Low', hourlyUsd: 0.0104 },
   'Standard_B2s': { type: 'Standard_B2s', vcpus: 2, ramGb: 4, network: 'Moderate', hourlyUsd: 0.0416 },
@@ -44,6 +51,7 @@ export const INSTANCE_PRICING: Record<LaunchProvider, Record<string, InstancePri
   AWS: AWS_PRICES,
   GCP: GCP_PRICES,
   AZURE: AZURE_PRICES,
+  CLOUDING: CLOUDING_PRICES,
 }
 
 export const HOURS_PER_MONTH = 730

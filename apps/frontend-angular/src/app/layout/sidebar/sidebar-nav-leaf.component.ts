@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core'
 import { RouterLink, RouterLinkActive } from '@angular/router'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
@@ -14,19 +14,26 @@ import { SidebarService } from './sidebar.service'
   template: `
     <a
       class="nav-leaf"
+      #link="routerLinkActive"
       [routerLink]="route()"
       routerLinkActive="nav-leaf--active"
       [routerLinkActiveOptions]="activeOptions()"
-      [matTooltip]="collapsed() ? label() : ''"
+      [matTooltip]="leafTooltip()"
+      [matTooltipDisabled]="!leafTooltip()"
       matTooltipPosition="right"
     >
       @if (icon() || logo()) {
-        <span class="nav-leaf__icon-wrap">
-          <app-nav-icon [icon]="icon()" [logo]="logo()" size="sm" />
+        <span class="nav-leaf__icon-wrap" [class.nav-leaf__icon-wrap--active]="link.isActive">
+          <app-nav-icon [icon]="icon()" [logo]="logo()" size="sm" [active]="link.isActive" />
         </span>
       }
       @if (!collapsed()) {
-        <span class="nav-leaf__label">{{ label() }}</span>
+        <span class="nav-leaf__text">
+          <span class="nav-leaf__label">{{ label() }}</span>
+          @if (hint()) {
+            <span class="nav-leaf__hint">{{ hint() }}</span>
+          }
+        </span>
         @if (badge() && badge()! > 0) {
           <span class="nav-leaf__badge">{{ badge()! > 99 ? '99+' : badge() }}</span>
         }
@@ -53,7 +60,7 @@ import { SidebarService } from './sidebar.service'
       text-decoration: none;
       font-size: 0.76rem;
       font-weight: 600;
-      color: var(--sidebar-text-muted);
+      color: var(--sidebar-text);
       border: none;
       transition: background 0.2s, color 0.2s, transform 0.18s;
     }
@@ -64,23 +71,54 @@ import { SidebarService } from './sidebar.service'
     }
     .nav-leaf--active {
       background: var(--sidebar-item-active);
-      color: var(--sidebar-primary);
+      color: var(--sidebar-text);
+      font-weight: 700;
     }
     .nav-leaf__icon-wrap {
-      width: 22px;
-      height: 22px;
+      width: 26px;
+      height: 26px;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       opacity: 0.92;
+      border-radius: 10px;
+      transition: transform 0.2s ease, box-shadow 0.25s ease;
+    }
+    .nav-leaf:hover .nav-leaf__icon-wrap {
+      transform: scale(1.08);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--sidebar-primary) 30%, transparent);
+    }
+    .nav-leaf__icon-wrap--active {
+      box-shadow: 0 0 14px color-mix(in srgb, #22d3ee 45%, transparent);
+      animation: leafIconPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes leafIconPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .nav-leaf__text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.12rem;
     }
     .nav-leaf__label {
-      flex: 1;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .nav-leaf__hint {
+      font-size: 0.62rem;
+      font-weight: 500;
+      line-height: 1.35;
+      color: var(--sidebar-text-faint);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .nav-leaf__badge {
       padding: 0.1rem 0.4rem;
@@ -113,6 +151,7 @@ export class SidebarNavLeafComponent {
   private readonly sidebar = inject(SidebarService)
 
   readonly label = input.required<string>()
+  readonly hint = input<string | undefined>()
   readonly route = input.required<string>()
   readonly icon = input<string | undefined>()
   readonly logo = input<NavLogoKey | undefined>()
@@ -126,6 +165,10 @@ export class SidebarNavLeafComponent {
     fragment: 'ignored' as const,
     matrixParams: 'ignored' as const,
   })
+
+  readonly leafTooltip = computed(() =>
+    this.collapsed() ? this.label() : (this.hint() ?? ''),
+  )
 
   isFavorite = (): boolean => this.sidebar.isFavorite(this.route())
 

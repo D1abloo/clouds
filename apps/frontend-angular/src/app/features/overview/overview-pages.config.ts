@@ -178,6 +178,7 @@ export interface CommandCenterPlatformStat {
   tasks: number
   successRate: number
   lastAction: string
+  connected?: boolean
 }
 
 export const COMMAND_CENTER_QUEUE: CommandCenterQueueItem[] = [
@@ -187,15 +188,18 @@ export const COMMAND_CENTER_QUEUE: CommandCenterQueueItem[] = [
   { id: 'q4', position: 4, action: 'Plan Terraform Azure', resource: 'azure-staging', provider: 'Terraform', logo: 'terraform', eta: '18 min', status: 'pending', priority: 'normal', actionType: 'terraform-plan' },
 ]
 
-export const COMMAND_CENTER_PLATFORMS: CommandCenterPlatformStat[] = [
-  { logo: 'aws', label: 'AWS', provider: 'AWS', tasks: 6, successRate: 98, lastAction: 'Reinicio EC2 · hace 8 min' },
-  { logo: 'gcp', label: 'GCP', provider: 'GCP', tasks: 3, successRate: 97, lastAction: 'Sync inventario · hace 1 h' },
-  { logo: 'azure', label: 'Azure', provider: 'Azure', tasks: 2, successRate: 96, lastAction: 'Plan TF · hace 2 h' },
-  { logo: 'kubernetes', label: 'Kubernetes', provider: 'Kubernetes', tasks: 4, successRate: 94, lastAction: 'Escalar deploy · hace 35 min' },
-  { logo: 'jenkins', label: 'Jenkins', provider: 'Jenkins', tasks: 2, successRate: 91, lastAction: 'Pipeline staging · en curso' },
-  { logo: 'terraform', label: 'Terraform', provider: 'Terraform', tasks: 3, successRate: 99, lastAction: 'Apply prod · hace 22 min' },
-  { logo: 'docker', label: 'Docker', provider: 'Docker', tasks: 2, successRate: 100, lastAction: 'Start nginx-edge · hace 55 min' },
+export const EMPTY_COMMAND_CENTER_PLATFORMS: CommandCenterPlatformStat[] = [
+  { logo: 'aws', label: 'AWS', provider: 'AWS', tasks: 0, successRate: 100, lastAction: 'Sin actividad reciente', connected: false },
+  { logo: 'gcp', label: 'GCP', provider: 'GCP', tasks: 0, successRate: 100, lastAction: 'Sin actividad reciente', connected: false },
+  { logo: 'azure', label: 'Azure', provider: 'Azure', tasks: 0, successRate: 100, lastAction: 'Sin actividad reciente', connected: false },
+  { logo: 'kubernetes', label: 'Kubernetes', provider: 'Kubernetes', tasks: 0, successRate: 100, lastAction: 'Sin actividad reciente', connected: false },
+  { logo: 'jenkins', label: 'Jenkins', provider: 'Jenkins', tasks: 0, successRate: 100, lastAction: 'Sin actividad reciente', connected: false },
+  { logo: 'terraform', label: 'Terraform', provider: 'Terraform', tasks: 0, successRate: 100, lastAction: 'Sin actividad reciente', connected: false },
+  { logo: 'docker', label: 'Docker', provider: 'Docker', tasks: 0, successRate: 100, lastAction: 'Sin actividad reciente', connected: false },
 ]
+
+/** @deprecated Usar EMPTY_COMMAND_CENTER_PLATFORMS + API en PRO */
+export const COMMAND_CENTER_PLATFORMS: CommandCenterPlatformStat[] = EMPTY_COMMAND_CENTER_PLATFORMS
 
 export const COMMAND_CENTER_QUICK_ACTIONS: CommandCenterQuickAction[] = [
   {

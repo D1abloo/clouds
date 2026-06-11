@@ -63,6 +63,8 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
+GITLAB_CLIENT_ID=
+GITLAB_CLIENT_SECRET=
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_DEFAULT_REGION=eu-west-1
@@ -87,8 +89,10 @@ for i in $(seq 1 48); do
   sleep 5
 done
 
+echo "==> Reconstruyendo imagen frontend (sin caché)..."
 docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env build --no-cache frontend
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d frontend
+echo "==> Reiniciando contenedor frontend..."
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --force-recreate frontend
 
 docker compose -f docker-compose.yml -f docker-compose.production.yml ps
 echo "Panel: https://spendlyx.com"

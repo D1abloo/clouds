@@ -1,4 +1,4 @@
-import { Component, Input, output, signal, computed } from '@angular/core'
+import { Component, input, output, signal, computed } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { DatePipe } from '@angular/common'
 import { MatButtonModule } from '@angular/material/button'
@@ -189,7 +189,7 @@ import { buildPrPreview } from '../utils/pr-dialog.util'
   `,
 })
 export class PullRequestsGithubSectionComponent {
-  @Input() pullRequests: Record<string, unknown>[] = []
+  readonly pullRequests = input<Record<string, unknown>[]>([])
 
   readonly routes = {
     commits: repoRoute('commits'),
@@ -211,7 +211,7 @@ export class PullRequestsGithubSectionComponent {
   readonly mergePr = output<Record<string, unknown>>()
 
   visiblePrs = computed(() => {
-    const prs = this.pullRequests
+    const prs = this.pullRequests()
     const i = this.tabIndex()
     if (i === 0) return prs.filter((p) => p['state'] === 'open' && !p['draft'])
     if (i === 1) return prs.filter((p) => p['state'] === 'open' && (p['reviewers'] as string[])?.length)
@@ -235,7 +235,7 @@ export class PullRequestsGithubSectionComponent {
   })
 
   firstOpenPr = (): Record<string, unknown> =>
-    this.pullRequests.find((p) => p['state'] === 'open') ?? this.pullRequests[0] ?? {}
+    this.pullRequests().find((p) => p['state'] === 'open') ?? this.pullRequests()[0] ?? {}
 
   stateBadge = (s: unknown): string => {
     if (s === 'open') return 'RUNNING'
@@ -259,7 +259,7 @@ export class PullRequestsGithubSectionComponent {
   previewUrl = (pr: Record<string, unknown>): string => buildPrPreview(pr).url
 
   summary = computed(() => {
-    const prs = this.pullRequests
+    const prs = this.pullRequests()
     return {
       open: prs.filter((p) => p['state'] === 'open' && !p['draft']).length,
       inReview: prs.filter((p) => p['state'] === 'open' && (p['reviewers'] as string[])?.length).length,

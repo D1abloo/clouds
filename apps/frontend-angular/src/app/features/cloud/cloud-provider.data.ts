@@ -2,7 +2,7 @@ import type { CloudProvider, Instance } from '../../core/models/api.models'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
 export type CloudSection = 'overview' | 'accounts' | 'instances' | 'network' | 'billing' | 'metrics'
-export type CloudSlug = 'aws' | 'gcp' | 'azure'
+export type CloudSlug = 'aws' | 'gcp' | 'azure' | 'clouding'
 
 export interface CloudSectionTab {
   id: CloudSection
@@ -484,6 +484,21 @@ export const CLOUD_PROVIDER_CONFIGS: Record<CloudSlug, CloudProviderUiConfig> = 
     lbLabel: 'Application Gateway',
     billingCurrency: 'USD',
   },
+  clouding: {
+    slug: 'clouding',
+    provider: 'CLOUDING',
+    logo: 'clouding',
+    title: 'Clouding',
+    subtitle: 'Plano de control Clouding · espacios, instancias, redes flexibles y métricas',
+    accent: '#6366f1',
+    accentSoft: '#4f46e5',
+    accountsLabel: 'Espacios',
+    instancesLabel: 'Instancias',
+    networkTitle: 'Redes',
+    sgLabel: 'Políticas de acceso',
+    lbLabel: 'Balanceadores',
+    billingCurrency: 'USD',
+  },
 }
 
 export const cloudSectionsFor = (slug: CloudSlug): CloudSectionTab[] => {
@@ -512,15 +527,21 @@ const genPoints = (seed: number, end: number, n = 12): number[] => {
   return pts
 }
 
-const slugFromProvider = (p: CloudProvider): CloudSlug =>
-  p === 'GCP' ? 'gcp' : p === 'AZURE' ? 'azure' : 'aws'
+const slugFromProvider = (p: CloudProvider): CloudSlug => {
+  if (p === 'GCP') return 'gcp'
+  if (p === 'AZURE') return 'azure'
+  if (p === 'CLOUDING') return 'clouding'
+  return 'aws'
+}
 
 export const cloudSlugFromParam = (slug: string | null): CloudSlug => {
-  if (slug === 'gcp' || slug === 'azure') return slug
+  if (slug === 'gcp' || slug === 'azure' || slug === 'clouding') return slug
   return 'aws'
 }
 
 export const cloudSectionFromSlug = (slug: string | null): CloudSection => {
+  const s = (slug ?? 'overview').toLowerCase()
+  if (s === 'images') return 'instances'
   const map: Record<string, CloudSection> = {
     overview: 'overview',
     accounts: 'accounts',
@@ -529,7 +550,7 @@ export const cloudSectionFromSlug = (slug: string | null): CloudSection => {
     billing: 'billing',
     metrics: 'metrics',
   }
-  return map[slug ?? ''] ?? 'overview'
+  return map[s] ?? 'overview'
 }
 
 export const fmtUsd = (v: number): string =>
@@ -557,11 +578,14 @@ const instanceToRow = (inst: Instance, idx: number, slug: CloudSlug): CloudCompu
         : `${region}${zoneSuffix[idx % 3]}`
 
   const idPrefix = slug === 'gcp' ? 'gce-' : slug === 'azure' ? 'vm-' : 'i-0'
+  const resourceId =
+    inst.externalId ??
+    (slug === 'azure' && inst.name ? inst.name : `${idPrefix}${inst.id.replace(/\D/g, '').slice(0, 8).padEnd(8, 'a')}`)
   return {
     id: inst.id,
     name: inst.name,
-    resourceId: `${idPrefix}${inst.id.replace(/\D/g, '').slice(0, 8).padEnd(8, 'a')}`,
-    account: inst.cloudAccountId ?? `${slug}-production`,
+    resourceId,
+    account: inst.cloudAccount?.name ?? inst.cloudAccountId ?? `${slug}-production`,
     region,
     zone,
     instanceType: inst.instanceType ?? (slug === 'gcp' ? 'n2-standard-4' : slug === 'azure' ? 'Standard_D4s_v3' : 't3.medium'),
@@ -1130,6 +1154,7 @@ const OVERVIEW_BY_SLUG: Record<CloudSlug, CloudOverviewSummary> = {
   aws: { complianceScore: 94, uptimePercent: 99.92, openIncidents: 2, monitoringCoverage: 96, costVariance: 8, lastAudit: '2026-05-28', managedResources: 148, backupCoverage: 88 },
   gcp: { complianceScore: 94, uptimePercent: 99.92, openIncidents: 2, monitoringCoverage: 96, costVariance: 8, lastAudit: '2026-05-28', managedResources: 148, backupCoverage: 88 },
   azure: { complianceScore: 94, uptimePercent: 99.92, openIncidents: 2, monitoringCoverage: 96, costVariance: 8, lastAudit: '2026-05-28', managedResources: 148, backupCoverage: 88 },
+  clouding: { complianceScore: 93, uptimePercent: 99.9, openIncidents: 1, monitoringCoverage: 95, costVariance: 6, lastAudit: '2026-05-30', managedResources: 96, backupCoverage: 86 },
 }
 
 const ALERTS_BY_SLUG: Record<CloudSlug, CloudAlertItem[]> = {
@@ -1147,6 +1172,11 @@ const ALERTS_BY_SLUG: Record<CloudSlug, CloudAlertItem[]> = {
     { id: 'z1', title: 'CPU sostenida > 85% en api-gateway', severity: 'warning', source: 'Azure Monitor', since: fmtTime(18), region: 'eastus' },
     { id: 'z2', title: 'NSG permite RDP desde Internet', severity: 'critical', source: 'Defender for Cloud', since: fmtTime(90), region: 'westeurope' },
     { id: 'z3', title: 'Forecast supera presupuesto mensual', severity: 'warning', source: 'Cost Management', since: fmtTime(120), region: 'global' },
+  ],
+  clouding: [
+    { id: 'c1', title: 'CPU sostenida > 85% en api-gateway', severity: 'warning', source: 'Clouding Metrics', since: fmtTime(18), region: 'eu-central' },
+    { id: 'c2', title: 'Política de acceso expuesta a Internet', severity: 'critical', source: 'Clouding Security', since: fmtTime(90), region: 'us-east' },
+    { id: 'c3', title: 'Forecast supera presupuesto mensual', severity: 'warning', source: 'Clouding Billing', since: fmtTime(120), region: 'global' },
   ],
 }
 
@@ -1374,7 +1404,46 @@ const AZURE_SEED: SeedBundle = {
   billingSummary: { budget: 2100, credits: 120, previousMonth: 1980, dailyAverage: 68, topAccount: 'azure-production', anomalies: 2, reservedSavings: 420, invoiceDate: '2026-06-01' },
 }
 
-const SEEDS: Record<CloudSlug, SeedBundle> = { aws: AWS_SEED, gcp: GCP_SEED, azure: AZURE_SEED }
+const CLOUDING_SEED: SeedBundle = {
+  ...AWS_SEED,
+  accountRows: AWS_SEED.accountRows.map((a, i) => ({
+    ...a,
+    id: `acc-cld-${i}`,
+    name: i === 0 ? 'clouding-production' : `clouding-${i === 1 ? 'staging' : 'dev'}`,
+    accountId: `cld-${String(100000 + i)}`,
+    primaryRegion: 'eu-central',
+    billingExport: 'Export API · Clouding Billing',
+    savingsPlan: i === 0 ? 'Reserved · 1y · $380/mes' : '—',
+  })),
+  computeRows: AWS_SEED.computeRows.map((r, i) => ({
+    ...r,
+    id: `cld-inst-${i}`,
+    name: `clouding-app-${i + 1}`,
+    resourceId: `cld-${String(i).padStart(8, '0')}`,
+    account: 'clouding-production',
+    region: ['eu-central', 'us-east', 'ap-south'][i % 3],
+    instanceType: ['cld.standard-2', 'cld.standard-4', 'cld.performance-8'][i % 3],
+    network: 'network-prod-main',
+  })),
+  billingByService: AWS_SEED.billingByService.map((b) => ({
+    ...b,
+    service: b.service.replace('Amazon', 'Clouding').replace('EC2', 'Compute'),
+  })),
+  metrics: AWS_SEED.metrics.map((m) => ({ ...m, color: '#6366f1', label: m.label.replace('EC2', 'Clouding') })),
+  regionList: [
+    { code: 'eu-central', name: 'EU Central', instances: 12, cost: 720, zones: 3, utilization: 68, latencyMs: 14 },
+    { code: 'us-east', name: 'US East', instances: 8, cost: 540, zones: 3, utilization: 55, latencyMs: 22 },
+    { code: 'ap-south', name: 'AP South', instances: 4, cost: 280, zones: 2, utilization: 41, latencyMs: 168 },
+  ],
+  billingSummary: { ...AWS_SEED.billingSummary, topAccount: 'clouding-production' },
+}
+
+const SEEDS: Record<CloudSlug, SeedBundle> = {
+  aws: AWS_SEED,
+  gcp: GCP_SEED,
+  azure: AZURE_SEED,
+  clouding: CLOUDING_SEED,
+}
 
 export const buildCloudSnapshot = (
   slug: CloudSlug,

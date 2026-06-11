@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { Module, forwardRef } from '@nestjs/common'
 import { JwtModule } from '@nestjs/jwt'
 import { PassportModule } from '@nestjs/passport'
 import { ConfigModule, ConfigService } from '@nestjs/config'
@@ -6,11 +6,17 @@ import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
 import { JwtStrategy } from './jwt.strategy'
 import { AuditModule } from '../audit/audit.module'
+import { GithubModule } from '../github/github.module'
+import { GitlabModule } from '../gitlab/gitlab.module'
 
 import { EmailVerificationService } from './email-verification.service'
+import { OrganizationScopeModule } from '../../common/organization/organization-scope.module'
 
 @Module({
   imports: [
+    OrganizationScopeModule,
+    forwardRef(() => GithubModule),
+    forwardRef(() => GitlabModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

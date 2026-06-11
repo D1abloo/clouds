@@ -317,7 +317,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1023px) {
   .repo-connect-bar {
     grid-template-columns: 1fr;
   }
@@ -328,9 +328,21 @@
 
   .repo-connect-bar__actions {
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .repo-module-page .account-card__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .repo-module-page .account-card__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .repo-connect-bar__actions .page-action-btn,
+  .repo-connect-bar__actions button {
+    min-height: 44px;
   }
 }

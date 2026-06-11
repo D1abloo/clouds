@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { CloudProvider } from '@prisma/client'
+import { CloudProvider, Prisma } from '@prisma/client'
 import { PrismaService } from '../../common/prisma/prisma.service'
+import { OrganizationScopeService } from '../../common/organization/organization-scope.service'
 import { AuditService } from '../audit/audit.service'
 import { InstancesService } from '../instances/instances.service'
 import { CloudAccountsService } from '../cloud-accounts/cloud-accounts.service'
@@ -20,6 +21,40 @@ export interface CommandCenterActionResult {
   destinationRoute: string
   destinationLabel: string
   metadata?: Record<string, unknown>
+}
+
+export interface CommandCenterPlatformStatDto {
+  logo: string
+  label: string
+  provider: string
+  tasks: number
+  successRate: number
+  lastAction: string
+  connected: boolean
+}
+
+const PLATFORM_DEFS: { logo: string; label: string; provider: string }[] = [
+  { logo: 'aws', label: 'AWS', provider: 'AWS' },
+  { logo: 'gcp', label: 'GCP', provider: 'GCP' },
+  { logo: 'azure', label: 'Azure', provider: 'Azure' },
+  { logo: 'kubernetes', label: 'Kubernetes', provider: 'Kubernetes' },
+  { logo: 'jenkins', label: 'Jenkins', provider: 'Jenkins' },
+  { logo: 'terraform', label: 'Terraform', provider: 'Terraform' },
+  { logo: 'docker', label: 'Docker', provider: 'Docker' },
+]
+
+const ACTIVE_INSTANCE_STATUSES = ['RUNNING', 'PENDING', 'WARNING'] as const
+const ACTIVE_TF_STATUSES = ['PENDING', 'PLANNING', 'PLANNED', 'APPLYING'] as const
+
+const formatRelativeTime = (date: Date): string => {
+  const diffMs = Date.now() - date.getTime()
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 1) return 'ahora'
+  if (mins < 60) return `hace ${mins} min`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `hace ${hours} h`
+  const days = Math.floor(hours / 24)
+  return `hace ${days} d`
 }
 
 const ACTION_DESTINATIONS: Record<CommandCenterActionType, { route: string; label: string }> = {
@@ -61,7 +96,12 @@ export class CommandCenterService {
     private readonly vps: VpsService,
     private readonly kubernetes: KubernetesService,
     private readonly integrations: IntegrationsService,
+    private readonly orgScope: OrganizationScopeService,
   ) {}
+
+  private projectScope(projectIds: string[]): { projectId: { in: string[] } } {
+    return { projectId: { in: projectIds.length ? projectIds : ['__none__'] } }
+  }
 
   async execute(dto: ExecuteActionDto, userId?: string): Promise<CommandCenterActionResult> {
     switch (dto.type) {
@@ -82,10 +122,148 @@ export class CommandCenterService {
     }
   }
 
-  async recentActions(limit = 20) {
+  async platformStats(userId: string): Promise<CommandCenterPlatformStatDto[]> {
+    const scope = await this.orgScope.resolveForUser(userId)
+    const projectScope = this.projectScope(scope.projectIds)
+    const instanceBase: Prisma.InstanceWhereInput = {
+      deletedAt: null,
+      status: { in: [...ACTIVE_INSTANCE_STATUSES] },
+      ...projectScope,
+    }
+
+    const [
+      awsTasks,
+      gcpTasks,
+      azureTasks,
+      k8sTasks,
+      jenkinsTasks,
+      tfTasks,
+      dockerTasks,
+      awsAccounts,
+      gcpAccounts,
+      azureAccounts,
+      jenkinsServers,
+      k8sClusters,
+      dockerHosts,
+      tfWorkspaces,
+      recentLogs,
+    ] = await Promise.all([
+      this.prisma.instance.count({
+        where: { ...instanceBase, provider: 'AWS' },
+      }),
+      this.prisma.instance.count({
+        where: { ...instanceBase, provider: 'GCP' },
+      }),
+      this.prisma.instance.count({
+        where: { ...instanceBase, provider: 'AZURE' },
+      }),
+      this.prisma.kubernetesResource.count({
+        where: {
+          kind: { in: ['Pod', 'Deployment'] },
+          status: { in: ['Running', 'Available', 'Progressing'], mode: 'insensitive' },
+          cluster: { NOT: { id: { startsWith: 'demo-' } } },
+        },
+      }),
+      this.prisma.jenkinsBuild.count({
+        where: { status: { in: ['BUILDING', 'RUNNING', 'QUEUED', 'IN_PROGRESS'], mode: 'insensitive' } },
+      }),
+      this.prisma.terraformRun.count({
+        where: { status: { in: [...ACTIVE_TF_STATUSES] } },
+      }),
+      this.prisma.dockerContainer.count({
+        where: {
+          status: { in: ['running', 'up', 'healthy'], mode: 'insensitive' },
+          dockerHost: { NOT: { hostRef: { startsWith: 'demo-' } } },
+        },
+      }),
+      this.prisma.cloudAccount.count({
+        where: { deletedAt: null, provider: 'AWS', isActive: true, ...projectScope },
+      }),
+      this.prisma.cloudAccount.count({
+        where: { deletedAt: null, provider: 'GCP', isActive: true, ...projectScope },
+      }),
+      this.prisma.cloudAccount.count({
+        where: { deletedAt: null, provider: 'AZURE', isActive: true, ...projectScope },
+      }),
+      this.prisma.jenkinsServer.count(),
+      this.prisma.kubernetesCluster.count({ where: { NOT: { id: { startsWith: 'demo-' } } } }),
+      this.prisma.dockerHost.count({ where: { NOT: { hostRef: { startsWith: 'demo-' } } } }),
+      this.prisma.terraformWorkspace.count(),
+      this.prisma.auditLog.findMany({
+        where: { action: { startsWith: 'command-center.' }, userId },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+    ])
+
+    const taskByProvider: Record<string, number> = {
+      AWS: awsTasks,
+      GCP: gcpTasks,
+      Azure: azureTasks,
+      Kubernetes: k8sTasks,
+      Jenkins: jenkinsTasks,
+      Terraform: tfTasks,
+      Docker: dockerTasks,
+    }
+
+    const connectedByProvider: Record<string, boolean> = {
+      AWS: awsAccounts > 0 || awsTasks > 0,
+      GCP: gcpAccounts > 0 || gcpTasks > 0,
+      Azure: azureAccounts > 0 || azureTasks > 0,
+      Kubernetes: k8sClusters > 0 || k8sTasks > 0,
+      Jenkins: jenkinsServers > 0 || jenkinsTasks > 0,
+      Terraform: tfWorkspaces > 0 || tfTasks > 0,
+      Docker: dockerHosts > 0 || dockerTasks > 0,
+    }
+
+    const logsByProvider = new Map<string, typeof recentLogs>()
+    for (const row of recentLogs) {
+      const meta = (row.metadata as Record<string, unknown>) ?? {}
+      const provider = String(meta['provider'] ?? '')
+      if (!provider) continue
+      const bucket = logsByProvider.get(provider) ?? []
+      bucket.push(row)
+      logsByProvider.set(provider, bucket)
+    }
+
+    return PLATFORM_DEFS.map((def) => {
+      const tasks = taskByProvider[def.provider] ?? 0
+      const providerLogs = logsByProvider.get(def.provider) ?? []
+      const successes = providerLogs.filter((l) => {
+        const meta = (l.metadata as Record<string, unknown>) ?? {}
+        return String(meta['status'] ?? 'success') === 'success'
+      }).length
+      const successRate = providerLogs.length
+        ? Math.round((successes / providerLogs.length) * 100)
+        : 100
+
+      const latest = providerLogs[0]
+      let lastAction = 'Sin actividad reciente'
+      if (latest) {
+        const meta = (latest.metadata as Record<string, unknown>) ?? {}
+        const label = String(meta['label'] ?? latest.action)
+        lastAction = `${label} · ${formatRelativeTime(latest.createdAt)}`
+      } else if (tasks > 0) {
+        lastAction = `${tasks} recurso${tasks === 1 ? '' : 's'} activo${tasks === 1 ? '' : 's'}`
+      } else if (connectedByProvider[def.provider]) {
+        lastAction = 'Cuenta conectada · sin tareas activas'
+      }
+
+      return {
+        ...def,
+        tasks,
+        successRate,
+        lastAction,
+        connected: connectedByProvider[def.provider] ?? false,
+      }
+    })
+  }
+
+  async recentActions(userId: string, limit = 20) {
     const rows = await this.prisma.auditLog.findMany({
       where: {
         action: { startsWith: 'command-center.' },
+        userId,
       },
       take: limit,
       orderBy: { createdAt: 'desc' },

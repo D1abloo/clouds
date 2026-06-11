@@ -16,8 +16,18 @@ export class InstancesService {
     provider?: CloudProvider | 'VPS'
     cloudAccountId?: string
     region?: string
-  }): Observable<Instance[]> =>
-    this.api.get<unknown>('instances', filters as Record<string, string>).pipe(
+    status?: string
+    includeTerminated?: boolean
+  }): Observable<Instance[]> => {
+    const params: Record<string, string> = {}
+    if (filters?.projectId) params['projectId'] = filters.projectId
+    if (filters?.provider) params['provider'] = filters.provider
+    if (filters?.cloudAccountId) params['cloudAccountId'] = filters.cloudAccountId
+    if (filters?.region) params['region'] = filters.region
+    if (filters?.status) params['status'] = filters.status
+    if (filters?.includeTerminated) params['includeTerminated'] = 'true'
+
+    return this.api.get<unknown>('instances', params).pipe(
       map((res) => {
         const list = unwrapList<Instance>(res)
         if (list.length) return list
@@ -27,6 +37,7 @@ export class InstancesService {
       }),
       catchError(() => of(emptyInstances())),
     )
+  }
 
   getOne = (id: string): Observable<Instance> =>
     this.api.get<Instance>(`instances/${id}`)

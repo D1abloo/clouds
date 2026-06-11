@@ -44,36 +44,41 @@ import {
   ],
   animations: loginAnimations,
   template: `
-    <div
-      class="login-bg"
-      aria-hidden="true"
-      [style.--mx]="bgShift().x"
-      [style.--my]="bgShift().y"
-    >
-      <div class="login-bg__mesh"></div>
-      <div class="login-bg__orb login-bg__orb--1" @bgOrb></div>
-      <div class="login-bg__orb login-bg__orb--2" @bgOrb></div>
-      <div class="login-bg__orb login-bg__orb--3" @bgOrb></div>
-      <div class="login-bg__cloud login-bg__cloud--1"></div>
-      <div class="login-bg__cloud login-bg__cloud--2"></div>
-      <div class="login-bg__cloud login-bg__cloud--3"></div>
-      <div class="login-bg__grid"></div>
-    </div>
-
     <main class="login-page" @pageZone>
+      <section class="login-showcase" aria-hidden="true" @cardZone>
+        <div class="login-showcase__lines" aria-hidden="true">
+          <svg class="login-showcase__line-svg" viewBox="0 0 800 600" preserveAspectRatio="none">
+            <path d="M0 120 Q200 80 400 140 T800 100" fill="none" stroke="#0284c7" stroke-width="1.5" stroke-opacity="0.35" />
+            <path d="M0 480 Q250 520 500 460 T800 500" fill="none" stroke="#0078FF" stroke-width="1.5" stroke-opacity="0.28" stroke-dasharray="8 6" />
+            <path d="M80 0 Q120 200 60 400 T100 600" fill="none" stroke="#0284c7" stroke-width="1" stroke-opacity="0.22" />
+            <path d="M720 0 Q680 220 740 380 T700 600" fill="none" stroke="#0078FF" stroke-width="1" stroke-opacity="0.22" stroke-dasharray="6 8" />
+          </svg>
+        </div>
+        <div class="login-showcase__inner">
+          <p class="login-showcase__eyebrow">Control de costes cloud</p>
+          <h2 class="login-showcase__title">Facturación AWS desde el móvil</h2>
+          <p class="login-showcase__text">
+            Revisa facturas EC2, gasto MTD y alertas de coste en tiempo real. Datos conectados a tu panel Spendlyx.
+          </p>
+          <figure class="login-hero">
+            <img
+              src="/assets/images/login-iphone-aws-invoice.png"
+              alt="iPhone mostrando factura AWS Billing con instancias EC2, subtotal MTD y métricas flotantes de coste"
+              class="login-hero__img"
+              width="1024"
+              height="1024"
+              loading="eager"
+            />
+          </figure>
+        </div>
+      </section>
+
       <section class="login-card" aria-labelledby="login-title" @cardZone>
         <header class="login-card__head" @headZone>
-          <img
-            src="/assets/logos/cloudops-mark.svg"
-            alt=""
-            class="login-card__mark"
-            width="40"
-            height="40"
-            @markSpin
-          />
+          <a class="login-card__mark" routerLink="/" aria-label="Volver al sitio público" @markSpin>S</a>
           <div>
-            <h1 id="login-title">CloudOps</h1>
-            <p>Acceso seguro al panel de administración</p>
+            <h1 id="login-title">Spendlyx</h1>
+            <p>Panel de operaciones cloud con espacio de trabajo privado por cuenta</p>
           </div>
         </header>
 
@@ -107,11 +112,26 @@ import {
         <form [formGroup]="form" (ngSubmit)="handleSubmit()" class="login-form" @formStagger>
           <mat-form-field appearance="outline" class="full-width" @formField>
             <mat-label>Correo electrónico</mat-label>
-            <input matInput type="email" formControlName="email" autocomplete="username" />
+            <input
+              matInput
+              type="email"
+              formControlName="email"
+              autocomplete="username"
+              placeholder="tu@empresa.com"
+              aria-describedby="login-email-hint"
+            />
+            <mat-hint id="login-email-hint">Usa el correo con el que registraste tu espacio de trabajo</mat-hint>
           </mat-form-field>
           <mat-form-field appearance="outline" class="full-width" @formField>
             <mat-label>Contraseña</mat-label>
-            <input matInput type="password" formControlName="password" autocomplete="current-password" />
+            <input
+              matInput
+              type="password"
+              formControlName="password"
+              autocomplete="current-password"
+              aria-describedby="login-password-hint"
+            />
+            <mat-hint id="login-password-hint">Mínimo 8 caracteres. No compartas tu acceso con otros usuarios</mat-hint>
           </mat-form-field>
           @if (error) {
             <p class="login-error" role="alert" @errorZone>{{ error }}</p>
@@ -157,6 +177,14 @@ import {
             <p>Demo: <code>{{ loginDemoUserEmail }}</code> / <code>{{ loginDemoUserPassword }}</code></p>
           </aside>
         }
+
+        <footer class="login-footer" @hintZone>
+          <a routerLink="/registro" class="login-footer__link">Crear cuenta nueva</a>
+          <span class="login-footer__sep" aria-hidden="true">·</span>
+          <a routerLink="/docs" class="login-footer__link">Documentación</a>
+          <span class="login-footer__sep" aria-hidden="true">·</span>
+          <a routerLink="/reenviar-verificacion" class="login-footer__link">Reenviar verificación</a>
+        </footer>
       </section>
     </main>
   `,
@@ -164,152 +192,104 @@ import {
     :host {
       display: block;
       min-height: 100dvh;
-      position: relative;
-      overflow: hidden;
-      --mx: 0;
-      --my: 0;
-    }
-
-    .login-bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background: linear-gradient(160deg, #0c4a6e 0%, #0f172a 45%, #1e1b4b 100%);
-      overflow: hidden;
-    }
-
-    .login-bg__mesh {
-      position: absolute;
-      inset: -20%;
-      background:
-        radial-gradient(circle at 20% 30%, rgba(56, 189, 248, 0.18) 0%, transparent 45%),
-        radial-gradient(circle at 80% 70%, rgba(129, 140, 248, 0.14) 0%, transparent 42%);
-      transform: translate(calc(var(--mx) * 0.4px), calc(var(--my) * 0.4px));
-      transition: transform 0.35s ease-out;
-      will-change: transform;
-    }
-
-    .login-bg__orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(48px);
-      opacity: 0.45;
-      will-change: transform;
-    }
-
-    .login-bg__orb--1 {
-      width: 280px;
-      height: 280px;
-      top: 12%;
-      left: 8%;
-      background: radial-gradient(circle, #38bdf8 0%, transparent 70%);
-      animation: orbFloat 18s ease-in-out infinite;
-    }
-
-    .login-bg__orb--2 {
-      width: 360px;
-      height: 360px;
-      bottom: 8%;
-      right: 6%;
-      background: radial-gradient(circle, #818cf8 0%, transparent 70%);
-      animation: orbFloat 24s ease-in-out infinite reverse;
-    }
-
-    .login-bg__orb--3 {
-      width: 200px;
-      height: 200px;
-      top: 48%;
-      left: 42%;
-      background: radial-gradient(circle, #22d3ee 0%, transparent 70%);
-      animation: orbFloat 20s ease-in-out infinite 2s;
-    }
-
-    .login-bg__cloud {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(40px);
-      opacity: 0.28;
-      background: radial-gradient(circle, #fff 0%, transparent 70%);
-    }
-
-    .login-bg__cloud--1 {
-      width: 420px;
-      height: 220px;
-      top: 8%;
-      left: -5%;
-      animation: drift 28s ease-in-out infinite;
-    }
-
-    .login-bg__cloud--2 {
-      width: 520px;
-      height: 260px;
-      top: 55%;
-      right: -8%;
-      animation: drift 34s ease-in-out infinite reverse;
-    }
-
-    .login-bg__cloud--3 {
-      width: 300px;
-      height: 160px;
-      bottom: 10%;
-      left: 30%;
-      animation: drift 22s ease-in-out infinite;
-    }
-
-    .login-bg__grid {
-      position: absolute;
-      inset: 0;
-      opacity: 0.06;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
-      animation: gridPulse 8s ease-in-out infinite;
-    }
-
-    @keyframes drift {
-      0%, 100% { transform: translate(0, 0); }
-      50% { transform: translate(24px, -12px); }
-    }
-
-    @keyframes orbFloat {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(16px, -20px) scale(1.05); }
-      66% { transform: translate(-12px, 10px) scale(0.95); }
-    }
-
-    @keyframes gridPulse {
-      0%, 100% { opacity: 0.05; }
-      50% { opacity: 0.09; }
+      background: #f8fafc;
     }
 
     .login-page {
-      position: relative;
-      z-index: 1;
       min-height: 100dvh;
       display: grid;
-      place-items: center;
-      padding: 1.5rem;
+      grid-template-columns: 1fr;
+    }
+
+    .login-showcase {
+      display: none;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 2.5rem 2rem;
+      position: relative;
+      overflow: hidden;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    .login-showcase__lines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .login-showcase__line-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .login-showcase__inner {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      justify-content: center;
+    }
+
+    .login-showcase__eyebrow {
+      margin: 0 0 0.75rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #0284c7;
+    }
+
+    .login-showcase__title {
+      margin: 0 0 0.65rem;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: #0f172a;
+    }
+
+    .login-showcase__text {
+      margin: 0 0 1.25rem;
+      font-size: 0.92rem;
+      color: #64748b;
+      line-height: 1.6;
+      max-width: 420px;
+    }
+
+    .login-hero {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .login-hero__img {
+      width: min(420px, 88vw);
+      height: auto;
+      display: block;
+      object-fit: contain;
     }
 
     .login-card {
       width: 100%;
-      max-width: 420px;
-      padding: 1.75rem 1.5rem 1.25rem;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.97);
-      box-shadow:
-        0 24px 64px rgba(15, 23, 42, 0.35),
-        0 0 0 1px rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px);
+      max-width: 380px;
+      margin: 0 auto;
+      padding: clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 1.25rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: #fff;
     }
 
     .login-card__head {
       display: flex;
-      gap: 0.75rem;
+      gap: 0.65rem;
       align-items: center;
-      margin-bottom: 1.25rem;
+      margin-bottom: 0.85rem;
 
       h1 {
         margin: 0;
@@ -326,12 +306,28 @@ import {
       }
     }
 
-    .login-card__mark { flex-shrink: 0; }
+    .login-card__mark {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #6366f1);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 0.95rem;
+      font-weight: 800;
+      box-shadow: 0 6px 16px rgba(2, 132, 199, 0.3);
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      &:hover { transform: scale(1.05); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.4); }
+    }
 
     .login-oauth {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
     .login-oauth__btn {
@@ -340,7 +336,7 @@ import {
       justify-content: center;
       gap: 0.55rem;
       width: 100%;
-      padding: 0.65rem 1rem;
+      padding: 0.5rem 0.85rem;
       border-radius: 10px;
       border: 1px solid #e2e8f0;
       background: #fff;
@@ -374,7 +370,7 @@ import {
       display: flex;
       align-items: center;
       gap: 0.65rem;
-      margin: 1rem 0 0.85rem;
+      margin: 0.75rem 0 0.6rem;
       color: #94a3b8;
       font-size: 0.68rem;
       text-transform: uppercase;
@@ -393,8 +389,8 @@ import {
 
     .login-submit {
       width: 100%;
-      min-height: 44px;
-      margin-top: 0.35rem;
+      min-height: 40px;
+      margin-top: 0.2rem;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -465,6 +461,30 @@ import {
       }
     }
 
+    .login-footer {
+      margin-top: 1.15rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem 0.5rem;
+      font-size: 0.72rem;
+    }
+
+    .login-footer__link {
+      color: #0284c7;
+      font-weight: 600;
+      text-decoration: none;
+
+      &:hover { text-decoration: underline; }
+    }
+
+    .login-footer__sep {
+      color: #cbd5e1;
+    }
+
     .login-hint {
       margin-top: 1rem;
       padding: 0.65rem 0.75rem;
@@ -492,18 +512,51 @@ import {
       }
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      .login-bg__orb,
-      .login-bg__cloud,
-      .login-bg__grid {
-        animation: none !important;
+    @media (max-width: 899px) {
+      .login-showcase {
+        display: block;
+        padding: 1.5rem 1.25rem 0;
+        background: #ffffff;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
       }
 
-      .login-bg__mesh,
-      .login-bg__orb {
-        transform: none !important;
-        transition: none !important;
+      .login-showcase__inner { max-width: 100%; }
+
+      .login-showcase__title { font-size: 1.25rem; }
+
+      .login-showcase__text { font-size: 0.82rem; margin-bottom: 0.75rem; }
+
+      .login-hero__img { width: min(320px, 92vw); }
+
+      .login-card {
+        max-width: 100%;
+        box-shadow: none;
       }
+    }
+
+    @media (min-width: 900px) {
+      .login-page {
+        grid-template-columns: 1.05fr 0.95fr;
+      }
+
+      .login-showcase { display: flex; align-items: center; }
+
+      .login-hero__img {
+        width: min(440px, 42vw);
+        margin: 0;
+      }
+
+      .login-card {
+        max-width: none;
+        margin: 0;
+        min-height: 100dvh;
+        box-shadow: -12px 0 48px rgba(15, 23, 42, 0.06);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .login-submit--loading { animation: none !important; }
     }
   `],
 })
@@ -526,6 +579,17 @@ export class LoginComponent implements OnInit {
   readonly loginDemoUserPassword = LOGIN_DEMO_USER_PASSWORD
 
   readonly bgShift = signal({ x: 0, y: 0 })
+
+  credentialsCipher = (): string =>
+    this.pro.security()?.credentialsEncryption
+      ? `Credenciales ${this.pro.security()!.credentialsEncryption}`
+      : 'Credenciales AES-256-GCM'
+
+  workspaceLabel = (): string =>
+    this.pro.workspaceIsolation() ? 'Workspace aislado por usuario' : 'Espacio de trabajo personal'
+
+  tlsLabel = (): string =>
+    this.pro.security()?.tls ? 'Conexión HTTPS/TLS' : 'TLS en producción'
 
   loading = false
   oauthLoading: 'google' | 'github' | null = null

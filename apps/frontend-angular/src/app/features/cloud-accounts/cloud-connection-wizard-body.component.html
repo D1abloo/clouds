@@ -1,58 +1,118 @@
 @let f = facade;
-<div class="cloud-wizard" [class.cloud-wizard--page]="mode() === 'page'">
-  <header class="cloud-wizard__header">
-    <div>
-      <h2 class="cloud-wizard__title">Conectar integración</h2>
-      <p class="cloud-wizard__subtitle">{{ f.wizardSubtitle }}</p>
+<div
+  class="caw"
+  [class.caw--page]="mode() === 'page'"
+  [style.--caw-accent]="theme().accent"
+  [style.--caw-accent-dark]="theme().accentDark"
+>
+  <header class="caw__hero" [style.background]="theme().headerBg">
+    <div class="caw__hero-brand">
+      <app-brand-logo [logo]="theme().logo" size="lg" />
+      <div class="caw__hero-copy">
+        <p class="caw__hero-eyebrow">{{ theme().eyebrow }}</p>
+        <h2 class="caw__hero-title">{{ theme().title }}</h2>
+        <p class="caw__hero-sub">{{ f.wizardSubtitle }}</p>
+      </div>
     </div>
-    @if (mode() === 'dialog') {
-      <button mat-icon-button type="button" aria-label="Cerrar" (click)="handleCancel()">
-        <mat-icon>close</mat-icon>
-      </button>
-    }
+    <div class="caw__hero-actions">
+      @if (f.selectedProvider(); as prov) {
+        <span class="caw__hero-chip">{{ f.providerMeta()?.shortName ?? prov }}</span>
+      }
+      @if (mode() === 'dialog') {
+        <button mat-icon-button type="button" class="caw__close" aria-label="Cerrar" (click)="handleCancel()">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
   </header>
 
-  <nav class="cloud-wizard__steps" aria-label="Pasos del asistente">
+  <nav class="caw__steps" aria-label="Pasos del asistente">
     @for (s of f.steps; track s.id; let i = $index) {
       <button
         type="button"
-        class="wizard-step"
-        [class.wizard-step--active]="f.step() === s.id"
-        [class.wizard-step--done]="f.stepIndex() > i"
+        class="caw__step"
+        [class.caw__step--on]="f.step() === s.id"
+        [class.caw__step--done]="f.stepIndex() > i"
         [disabled]="!f.canGoToStep(s.id)"
         (click)="f.goToStep(s.id)"
+        [attr.aria-current]="f.step() === s.id ? 'step' : null"
       >
-        <span class="wizard-step__num">{{ i + 1 }}</span>
-        <span class="wizard-step__label">{{ s.label }}</span>
+        <mat-icon>{{ f.stepIcons[s.id] }}</mat-icon>
+        <span>{{ s.label }}</span>
       </button>
     }
+    <div class="caw__steps-bar" aria-hidden="true">
+      <span [style.width.%]="stepProgress()"></span>
+    </div>
   </nav>
 
-  <div class="cloud-wizard__body">
+  <div class="caw__body">
     @if (f.step() === 'provider') {
-      <section class="provider-step">
-        <h3>Selecciona proveedor</h3>
-        <div class="provider-grid">
+      <section class="caw__panel">
+        <div class="caw__panel-head">
+          <div>
+            <h3>Selecciona proveedor</h3>
+            <p>Elige el servicio cloud o plataforma que quieres conectar con Spendlyx.</p>
+          </div>
+        </div>
+
+        @if (f.showScopeTabs()) {
+          <div class="caw__scope-tabs" role="tablist" aria-label="Filtrar proveedores">
+            <button
+              type="button"
+              class="caw__scope-tab"
+              [class.caw__scope-tab--on]="f.scopeFilter() === 'all'"
+              (click)="f.setScopeFilter('all')"
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              class="caw__scope-tab"
+              [class.caw__scope-tab--on]="f.scopeFilter() === 'cloud'"
+              (click)="f.setScopeFilter('cloud')"
+            >
+              Nubes
+            </button>
+            <button
+              type="button"
+              class="caw__scope-tab"
+              [class.caw__scope-tab--on]="f.scopeFilter() === 'vps'"
+              (click)="f.setScopeFilter('vps')"
+            >
+              VPS
+            </button>
+            <button
+              type="button"
+              class="caw__scope-tab"
+              [class.caw__scope-tab--on]="f.scopeFilter() === 'platform'"
+              (click)="f.setScopeFilter('platform')"
+            >
+              Plataforma
+            </button>
+          </div>
+        }
+
+        <div class="caw__provider-grid">
           @for (card of f.providerCards(); track card.id) {
             <button
               type="button"
-              class="provider-card"
+              class="caw__provider-card"
               [class]="card.toneClass"
-              [class.provider-card--selected]="f.selectedProvider() === card.id"
-              [class.provider-card--suggested]="suggestedProvider() === card.id"
+              [class.caw__provider-card--on]="f.selectedProvider() === card.id"
+              [class.caw__provider-card--hint]="suggestedProvider() === card.id"
               (click)="f.selectProvider(card.id)"
             >
-              <div class="provider-card__head">
+              <div class="caw__provider-card-head">
                 <app-brand-logo [logo]="card.logo" size="lg" />
-                <h4>{{ card.shortName }}</h4>
+                <div>
+                  <strong>{{ card.shortName }}</strong>
+                  <span>{{ card.credentialsSummary }}</span>
+                </div>
               </div>
-              <p class="provider-card__desc">{{ card.description }}</p>
-              <div class="provider-card__creds">
-                <mat-icon>vpn_key</mat-icon>
-                <span>{{ card.credentialsSummary }}</span>
-              </div>
+              <p>{{ card.description }}</p>
               @if (f.selectedProvider() === card.id) {
-                <mat-icon class="provider-card__check">check_circle</mat-icon>
+                <mat-icon class="caw__provider-check">check_circle</mat-icon>
               }
             </button>
           }
@@ -61,23 +121,29 @@
     }
 
     @if (f.step() === 'method' && f.selectedProvider()) {
-      <section class="method-step">
-        <h3>Método de conexión</h3>
-        <p class="method-step__hint">Elige cómo Spendlyx se autenticará con {{ f.providerMeta()!.shortName }}.</p>
-        <div class="method-grid">
+      <section class="caw__panel">
+        <div class="caw__panel-head">
+          <div>
+            <h3>Método de conexión</h3>
+            <p>Elige cómo Spendlyx se autenticará con {{ f.providerMeta()!.shortName }}.</p>
+          </div>
+        </div>
+        <div class="caw__method-grid">
           @for (m of f.connectionMethods(); track m.id) {
             <button
               type="button"
-              class="method-card"
-              [class.method-card--selected]="f.form.value.credentialType === m.id"
-              [class.method-card--soon]="m.comingSoon"
+              class="caw__method-card"
+              [class.caw__method-card--on]="f.form.value.credentialType === m.id"
+              [class.caw__method-card--soon]="m.comingSoon"
               (click)="f.selectMethod(m.id, m.comingSoon)"
             >
               <mat-icon>{{ m.icon }}</mat-icon>
               <div>
-                <strong>{{ m.label }}</strong>
-                @if (m.recommended) { <span class="method-card__badge">Recomendado</span> }
-                @if (m.comingSoon) { <span class="method-card__badge method-card__badge--soon">Próximamente</span> }
+                <strong>
+                  {{ m.label }}
+                  @if (m.recommended) { <span class="caw__badge">Recomendado</span> }
+                  @if (m.comingSoon) { <span class="caw__badge caw__badge--soon">Próximamente</span> }
+                </strong>
                 <p>{{ m.description }}</p>
               </div>
             </button>
@@ -86,175 +152,334 @@
       </section>
     }
 
-    @if (f.step() === 'credentials' && f.selectedProvider()) {
-      <section class="credentials-step">
-        <div class="credentials-step__banner" [class]="f.providerMeta()?.toneClass ?? ''">
+    @if (f.step() === 'credentials' && f.selectedProvider(); as prov) {
+      <section class="caw__panel">
+        <div class="caw__cred-banner" [class]="f.providerMeta()?.toneClass ?? ''">
           <app-brand-logo [logo]="f.providerMeta()!.logo" size="xl" />
           <div>
             <strong>{{ f.providerMeta()!.name }}</strong>
-            <p>Credenciales cifradas · {{ f.credentialTypeLabel(f.selectedProvider()!, f.form.value.credentialType ?? '') }}</p>
+            <p>
+              Credenciales cifradas ·
+              {{ f.credentialTypeLabel(prov, f.form.value.credentialType ?? '') }}
+            </p>
           </div>
         </div>
-        <form [formGroup]="f.form" class="form-grid">
-          <h4 class="form-section-title">Identificación</h4>
-          <mat-form-field appearance="outline" class="full">
+
+        <form [formGroup]="f.form" class="caw__form-grid">
+          <h4 class="caw__section-title caw__span-2">Identificación</h4>
+          <mat-form-field appearance="outline" class="caw__span-2">
             <mat-label>Nombre de la conexión</mat-label>
             <input matInput formControlName="name" placeholder="Ej. Producción EU" />
+            <mat-hint>Nombre visible en el panel para este entorno</mat-hint>
             @if (f.form.controls.name.hasError('required') && f.form.controls.name.touched) {
               <mat-error>El nombre es obligatorio</mat-error>
             }
           </mat-form-field>
 
-          @if (f.selectedProvider() === 'AWS') {
-            <mat-form-field appearance="outline" class="full">
+          @if (prov === 'AWS') {
+            <mat-form-field appearance="outline">
               <mat-label>ID de cuenta AWS (12 dígitos)</mat-label>
               <input matInput formControlName="accountId" placeholder="123456789012" maxlength="12" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full">
+            <mat-form-field appearance="outline">
               <mat-label>Región por defecto</mat-label>
               <mat-select formControlName="defaultRegion">
                 <mat-option value="us-east-1">us-east-1 (N. Virginia)</mat-option>
+                <mat-option value="us-west-2">us-west-2 (Oregón)</mat-option>
                 <mat-option value="eu-west-1">eu-west-1 (Irlanda)</mat-option>
                 <mat-option value="eu-central-1">eu-central-1 (Fráncfort)</mat-option>
               </mat-select>
             </mat-form-field>
             @if (f.form.value.credentialType === 'iam_role') {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline" class="caw__span-2">
                 <mat-label>ARN del rol IAM</mat-label>
-                <input matInput formControlName="roleArn" />
+                <input matInput formControlName="roleArn" placeholder="arn:aws:iam::123456789012:role/SpendlyxRead" />
               </mat-form-field>
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline" class="caw__span-2">
                 <mat-label>External ID (opcional)</mat-label>
                 <input matInput formControlName="externalId" />
               </mat-form-field>
             }
             @if (f.form.value.credentialType === 'access_key') {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>Access Key ID</mat-label>
                 <input matInput formControlName="accessKeyId" autocomplete="off" />
               </mat-form-field>
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>Secret Access Key</mat-label>
                 <input matInput type="password" formControlName="secretAccessKey" autocomplete="new-password" />
               </mat-form-field>
             }
             @if (f.form.value.credentialType === 'oidc') {
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>Proveedor OIDC</mat-label>
-                <input matInput formControlName="oidcProvider" />
+              <mat-form-field appearance="outline" class="caw__span-2">
+                <mat-label>Proveedor OIDC / URL del issuer</mat-label>
+                <input matInput formControlName="oidcProvider" placeholder="https://oidc.example.com" />
               </mat-form-field>
             }
           }
 
-          @if (f.selectedProvider() === 'GCP') {
-            <mat-form-field appearance="outline" class="full">
+          @if (prov === 'GCP') {
+            <mat-form-field appearance="outline">
               <mat-label>ID del proyecto GCP</mat-label>
-              <input matInput formControlName="accountId" />
+              <input matInput formControlName="accountId" placeholder="mi-proyecto-prod" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Zona por defecto</mat-label>
+              <mat-select formControlName="defaultRegion">
+                <mat-option value="us-central1-a">us-central1-a</mat-option>
+                <mat-option value="europe-west1-b">europe-west1-b</mat-option>
+                <mat-option value="southamerica-east1-a">southamerica-east1-a</mat-option>
+              </mat-select>
             </mat-form-field>
             @if (f.form.value.credentialType === 'service_account') {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline" class="caw__span-2">
                 <mat-label>JSON de la cuenta de servicio</mat-label>
                 <textarea matInput rows="5" formControlName="serviceAccountJson"></textarea>
               </mat-form-field>
             }
+            @if (f.form.value.credentialType === 'workload_identity') {
+              <mat-form-field appearance="outline" class="caw__span-2">
+                <mat-label>Proveedor Workload Identity</mat-label>
+                <input matInput formControlName="oidcProvider" />
+              </mat-form-field>
+            }
+            <mat-form-field appearance="outline">
+              <mat-label>ID cuenta de facturación (opcional)</mat-label>
+              <input matInput formControlName="billingAccountId" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Organización (opcional)</mat-label>
+              <input matInput formControlName="organizationId" />
+            </mat-form-field>
           }
 
-          @if (f.selectedProvider() === 'AZURE') {
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>ID de suscripción</mat-label>
+          @if (prov === 'AZURE') {
+            <mat-form-field appearance="outline">
+              <mat-label>ID de suscripción Azure</mat-label>
               <input matInput formControlName="accountId" />
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>Tenant ID</mat-label>
+            <mat-form-field appearance="outline">
+              <mat-label>ID de inquilino (Tenant)</mat-label>
               <input matInput formControlName="tenantId" />
             </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Región por defecto</mat-label>
+              <mat-select formControlName="defaultRegion">
+                <mat-option value="westeurope">West Europe</mat-option>
+                <mat-option value="northeurope">North Europe</mat-option>
+                <mat-option value="eastus">East US</mat-option>
+                <mat-option value="brazilsouth">Brazil South</mat-option>
+              </mat-select>
+            </mat-form-field>
             @if (f.form.value.credentialType === 'client_secret') {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>Client ID</mat-label>
                 <input matInput formControlName="clientId" />
               </mat-form-field>
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>Client Secret</mat-label>
                 <input matInput type="password" formControlName="clientSecret" autocomplete="new-password" />
               </mat-form-field>
             }
-          }
-
-          @if (f.selectedProvider() === 'DIGITALOCEAN' || f.selectedProvider() === 'HETZNER' || f.selectedProvider() === 'LINODE') {
-            <mat-form-field appearance="outline" class="full">
-              <mat-label>API Token</mat-label>
-              <input matInput type="password" formControlName="apiToken" autocomplete="new-password" />
+            @if (f.form.value.credentialType === 'managed_identity') {
+              <mat-form-field appearance="outline" class="caw__span-2">
+                <mat-label>Nombre Managed Identity</mat-label>
+                <input matInput formControlName="managedIdentity" />
+              </mat-form-field>
+            }
+            <mat-form-field appearance="outline" class="caw__span-2">
+              <mat-label>Resource group (opcional)</mat-label>
+              <input matInput formControlName="resourceGroup" />
             </mat-form-field>
           }
 
-          @if (f.selectedProvider() === 'KUBERNETES') {
+          @if (prov === 'CLOUDING') {
+            <mat-form-field appearance="outline">
+              <mat-label>Región por defecto</mat-label>
+              <mat-select formControlName="defaultRegion">
+                <mat-option value="eu-central">eu-central</mat-option>
+                <mat-option value="eu-west">eu-west</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>API Token</mat-label>
+              <input matInput type="password" formControlName="apiToken" autocomplete="new-password" />
+              <mat-hint>Token con permisos de instancias, redes y facturación</mat-hint>
+            </mat-form-field>
+          }
+
+          @if (prov === 'DIGITALOCEAN' || prov === 'HETZNER' || prov === 'LINODE' || prov === 'IONOS' || prov === 'VULTR' || prov === 'SCALEWAY') {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Región / datacenter</mat-label>
+              <input matInput formControlName="defaultRegion" placeholder="fra1" />
+              <mat-hint>Código de región por defecto, ej. nyc1, ams3, par1</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>API Token *</mat-label>
+              <input matInput type="password" formControlName="apiToken" autocomplete="new-password" placeholder="••••••••••••" />
+              <mat-hint>Token con permisos de lectura de servidores y facturación</mat-hint>
+            </mat-form-field>
+          }
+
+          @if (prov === 'OVH') {
+            <mat-form-field appearance="outline">
+              <mat-label>Application Key</mat-label>
+              <input matInput formControlName="appKey" autocomplete="off" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Application Secret</mat-label>
+              <input matInput type="password" formControlName="appSecret" autocomplete="new-password" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="caw__span-2">
+              <mat-label>Consumer Key</mat-label>
+              <input matInput formControlName="consumerKey" autocomplete="off" />
+            </mat-form-field>
+          }
+
+          @if (prov === 'KUBERNETES') {
             @if (f.form.value.credentialType === 'kubeconfig') {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline" class="caw__span-2">
                 <mat-label>Kubeconfig</mat-label>
                 <textarea matInput rows="6" formControlName="kubeconfig"></textarea>
               </mat-form-field>
             } @else {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>URL del cluster</mat-label>
                 <input matInput formControlName="clusterUrl" />
               </mat-form-field>
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>Bearer Token</mat-label>
                 <input matInput type="password" formControlName="bearerToken" autocomplete="new-password" />
               </mat-form-field>
             }
           }
 
-          @if (f.selectedProvider() === 'DOCKER') {
+          @if (prov === 'DOCKER') {
             @if (f.form.value.credentialType === 'tls') {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline" class="caw__span-2">
                 <mat-label>Endpoint Docker</mat-label>
                 <input matInput formControlName="dockerHost" placeholder="tcp://host:2376" />
               </mat-form-field>
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline" class="caw__span-2">
                 <mat-label>Certificado TLS (PEM)</mat-label>
                 <textarea matInput rows="3" formControlName="dockerTlsCert"></textarea>
               </mat-form-field>
             } @else {
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>Host SSH</mat-label>
                 <input matInput formControlName="sshHost" />
               </mat-form-field>
-              <mat-form-field appearance="outline" class="full">
+              <mat-form-field appearance="outline">
                 <mat-label>Usuario SSH</mat-label>
                 <input matInput formControlName="sshUser" />
               </mat-form-field>
             }
           }
 
-          <mat-checkbox formControlName="encryptCredentials">Cifrar credenciales antes de guardarlas</mat-checkbox>
+          @if (prov === 'GITHUB') {
+            <mat-form-field appearance="outline">
+              <mat-label>Organización o usuario</mat-label>
+              <input matInput formControlName="githubOrg" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Personal Access Token</mat-label>
+              <input matInput type="password" formControlName="apiToken" autocomplete="new-password" />
+            </mat-form-field>
+          }
+
+          @if (prov === 'GITLAB') {
+            <mat-form-field appearance="outline">
+              <mat-label>URL de GitLab</mat-label>
+              <input matInput formControlName="gitlabUrl" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Personal Access Token</mat-label>
+              <input matInput type="password" formControlName="apiToken" autocomplete="new-password" />
+            </mat-form-field>
+          }
+
+          @if (prov === 'JENKINS') {
+            <mat-form-field appearance="outline">
+              <mat-label>URL de Jenkins</mat-label>
+              <input matInput formControlName="jenkinsUrl" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Usuario</mat-label>
+              <input matInput formControlName="jenkinsUser" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="caw__span-2">
+              <mat-label>API Token</mat-label>
+              <input matInput type="password" formControlName="apiToken" autocomplete="new-password" />
+            </mat-form-field>
+          }
+
+          @if (prov === 'TERRAFORM') {
+            <mat-form-field appearance="outline">
+              <mat-label>Organización Terraform Cloud</mat-label>
+              <input matInput formControlName="terraformOrg" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Hostname (opcional)</mat-label>
+              <input matInput formControlName="terraformHostname" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="caw__span-2">
+              <mat-label>API Token</mat-label>
+              <input matInput type="password" formControlName="apiToken" autocomplete="new-password" />
+            </mat-form-field>
+          }
+
+          @if (f.providerMeta()?.permissionsSummary?.length) {
+            <mat-expansion-panel class="caw__permissions caw__span-2">
+              <mat-expansion-panel-header>
+                <mat-panel-title>Permisos mínimos recomendados</mat-panel-title>
+              </mat-expansion-panel-header>
+              <ul class="caw__permissions-list">
+                @for (p of f.providerMeta()!.permissionsSummary; track p) {
+                  <li><code>{{ p }}</code></li>
+                }
+              </ul>
+            </mat-expansion-panel>
+          }
+
+          <div class="caw__checks caw__span-2">
+            <mat-checkbox formControlName="encryptCredentials">Cifrar credenciales antes de guardarlas</mat-checkbox>
+            <mat-checkbox formControlName="syncOnCreate">Sincronizar recursos al guardar</mat-checkbox>
+          </div>
         </form>
       </section>
     }
 
     @if (f.step() === 'validate') {
-      <section class="validate-step">
-        <h3>Validar conexión</h3>
-        <p>Comprobamos credenciales y permisos antes de sincronizar recursos.</p>
-        <button mat-flat-button color="primary" type="button" [disabled]="f.validating()" (click)="f.handleValidateConnection()">
-          @if (f.validating()) { <mat-spinner diameter="18" /> } @else { <mat-icon>verified</mat-icon> }
-          Probar conexión
-        </button>
-        @if (f.validationResult()) {
-          <p class="validation-msg" [class.validation-msg--ok]="f.validationResult()!.valid">
-            <mat-icon>{{ f.validationResult()!.valid ? 'check_circle' : 'error' }}</mat-icon>
-            {{ f.validationResult()!.message }}
-          </p>
-        }
+      <section class="caw__panel caw__panel--center">
+        <div class="caw__validate-card">
+          <mat-icon>verified_user</mat-icon>
+          <h3>Validar conexión</h3>
+          <p>Comprobamos credenciales y permisos antes de sincronizar recursos.</p>
+          <button mat-flat-button color="primary" type="button" [disabled]="f.validating()" (click)="f.handleValidateConnection()">
+            @if (f.validating()) { <mat-spinner diameter="18" /> } @else { <mat-icon>verified</mat-icon> }
+            Probar conexión
+          </button>
+          @if (f.validationResult()) {
+            <p class="caw__validation" [class.caw__validation--ok]="f.validationResult()!.valid">
+              <mat-icon>{{ f.validationResult()!.valid ? 'check_circle' : 'error' }}</mat-icon>
+              {{ f.validationResult()!.message }}
+            </p>
+          }
+        </div>
       </section>
     }
 
     @if (f.step() === 'resources' && f.selectedProvider()) {
-      <section class="resources-step">
-        <h3>Seleccionar recursos a sincronizar</h3>
-        <div class="resources-grid">
+      <section class="caw__panel">
+        <div class="caw__panel-head">
+          <div>
+            <h3>Recursos a sincronizar</h3>
+            <p>Selecciona qué inventario importar desde {{ f.providerMeta()!.shortName }}.</p>
+          </div>
+        </div>
+        <div class="caw__resources">
           @for (opt of f.resourceOptions(); track opt.id) {
-            <label class="resource-option">
+            <label class="caw__resource">
               <mat-checkbox
                 [checked]="f.selectedResources().includes(opt.id)"
                 (change)="f.toggleResource(opt.id, $event.checked)"
@@ -266,22 +491,30 @@
             </label>
           }
         </div>
-        <mat-checkbox formControlName="syncOnCreate" [formGroup]="f.form">Sincronizar al guardar</mat-checkbox>
       </section>
     }
 
     @if (f.step() === 'finish' && f.selectedProvider()) {
-      <section class="review-step">
-        <div class="review-card review-card--success">
-          <mat-icon>check_circle</mat-icon>
-          <h4>Listo para conectar</h4>
-          <p>{{ f.form.value.name }} · {{ f.reviewLine() }}</p>
+      <section class="caw__panel">
+        <div class="caw__finish-card">
+          <app-brand-logo [logo]="f.providerMeta()!.logo" size="lg" />
+          <div>
+            <h3>{{ f.form.value.name || 'Nueva conexión' }}</h3>
+            <p>{{ f.reviewLine() }}</p>
+          </div>
         </div>
-        <dl class="review-dl">
+        <dl class="caw__review">
+          <div><dt>Proveedor</dt><dd>{{ f.providerMeta()!.name }}</dd></div>
+          @if (f.form.value.accountId) {
+            <div><dt>Identificador</dt><dd class="caw__mono">{{ f.form.value.accountId }}</dd></div>
+          }
+          @if (f.form.value.defaultRegion) {
+            <div><dt>Región / zona</dt><dd>{{ f.form.value.defaultRegion }}</dd></div>
+          }
           <div><dt>Recursos</dt><dd>{{ f.selectedResources().join(', ') }}</dd></div>
           <div><dt>Cifrado</dt><dd>{{ f.form.value.encryptCredentials ? 'Activado' : 'Desactivado' }}</dd></div>
         </dl>
-        <p class="security-note">
+        <p class="caw__security">
           <mat-icon>shield</mat-icon>
           Las credenciales se almacenan cifradas y no se vuelven a mostrar en texto plano.
         </p>
@@ -289,7 +522,7 @@
     }
   </div>
 
-  <footer class="cloud-wizard__actions">
+  <footer class="caw__actions">
     <button mat-button type="button" (click)="handleCancel()">Cancelar</button>
     @if (f.step() !== 'provider') {
       <button mat-stroked-button type="button" (click)="f.handleBack()">
@@ -302,7 +535,9 @@
       </button>
     }
     @if (f.step() === 'finish') {
-      <button mat-flat-button type="button" [disabled]="f.saving()" (click)="handleSave(false)">Guardar conexión</button>
+      <button mat-stroked-button type="button" [disabled]="f.saving()" (click)="handleSave(false)">
+        Guardar conexión
+      </button>
       <button mat-flat-button color="primary" type="button" [disabled]="f.saving()" (click)="handleSave(true)">
         @if (f.saving()) { <mat-spinner diameter="18" /> } @else { <mat-icon>cloud_sync</mat-icon> }
         Guardar y sincronizar

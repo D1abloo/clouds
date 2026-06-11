@@ -6,6 +6,7 @@ import {
   VPS_SIDEBAR_BRANCHES,
 } from '../../core/routing/area-nav.config'
 import { AuthService } from '../../core/services/auth.service'
+import { isCompactNavViewport } from '../layout-breakpoints'
 import { UserShortcutsService } from '../../core/services/user-shortcuts.service'
 import { ToastService } from '../../core/services/toast.service'
 
@@ -183,7 +184,7 @@ export class SidebarService {
   }
 
   toggleExpanded = (id: string): void => {
-    const mobile = typeof window !== 'undefined' && window.innerWidth <= 960
+    const mobile = isCompactNavViewport()
     const willOpen = !this.isExpanded(id)
 
     this._expanded.update((m) => {
@@ -206,7 +207,7 @@ export class SidebarService {
     const area = resolveAreaFromPath(path)
     const cloud = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
     const vps = path.match(/^\/vps\/(digitalocean|hetzner|linode|ovh)/)?.[1]
-    const mobile = typeof window !== 'undefined' && window.innerWidth <= 960
+    const mobile = isCompactNavViewport()
 
     this._expanded.update((prev) => {
       const next = mobile ? {} : { ...prev }

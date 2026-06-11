@@ -3,6 +3,7 @@ import { Observable, catchError, map, of } from 'rxjs'
 import { ApiClientService } from '../../core/services/api-client.service'
 import type {
   CommandCenterActionResult,
+  CommandCenterPlatformStatApi,
   CommandCenterRecentApiRow,
   ExecuteActionPayload,
 } from './command-center.types'
@@ -74,4 +75,14 @@ export class CommandCenterApiService {
       map((res) => (Array.isArray(res) ? res : (res.data ?? []))),
       catchError(() => of([])),
     )
+
+  platformStats = (): Observable<CommandCenterPlatformStatApi[]> =>
+    this.api
+      .get<{ data?: CommandCenterPlatformStatApi[] } | CommandCenterPlatformStatApi[]>(
+        'command-center/platforms/stats',
+      )
+      .pipe(
+        map((res) => (Array.isArray(res) ? res : (res.data ?? []))),
+        catchError(() => of([])),
+      )
 }

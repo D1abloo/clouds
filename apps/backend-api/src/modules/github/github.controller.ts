@@ -1,12 +1,17 @@
-import { BadRequestException, Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common'
+import { BadRequestException, Controller, Get, Post, Delete, Param, Body, Query, Res } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger'
+import { ConfigService } from '@nestjs/config'
+import type { Response } from 'express'
+import { Public } from '../../common/decorators/auth.decorators'
 import { GithubAccountsService } from './github-accounts.service'
+import { GithubOAuthService } from './github-oauth.service'
 import { GithubRepositoriesService } from './github-repositories.service'
 import { GithubBranchesService } from './github-branches.service'
 import { GithubCommitsService } from './github-commits.service'
 import { GithubPullRequestsService } from './github-pull-requests.service'
 import { GithubWebhooksService } from './github-webhooks.service'
 import { GithubDeploymentsService } from './github-deployments.service'
+import { GithubWorkflowsService } from './github-workflows.service'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('GitHub')
@@ -14,6 +19,8 @@ import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.de
 @Controller('github')
 export class GithubController {
   constructor(
+    private readonly config: ConfigService,
+    private readonly oauth: GithubOAuthService,
     private readonly accounts: GithubAccountsService,
     private readonly repositories: GithubRepositoriesService,
     private readonly branches: GithubBranchesService,
@@ -21,12 +28,54 @@ export class GithubController {
     private readonly pullRequests: GithubPullRequestsService,
     private readonly webhooks: GithubWebhooksService,
     private readonly deployments: GithubDeploymentsService,
+    private readonly workflows: GithubWorkflowsService,
   ) {}
+
+  @Get('oauth/start')
+  @ApiOperation({ summary: 'Iniciar OAuth GitHub para integración de repositorios' })
+  oauthStart(@CurrentUser() user: JwtPayload, @Query('returnUrl') returnUrl?: string) {
+    return this.oauth.start(user.sub, returnUrl)
+  }
+
+  @Public()
+  @Get('oauth/callback')
+  @ApiOperation({ summary: 'Callback OAuth GitHub — intercambio code → token de repositorio' })
+  async oauthCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Query('error') oauthError: string,
+    @Res() res: Response,
+  ) {
+    const appUrl = (this.config.get<string>('APP_URL') ?? this.config.get<string>('AUTH_URL', 'http://localhost:4200')).replace(
+      /\/$/,
+      '',
+    )
+    const fallback = `${appUrl}/admin/configuracion/integraciones/github/conectar`
+
+    if (oauthError) {
+      const message =
+        oauthError === 'access_denied'
+          ? 'Autorización OAuth cancelada.'
+          : 'No se pudo completar la autorización con GitHub.'
+      return res.redirect(`${fallback}?oauth_error=${encodeURIComponent(message)}`)
+    }
+
+    try {
+      const { redirectUrl } = await this.oauth.handleCallback(code, state)
+      return res.redirect(redirectUrl)
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'No se pudo completar la autorización con GitHub.'
+      return res.redirect(`${fallback}?oauth_error=${encodeURIComponent(message)}`)
+    }
+  }
 
   @Get('accounts')
   @ApiOperation({ summary: 'Listar cuentas GitHub' })
-  listAccounts() {
-    return this.accounts.list()
+  listAccounts(@CurrentUser() user: JwtPayload) {
+    return this.accounts.list(user.sub)
   }
 
   @Post('accounts/validate-preview')
@@ -125,13 +174,31 @@ export class GithubController {
       throw new BadRequestException('No hay cuenta GitHub conectada')
     }
     const sync = await this.accounts.sync(user.sub, conn.accountId)
-    const repos = await this.repositories.list()
+    const repos = await this.repositories.list(undefined, user.sub)
     return { synced: sync.synced, repos: repos.items, lastSyncAt: sync.lastSyncAt }
   }
 
+  @Get('branches')
+  @ApiOperation({ summary: 'Listar todas las ramas GitHub sincronizadas' })
+  listAllBranches(@CurrentUser() user: JwtPayload) {
+    return this.branches.listAll(user.sub)
+  }
+
+  @Get('commits')
+  @ApiOperation({ summary: 'Listar todos los commits GitHub sincronizados' })
+  listAllCommits(@CurrentUser() user: JwtPayload) {
+    return this.commits.listAll(user.sub)
+  }
+
+  @Get('pull-requests')
+  @ApiOperation({ summary: 'Listar todos los Pull Requests GitHub sincronizados' })
+  listAllPullRequests(@CurrentUser() user: JwtPayload) {
+    return this.pullRequests.listAll(user.sub)
+  }
+
   @Get('repositories')
-  listRepositories(@Query('accountId') accountId?: string) {
-    return this.repositories.list(accountId)
+  listRepositories(@CurrentUser() user: JwtPayload, @Query('accountId') accountId?: string) {
+    return this.repositories.list(accountId, user.sub)
   }
 
   @Get('repositories/:id')
@@ -174,6 +241,9 @@ export class GithubController {
       targetType: 'instance' | 'vps' | 'docker' | 'kubernetes'
       targetId: string
       targetName?: string
+      environment?: string
+      strategy?: string
+      notes?: string
     },
   ) {
     return this.deployments.deploy(user.sub, id, body)
@@ -197,14 +267,26 @@ export class GithubController {
     return this.webhooks.remove(user.sub, id)
   }
 
+  @Get('deploy-targets')
+  @ApiOperation({ summary: 'Destinos de despliegue del workspace (instancias y VPS)' })
+  deployTargets(@CurrentUser() user: JwtPayload) {
+    return this.deployments.listDeployTargets(user.sub)
+  }
+
+  @Get('workflow-runs')
+  @ApiOperation({ summary: 'GitHub Actions — ejecuciones recientes en vivo' })
+  workflowRuns(@CurrentUser() user: JwtPayload) {
+    return this.workflows.listForUser(user.sub)
+  }
+
   @Get('deployments')
-  listDeployments() {
-    return this.deployments.listAll()
+  listDeployments(@CurrentUser() user: JwtPayload) {
+    return this.deployments.listAll(user.sub)
   }
 
   @Get('deployments/:id/logs')
-  deploymentLogs(@Param('id') id: string) {
-    return this.deployments.getLogs(id)
+  deploymentLogs(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.deployments.getLogs(id, user.sub)
   }
 
   @Post('deploy')

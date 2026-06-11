@@ -38,11 +38,9 @@ import {
   type CommandCenterActionDialogResult,
 } from './command-center-action-dialog.component'
 import {
-  COMMAND_CENTER_ACTIONS,
-  COMMAND_CENTER_PENDING,
-  COMMAND_CENTER_QUEUE,
-  COMMAND_CENTER_PLATFORMS,
   COMMAND_CENTER_QUICK_ACTIONS,
+  EMPTY_COMMAND_CENTER_PLATFORMS,
+  type CommandCenterPlatformStat,
   type CommandCenterQueueItem,
   type CommandCenterQuickAction,
   type OverviewActionRow,
@@ -174,7 +172,7 @@ const pendingRowToPayload = (row: OverviewActionRow): ExecuteActionPayload | nul
         </section>
 
         <div class="cmd-platforms" role="list" aria-label="Estado por plataforma">
-          @for (p of platforms; track p.logo) {
+          @for (p of platforms(); track p.logo) {
             <button
               type="button"
               class="cmd-platform"
@@ -925,7 +923,7 @@ export class CommandCenterPageComponent implements OnInit {
     { initialValue: '' },
   )
 
-  readonly platforms = COMMAND_CENTER_PLATFORMS
+  readonly platforms = signal<CommandCenterPlatformStat[]>([...EMPTY_COMMAND_CENTER_PLATFORMS])
   readonly quickActions = COMMAND_CENTER_QUICK_ACTIONS
 
   readonly selectedQuick = computed((): CommandCenterQuickAction | null => {
@@ -934,7 +932,9 @@ export class CommandCenterPageComponent implements OnInit {
     return this.quickActions.find((a) => a.id === id) ?? null
   })
 
-  readonly connectedPlatforms = computed(() => new Set(this.recent().map((r) => r.provider)).size)
+  readonly connectedPlatforms = computed(
+    () => this.platforms().filter((p) => p.connected || p.tasks > 0).length,
+  )
 
   readonly filteredRecent = computed(() => {
     const q = this.searchQuery()
@@ -959,7 +959,32 @@ export class CommandCenterPageComponent implements OnInit {
   ngOnInit(): void {
     of(true).pipe(delay(350)).subscribe(() => {
       this.loading.set(false)
-      this.loadRecentFromApi()
+      this.loadLiveData()
+    })
+  }
+
+  private loadLiveData = (): void => {
+    this.loadPlatformStatsFromApi()
+    this.loadRecentFromApi()
+  }
+
+  private loadPlatformStatsFromApi = (): void => {
+    this.commandCenterApi.platformStats().subscribe((rows) => {
+      if (!rows.length) {
+        this.platforms.set([...EMPTY_COMMAND_CENTER_PLATFORMS])
+        return
+      }
+      this.platforms.set(
+        rows.map((row) => ({
+          logo: row.logo as CommandCenterPlatformStat['logo'],
+          label: row.label,
+          provider: row.provider,
+          tasks: row.tasks,
+          successRate: row.successRate,
+          lastAction: row.lastAction,
+          connected: row.connected,
+        })),
+      )
     })
   }
 
@@ -1006,7 +1031,7 @@ export class CommandCenterPageComponent implements OnInit {
   handleRefresh = (): void => {
     if (this.refreshing()) return
     this.refreshing.set(true)
-    this.loadRecentFromApi()
+    this.loadLiveData()
     this.commandCenterApi.recent(1).subscribe({
       complete: () => {},
       error: () => {},
@@ -1185,9 +1210,25 @@ export class CommandCenterPageComponent implements OnInit {
   private getQuickAction = (id: string): CommandCenterQuickAction | undefined =>
     this.quickActions.find((a) => a.id === id)
 
+  private openQuickActionDialog = (qa: CommandCenterQuickAction): void => {
+    this.openActionDialog({
+      action: qa.label,
+      provider: qa.provider,
+      logo: qa.logo ?? null,
+      resource: qa.resource,
+      region: qa.region,
+      mode: 'now',
+      priority: 'normal',
+    })
+  }
+
   handleQuickEnqueue = (id: string): void => {
     const qa = this.getQuickAction(id)
     if (!qa) return
+    if (!qa.resource?.trim()) {
+      this.openQuickActionDialog(qa)
+      return
+    }
     const item: CommandCenterQueueItem = {
       id: newId(),
       position: this.queue().length + 1,
@@ -1220,6 +1261,10 @@ export class CommandCenterPageComponent implements OnInit {
   handleQuickEnqueueAndGo = (id: string): void => {
     const qa = this.getQuickAction(id)
     if (!qa) return
+    if (!qa.resource?.trim()) {
+      this.openQuickActionDialog(qa)
+      return
+    }
     const payload = quickActionToPayload(qa)
     this.executeViaApi(payload, qa.label, qa.provider, qa.logo, qa.region, true)
   }

@@ -1,6 +1,6 @@
-# CloudOps Control Center
+# Spendlyx / CloudOps Control Center
 
-Plataforma unificada para gestionar **AWS**, **GCP**, **Azure**, VPS externas, Docker, Kubernetes, Jenkins, Terraform, métricas, facturación, alertas y terminal SSH desde una única interfaz.
+Plataforma unificada para gestionar **AWS**, **GCP**, **Azure**, VPS externas, Docker, Kubernetes, Jenkins, **FinOps**, **AI Infra Studio**, métricas, facturación, alertas y terminal SSH desde una única interfaz.
 
 ![Stack](https://img.shields.io/badge/Angular-19-red) ![NestJS](https://img.shields.io/badge/NestJS-10-red) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 
@@ -10,7 +10,8 @@ Plataforma unificada para gestionar **AWS**, **GCP**, **Azure**, VPS externas, D
 - VPS / bare metal con terminal SSH web (WebSocket + xterm.js)
 - Detección Docker, Kubernetes, servicios systemd, puertos y métricas
 - Integración Jenkins (jobs, builds, logs)
-- Terraform plan/apply/destroy con confirmación
+- **FinOps** — panel de costes multi-cloud con KPIs, facturación, instancias, alertas e insights IA
+- **AI Infra Studio** — asistente Copilot para lanzar instancias paso a paso (sustituye Terraform en navegación)
 - Dashboard en tiempo real con alertas y notificaciones
 - **Command Center** — acciones rápidas multi-plataforma
 - **Deployments, Backups, Network, Storage** — infraestructura ampliada
@@ -98,6 +99,44 @@ npm run prisma:studio  # DB explorer
 npm run seed:demo      # Base seed + dataset demo completo
 ```
 
+## Módulo FinOps
+
+Panel SaaS de gestión financiera cloud (datos mock en demo, integrable con APIs de billing en PRO).
+
+### Rutas
+
+| Ruta | Descripción |
+|------|-------------|
+| `/finops` | Hub con hero, KPIs y accesos rápidos |
+| `/finops/dashboard` | Panel completo con todos los KPIs y gráficos |
+| `/finops/billing` | Tabla de facturas AWS/GCP/Azure, filtros y exportación |
+| `/finops/instances` | Instancias con coste, utilización y recomendaciones |
+| `/finops/cost-centers` | Desglose por centro de coste y presupuesto |
+| `/finops/alerts` | Alertas de presupuesto y anomalías |
+| `/finops/recommendations` | Insights IA de ahorro |
+| `/finops/reports` | Informes programados |
+| `/finops/settings` | Umbrales, presupuestos y preferencias |
+
+### Datos mock
+
+Los ficheros en `apps/frontend-angular/src/app/features/finops/data/mock-*.ts` contienen facturación, instancias, alertas y recomendaciones realistas para AWS, GCP y Azure. En PRO se pueden sustituir por llamadas a `billing` y `cloud-accounts`.
+
+### Tema
+
+Variables SCSS en `apps/frontend-angular/src/app/features/finops/finops-theme.scss` (gradientes electric blue, purple, verde ahorro, coral sobrecoste).
+
+## AI Infra Studio
+
+- Ruta: `/infra/ai-studio`
+- Las rutas `/terraform/*` redirigen aquí (los ficheros Terraform permanecen en el repo pero fuera del sidebar).
+- Wizard: proveedor → región → tipo → imagen → lanzamiento real vía `CloudAccountsService` con progreso `instance.launch.progress` por WebSocket.
+- **Importante:** tras un lanzamiento de prueba, elimina la instancia en el panel de instancias.
+
+## Hora del servidor
+
+- API: `GET /api/v1/platform/server-time` → `{ serverTime, timezone }`
+- El topbar muestra la hora sincronizada cada 60 s (`ServerTimeService`).
+
 ## Documentación
 
 | Doc | Descripción |
@@ -131,14 +170,23 @@ cd apps/frontend-angular && npm test
 ./scripts/test.sh
 ```
 
+## Roadmap
+
+- [ ] Conectar FinOps a billing API real (Cost Explorer, GCP Billing, Azure Cost Management)
+- [ ] Presupuestos y alertas FinOps persistidos en PostgreSQL
+- [ ] AI Infra Studio: plantillas guardadas y políticas de aprobación
+- [ ] Exportación PDF/CSV FinOps en PRO
+- [ ] SSO enterprise y multi-organización en FinOps
+
 ## Subir a GitHub
 
 ```bash
-git init
 git add .
-git commit -m "feat: initial CloudOps Control Center monorepo"
-gh repo create cloudops-control-center --public --source=. --push
+git commit -m "feat(finops): FinOps panel, AI infra studio, sidebar UX, server time sync"
+git push origin pro-clean-cutover
 ```
+
+Producción Spendlyx: `npm run deploy:spendlyx` (rsync + Docker rebuild en el servidor).
 
 ## Licencia
 

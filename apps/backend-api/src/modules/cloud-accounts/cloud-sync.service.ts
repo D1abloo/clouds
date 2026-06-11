@@ -101,8 +101,45 @@ export class CloudSyncService {
     return result
   }
 
+  private emitLaunchStep = async (
+    accountId: string,
+    percent: number,
+    step: string,
+    log: string,
+    status: 'running' | 'success' | 'error' = 'running',
+  ) => {
+    this.realtime.emitInstanceLaunchProgress({ accountId, percent, step, log, status })
+    await new Promise((r) => setTimeout(r, 350))
+  }
+
   async launchInstance(accountId: string, dto: LaunchInstanceDto, userId?: string) {
+    await this.emitLaunchStep(accountId, 12, 'Validando imagen y región', `image=${dto.imageId} region=${dto.region}`)
+    await this.emitLaunchStep(accountId, 28, 'Reservando capacidad compute', `type=${dto.instanceType}`)
+    await this.emitLaunchStep(
+      accountId,
+      45,
+      'Configurando red y seguridad',
+      `subnet=${dto.subnetId ?? 'auto'} sg=${dto.securityGroupIds?.join(',') ?? 'default'} publicIp=${dto.publicIp ?? true}`,
+    )
+    await this.emitLaunchStep(
+      accountId,
+      62,
+      'Creando volumen raíz',
+      `Disco ${dto.diskType ?? 'default'} ${dto.diskGb ?? 30} GB · key=${dto.keyPair ?? 'none'}`,
+    )
+    if (dto.userData) {
+      await this.emitLaunchStep(accountId, 70, 'Aplicando user data', `${dto.userData.length} bytes`)
+    }
+    await this.emitLaunchStep(
+      accountId,
+      78,
+      'Provisionando instancia',
+      `name=${dto.name} monitoring=${dto.monitoring ?? false}`,
+    )
+
     const launched = await this.registry.launchInstance(accountId, dto)
+
+    await this.emitLaunchStep(accountId, 92, 'Registrando en inventario', `externalId=${launched.id}`)
     const account = await this.prisma.cloudAccount.findUnique({ where: { id: accountId } })
     if (!account) return launched
 
@@ -129,6 +166,13 @@ export class CloudSyncService {
     })
 
     this.realtime.emitInventoryUpdate(accountId, { launched: 1, instanceId: row.id })
+    this.realtime.emitInstanceLaunchProgress({
+      accountId,
+      percent: 100,
+      step: 'Instancia operativa',
+      log: `${launched.name} (${launched.id}) en ${launched.region}`,
+      status: 'success',
+    })
     return { ...launched, dbId: row.id }
   }
 
@@ -136,7 +180,10 @@ export class CloudSyncService {
     const account = await this.prisma.cloudAccount.findUnique({ where: { id: accountId } })
     if (!account) return 0
 
+    const syncedExternalIds = new Set<string>()
+
     for (const inst of instances) {
+      syncedExternalIds.add(inst.id)
       const existing = await this.prisma.instance.findFirst({
         where: { cloudAccountId: accountId, externalId: inst.id },
       })
@@ -149,6 +196,7 @@ export class CloudSyncService {
             instanceType: inst.instanceType,
             region: inst.region,
             metadata: inst.metadata as object,
+            deletedAt: null,
           },
         })
       } else {
@@ -167,6 +215,21 @@ export class CloudSyncService {
         })
       }
     }
+
+    const externalIdList = [...syncedExternalIds]
+    await this.prisma.instance.updateMany({
+      where: {
+        cloudAccountId: accountId,
+        ...(externalIdList.length > 0 && { externalId: { notIn: externalIdList } }),
+        deletedAt: null,
+        status: { not: 'TERMINATED' },
+      },
+      data: {
+        status: 'TERMINATED',
+        deletedAt: new Date(),
+      },
+    })
+
     return instances.length
   }
 

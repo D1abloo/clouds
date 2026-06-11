@@ -1,4 +1,4 @@
-import { Component, Input, output, signal, computed } from '@angular/core'
+import { Component, input, output, signal, computed } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { DatePipe, SlicePipe } from '@angular/common'
 import { MatButtonModule } from '@angular/material/button'
@@ -368,7 +368,7 @@ const TAB_LABELS = ['Recientes', 'GitHub', 'GitLab', 'Con error CI', 'Desplegado
   `,
 })
 export class CommitsGlobalSectionComponent {
-  @Input() commits: GlobalCommitRow[] = []
+  readonly commits = input<GlobalCommitRow[]>([])
 
   readonly routes = {
     branches: repoRoute('branches'),
@@ -392,7 +392,7 @@ export class CommitsGlobalSectionComponent {
 
   visibleRows = computed(() => {
     const fn = COMMIT_TAB_FILTERS[this.tabIndex()] ?? COMMIT_TAB_FILTERS[0]
-    return this.commits.filter(fn)
+    return this.commits().filter(fn)
   })
 
   summaryStats = computed(() => {

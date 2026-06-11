@@ -21,6 +21,9 @@ export type ConnectionProviderId =
   | 'CLOUDFLARE'
   | 'LINODE'
   | 'OVH'
+  | 'IONOS'
+  | 'VULTR'
+  | 'SCALEWAY'
   | 'KUBERNETES'
   | 'DOCKER'
   | 'GITHUB'
@@ -68,10 +71,14 @@ export const PROVIDER_ALIAS_MAP: Record<string, ConnectionProviderId> = {
   aws: 'AWS',
   gcp: 'GCP',
   azure: 'AZURE',
+  clouding: 'CLOUDING',
   digitalocean: 'DIGITALOCEAN',
   hetzner: 'HETZNER',
   linode: 'LINODE',
   ovh: 'OVH',
+  ionos: 'IONOS',
+  vultr: 'VULTR',
+  scaleway: 'SCALEWAY',
   cloudflare: 'CLOUDFLARE',
   kubernetes: 'KUBERNETES',
   k8s: 'KUBERNETES',
@@ -113,6 +120,10 @@ export const connectionMethodsFor = (provider: ConnectionProviderId): Connection
     HETZNER: [{ id: 'api_token', label: 'API Token', description: 'Token Hetzner Cloud Console', icon: 'token', recommended: true }],
     LINODE: [{ id: 'api_token', label: 'Personal Access Token', description: 'Token Linode API v4', icon: 'token', recommended: true }],
     OVH: [{ id: 'ovh_keys', label: 'Application + Consumer Keys', description: 'Par de claves API OVH', icon: 'key', recommended: true }],
+    IONOS: [{ id: 'api_token', label: 'API Token', description: 'Token del panel IONOS Cloud', icon: 'token', recommended: true }],
+    VULTR: [{ id: 'api_token', label: 'API Key', description: 'Personal API Key de Vultr', icon: 'token', recommended: true }],
+    SCALEWAY: [{ id: 'api_token', label: 'API Secret Key', description: 'Secret Key de Scaleway IAM', icon: 'token', recommended: true }],
+    CLOUDING: [{ id: 'api_token', label: 'API Token', description: 'Token de acceso Clouding.io', icon: 'token', recommended: true }],
     CLOUDFLARE: [
       { id: 'api_token', label: 'API Token', description: 'Token con permisos de zona', icon: 'token', recommended: true },
       { id: 'global_key', label: 'Global API Key', description: 'Global Key + email de cuenta', icon: 'mail' },
@@ -182,6 +193,23 @@ export const resourceSyncOptionsFor = (provider: ConnectionProviderId): Resource
     ],
     LINODE: [{ id: 'linodes', label: 'Linodes', description: 'Instancias Linode', defaultSelected: true }],
     OVH: [{ id: 'instances', label: 'Instancias Public Cloud', description: 'Instancias OVH', defaultSelected: true }],
+    IONOS: [
+      { id: 'servers', label: 'Servidores cloud', description: 'Instancias IONOS Cloud', defaultSelected: true },
+      { id: 'networks', label: 'Redes privadas', description: 'LAN y balanceadores', defaultSelected: true },
+    ],
+    VULTR: [
+      { id: 'instances', label: 'Instancias cloud', description: 'Compute Vultr', defaultSelected: true },
+      { id: 'block_storage', label: 'Block storage', description: 'Volúmenes persistentes', defaultSelected: false },
+    ],
+    SCALEWAY: [
+      { id: 'instances', label: 'Instances', description: 'Instancias Scaleway', defaultSelected: true },
+      { id: 'networks', label: 'Private Networks', description: 'Redes privadas y LB', defaultSelected: true },
+    ],
+    CLOUDING: [
+      { id: 'instances', label: 'Instancias cloud', description: 'VMs Clouding', defaultSelected: true },
+      { id: 'networks', label: 'Redes privadas', description: 'Private networks y políticas', defaultSelected: true },
+      { id: 'billing', label: 'Facturación', description: 'Costes y uso', defaultSelected: true },
+    ],
   }
   return map[provider] ?? [{ id: 'inventory', label: 'Inventario básico', description: 'Recursos detectados por la API', defaultSelected: true }]
 }
@@ -266,6 +294,25 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     defaultRegion: 'westeurope',
   },
   {
+    id: 'CLOUDING',
+    name: 'Clouding.io',
+    shortName: 'Clouding',
+    description: 'Instancias cloud europeas, redes privadas, métricas y facturación unificada.',
+    credentialsSummary: 'API Token con permisos de instancias y redes',
+    permissionsSummary: [
+      'instances.list / instances.create',
+      'networks.read',
+      'images.read',
+      'billing.read',
+    ],
+    logo: 'clouding',
+    toneClass: 'provider-card--clouding',
+    scope: 'cloud',
+    cloudApiProvider: 'CLOUDING',
+    defaultCredentialType: 'api_token',
+    defaultRegion: 'eu-central',
+  },
+  {
     id: 'DIGITALOCEAN',
     name: 'DigitalOcean',
     shortName: 'DigitalOcean',
@@ -328,6 +375,45 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     scope: 'vps',
     defaultCredentialType: 'ovh_keys',
     defaultRegion: 'GRA',
+  },
+  {
+    id: 'IONOS',
+    name: 'IONOS Cloud',
+    shortName: 'IONOS',
+    description: 'Servidores cloud, redes privadas y facturación desde la API de IONOS.',
+    credentialsSummary: 'API Token del panel IONOS Cloud',
+    permissionsSummary: ['servers:read', 'servers:write', 'datacenters:read', 'lan:read'],
+    logo: 'ionos',
+    toneClass: 'provider-card--ionos',
+    scope: 'vps',
+    defaultCredentialType: 'api_token',
+    defaultRegion: 'de/fra',
+  },
+  {
+    id: 'VULTR',
+    name: 'Vultr',
+    shortName: 'Vultr',
+    description: 'Instancias cloud, block storage y redes privadas en Vultr.',
+    credentialsSummary: 'Personal API Key de Vultr',
+    permissionsSummary: ['instances:read', 'instances:write', 'billing:read', 'network:read'],
+    logo: 'vultr',
+    toneClass: 'provider-card--vultr',
+    scope: 'vps',
+    defaultCredentialType: 'api_token',
+    defaultRegion: 'ewr',
+  },
+  {
+    id: 'SCALEWAY',
+    name: 'Scaleway',
+    shortName: 'Scaleway',
+    description: 'Instancias Instances, Elastic Metal y facturación Scaleway.',
+    credentialsSummary: 'Secret Key de Scaleway IAM',
+    permissionsSummary: ['instance:read', 'instance:write', 'billing:read', 'vpc:read'],
+    logo: 'scaleway',
+    toneClass: 'provider-card--scaleway',
+    scope: 'vps',
+    defaultCredentialType: 'api_token',
+    defaultRegion: 'fr-par-1',
   },
   {
     id: 'KUBERNETES',
@@ -429,6 +515,10 @@ export const credentialTypeLabel = (provider: ConnectionProviderId, type: string
     CLOUDFLARE: { api_token: 'API Token', global_key: 'Global API Key + Email' },
     LINODE: { api_token: 'Personal Access Token' },
     OVH: { ovh_keys: 'Application + Consumer Keys' },
+    IONOS: { api_token: 'API Token' },
+    VULTR: { api_token: 'API Key' },
+    SCALEWAY: { api_token: 'API Secret Key' },
+    CLOUDING: { api_token: 'API Token' },
     KUBERNETES: { kubeconfig: 'Kubeconfig', bearer_token: 'Bearer Token' },
     DOCKER: { tls: 'TLS + Endpoint', ssh_tunnel: 'SSH + socket remoto' },
     GITHUB: { pat: 'Personal Access Token', github_app: 'GitHub App' },

@@ -13,6 +13,9 @@ export type SettingsIntegration = {
   lastSync: string
   events24h: number
   accent: string
+  accountConnected?: boolean
+  connectRoute?: string | null
+  kind?: 'platform' | 'webhook'
 }
 
 export type IntegrationConfigField = {
@@ -66,6 +69,13 @@ export type SettingsSecurityPolicy = {
   impact: string
 }
 
+export const SETTINGS_COPILOT_LINK = {
+  route: '/settings/copilot',
+  label: 'Copilot IA',
+  icon: 'smart_toy',
+  desc: 'Clave LLM, modelo y tareas autónomas',
+} as const
+
 export const SETTINGS_TABS: { id: SettingsTabId; label: string; icon: string; desc: string }[] = [
   { id: 'general', label: 'General', icon: 'tune', desc: 'Organización, región y sincronización' },
   { id: 'integrations', label: 'Integraciones', icon: 'hub', desc: 'Slack, PagerDuty, Jira y más' },
@@ -92,6 +102,81 @@ export const SETTINGS_SYNC_HISTORY = []
 export const SETTINGS_PLATFORM_SOURCES: { id: string; label: string; status: string; events?: string[] }[] = []
 
 export const SETTINGS_INTEGRATIONS: SettingsIntegration[] = []
+
+export const INTEGRATION_UI_CATALOG: SettingsIntegration[] = [
+  {
+    id: 'slack',
+    label: 'Slack',
+    desc: 'Canal #cloudops-alerts — alertas, despliegues y ops en tiempo real',
+    category: 'Comunicación',
+    icon: 'chat',
+    enabled: false,
+    status: 'disconnected',
+    lastSync: ts(86400),
+    events24h: 0,
+    accent: '#4A154B',
+  },
+  {
+    id: 'pagerduty',
+    label: 'PagerDuty',
+    desc: 'Escalado P1/P2 para incidentes críticos y despliegues fallidos',
+    category: 'Monitorización',
+    icon: 'notifications_active',
+    enabled: false,
+    status: 'disconnected',
+    lastSync: ts(86400),
+    events24h: 0,
+    accent: '#06AC38',
+  },
+  {
+    id: 'jira',
+    label: 'Jira',
+    desc: 'Tickets ITSM automáticos desde despliegues y cambios',
+    category: 'ITSM',
+    icon: 'confirmation_number',
+    enabled: false,
+    status: 'disconnected',
+    lastSync: ts(86400),
+    events24h: 0,
+    accent: '#0052CC',
+  },
+  {
+    id: 'servicenow',
+    label: 'ServiceNow',
+    desc: 'Sincronización CMDB y cambios con instancias del panel',
+    category: 'ITSM',
+    icon: 'business',
+    enabled: false,
+    status: 'disconnected',
+    lastSync: ts(86400),
+    events24h: 0,
+    accent: '#81B5A1',
+  },
+  {
+    id: 'teams',
+    label: 'Microsoft Teams',
+    desc: 'Webhook entrante para alertas críticas al equipo de ops',
+    category: 'Comunicación',
+    icon: 'groups',
+    enabled: false,
+    status: 'disconnected',
+    lastSync: ts(86400),
+    events24h: 0,
+    accent: '#6264A7',
+  },
+  {
+    id: 'github',
+    label: 'GitHub',
+    desc: 'Workflows, despliegues y repos — conecta tu cuenta en Repositorios',
+    category: 'DevOps',
+    icon: 'code',
+    enabled: false,
+    status: 'disconnected',
+    lastSync: ts(86400),
+    events24h: 0,
+    accent: '#24292f',
+  },
+]
 
 export const SETTINGS_SECURITY_POLICIES: SettingsSecurityPolicy[] = []
 
@@ -289,13 +374,22 @@ const INTEGRATION_CONFIG: Record<string, { endpoint: string; workspace: string; 
 }
 
 export const mergeIntegrationFromApi = (
-  api: { id: string; enabled: boolean; status: string; lastSync: string | null },
+  api: {
+    id: string
+    enabled: boolean
+    status: string
+    lastSync: string | null
+    events24h?: number
+    accountConnected?: boolean
+    accountSummary?: string
+  },
   demo: SettingsIntegration,
 ): SettingsIntegration => ({
   ...demo,
   enabled: api.enabled,
-  status: api.status as SettingsIntegration['status'],
+  status: (api.accountConnected && api.enabled ? 'connected' : api.status) as SettingsIntegration['status'],
   lastSync: api.lastSync ?? demo.lastSync,
+  events24h: api.events24h ?? demo.events24h,
 })
 
 export const enrichIntegrationProfile = (integration: SettingsIntegration): IntegrationProfile => {

@@ -5,11 +5,19 @@ import type { Request } from 'express'
 import { Public } from '../../common/decorators/auth.decorators'
 import { PublicService } from './public.service'
 import { ContactFormDto, PublicRegisterDto, ResendVerificationDto } from './dto/public.dto'
+import { PublicStatsResponseDto } from './dto/public-stats.dto'
 
 @ApiTags('Public')
 @Controller('public')
 export class PublicController {
   constructor(private readonly publicService: PublicService) {}
+
+  @Public()
+  @Get('stats')
+  @ApiOperation({ summary: 'Métricas públicas agregadas para la landing' })
+  getStats(): Promise<PublicStatsResponseDto> {
+    return this.publicService.getStats()
+  }
 
   @Public()
   @Post('register')

@@ -51,12 +51,32 @@ export class PlatformController {
     const settingsFromDb = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]))
     const settings = { ...PLATFORM_SETTINGS_PRO, ...settingsFromDb }
 
+    const isProd = process.env.NODE_ENV === 'production' || mode.proMode
+
     return {
       ...mode,
       database,
       counts: { users, instances, alerts, organizations, memberships },
       multiUser: { organizations, memberships, workspaceScoping: true },
+      security: {
+        tls: isProd,
+        credentialsEncryption: 'AES-256-GCM',
+        passwordHashing: 'bcrypt',
+        workspaceIsolation: true,
+        jwtSessions: true,
+      },
       settings,
+    }
+  }
+
+  @Public()
+  @Get('server-time')
+  @ApiOperation({ summary: 'Hora del servidor y zona horaria' })
+  serverTime() {
+    const now = new Date()
+    return {
+      serverTime: now.toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }
   }
 }

@@ -21,6 +21,7 @@ describe('CloudAccountsService.validatePreview', () => {
     {} as CloudSyncService,
     {} as SecretsVaultService,
     config,
+    {} as import('../../common/organization/organization-scope.service').OrganizationScopeService,
   )
 
   beforeEach(() => jest.clearAllMocks())

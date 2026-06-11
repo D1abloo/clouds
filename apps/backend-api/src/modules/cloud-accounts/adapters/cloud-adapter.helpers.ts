@@ -51,16 +51,41 @@ export const mockSecurityGroups = (ctx: CloudAdapterContext, region: string): Cl
   { id: `sg-${region}-db`, name: `${ctx.name}-db`, region, vpcId: `net-${region}-main`, rules: 2 },
 ]
 
-export const mockImages = (ctx: CloudAdapterContext, region: string): CloudImage[] => [
-  { id: `ami-${hash(ctx.accountId)}-ubuntu`, name: 'Ubuntu 22.04 LTS', region, os: 'linux', architecture: 'x86_64' },
-  { id: `ami-${hash(ctx.accountId)}-debian`, name: 'Debian 12', region, os: 'linux', architecture: 'x86_64' },
-]
+export const mockImages = (ctx: CloudAdapterContext, region: string): CloudImage[] => {
+  const h = hash(ctx.accountId)
+  return [
+    { id: `ami-0${h}a1b2c3d4`, name: 'Amazon Linux 2023', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}b2c3d4e5`, name: 'Amazon Linux 2', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}c3d4e5f6`, name: 'Amazon Linux 2023 (arm64)', region, os: 'Linux/UNIX', architecture: 'arm64', status: 'available' },
+    { id: `ami-0${h}d4e5f6a7`, name: 'Ubuntu Server 24.04 LTS', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}e5f6a7b8`, name: 'Ubuntu Server 22.04 LTS', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}f6a7b8c9`, name: 'Ubuntu Pro 22.04 LTS', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}a7b8c9d0`, name: 'Debian 12', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}b8c9d0e1`, name: 'Red Hat Enterprise Linux 9', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}c9d0e1f2`, name: 'SUSE Linux Enterprise 15', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}d0e1f2a3`, name: 'Windows Server 2025 Base', region, os: 'Windows', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}e1f2a3b4`, name: 'Windows Server 2022 Base', region, os: 'Windows', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}f2a3b4c5`, name: 'Windows Server 2019 Base', region, os: 'Windows', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}a3b4c5d6`, name: 'macOS Sonoma (Mac instances)', region, os: 'macOS', architecture: 'arm64', status: 'available' },
+    { id: `ami-0${h}b4c5d6e7`, name: 'Rocky Linux 9', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+    { id: `ami-0${h}c5d6e7f8`, name: 'AlmaLinux 9', region, os: 'Linux/UNIX', architecture: 'x86_64', status: 'available' },
+  ]
+}
 
 export const mockInstanceTypes = (_ctx: CloudAdapterContext, region: string): CloudInstanceType[] => [
   { id: 'small', name: 'small', region, vcpus: 2, memoryGb: 4, pricePerHour: 0.04 },
   { id: 'medium', name: 'medium', region, vcpus: 4, memoryGb: 8, pricePerHour: 0.08 },
   { id: 'large', name: 'large', region, vcpus: 8, memoryGb: 16, pricePerHour: 0.16 },
 ]
+
+/** IDs generados por synthesizeInstances cuando no hay inventario real (solo demo). */
+export const isSynthesizedExternalId = (provider: CloudProvider, accountId: string, externalId: string): boolean => {
+  const prefix = prefixFor(provider)
+  const stem = `${prefix}-${accountId.slice(0, 8)}-`
+  if (!externalId.startsWith(stem)) return false
+  const suffix = externalId.slice(stem.length)
+  return /^[0-3]$/.test(suffix)
+}
 
 export const synthesizeInstances = (ctx: CloudAdapterContext): CloudInstance[] => {
   const region = ctx.defaultRegion ?? defaultRegionFor(ctx.provider)
@@ -87,17 +112,20 @@ export const synthesizeInstances = (ctx: CloudAdapterContext): CloudInstance[] =
 const prefixFor = (p: CloudProvider): string => {
   if (p === 'AWS') return 'i'
   if (p === 'GCP') return 'gce'
+  if (p === 'CLOUDING') return 'cld'
   return 'vm'
 }
 
 const defaultRegionFor = (p: CloudProvider): string => {
   if (p === 'AWS') return 'us-east-1'
   if (p === 'GCP') return 'us-central1-a'
+  if (p === 'CLOUDING') return 'eu-central'
   return 'westeurope'
 }
 
 const altRegion = (p: CloudProvider, primary: string): string => {
   if (p === 'AWS') return primary === 'us-east-1' ? 'eu-west-1' : 'us-east-1'
   if (p === 'GCP') return primary === 'us-central1-a' ? 'europe-west1-b' : 'us-central1-a'
+  if (p === 'CLOUDING') return primary === 'eu-central' ? 'us-east' : 'eu-central'
   return primary === 'westeurope' ? 'eastus' : 'westeurope'
 }

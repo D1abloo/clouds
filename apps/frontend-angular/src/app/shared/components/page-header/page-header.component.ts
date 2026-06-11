@@ -147,6 +147,24 @@ export interface PageHeaderAction {
       color: #111;
       border-color: color-mix(in srgb, #111 18%, transparent);
     }
+    @media (max-width: 767px) {
+      .page-header-premium {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem 0.85rem;
+      }
+      .page-header-premium__title-row h1 {
+        font-size: clamp(1.2rem, 5vw, 1.55rem);
+      }
+      .page-header-premium__actions {
+        width: 100%;
+      }
+      .page-header-premium__actions .page-action-btn {
+        flex: 1 1 calc(50% - 0.25rem);
+        justify-content: center;
+        min-height: 44px;
+      }
+    }
   `,
 })
 export class PageHeaderComponent {

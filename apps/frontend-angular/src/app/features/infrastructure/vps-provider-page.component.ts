@@ -158,43 +158,6 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
                 </div>
               </section>
             }
-            @case ('accounts') {
-              <section class="vps-panel">
-                <header class="vps-panel__head">
-                  <h3><mat-icon>corporate_fare</mat-icon> Cuentas conectadas</h3>
-                  <button mat-stroked-button type="button" (click)="handleConnectAccount()">
-                    <mat-icon>add_link</mat-icon>
-                    Conectar cuenta
-                  </button>
-                </header>
-                <div class="vps-table-wrap">
-                  <table class="vps-table">
-                    <thead>
-                      <tr>
-                        <th>Nombre</th>
-                        <th>Región</th>
-                        <th>Servidores</th>
-                        <th>Estado</th>
-                        <th>Última sync</th>
-                        <th>Coste MTD</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (acc of data().accountRows; track acc.id) {
-                        <tr>
-                          <td>{{ acc.name }}</td>
-                          <td>{{ acc.region }}</td>
-                          <td>{{ acc.servers }}</td>
-                          <td><app-status-badge [status]="acc.status" /></td>
-                          <td>{{ acc.lastSync }}</td>
-                          <td>{{ fmtUsd(acc.monthlyCost) }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            }
             @case ('servers') {
               <section class="vps-panel">
                 <header class="vps-panel__head">
@@ -221,38 +184,6 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
                           <td><app-status-badge [status]="row.status" /></td>
                           <td class="mono">{{ row.ipv4 }}</td>
                           <td>{{ fmtUsd(row.monthlyCost) }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            }
-            @case ('billing') {
-              <div class="vps-strip">
-                <article><span>Coste estimado MTD</span><strong>{{ fmtUsd(data().monthlyCost) }}</strong></article>
-                <article><span>Cuentas activas</span><strong>{{ data().accounts }}</strong></article>
-                <article><span>Servidores facturables</span><strong>{{ data().servers }}</strong></article>
-              </div>
-              <section class="vps-panel">
-                <header class="vps-panel__head">
-                  <h3><mat-icon>account_balance_wallet</mat-icon> Desglose por cuenta</h3>
-                </header>
-                <div class="vps-table-wrap">
-                  <table class="vps-table">
-                    <thead>
-                      <tr>
-                        <th>Cuenta</th>
-                        <th>Servidores</th>
-                        <th>Coste mensual</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (acc of data().accountRows; track acc.id) {
-                        <tr>
-                          <td>{{ acc.name }}</td>
-                          <td>{{ acc.servers }}</td>
-                          <td>{{ fmtUsd(acc.monthlyCost) }}</td>
                         </tr>
                       }
                     </tbody>
@@ -425,12 +356,18 @@ export class VpsProviderPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const sectionParam = params.get('section')
+      if (sectionParam === 'accounts' || sectionParam === 'billing') {
+        const provider = params.get('provider') ?? 'digitalocean'
+        void this.router.navigateByUrl(`/vps/${provider}/overview`, { replaceUrl: true })
+        return
+      }
       this.slug.set(vpsSlugFromParam(params.get('provider')))
-      this.section.set(vpsSectionFromSlug(params.get('section')))
+      this.section.set(vpsSectionFromSlug(sectionParam))
       this.loadData()
     })
 
-    this.liveSync.startPolling(() => this.loadData(), 15000)
+    this.liveSync.startPolling(() => this.loadData(), 45_000)
     this.destroyRef.onDestroy(() => this.liveSync.stopPolling())
   }
 

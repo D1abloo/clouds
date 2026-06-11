@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { OrganizationScopeModule } from '../../common/organization/organization-scope.module'
 import { AuditModule } from '../audit/audit.module'
 import { RealtimeModule } from '../realtime/realtime.module'
 import { BillingModule } from '../billing/billing.module'
@@ -7,6 +8,7 @@ import { CloudAccountsService } from './cloud-accounts.service'
 import { AwsAdapterService } from './adapters/aws.adapter.service'
 import { GcpAdapterService } from './adapters/gcp.adapter.service'
 import { AzureAdapterService } from './adapters/azure.adapter.service'
+import { CloudingAdapterService } from './adapters/clouding.adapter.service'
 import { SecretsVaultService } from './secrets-vault.service'
 import { CloudAdapterContextLoader } from './cloud-adapter.context'
 import { CloudAdapterRegistry } from './cloud-adapter.registry'
@@ -16,7 +18,7 @@ import { MetricsSyncWorker } from './metrics-sync.worker'
 import { BillingSyncWorker } from './billing-sync.worker'
 
 @Module({
-  imports: [AuditModule, RealtimeModule, BillingModule],
+  imports: [OrganizationScopeModule, AuditModule, RealtimeModule, BillingModule],
   controllers: [CloudAccountsController],
   providers: [
     CloudAccountsService,
@@ -30,6 +32,7 @@ import { BillingSyncWorker } from './billing-sync.worker'
     AwsAdapterService,
     GcpAdapterService,
     AzureAdapterService,
+    CloudingAdapterService,
   ],
   exports: [
     CloudAccountsService,
@@ -38,6 +41,7 @@ import { BillingSyncWorker } from './billing-sync.worker'
     AwsAdapterService,
     GcpAdapterService,
     AzureAdapterService,
+    CloudingAdapterService,
     SecretsVaultService,
   ],
 })

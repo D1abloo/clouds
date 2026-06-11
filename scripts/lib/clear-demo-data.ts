@@ -1,21 +1,51 @@
 import type { PrismaClient } from '@prisma/client'
 
-/** Elimina registros con prefijos/etiquetas demo en PostgreSQL. */
+const DEMO_GITHUB_ACCOUNT_WHERE = {
+  OR: [
+    { id: { startsWith: 'demo-github' } },
+    { tokenRef: 'demo' },
+    { tokenRef: { startsWith: 'demo:' } },
+  ],
+} as const
+
+const demoInstanceWhere = {
+  OR: [
+    { id: { startsWith: 'demo-inst-' } },
+    { externalId: { contains: 'demo', mode: 'insensitive' as const } },
+    { name: { contains: 'demo', mode: 'insensitive' as const } },
+    { name: { contains: 'aws-producción-vm-', mode: 'insensitive' as const } },
+    { name: { contains: 'aws-produccion-vm-', mode: 'insensitive' as const } },
+  ],
+} as const
+
+/** Elimina registros demo/sintéticos en PostgreSQL. Preserva cuentas cloud/GitHub reales conectadas. */
 export const clearDemoData = async (prisma: PrismaClient): Promise<void> => {
   console.log('Clearing existing demo data...')
 
+  const demoGithubAccounts = await prisma.githubAccount.findMany({
+    where: DEMO_GITHUB_ACCOUNT_WHERE,
+    select: { id: true },
+  })
+  const demoGithubAccountIds = demoGithubAccounts.map((a) => a.id)
+
   const demoInstanceIds = (
     await prisma.instance.findMany({
+      where: demoInstanceWhere,
+      select: { id: true },
+    })
+  ).map((i) => i.id)
+
+  const demoCloudAccountIds = (
+    await prisma.cloudAccount.findMany({
       where: {
         OR: [
-          { id: { startsWith: 'demo-inst-' } },
-          { externalId: { contains: 'demo' } },
-          { name: { contains: 'demo' } },
+          { id: { startsWith: 'demo-' } },
+          { credentials: { some: { credentialType: 'demo' } } },
         ],
       },
       select: { id: true },
     })
-  ).map((i) => i.id)
+  ).map((a) => a.id)
 
   if (demoInstanceIds.length) {
     await prisma.metricSample.deleteMany({ where: { resourceId: { in: demoInstanceIds } } })
@@ -25,13 +55,39 @@ export const clearDemoData = async (prisma: PrismaClient): Promise<void> => {
   await prisma.terraformRun.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   await prisma.terraformWorkspace.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   await prisma.instanceTemplate.deleteMany({ where: { id: { startsWith: 'demo-' } } })
-  await prisma.githubDeployment.deleteMany({ where: { id: { startsWith: 'gh-dep-' } } })
-  await prisma.githubWebhook.deleteMany({ where: { id: { startsWith: 'gh-wh-' } } })
-  await prisma.githubPullRequest.deleteMany({})
-  await prisma.githubCommit.deleteMany({})
-  await prisma.githubBranch.deleteMany({})
-  await prisma.githubRepository.deleteMany({ where: { id: { startsWith: 'gh-repo-' } } })
-  await prisma.githubAccount.deleteMany({ where: { id: { startsWith: 'demo-github' } } })
+
+  if (demoGithubAccountIds.length) {
+    await prisma.githubDeployment.deleteMany({
+      where: { repo: { accountId: { in: demoGithubAccountIds } } },
+    })
+    await prisma.githubWebhook.deleteMany({
+      where: {
+        OR: [
+          { accountId: { in: demoGithubAccountIds } },
+          { repo: { accountId: { in: demoGithubAccountIds } } },
+        ],
+      },
+    })
+    await prisma.githubPullRequest.deleteMany({
+      where: { repo: { accountId: { in: demoGithubAccountIds } } },
+    })
+    await prisma.githubCommit.deleteMany({
+      where: { repo: { accountId: { in: demoGithubAccountIds } } },
+    })
+    await prisma.githubBranch.deleteMany({
+      where: { repo: { accountId: { in: demoGithubAccountIds } } },
+    })
+    await prisma.githubRepository.deleteMany({
+      where: {
+        OR: [
+          { accountId: { in: demoGithubAccountIds } },
+          { id: { startsWith: 'gh-repo-' } },
+        ],
+      },
+    })
+    await prisma.githubAccount.deleteMany({ where: { id: { in: demoGithubAccountIds } } })
+  }
+
   await prisma.jenkinsBuild.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   await prisma.jenkinsJob.deleteMany({ where: { id: { startsWith: 'demo-' } } })
   await prisma.jenkinsServer.deleteMany({ where: { id: { startsWith: 'demo-' } } })
@@ -45,18 +101,16 @@ export const clearDemoData = async (prisma: PrismaClient): Promise<void> => {
   await prisma.notification.deleteMany({ where: { title: { contains: 'Demo' } } })
   await prisma.auditLog.deleteMany({ where: { action: { contains: 'demo' } } })
   await prisma.commandExecution.deleteMany({ where: { output: { contains: '[Demo]' } } })
-  await prisma.instance.deleteMany({
-    where: {
-      OR: [
-        { id: { startsWith: 'demo-inst-' } },
-        { externalId: { contains: 'demo' } },
-      ],
-    },
-  })
+
+  if (demoCloudAccountIds.length) {
+    await prisma.instance.deleteMany({ where: { cloudAccountId: { in: demoCloudAccountIds } } })
+    await prisma.cloudCredential.deleteMany({ where: { cloudAccountId: { in: demoCloudAccountIds } } })
+    await prisma.cloudRegion.deleteMany({ where: { cloudAccountId: { in: demoCloudAccountIds } } })
+    await prisma.cloudAccount.deleteMany({ where: { id: { in: demoCloudAccountIds } } })
+  }
+
+  await prisma.instance.deleteMany({ where: demoInstanceWhere })
   await prisma.vpsServer.deleteMany({ where: { id: { startsWith: 'demo-vps' } } })
-  await prisma.cloudCredential.deleteMany({ where: { cloudAccountId: { startsWith: 'demo-' } } })
-  await prisma.cloudRegion.deleteMany({ where: { cloudAccountId: { startsWith: 'demo-' } } })
-  await prisma.cloudAccount.deleteMany({ where: { id: { startsWith: 'demo-' } } })
 
   console.log('Demo data cleared.')
 }

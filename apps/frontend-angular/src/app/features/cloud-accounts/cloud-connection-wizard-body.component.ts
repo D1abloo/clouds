@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnInit, output } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, output } from '@angular/core'
 import { ReactiveFormsModule } from '@angular/forms'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
@@ -29,7 +29,7 @@ import type { ConnectionProviderId } from './cloud-account-wizard.config'
     BrandLogoComponent,
   ],
   templateUrl: './cloud-connection-wizard-body.component.html',
-  styleUrl: './cloud-account-form-dialog.component.scss',
+  styleUrl: './cloud-connection-wizard-body.component.scss',
 })
 export class CloudConnectionWizardBodyComponent implements OnInit {
   readonly facade = inject(CloudAccountWizardFacade)
@@ -39,6 +39,9 @@ export class CloudConnectionWizardBodyComponent implements OnInit {
   readonly initOptions = input<WizardInitOptions>({})
   readonly cancel = output<void>()
   readonly completed = output<{ created: boolean; accountId?: string; provider?: ConnectionProviderId }>()
+
+  readonly theme = computed(() => this.facade.wizardTheme())
+  readonly stepProgress = computed(() => this.facade.stepProgress())
 
   ngOnInit(): void {
     const opts = this.initOptions()

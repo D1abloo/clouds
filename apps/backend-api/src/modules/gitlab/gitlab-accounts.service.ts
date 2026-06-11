@@ -6,6 +6,8 @@ import { AppModeService } from '../../common/config/app-mode.service'
 import { SecretsVaultService } from '../cloud-accounts/secrets-vault.service'
 import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GitlabApiClient } from './gitlab-api.client'
+import { GitlabResourcesService } from './gitlab-resources.service'
+import { RealtimeGateway } from '../realtime/realtime.gateway'
 import { mapGitlabAccount, mapGitlabProject } from './gitlab-mappers'
 
 @Injectable()
@@ -17,10 +19,15 @@ export class GitlabAccountsService {
     private readonly mode: AppModeService,
     private readonly vault: SecretsVaultService,
     private readonly gitlab: GitlabApiClient,
+    private readonly resources: GitlabResourcesService,
+    private readonly realtime: RealtimeGateway,
   ) {}
 
-  async list() {
-    const items = await this.prisma.gitlabAccount.findMany({ orderBy: { createdAt: 'desc' } })
+  async list(userId?: string) {
+    const items = await this.prisma.gitlabAccount.findMany({
+      where: userId ? { createdById: userId } : undefined,
+      orderBy: { createdAt: 'desc' },
+    })
     if (this.mode.isProMode() && !this.mode.canUseDemoFallback() && !items.length) {
       return {
         ...connectionRequired('GitLab', 'Conecte una cuenta GitLab con token PAT o OAuth'),
@@ -42,7 +49,7 @@ export class GitlabAccountsService {
   ) {
     const token = body.token?.trim()
     if (!token) throw new BadRequestException('Token GitLab obligatorio')
-    const result = await this.gitlab.validateToken(token, body.baseUrl)
+    const result = await this.gitlab.validateToken(token, body.baseUrl, body.authType)
     await this.audit.create({
       userId,
       action: result.valid ? 'gitlab.validate_preview' : 'gitlab.validate_preview_failed',
@@ -61,10 +68,15 @@ export class GitlabAccountsService {
     }
   }
 
-  async previewProjects(body: { token: string; baseUrl?: string; excludeArchived?: boolean }) {
+  async previewProjects(body: {
+    token: string
+    baseUrl?: string
+    excludeArchived?: boolean
+    authType?: string
+  }) {
     const token = body.token?.trim()
     if (!token) throw new BadRequestException('Token GitLab obligatorio')
-    let projects = await this.gitlab.listAllProjects(token, body.baseUrl)
+    let projects = await this.gitlab.listAllProjects(token, body.baseUrl, 5, body.authType)
     if (body.excludeArchived !== false) projects = projects.filter((p) => !p.archived)
     return {
       items: projects.map((p) => ({
@@ -91,7 +103,7 @@ export class GitlabAccountsService {
   ) {
     const token = body.token?.trim()
     if (!token) throw new BadRequestException('Token GitLab obligatorio')
-    const preview = await this.gitlab.validateToken(token, body.baseUrl)
+    const preview = await this.gitlab.validateToken(token, body.baseUrl, body.authType)
     if (!preview.valid || !preview.user) {
       throw new BadRequestException(preview.error ?? 'No se pudo validar el token GitLab')
     }
@@ -124,7 +136,7 @@ export class GitlabAccountsService {
   async validate(userId: string, accountId: string) {
     const account = await this.findOrThrow(accountId)
     const token = this.readToken(account.tokenRef)
-    const result = await this.gitlab.validateToken(token, account.baseUrl)
+    const result = await this.gitlab.validateToken(token, account.baseUrl, account.authType)
     const updated = await this.prisma.gitlabAccount.update({
       where: { id: accountId },
       data: {
@@ -159,7 +171,7 @@ export class GitlabAccountsService {
     const account = await this.findOrThrow(accountId)
     if (account.status !== 'connected') await this.validate(userId, accountId)
     const token = this.readToken(account.tokenRef)
-    let projects = await this.gitlab.listAllProjects(token, account.baseUrl)
+    let projects = await this.gitlab.listAllProjects(token, account.baseUrl, 5, account.authType)
     if (body?.excludeArchived !== false) projects = projects.filter((p) => !p.archived)
     if (body?.selectedProjectIds?.length) {
       const selected = new Set(body.selectedProjectIds)
@@ -194,11 +206,18 @@ export class GitlabAccountsService {
         },
       })
       synced++
+      this.realtime.emitGitlabSyncProgress({
+        accountId,
+        step: 'project',
+        message: `Proyecto ${project.path_with_namespace} sincronizado`,
+        percent: Math.round((synced / Math.max(projects.length, 1)) * 100),
+      })
     }
     const updated = await this.prisma.gitlabAccount.update({
       where: { id: accountId },
       data: { lastSyncAt: new Date(), status: 'connected', lastError: null },
     })
+    this.realtime.emitGitlabSynced({ accountId, projectCount: synced })
     await this.audit.create({
       userId,
       action: 'gitlab.account.sync',
@@ -213,12 +232,18 @@ export class GitlabAccountsService {
       `${synced} proyectos sincronizados para ${account.username}.`,
     )
     const items = await this.prisma.gitlabProject.findMany({ where: { accountId } })
+    const counts = await this.resources.countResourcesForAccount(accountId)
     return {
       synced,
       projects: items.map(mapGitlabProject),
       account: mapGitlabAccount(updated, synced),
       lastSyncAt: updated.lastSyncAt?.toISOString(),
-      message: `${synced} proyectos sincronizados`,
+      branchesSynced: counts.branches,
+      commitsSynced: counts.commits,
+      mergeRequestsSynced: counts.mergeRequests,
+      webhooksSynced: counts.webhooks,
+      deploymentsSynced: counts.deployments,
+      message: `${synced} proyectos sincronizados · ${counts.branches} ramas · ${counts.mergeRequests} MRs`,
     }
   }
 

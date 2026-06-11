@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common'
+import { ForbiddenException, Injectable } from '@nestjs/common'
 import { CloudProvider } from '@prisma/client'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
+import { OrganizationScopeService } from '../../common/organization/organization-scope.service'
 
 @Injectable()
 export class AwsBillingService {
@@ -25,24 +26,90 @@ export class AzureBillingService {
 }
 
 @Injectable()
+export class CloudingBillingService {
+  async fetchCosts(_accountId: string) {
+    return {
+      daily: 18.4,
+      weekly: 128.0,
+      monthly: 520.0,
+      byService: { Instances: 380, Storage: 90, Network: 50 },
+    }
+  }
+}
+
+@Injectable()
 export class BillingService {
   constructor(
     private prisma: PrismaService,
     private aws: AwsBillingService,
     private gcp: GcpBillingService,
     private azure: AzureBillingService,
+    private clouding: CloudingBillingService,
     private realtime: RealtimeGateway,
+    private orgScope: OrganizationScopeService,
   ) {}
+
+  private emptySummary() {
+    return {
+      records: [],
+      byProvider: {} as Record<string, number>,
+      totalMonthly: 0,
+      totalCost: 0,
+      daily: 0,
+      weekly: 0,
+      currency: 'USD',
+      period: 'Current month',
+      forecastMonthly: 0,
+      varianceVsPreviousMonth: 0,
+      isEstimated: true,
+    }
+  }
+
+  private async ownedBillingAccountIds(userId: string): Promise<string[]> {
+    const scope = await this.orgScope.resolveForUser(userId)
+    if (!scope.projectIds.length) return []
+
+    const cloudAccounts = await this.prisma.cloudAccount.findMany({
+      where: { projectId: { in: scope.projectIds }, deletedAt: null },
+      select: { id: true, accountId: true, provider: true },
+    })
+    if (!cloudAccounts.length) return []
+
+    const orConditions = cloudAccounts.flatMap((ca) => [
+      { provider: ca.provider, accountId: ca.id },
+      ...(ca.accountId ? [{ provider: ca.provider, accountId: ca.accountId }] : []),
+    ])
+
+    const billingAccounts = await this.prisma.billingAccount.findMany({
+      where: { OR: orConditions },
+      select: { id: true },
+    })
+    return billingAccounts.map((b) => b.id)
+  }
 
   private getService(provider: CloudProvider) {
     switch (provider) {
       case CloudProvider.AWS: return this.aws
       case CloudProvider.GCP: return this.gcp
       case CloudProvider.AZURE: return this.azure
+      case CloudProvider.CLOUDING: return this.clouding
     }
   }
 
-  async syncBilling(provider: CloudProvider, accountId: string) {
+  async syncBilling(provider: CloudProvider, accountId: string, userId: string) {
+    const scope = await this.orgScope.resolveForUser(userId)
+    const owned = await this.prisma.cloudAccount.findFirst({
+      where: {
+        projectId: { in: scope.projectIds },
+        provider,
+        deletedAt: null,
+        OR: [{ id: accountId }, { accountId }],
+      },
+    })
+    if (!owned) {
+      throw new ForbiddenException('Sin acceso a esta cuenta cloud')
+    }
+
     const costs = await this.getService(provider).fetchCosts(accountId)
 
     let billingAccount = await this.prisma.billingAccount.findFirst({
@@ -73,8 +140,12 @@ export class BillingService {
     return { provider, accountId, costs, isEstimated: true }
   }
 
-  async getSummary() {
+  async getSummary(userId: string) {
+    const billingAccountIds = await this.ownedBillingAccountIds(userId)
+    if (!billingAccountIds.length) return this.emptySummary()
+
     const records = await this.prisma.billingRecord.findMany({
+      where: { billingAccountId: { in: billingAccountIds } },
       include: { billingAccount: true },
       orderBy: { periodStart: 'desc' },
       take: 200,

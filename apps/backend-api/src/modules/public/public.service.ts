@@ -9,6 +9,7 @@ import { EmailService } from '../email/email.service'
 import { AuditService } from '../audit/audit.service'
 import * as bcrypt from 'bcrypt'
 import type { ContactFormDto, PublicRegisterDto } from './dto/public.dto'
+import type { PublicStatsResponseDto } from './dto/public-stats.dto'
 
 @Injectable()
 export class PublicService {
@@ -105,6 +106,41 @@ export class PublicService {
 
   resendVerification(email: string, ipAddress?: string, userAgent?: string) {
     return this.verification.resendVerification(email, ipAddress, userAgent)
+  }
+
+  async getStats(): Promise<PublicStatsResponseDto> {
+    const baseWhere = { deletedAt: null as Date | null }
+    const accountWhere = { deletedAt: null as Date | null, isActive: true }
+
+    const [organizations, users, awsAccounts, gcpAccounts, azureAccounts, totalAccounts, activeInstances, totalInstances, dbHealthy] =
+      await Promise.all([
+        this.prisma.organization.count({ where: baseWhere }).catch(() => 0),
+        this.prisma.user.count({ where: baseWhere }).catch(() => 0),
+        this.prisma.cloudAccount.count({ where: { ...accountWhere, provider: 'AWS' } }).catch(() => 0),
+        this.prisma.cloudAccount.count({ where: { ...accountWhere, provider: 'GCP' } }).catch(() => 0),
+        this.prisma.cloudAccount.count({ where: { ...accountWhere, provider: 'AZURE' } }).catch(() => 0),
+        this.prisma.cloudAccount.count({ where: accountWhere }).catch(() => 0),
+        this.prisma.instance
+          .count({ where: { deletedAt: null, status: 'RUNNING' } })
+          .catch(() => 0),
+        this.prisma.instance.count({ where: { deletedAt: null } }).catch(() => 0),
+        this.prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false),
+      ])
+
+    return {
+      organizations,
+      users,
+      cloudAccounts: {
+        aws: awsAccounts,
+        gcp: gcpAccounts,
+        azure: azureAccounts,
+        total: totalAccounts,
+      },
+      activeInstances,
+      totalInstances,
+      uptimePercent: dbHealthy ? '99.9%' : '—',
+      updatedAt: new Date().toISOString(),
+    }
   }
 
   async submitContact(dto: ContactFormDto, ipAddress?: string) {

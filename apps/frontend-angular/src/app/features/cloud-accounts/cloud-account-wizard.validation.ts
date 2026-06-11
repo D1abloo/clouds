@@ -73,6 +73,10 @@ export const isWizardFormValid = (prov: ConnectionProviderId, v: WizardFormValue
     case 'DIGITALOCEAN':
     case 'HETZNER':
     case 'LINODE':
+    case 'IONOS':
+    case 'VULTR':
+    case 'SCALEWAY':
+    case 'CLOUDING':
       return !!v.apiToken?.trim() && !!v.defaultRegion?.trim()
     case 'CLOUDFLARE':
       if (v.credentialType === 'global_key') return !!v.apiEmail?.trim() && !!v.apiToken?.trim()

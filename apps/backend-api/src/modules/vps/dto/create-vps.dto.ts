@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator'
+import { IsInt, IsObject, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator'
 import { ApiProperty } from '@nestjs/swagger'
 
 export class CreateVpsDto {
@@ -29,6 +29,11 @@ export class CreateVpsDto {
   @IsOptional()
   @IsString()
   sshKeyRef?: string
+
+  @ApiProperty({ required: false, description: 'Provider, OS, environment, tags, etc.' })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>
 }
 
 export class ExecuteCommandDto {

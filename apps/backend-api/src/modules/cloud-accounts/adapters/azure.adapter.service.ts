@@ -28,7 +28,14 @@ import {
   createAzureSubscriptionClient,
   resolveAzureSubscriptionId,
 } from './sdk/azure-client.factory'
-import { isDemoMode, mapAzurePowerState, parseAzureResourceIds, sdkErrorMessage } from './sdk/adapter-sdk.util'
+import {
+  instancesOnSyncError,
+  isDemoMode,
+  mapAzurePowerState,
+  parseAzureResourceIds,
+  resolveSyncedInstances,
+  sdkErrorMessage,
+} from './sdk/adapter-sdk.util'
 
 const AZURE_PERMS = [
   'Microsoft.Compute/virtualMachines/read',
@@ -137,20 +144,19 @@ export class AzureAdapterService implements CloudProviderAdapter {
         id: `/subscriptions/${resolveAzureSubscriptionId(ctx) || 'demo'}/images/${i.id}`,
       }))
     }
-    return [
-      {
-        id: 'Canonical:ubuntu-22_04-lts:22_04-lts-gen2:latest',
-        name: 'Ubuntu 22.04 LTS',
-        region,
-        os: 'linux',
-      },
-      {
-        id: 'Debian:debian-12:12-gen2:latest',
-        name: 'Debian 12',
-        region,
-        os: 'linux',
-      },
+    const operational: CloudImage[] = [
+      { id: 'Canonical:ubuntu-22_04-lts:22_04-lts-gen2:latest', name: 'Ubuntu 22.04 LTS', region, os: 'linux', architecture: 'x86_64', status: 'available' },
+      { id: 'Debian:debian-12:12-gen2:latest', name: 'Debian 12', region, os: 'linux', architecture: 'x86_64', status: 'available' },
+      { id: 'MicrosoftWindowsServer:WindowsServer:2022-datacenter:latest', name: 'Windows Server 2022', region, os: 'windows', architecture: 'x86_64', status: 'available' },
+      { id: 'RedHat:RHEL:9-lvm-gen2:latest', name: 'RHEL 9', region, os: 'linux', architecture: 'x86_64', status: 'available' },
+      { id: 'Canonical:0001-com-ubuntu-server-jammy:22_04-lts-arm64:latest', name: 'Ubuntu 22.04 ARM64', region, os: 'linux', architecture: 'arm64', status: 'available' },
     ]
+    return operational.length
+      ? operational
+      : mockImages(ctx, region).map((i) => ({
+          ...i,
+          id: `/subscriptions/${resolveAzureSubscriptionId(ctx) || 'demo'}/images/${i.id}`,
+        }))
   }
 
   async listInstanceTypes(ctx: CloudAdapterContext, region: string): Promise<CloudInstanceType[]> {
@@ -197,10 +203,10 @@ export class AzureAdapterService implements CloudProviderAdapter {
           },
         })
       }
-      return items.length ? items : synthesizeInstances(ctx)
+      return resolveSyncedInstances(ctx, items, () => synthesizeInstances(ctx))
     } catch (err) {
       this.logger.warn(`Azure listInstances fallback: ${sdkErrorMessage(err)}`)
-      return synthesizeInstances(ctx)
+      return instancesOnSyncError(ctx, () => synthesizeInstances(ctx))
     }
   }
 
@@ -246,6 +252,22 @@ export class AzureAdapterService implements CloudProviderAdapter {
   }
 
   async launchInstance(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<CloudInstance> {
+    const resourceGroup = input.resourceGroup ?? (ctx.config['resourceGroup'] as string) ?? 'cloudops-rg'
+    const launchMeta = {
+      imageId: input.imageId,
+      subnetId: input.subnetId,
+      securityGroupIds: input.securityGroupIds,
+      availabilityZone: input.availabilityZone,
+      resourceGroup,
+      keyPair: input.keyPair,
+      publicIp: input.publicIp,
+      diskGb: input.diskGb,
+      diskType: input.diskType,
+      userData: input.userData ? true : false,
+      monitoring: input.monitoring,
+      tags: input.tags,
+    }
+
     if (isDemoMode(ctx)) {
       return {
         id: `vm-${Date.now().toString(36)}`,
@@ -254,11 +276,25 @@ export class AzureAdapterService implements CloudProviderAdapter {
         status: 'PENDING' as InstanceStatus,
         instanceType: input.instanceType,
         provider: ctx.provider,
-        metadata: { imageId: input.imageId, resourceGroup: ctx.config['resourceGroup'], isDemo: true },
+        metadata: { ...launchMeta, isDemo: true },
       }
     }
-    const resourceGroup = (ctx.config['resourceGroup'] as string) ?? 'cloudops-rg'
     const client = createAzureComputeClient(ctx)
+    const osProfile: Record<string, unknown> = {
+      computerName: input.name,
+      adminUsername: 'azureuser',
+      adminPassword: `Co${Date.now()}!Aa1`,
+    }
+    if (input.userData) {
+      osProfile.customData = Buffer.from(input.userData, 'utf8').toString('base64')
+    }
+
+    const osDisk = {
+      createOption: 'FromImage' as const,
+      ...(input.diskGb ? { diskSizeGB: input.diskGb } : {}),
+      ...(input.diskType ? { managedDisk: { storageAccountType: input.diskType } } : {}),
+    }
+
     const poller = await client.virtualMachines.beginCreateOrUpdate(resourceGroup, input.name, {
       location: input.region,
       hardwareProfile: { vmSize: input.instanceType },
@@ -269,15 +305,13 @@ export class AzureAdapterService implements CloudProviderAdapter {
           sku: '22_04-lts-gen2',
           version: 'latest',
         },
+        osDisk,
       },
-      osProfile: {
-        computerName: input.name,
-        adminUsername: 'azureuser',
-        adminPassword: `Co${Date.now()}!Aa1`,
-      },
+      osProfile: osProfile as never,
       networkProfile: {
-        networkInterfaces: [{ id: input.subnetId }],
+        networkInterfaces: input.subnetId ? [{ id: input.subnetId }] : [],
       },
+      tags: input.tags,
     })
     const vm = await poller.pollUntilDone()
     return {
@@ -287,7 +321,7 @@ export class AzureAdapterService implements CloudProviderAdapter {
       status: 'PENDING',
       instanceType: input.instanceType,
       provider: CloudProvider.AZURE,
-      metadata: { resourceGroup, vmName: vm.name, isDemo: false },
+      metadata: { ...launchMeta, vmName: vm.name, isDemo: false },
     }
   }
 

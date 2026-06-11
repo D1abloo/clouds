@@ -6,7 +6,7 @@ import { filter } from 'rxjs'
 import { MatIconModule } from '@angular/material/icon'
 import { CookieConsentService } from './cookie-consent.service'
 import { SPENDLYX_CONTACT_EMAIL } from './public.constants'
-import { bindPublicScroll, scrollPublicToTop } from './public-scroll.util'
+import { bindPublicScroll, scrollPublicAnchor, scrollPublicToTop } from './public-scroll.util'
 import { PUBLIC_THEME } from './public-theme'
 
 @Component({
@@ -22,10 +22,10 @@ import { PUBLIC_THEME } from './public-theme'
             <span>Spendlyx</span>
           </a>
           <nav class="pub-nav" aria-label="Principal">
+            <a href="/#funciones" (click)="handleAnchor($event, 'funciones')">Funciones</a>
             <a routerLink="/producto" routerLinkActive="active">Producto</a>
-            <a routerLink="/casos-de-uso" routerLinkActive="active">Casos de uso</a>
-            <a routerLink="/docs" routerLinkActive="active">Docs</a>
-            <a routerLink="/planes" routerLinkActive="active">Planes</a>
+            <a href="/#precios" (click)="handleAnchor($event, 'precios')">Precios</a>
+            <a href="/#faq" (click)="handleAnchor($event, 'faq')">FAQ</a>
             <a routerLink="/contacto" routerLinkActive="active">Contacto</a>
           </nav>
           <div class="pub-header__actions">
@@ -38,10 +38,10 @@ import { PUBLIC_THEME } from './public-theme'
         </div>
         @if (menuOpen()) {
           <nav class="pub-mobile-nav" aria-label="Menú móvil">
+            <a href="/#funciones" (click)="handleAnchor($event, 'funciones')">Funciones</a>
             <a routerLink="/producto" (click)="closeMenu()">Producto</a>
-            <a routerLink="/casos-de-uso" (click)="closeMenu()">Casos de uso</a>
-            <a routerLink="/docs" (click)="closeMenu()">Docs</a>
-            <a routerLink="/planes" (click)="closeMenu()">Planes</a>
+            <a href="/#precios" (click)="handleAnchor($event, 'precios')">Precios</a>
+            <a href="/#faq" (click)="handleAnchor($event, 'faq')">FAQ</a>
             <a routerLink="/contacto" (click)="closeMenu()">Contacto</a>
             <a routerLink="/login" (click)="closeMenu()">Iniciar sesión</a>
             <a routerLink="/registro" (click)="closeMenu()">Crear cuenta</a>
@@ -162,8 +162,19 @@ import { PUBLIC_THEME } from './public-theme'
     .pub-nav a.active { color: #0284c7; border-bottom-color: #0284c7; font-weight: 600; }
     .pub-nav a:hover { color: #0284c7; }
     .pub-header__actions { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
-    .pub-btn--sm { padding: 0.48rem 0.9rem; font-size: 0.78rem; }
-    .pub-menu-btn { display: grid; background: none; border: none; cursor: pointer; color: #0f172a; padding: 0.25rem; }
+    .pub-btn--sm { padding: 0.48rem 0.9rem; font-size: 0.78rem; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .pub-menu-btn {
+      display: grid;
+      place-items: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #0f172a;
+      padding: 0.35rem;
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: 10px;
+    }
     .pub-mobile-nav {
       display: flex;
       flex-direction: column;
@@ -178,6 +189,10 @@ import { PUBLIC_THEME } from './public-theme'
       .pub-nav { display: flex; }
       .pub-menu-btn, .pub-mobile-nav { display: none; }
       .pub-header__actions { margin-left: 0; }
+    }
+    @media (max-width: 899px) {
+      .pub-header__actions .pub-btn { display: none; }
+      .pub-header__inner { min-height: 60px; }
     }
     .pub-footer {
       background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
@@ -263,5 +278,18 @@ export class PublicLayoutComponent implements OnInit {
 
   savePrefs = (): void => {
     this.cookies.savePreferences(this.prefs)
+  }
+
+  handleAnchor = (event: Event, id: string): void => {
+    event.preventDefault()
+    this.closeMenu()
+    const onHome = this.router.url === '/' || this.router.url.startsWith('/#')
+    if (!onHome) {
+      void this.router.navigate(['/']).then(() => {
+        requestAnimationFrame(() => scrollPublicAnchor(id))
+      })
+      return
+    }
+    scrollPublicAnchor(id)
   }
 }

@@ -29,6 +29,21 @@ const passwordMatch = (group: AbstractControl): ValidationErrors | null => {
             <label>Apellidos<input formControlName="lastName" autocomplete="family-name" /></label>
           </div>
           <label>Empresa<input formControlName="company" autocomplete="organization" /></label>
+          <label>Plan
+            <select formControlName="plan">
+              <option value="starter">Starter — hasta 3 cuentas cloud</option>
+              <option value="growth">Growth — equipos medianos</option>
+              <option value="enterprise">Enterprise — SSO y SLA</option>
+            </select>
+          </label>
+          <label>Proveedor cloud principal
+            <select formControlName="cloudProvider">
+              <option value="aws">AWS</option>
+              <option value="gcp">GCP</option>
+              <option value="azure">Azure</option>
+              <option value="multi">Multi-cloud</option>
+            </select>
+          </label>
           <label>Email profesional<input type="email" formControlName="email" autocomplete="email" /></label>
           <label>Contraseña<input type="password" formControlName="password" autocomplete="new-password" /></label>
           <label>Confirmar contraseña<input type="password" formControlName="confirmPassword" autocomplete="new-password" /></label>
@@ -58,7 +73,7 @@ const passwordMatch = (group: AbstractControl): ValidationErrors | null => {
     form { display: flex; flex-direction: column; gap: .75rem; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
     label { display: flex; flex-direction: column; gap: .25rem; font-size: .8rem; font-weight: 600; }
-    label input { padding: .6rem .7rem; border: 1px solid #e2e8f0; border-radius: 10px; font: inherit; }
+    label input, label select { padding: .6rem .7rem; border: 1px solid #e2e8f0; border-radius: 10px; font: inherit; background: #fff; }
     label input:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); }
     .check { flex-direction: row; align-items: flex-start; font-weight: 400; font-size: .82rem; gap: 0.5rem; }
     .full { width: 100%; margin-top: .5rem; }
@@ -80,6 +95,8 @@ export class RegisterPageComponent {
     firstName: ['', Validators.required],
     lastName: ['', Validators.required],
     company: ['', Validators.required],
+    plan: ['starter', Validators.required],
+    cloudProvider: ['aws', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
     confirmPassword: ['', Validators.required],

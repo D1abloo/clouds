@@ -53,7 +53,7 @@ export const SIDEBAR_NAV: SidebarNavSection[] = [
     label: 'Automation',
     items: [
       { label: 'Jenkins', route: '/jenkins', icon: 'precision_manufacturing', tone: 'amber' },
-      { label: 'Terraform', route: '/terraform', icon: 'account_tree', tone: 'violet' },
+      { label: 'AI Infra Studio', route: '/infra/ai-studio', icon: 'auto_awesome', tone: 'violet' },
       { label: 'Terminal', route: '/terminal', icon: 'terminal', tone: 'slate' },
     ],
   },

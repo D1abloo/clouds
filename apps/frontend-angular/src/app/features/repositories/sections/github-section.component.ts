@@ -12,9 +12,7 @@ import { GithubAccountCardComponent } from '../components/github-account-card.co
 import { GithubSyncStatusComponent } from '../components/github-sync-status.component'
 import type { GithubAccount, GithubConnection, GithubRepo } from '../../../core/services/github.service'
 import {
-  CLIENT_DEMO_GITHUB_ACTIONS,
   CLIENT_DEMO_GITHUB_ISSUES,
-  CLIENT_DEMO_DEPLOYMENTS,
 } from '../utils/github.data'
 import { repoRoute } from '../repositories-section.config'
 import { RepositoriesQuickLinksComponent } from '../components/repositories-quick-links.component'
@@ -86,7 +84,7 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
         <mat-tab label="Repositorios">
           <div class="repo-data-block">
             <p class="repo-tab-hint">
-              Inventario sincronizado · {{ repos.length }} repos · PAT demo con scopes repo, workflow, admin:repo_hook
+              Inventario sincronizado en vivo · {{ repos.length }} repos · datos desde tu cuenta GitHub conectada
             </p>
             <mat-form-field appearance="outline" class="repo-select-field">
               <mat-label>Repositorio activo</mat-label>
@@ -139,9 +137,9 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
 
         <mat-tab label="GitHub Actions">
           <div class="repo-data-block">
-            <p class="repo-tab-hint">Workflows recientes · usa la sección Despliegues para historial completo</p>
+            <p class="repo-tab-hint">GitHub Actions en tiempo real · {{ workflowRuns.length }} ejecuciones recientes</p>
             <ul class="repo-inline-list">
-              @for (w of actions; track w['id']) {
+              @for (w of workflowRuns; track w['id']) {
                 <li>
                   <strong>{{ w['workflow'] }}</strong>
                   <span class="repo-muted">{{ w['repoFullName'] }}</span>
@@ -187,9 +185,10 @@ import { RepositoriesQuickLinksComponent } from '../components/repositories-quic
 
         <mat-tab label="Logs">
           <div class="repo-data-block">
-            <pre class="repo-log-preview">[GitHub] Sync cloudops-lab OK
-[GitHub] workflow build-and-test #128 success
-[GitHub] webhook push delivered · 3 despliegues activos</pre>
+            <pre class="repo-log-preview">{{ syncLogs || '[GitHub] Sin actividad reciente — sincroniza tu cuenta' }}</pre>
+            @if (deployments.length) {
+              <p class="repo-tab-hint">{{ deployments.length }} despliegues registrados en tu workspace</p>
+            }
             <div class="repo-toolbar repo-toolbar--inline">
               <button mat-stroked-button type="button" (click)="viewLogs.emit()">
                 <mat-icon>terminal</mat-icon> Panel de logs
@@ -211,10 +210,11 @@ export class GithubSectionComponent {
   @Input() demoMode = true
   @Input() syncStatus: 'connected' | 'pending' | 'invalid' | 'disconnected' = 'connected'
   @Input() repoControl = new FormControl<string>('', { nonNullable: true })
+  @Input() workflowRuns: Record<string, unknown>[] = []
+  @Input() deployments: Record<string, unknown>[] = []
+  @Input() syncLogs = ''
 
-  readonly actions = CLIENT_DEMO_GITHUB_ACTIONS
   readonly issues = CLIENT_DEMO_GITHUB_ISSUES
-  readonly githubDeployments = CLIENT_DEMO_DEPLOYMENTS
   readonly cols = ['name', 'language', 'stars', 'branch', 'actions']
   readonly routes = {
     webhooks: repoRoute('webhooks'),

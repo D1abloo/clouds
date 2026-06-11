@@ -10,11 +10,25 @@ export type IntegrationDispatchPayload = {
 }
 
 export type IntegrationSendResult = {
-  status: 'sent' | 'simulated' | 'failed'
+  status: 'sent' | 'simulated' | 'failed' | 'routed' | 'logged'
   httpStatus?: number
   latencyMs?: number
   error?: string
   responsePreview?: string
+}
+
+/** Integraciones enlazadas a módulos del panel (no webhook HTTP). */
+export const PLATFORM_INTEGRATION_IDS: IntegrationId[] = ['github', 'servicenow', 'teams']
+
+export const WEBHOOK_INTEGRATION_IDS: IntegrationId[] = ['slack', 'pagerduty', 'jira']
+
+export const INTEGRATION_CONNECT_ROUTES: Record<IntegrationId, string | null> = {
+  slack: '/settings/integrations',
+  pagerduty: '/settings/integrations',
+  jira: '/settings/integrations',
+  servicenow: '/settings/integrations',
+  teams: '/settings/integrations',
+  github: '/admin/configuracion/integraciones/github/conectar',
 }
 
 export const DEFAULT_INTEGRATIONS: Array<{

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-label="Vista de facturaci�n Spendlyx">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f0f9ff"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="960" height="640" fill="url(#bg)"/>
+  <rect x="32" y="28" width="896" height="584" rx="16" fill="#fff" filter="url(#shadow)"/>
+  <rect x="32" y="28" width="896" height="56" rx="16" fill="#0f172a"/>
+  <rect x="32" y="68" width="896" height="16" fill="#0f172a"/>
+  <circle cx="60" cy="56" r="6" fill="#f87171"/>
+  <circle cx="80" cy="56" r="6" fill="#fbbf24"/>
+  <circle cx="100" cy="56" r="6" fill="#4ade80"/>
+  <text x="130" y="60" fill="#e2e8f0" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600">Spendlyx  Facturaci�n</text>
+  <text x="780" y="60" fill="#94a3b8" font-family="Inter, system-ui, sans-serif" font-size="12">Junio 2026 � MTD</text>
+
+  <text x="56" y="118" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="800">Facturaci�n</text>
+  <text x="56" y="142" fill="#64748b" font-family="Inter, system-ui, sans-serif" font-size="13">Resumen de gasto cloud, previsiones y alertas de coste</text>
+
+  <rect x="56" y="168" width="180" height="72" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+  <text x="72" y="196" fill="#047857" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">AWS</text>
+  <text x="72" y="224" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="800">$4,280.50</text>
+
+  <rect x="252" y="168" width="180" height="72" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+  <text x="268" y="196" fill="#047857" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">GCP</text>
+  <text x="268" y="224" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="800">$1,942.30</text>
+
+  <rect x="448" y="168" width="180" height="72" rx="10" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+  <text x="464" y="196" fill="#047857" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">AZURE</text>
+  <text x="464" y="224" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="800">$876.15</text>
+
+  <rect x="644" y="168" width="252" height="72" rx="10" fill="#d1fae5" stroke="#047857" stroke-width="2"/>
+  <text x="660" y="196" fill="#047857" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">TOTAL MES</text>
+  <text x="660" y="224" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="800">$7,098.95</text>
+
+  <rect x="56" y="264" width="840" height="140" rx="12" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="72" y="292" fill="#64748b" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">TENDENCIA DIARIA</text>
+  <polyline points="80,360 140,340 200,350 260,310 320,320 380,280 440,290 500,250 560,260 620,230 680,240 740,210 800,220 860,200" fill="none" stroke="url(#accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="72" y1="380" x2="880" y2="380" stroke="#e2e8f0" stroke-width="1"/>
+
+  <rect x="56" y="424" width="840" height="168" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <rect x="56" y="424" width="840" height="36" rx="12" fill="#f1f5f9"/>
+  <rect x="56" y="448" width="840" height="12" fill="#f1f5f9"/>
+  <text x="72" y="448" fill="#475569" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">PROVEEDOR</text>
+  <text x="220" y="448" fill="#475569" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">INSTANCIA / SERVICIO</text>
+  <text x="620" y="448" fill="#475569" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">MTD</text>
+  <text x="760" y="448" fill="#475569" font-family="Inter, system-ui, sans-serif" font-size="11" font-weight="700">PROYECCI�N</text>
+
+  <line x1="56" y1="460" x2="896" y2="460" stroke="#e2e8f0"/>
+  <text x="72" y="486" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600">AWS</text>
+  <text x="220" y="486" fill="#334155" font-family="Inter, system-ui, sans-serif" font-size="12">prod-api-01 � t3.large</text>
+  <text x="620" y="486" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600">$842.20</text>
+  <text x="760" y="486" fill="#64748b" font-family="Inter, system-ui, sans-serif" font-size="12">$1,124.00</text>
+
+  <line x1="56" y1="500" x2="896" y2="500" stroke="#f1f5f9"/>
+  <text x="72" y="526" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600">GCP</text>
+  <text x="220" y="526" fill="#334155" font-family="Inter, system-ui, sans-serif" font-size="12">gke-worker-pool � n2-standard-4</text>
+  <text x="620" y="526" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600">$1,156.80</text>
+  <text x="760" y="526" fill="#64748b" font-family="Inter, system-ui, sans-serif" font-size="12">$1,540.00</text>
+
+  <line x1="56" y1="540" x2="896" y2="540" stroke="#f1f5f9"/>
+  <text x="72" y="566" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600">AZURE</text>
+  <text x="220" y="566" fill="#334155" font-family="Inter, system-ui, sans-serif" font-size="12">vm-staging-02 � Standard_D4s_v3</text>
+  <text x="620" y="566" fill="#0f172a" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="600">$312.45</text>
+  <text x="760" y="566" fill="#64748b" font-family="Inter, system-ui, sans-serif" font-size="12">$416.00</text>
+</svg>

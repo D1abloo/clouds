@@ -11,6 +11,7 @@ enum CloudProvider {
   AWS
   GCP
   AZURE
+  CLOUDING
 }
 
 enum InstanceStatus {
@@ -44,6 +45,24 @@ enum MembershipRole {
   OWNER
   ADMIN
   MEMBER
+}
+
+enum CopilotAiProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  OPENROUTER
+}
+
+enum CopilotScopeMode {
+  PANEL_ONLY
+}
+
+enum CopilotTaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
 }
 
 model User {
@@ -101,16 +120,54 @@ model ContactMessage {
 }
 
 model Organization {
-  id          String       @id @default(uuid())
+  id          String                  @id @default(uuid())
   name        String
-  slug        String       @unique
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  deletedAt   DateTime?    @map("deleted_at")
+  slug        String                  @unique
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+  deletedAt   DateTime?               @map("deleted_at")
   projects    Project[]
   memberships Membership[]
+  aiSettings  OrganizationAiSettings?
 
   @@map("organizations")
+}
+
+model OrganizationAiSettings {
+  id              String            @id @default(uuid())
+  organizationId  String            @unique @map("organization_id")
+  enabled         Boolean           @default(false)
+  provider        CopilotAiProvider @default(OPENAI)
+  model           String            @default("gpt-4o-mini")
+  apiKeySecretRef String?           @map("api_key_secret_ref") @db.Text
+  apiKeyHint      String?           @map("api_key_hint")
+  scopeMode       CopilotScopeMode  @default(PANEL_ONLY) @map("scope_mode")
+  allowAutonomous Boolean           @default(false) @map("allow_autonomous")
+  allowLaunch     Boolean           @default(false) @map("allow_launch")
+  maxTokens       Int               @default(2048) @map("max_tokens")
+  temperature     Float             @default(0.3)
+  systemPrompt    String?           @map("system_prompt") @db.Text
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_ai_settings")
+}
+
+model CopilotAutonomousTask {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  userId         String            @map("user_id")
+  prompt         String            @db.Text
+  status         CopilotTaskStatus @default(PENDING)
+  result         String?           @db.Text
+  actions        Json              @default("[]")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
+  @@map("copilot_autonomous_tasks")
 }
 
 model Membership {

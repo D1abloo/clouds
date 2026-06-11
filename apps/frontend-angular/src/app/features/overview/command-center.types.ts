@@ -28,6 +28,16 @@ export interface CommandCenterActionResult {
   metadata?: Record<string, unknown>
 }
 
+export interface CommandCenterPlatformStatApi {
+  logo: string
+  label: string
+  provider: string
+  tasks: number
+  successRate: number
+  lastAction: string
+  connected: boolean
+}
+
 export interface CommandCenterRecentApiRow {
   id: string
   action: string

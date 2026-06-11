@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common'
-import { Component, computed, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core'
+import { Component, computed, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core'
+import { ActivatedRoute, Router } from '@angular/router'
 import { MatSlideToggleModule } from '@angular/material/slide-toggle'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
@@ -27,6 +28,7 @@ import {
   SETTINGS_ACCOUNT_META,
   SETTINGS_GENERAL,
   SETTINGS_INTEGRATIONS,
+  INTEGRATION_UI_CATALOG,
   SETTINGS_NOTIFICATION_CHANNELS,
   SETTINGS_PLATFORM_SOURCES,
   SETTINGS_NOTIF_HISTORY,
@@ -232,16 +234,31 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
                   </p>
                   <div class="set-int-sources__grid">
                     @for (src of platformSources(); track src.id) {
-                      <article class="set-int-source">
+                      <article class="set-int-source" [class.set-int-source--live]="src.connected">
                         <header>
                           <strong>{{ src.label }}</strong>
-                          <code>{{ src.module }}</code>
+                          <span class="set-int-source__status" [attr.data-on]="src.connected">
+                            {{ src.connected ? 'LIVE' : 'Sin conectar' }}
+                          </span>
                         </header>
+                        <p class="set-int-source__summary">{{ src.summary }}</p>
                         <ul>
                           @for (ev of src.events; track ev) {
                             <li><code>{{ ev }}</code></li>
                           }
                         </ul>
+                        <div class="set-int-source__actions">
+                          @if (src.route) {
+                            <button type="button" class="set-int-source__link" (click)="openRoute(src.route!)">
+                              <mat-icon>open_in_new</mat-icon> Abrir módulo
+                            </button>
+                          }
+                          @if (src.connectRoute && !src.connected) {
+                            <button type="button" class="set-int-source__link set-int-source__link--primary" (click)="openRoute(src.connectRoute!)">
+                              <mat-icon>link</mat-icon> Conectar
+                            </button>
+                          }
+                        </div>
                       </article>
                     }
                   </div>
@@ -271,6 +288,11 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
                       </span>
                       @if (int.enabled) {
                         <span class="set-int-meta">{{ int.events24h }} evt/24h · {{ relativeTime(int.lastSync) }}</span>
+                      }
+                      @if (int.id === 'github' && !int.accountConnected) {
+                        <button type="button" class="set-int-connect" (click)="openRoute('/admin/configuracion/integraciones/github/conectar')">
+                          <mat-icon>link</mat-icon> Conectar GitHub
+                        </button>
                       }
                       <button type="button" class="set-int-config" (click)="configureIntegration(int)">
                         <mat-icon>settings</mat-icon> Configurar
@@ -357,6 +379,54 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
             }
 
             @case ('security') {
+              <section class="set-mfa-panel">
+                <header>
+                  <div>
+                    <h3><mat-icon>verified_user</mat-icon> Autenticación multifactor (MFA)</h3>
+                    <p>Protege cuentas administrativas con TOTP o llaves de seguridad FIDO2.</p>
+                  </div>
+                  <span class="set-mfa-status" [attr.data-on]="mfaEnabled()">
+                    {{ mfaEnabled() ? 'Activo' : 'Pendiente' }}
+                  </span>
+                </header>
+                <div class="set-mfa-grid">
+                  <article class="set-mfa-card" [class.set-mfa-card--on]="mfaEnforceAdmins()">
+                    <mat-icon>admin_panel_settings</mat-icon>
+                    <div>
+                      <strong>MFA obligatorio para admins</strong>
+                      <span>Requiere segundo factor en cada inicio de sesión</span>
+                    </div>
+                    <mat-slide-toggle
+                      [checked]="mfaEnforceAdmins()"
+                      (change)="mfaEnforceAdmins.set($event.checked)"
+                      aria-label="MFA obligatorio para administradores"
+                    />
+                  </article>
+                  <article class="set-mfa-card" [class.set-mfa-card--on]="mfaRememberDevice()">
+                    <mat-icon>devices</mat-icon>
+                    <div>
+                      <strong>Recordar dispositivo</strong>
+                      <span>Confía en este navegador durante 30 días</span>
+                    </div>
+                    <mat-slide-toggle
+                      [checked]="mfaRememberDevice()"
+                      (change)="mfaRememberDevice.set($event.checked)"
+                      aria-label="Recordar dispositivo"
+                    />
+                  </article>
+                  <article class="set-mfa-card">
+                    <mat-icon>phonelink_lock</mat-icon>
+                    <div>
+                      <strong>Método actual</strong>
+                      <span>{{ mfaMethod() }}</span>
+                    </div>
+                    <button type="button" class="set-mfa-config" (click)="saveSection('MFA')">
+                      Configurar
+                    </button>
+                  </article>
+                </div>
+              </section>
+
               <div class="set-sec-hero">
                 <div class="set-sec-score">
                   <svg viewBox="0 0 80 80" aria-hidden="true">
@@ -547,6 +617,7 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
     :host { display: block; flex: 1; min-height: 0; }
     .set-page {
       display: flex; flex-direction: column; gap: 0.65rem;
+      width: 100%; max-width: 100%;
       overflow-y: auto; scrollbar-width: thin;
       --page-accent: ${ADMIN_SETTINGS_ACCENT};
     }
@@ -730,10 +801,30 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
       display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 0.45rem;
     }
     .set-int-source {
-      padding: 0.55rem 0.65rem; border-radius: 9px; border: 1px solid #e2e8f0; background: #fafbfc;
-      header { display: flex; flex-direction: column; gap: 0.12rem; margin-bottom: 0.35rem; strong { font-size: 0.72rem; color: #0f172a; } code { font-size: 0.55rem; color: #94a3b8; } }
+      border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.65rem 0.75rem; background: #fff;
+      &--live { border-color: #86efac; background: linear-gradient(180deg, #f0fdf4, #fff); }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; margin-bottom: 0.35rem; }
+      strong { font-size: 0.72rem; }
+      &__status {
+        font-size: 0.55rem; font-weight: 800; letter-spacing: 0.04em; padding: 0.1rem 0.35rem; border-radius: 999px;
+        background: #f1f5f9; color: #64748b;
+        &[data-on="true"] { background: #dcfce7; color: #15803d; }
+      }
+      &__summary { margin: 0 0 0.35rem; font-size: 0.62rem; color: #64748b; }
       ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.22rem; }
-      li code { font-size: 0.55rem; padding: 0.06rem 0.28rem; border-radius: 4px; background: #fff; border: 1px solid #e2e8f0; color: ${ADMIN_SETTINGS_ACCENT}; }
+      li code { font-size: 0.55rem; padding: 0.08rem 0.28rem; border-radius: 4px; background: #f8fafc; color: #475569; }
+      &__actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+      &__link {
+        display: inline-flex; align-items: center; gap: 0.2rem; border: 1px solid #e2e8f0; background: #fff;
+        border-radius: 8px; padding: 0.22rem 0.45rem; font: inherit; font-size: 0.6rem; font-weight: 650; cursor: pointer; color: #475569;
+        mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
+        &--primary { border-color: ${ADMIN_SETTINGS_ACCENT_BORDER}; color: ${ADMIN_SETTINGS_ACCENT}; background: ${ADMIN_SETTINGS_ACCENT_LIGHT}; }
+      }
+    }
+    .set-int-connect {
+      display: inline-flex; align-items: center; gap: 0.2rem; border: 1px solid #86efac; background: #f0fdf4;
+      border-radius: 8px; padding: 0.2rem 0.45rem; font: inherit; font-size: 0.6rem; font-weight: 700; cursor: pointer; color: #15803d;
+      mat-icon { font-size: 0.85rem; width: 0.85rem; height: 0.85rem; }
     }
 
     .set-deliveries { margin-top: 0.65rem; }
@@ -745,6 +836,7 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
       padding: 0.08rem 0.35rem; border-radius: 999px;
       &[data-status='sent'] { background: #dcfce7; color: #15803d; }
       &[data-status='simulated'] { background: #fef3c7; color: #b45309; }
+      &[data-status='routed'], &[data-status='logged'] { background: #dbeafe; color: #1d4ed8; }
       &[data-status='failed'] { background: #fef2f2; color: #dc2626; }
     }
 
@@ -764,6 +856,39 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
     .set-notif-row__body p { margin: 0.15rem 0 0; font-size: 0.64rem; color: #64748b; line-height: 1.45; }
     .set-notif-metrics { display: flex; gap: 0.65rem; margin-top: 0.28rem; font-size: 0.6rem; color: #94a3b8; }
     .set-notif-rate { font-weight: 700; &[data-ok='true'] { color: #15803d; } &[data-ok='false'] { color: #d97706; } }
+
+    .set-mfa-panel {
+      margin-bottom: 0.65rem;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      border: 1px solid ${ADMIN_SETTINGS_ACCENT_BORDER};
+      background: #fff;
+      header {
+        display: flex; align-items: flex-start; justify-content: space-between; gap: 0.65rem; margin-bottom: 0.65rem;
+        h3 { display: flex; align-items: center; gap: 0.35rem; margin: 0 0 0.2rem; font-size: 0.82rem; font-weight: 700; color: #0f172a; mat-icon { color: ${ADMIN_SETTINGS_ACCENT}; font-size: 1rem; width: 1rem; height: 1rem; } }
+        p { margin: 0; font-size: 0.66rem; color: #64748b; line-height: 1.5; max-width: 36rem; }
+      }
+    }
+    .set-mfa-status {
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase; padding: 0.2rem 0.5rem; border-radius: 999px;
+      background: #fef3c7; color: #b45309;
+      &[data-on='true'] { background: #dcfce7; color: #15803d; }
+    }
+    .set-mfa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 0.5rem; }
+    .set-mfa-card {
+      display: flex; align-items: center; gap: 0.55rem;
+      padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid #e2e8f0; background: #fafbfc;
+      mat-icon { color: ${ADMIN_SETTINGS_ACCENT}; flex-shrink: 0; }
+      strong { display: block; font-size: 0.72rem; }
+      span { display: block; font-size: 0.6rem; color: #64748b; margin-top: 0.08rem; }
+      &--on { border-color: #86efac; background: #f0fdf4; }
+    }
+    .set-mfa-config {
+      margin-left: auto; border: 1px solid ${ADMIN_SETTINGS_ACCENT_BORDER}; background: #fff;
+      border-radius: 8px; padding: 0.25rem 0.5rem; font: inherit; font-size: 0.6rem; font-weight: 700;
+      color: ${ADMIN_SETTINGS_ACCENT}; cursor: pointer;
+      &:hover { background: ${ADMIN_SETTINGS_ACCENT_LIGHT}; }
+    }
 
     .set-sec-hero {
       display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
@@ -882,7 +1007,7 @@ import { AdminSettingsIntegrationDialogComponent } from './admin-settings-integr
     }
   `,
 })
-export class AdminSettingsPageComponent implements OnInit {
+export class AdminSettingsPageComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService)
   readonly theme = inject(ThemeService)
   readonly pro = inject(ProModeService)
@@ -890,6 +1015,10 @@ export class AdminSettingsPageComponent implements OnInit {
   private readonly actions = inject(PlatformActionService)
   private readonly dialog = inject(MatDialog)
   private readonly integrationsApi = inject(IntegrationsService)
+  private readonly router = inject(Router)
+  private readonly route = inject(ActivatedRoute)
+
+  private pollTimer: ReturnType<typeof setInterval> | null = null
 
   readonly apiUrl = environment.apiUrl
   readonly general = SETTINGS_GENERAL
@@ -900,6 +1029,10 @@ export class AdminSettingsPageComponent implements OnInit {
   readonly timezones = ['Europe/Madrid', 'Europe/London', 'America/New_York', 'America/Sao_Paulo', 'UTC']
 
   readonly orgName = signal('Spendlyx')
+  readonly mfaEnabled = signal(true)
+  readonly mfaEnforceAdmins = signal(true)
+  readonly mfaRememberDevice = signal(false)
+  readonly mfaMethod = signal('TOTP (Google Authenticator)')
   readonly timezone = signal(SETTINGS_GENERAL.timezone)
   readonly locale = signal(SETTINGS_GENERAL.locale)
   readonly syncInterval = signal(SETTINGS_GENERAL.syncIntervalMin)
@@ -923,7 +1056,9 @@ export class AdminSettingsPageComponent implements OnInit {
 
   readonly currentTab = computed(() => this.tabs.find((t) => t.id === this.view()) ?? this.tabs[0])
   readonly activeIntegrations = computed(() => this.integrations().filter((i) => i.enabled).length)
-  readonly connectedIntegrations = computed(() => this.integrations().filter((i) => i.status === 'connected').length)
+  readonly connectedIntegrations = computed(() =>
+    this.integrations().filter((i) => i.status === 'connected' || i.accountConnected).length,
+  )
   readonly totalEvents24h = computed(() => this.integrations().reduce((s, i) => s + (i.enabled ? i.events24h : 0), 0))
   readonly activeNotifChannels = computed(() => this.notificationChannels().filter((c) => c.enabled).length)
   readonly enabledPolicies = computed(() => this.securityPolicies().filter((p) => p.enabled).length)
@@ -939,21 +1074,43 @@ export class AdminSettingsPageComponent implements OnInit {
     switch (status) {
       case 'sent': return 'Enviado'
       case 'simulated': return 'Simulado'
+      case 'routed': return 'Enrutado'
+      case 'logged': return 'Registrado'
       case 'failed': return 'Fallido'
       default: return status
     }
   }
 
   ngOnInit(): void {
+    const section = this.route.snapshot.paramMap.get('section') as SettingsTabId | null
+    if (section && this.tabs.some((t) => t.id === section)) {
+      this.view.set(section)
+    }
+    this.route.paramMap.subscribe((params) => {
+      const s = params.get('section') as SettingsTabId | null
+      if (s && this.tabs.some((t) => t.id === s)) this.view.set(s)
+    })
+
     if (allowsDemoDataFrom(this.pro)) {
-      this.integrations.set([...SETTINGS_INTEGRATIONS])
+      this.integrations.set([...INTEGRATION_UI_CATALOG])
       this.notificationChannels.set([...SETTINGS_NOTIFICATION_CHANNELS])
       this.securityPolicies.set([...SETTINGS_SECURITY_POLICIES])
     }
     this.loadIntegrationsFromApi()
+    this.pollTimer = setInterval(() => {
+      if (this.view() === 'integrations') this.loadIntegrationsFromApi(false)
+    }, 30_000)
   }
 
-  private loadIntegrationsFromApi = (): void => {
+  ngOnDestroy(): void {
+    if (this.pollTimer) clearInterval(this.pollTimer)
+  }
+
+  openRoute = (path: string): void => {
+    void this.router.navigateByUrl(path)
+  }
+
+  private loadIntegrationsFromApi = (showLoading = true): void => {
     this.integrationsApi.getStatus().subscribe((s) => {
       if (s) this.integrationsStatus.set(s)
     })
@@ -968,22 +1125,30 @@ export class AdminSettingsPageComponent implements OnInit {
   }
 
   private mapIntegrationRow = (row: IntegrationConfigDto): SettingsIntegration => {
-    const demo = SETTINGS_INTEGRATIONS.find((d) => d.id === row.id)
+    const demo = INTEGRATION_UI_CATALOG.find((d) => d.id === row.id)
     if (!demo) {
       return {
         id: row.id,
         label: row.label,
-        desc: '',
+        desc: row.accountSummary ?? '',
         category: row.category as SettingsIntegration['category'],
         icon: 'hub',
         enabled: row.enabled,
         status: row.status as SettingsIntegration['status'],
         lastSync: row.lastSync ?? new Date().toISOString(),
-        events24h: 0,
+        events24h: row.events24h ?? 0,
         accent: ADMIN_SETTINGS_ACCENT,
+        accountConnected: row.accountConnected,
+        connectRoute: row.connectRoute,
+        kind: row.kind,
       }
     }
-    return mergeIntegrationFromApi(row, demo)
+    return {
+      ...mergeIntegrationFromApi(row, demo),
+      accountConnected: row.accountConnected,
+      connectRoute: row.connectRoute,
+      kind: row.kind,
+    }
   }
 
   private applyIntegrationRow = (row: IntegrationConfigDto): void => {

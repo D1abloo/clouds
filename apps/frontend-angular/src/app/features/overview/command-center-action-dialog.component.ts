@@ -8,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatRadioModule } from '@angular/material/radio'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
-import { COMMAND_CENTER_ACTION_PRESETS, COMMAND_CENTER_PLATFORMS } from './overview-pages.data'
+import { COMMAND_CENTER_ACTION_PRESETS, EMPTY_COMMAND_CENTER_PLATFORMS } from './overview-pages.data'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 
 export interface CommandCenterActionDialogData {
@@ -86,7 +86,7 @@ export interface CommandCenterActionDialogResult {
           <div class="cmd-dialog__row">
             <mat-form-field appearance="fill" subscriptSizing="dynamic">
               <mat-label>Recurso</mat-label>
-              <input matInput formControlName="resource" placeholder="aws-prod-app-1" />
+              <input matInput formControlName="resource" placeholder="Nombre o ID del recurso" />
             </mat-form-field>
             <mat-form-field appearance="fill" subscriptSizing="dynamic">
               <mat-label>Región / scope</mat-label>
@@ -190,14 +190,14 @@ export class CommandCenterActionDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<CommandCenterActionDialogComponent, CommandCenterActionDialogResult>)
   readonly data = inject<CommandCenterActionDialogData>(MAT_DIALOG_DATA, { optional: true })
 
-  readonly platforms = COMMAND_CENTER_PLATFORMS
+  readonly platforms = EMPTY_COMMAND_CENTER_PLATFORMS
   readonly presets = COMMAND_CENTER_ACTION_PRESETS
 
   readonly form = this.fb.nonNullable.group({
     provider: [this.data?.prefill?.provider ?? 'AWS', Validators.required],
     action: [this.data?.prefill?.action ?? 'Reiniciar instancia', Validators.required],
-    resource: [this.data?.prefill?.resource ?? 'aws-prod-app-1', Validators.required],
-    region: [this.data?.prefill?.region ?? 'us-east-1', Validators.required],
+    resource: [this.data?.prefill?.resource ?? '', Validators.required],
+    region: [this.data?.prefill?.region ?? '', Validators.required],
     mode: ['now' as 'now' | 'queue', Validators.required],
     priority: ['normal' as 'normal' | 'high', Validators.required],
   })

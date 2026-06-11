@@ -13,7 +13,7 @@ import { GithubService } from '../../../core/services/github.service'
 import { GitlabService } from '../../../core/services/gitlab.service'
 import { ProModeService } from '../../../core/services/pro-mode.service'
 import { ToastService } from '../../../core/services/toast.service'
-import { catchError, of, switchMap } from 'rxjs'
+import { catchError, of, switchMap, throwError } from 'rxjs'
 import {
   REPO_AUTH_METHOD_CARDS,
   REPO_PROVIDER_CARDS,
@@ -86,7 +86,21 @@ export class RepositoryConnectionWizardComponent implements OnInit {
   readonly providerLabel = computed(() =>
     this.provider() === 'gitlab' ? 'GitLab' : this.provider() === 'github' ? 'GitHub' : 'repositorio',
   )
-  readonly oauthAvailable = computed(() => this.pro.oauthGithubEnabled())
+  readonly oauthAvailable = computed(() => {
+    const prov = this.provider()
+    if (prov === 'gitlab') return this.pro.oauthGitlabEnabled()
+    if (prov === 'github') return this.pro.oauthGithubEnabled()
+    return false
+  })
+
+  readonly oauthHint = computed(() => {
+    const prov = this.provider()
+    if (this.oauthAvailable()) {
+      return `Autoriza en ${this.providerLabel()} sin pegar tokens — se abrirá la ventana de ${this.providerLabel()}.`
+    }
+    const envVar = prov === 'gitlab' ? 'GITLAB_CLIENT_ID' : 'GITHUB_CLIENT_ID'
+    return `OAuth no está configurado en el servidor (${envVar}). Usa token PAT o contacta al administrador.`
+  })
 
   form = this.fb.nonNullable.group({
     connectionName: ['', Validators.required],
@@ -95,6 +109,10 @@ export class RepositoryConnectionWizardComponent implements OnInit {
   })
 
   ngOnInit(): void {
+    if (!this.pro.loaded()) {
+      this.pro.loadStatus()
+    }
+
     const fromRoute = this.route.snapshot.data['provider'] as RepoProviderId | undefined
     const fromParam = this.route.snapshot.paramMap.get('provider') as RepoProviderId | null
     const initial = fromRoute ?? fromParam
@@ -102,6 +120,35 @@ export class RepositoryConnectionWizardComponent implements OnInit {
       this.provider.set(initial)
       this.step.set('method')
     }
+
+    const oauthError = this.route.snapshot.queryParamMap.get('oauth_error')
+    if (oauthError) {
+      this.toast.error(decodeURIComponent(oauthError))
+    }
+
+    this.applyOAuthCallbackFromHash()
+  }
+
+  private applyOAuthCallbackFromHash = (): void => {
+    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
+    if (!hash) return
+
+    const params = new URLSearchParams(hash)
+    const token = params.get('repo_token')
+    const username = params.get('username')
+    if (!token) return
+
+    const prov = this.provider()
+    if (prov !== 'github' && prov !== 'gitlab') return
+
+    this.authMethod.set('oauth')
+    this.form.patchValue({
+      token,
+      connectionName: username ? `${username} (OAuth)` : `${this.providerLabel()} OAuth`,
+    })
+    this.step.set('credentials')
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    this.runValidatePreview()
   }
 
   selectProvider = (id: RepoProviderId): void => {
@@ -166,7 +213,11 @@ export class RepositoryConnectionWizardComponent implements OnInit {
     }
     if (current === 'credentials') {
       if (this.authMethod() === 'oauth') {
-        this.toast.info('OAuth próximamente — usa token PAT por ahora')
+        if (!this.form.controls.token.value.trim()) {
+          this.handleOAuth()
+          return
+        }
+        this.runValidatePreview()
         return
       }
       if (!this.credentialsReady()) {
@@ -191,7 +242,31 @@ export class RepositoryConnectionWizardComponent implements OnInit {
   }
 
   handleOAuth = (): void => {
-    this.toast.info('OAuth próximamente. Configura GITHUB_CLIENT_ID en el servidor o usa token PAT.')
+    const prov = this.provider()
+    if (!prov) {
+      this.toast.error('Selecciona GitHub o GitLab')
+      return
+    }
+    const returnUrl = `${window.location.origin}${window.location.pathname}`
+    const req = prov === 'github' ? this.github.startOAuth(returnUrl) : this.gitlab.startOAuth(returnUrl)
+    req
+      .pipe(
+        catchError((err) => {
+          const message =
+            typeof err?.error?.message === 'string'
+              ? err.error.message
+              : 'No se pudo iniciar OAuth. Comprueba la configuración del servidor.'
+          this.toast.error(message)
+          return throwError(() => err)
+        }),
+      )
+      .subscribe({
+        next: (res) => {
+          if (res.redirectUrl) {
+            window.location.href = res.redirectUrl
+          }
+        },
+      })
   }
 
   runValidatePreview = (): void => {
@@ -200,10 +275,11 @@ export class RepositoryConnectionWizardComponent implements OnInit {
     const baseUrl = this.form.controls.baseUrl.value.trim() || undefined
     if (!prov || !token) return
     this.validating.set(true)
+    const authType = this.authMethod() ?? 'pat'
     const req =
       prov === 'github'
-        ? this.github.validatePreview({ token, baseUrl, authType: this.authMethod() ?? 'pat' })
-        : this.gitlab.validatePreview({ token, baseUrl, authType: this.authMethod() ?? 'pat' })
+        ? this.github.validatePreview({ token, baseUrl, authType })
+        : this.gitlab.validatePreview({ token, baseUrl, authType })
     req.pipe(catchError(() => of({ valid: false, message: 'Error al validar', scopes: [], repoCount: 0, username: null, avatarUrl: null }))).subscribe({
       next: (res) => {
         this.validation.set(res)
@@ -227,10 +303,11 @@ export class RepositoryConnectionWizardComponent implements OnInit {
     const token = this.form.controls.token.value.trim()
     const baseUrl = this.form.controls.baseUrl.value.trim() || undefined
     if (!prov || !token) return
+    const authType = this.authMethod() ?? 'pat'
     const req =
       prov === 'github'
         ? this.github.previewRepos({ token, baseUrl, excludeArchived: this.excludeArchived() })
-        : this.gitlab.previewProjects({ token, baseUrl, excludeArchived: this.excludeArchived() })
+        : this.gitlab.previewProjects({ token, baseUrl, excludeArchived: this.excludeArchived(), authType })
     req.pipe(catchError(() => of({ items: [] as RemoteRepo[] }))).subscribe((res) => {
       const items: RemoteRepo[] = res.items.map((r) => ({
         id: r.id,

@@ -6,6 +6,7 @@ import { RealtimeGateway } from '../realtime/realtime.gateway'
 import { SecretsVaultService } from '../cloud-accounts/secrets-vault.service'
 import { connectionRequired } from '../../common/utils/pro-connection.util'
 import { GithubApiClient } from './github-api.client'
+import { GithubRepoResourcesService } from './github-repo-resources.service'
 import { mapAccount, mapRepo, isDemoGithubAccount } from './github-mappers'
 
 @Injectable()
@@ -17,10 +18,14 @@ export class GithubAccountsService {
     private readonly realtime: RealtimeGateway,
     private readonly vault: SecretsVaultService,
     private readonly githubApi: GithubApiClient,
+    private readonly repoResources: GithubRepoResourcesService,
   ) {}
 
-  async list() {
-    const items = await this.prisma.githubAccount.findMany({ orderBy: { createdAt: 'desc' } })
+  async list(userId?: string) {
+    const items = await this.prisma.githubAccount.findMany({
+      where: userId ? { createdById: userId } : undefined,
+      orderBy: { createdAt: 'desc' },
+    })
     const liveAccounts = items.filter((a) => !isDemoGithubAccount(a))
     if (!liveAccounts.length) {
       return {
@@ -277,6 +282,11 @@ export class GithubAccountsService {
       repos = repos.filter((r) => selected.has(r.id))
     }
     let synced = 0
+    let branchesSynced = 0
+    let commitsSynced = 0
+    let pullRequestsSynced = 0
+    let webhooksSynced = 0
+    const reposToSync = repos.slice(0, 25)
     for (const repo of repos) {
       await this.prisma.githubRepository.upsert({
         where: { accountId_fullName: { accountId, fullName: repo.full_name } },
@@ -302,6 +312,32 @@ export class GithubAccountsService {
       })
       synced++
     }
+    for (const repo of reposToSync) {
+      this.realtime.emitGithubSyncProgress({
+        accountId,
+        step: 'repo',
+        message: `Sincronizando ${repo.full_name}`,
+        percent: Math.round((synced / Math.max(reposToSync.length, 1)) * 40),
+      })
+      const resources = await this.repoResources.syncRepoResources(
+        token,
+        account.baseUrl,
+        accountId,
+        `gh-repo-${repo.id}`,
+        repo.full_name,
+        repo.default_branch || 'main',
+      )
+      branchesSynced += resources.branches
+      commitsSynced += resources.commits
+      pullRequestsSynced += resources.pullRequests
+      webhooksSynced += resources.webhooks
+      this.realtime.emitGithubSyncProgress({
+        accountId,
+        step: 'resources',
+        message: `${repo.full_name}: ${resources.branches} ramas, ${resources.commits} commits`,
+        percent: Math.round((synced / Math.max(reposToSync.length, 1)) * 90),
+      })
+    }
     const updated = await this.prisma.githubAccount.update({
       where: { id: accountId },
       data: { lastSyncAt: new Date(), status: 'connected', lastError: null },
@@ -311,7 +347,13 @@ export class GithubAccountsService {
       action: 'github.account.sync',
       resource: 'github',
       resourceId: accountId,
-      metadata: { synced },
+      metadata: {
+        synced,
+        branchesSynced,
+        commitsSynced,
+        pullRequestsSynced,
+        webhooksSynced,
+      },
     })
     await this.notifications.create(
       userId,
@@ -323,10 +365,14 @@ export class GithubAccountsService {
     const items = await this.prisma.githubRepository.findMany({ where: { accountId } })
     return {
       synced,
+      branchesSynced,
+      commitsSynced,
+      pullRequestsSynced,
+      webhooksSynced,
       repos: items.map(mapRepo),
       account: { ...mapAccount(updated), repoCount: synced, connectionName: updated.connectionName ?? updated.label },
       lastSyncAt: updated.lastSyncAt?.toISOString(),
-      message: `${synced} repositorios sincronizados`,
+      message: `${synced} repositorios sincronizados · ${branchesSynced} ramas · ${commitsSynced} commits · ${pullRequestsSynced} PRs`,
     }
   }
 

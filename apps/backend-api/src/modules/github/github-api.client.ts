@@ -20,6 +20,46 @@ export type GithubRepoApi = {
   updated_at: string
 }
 
+export type GithubBranchApi = {
+  name: string
+  protected: boolean
+  commit: { sha: string; commit?: { message?: string } }
+}
+
+export type GithubCommitApi = {
+  sha: string
+  commit: { message: string; author: { name: string; date: string } }
+}
+
+export type GithubPullRequestApi = {
+  number: number
+  title: string
+  state: string
+  user: { login: string } | null
+  base: { ref: string }
+  head: { ref: string }
+  created_at: string
+}
+
+export type GithubHookApi = {
+  id: number
+  active: boolean
+  events: string[]
+  config: { url: string }
+}
+
+export type GithubWorkflowRunApi = {
+  id: number
+  name: string
+  status: string
+  conclusion: string | null
+  head_branch: string
+  head_sha: string
+  html_url: string
+  created_at: string
+  updated_at: string
+}
+
 @Injectable()
 export class GithubApiClient {
   private readonly logger = new Logger(GithubApiClient.name)
@@ -90,6 +130,75 @@ export class GithubApiClient {
       if (items.length < 100) break
     }
     return all
+  }
+
+  listBranches = async (
+    token: string,
+    owner: string,
+    repo: string,
+    baseUrl?: string | null,
+    perPage = 100,
+  ): Promise<GithubBranchApi[]> => {
+    const url = `${this.apiBase(baseUrl)}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches?per_page=${perPage}`
+    const res = await fetch(url, { headers: this.headers(token) })
+    if (!res.ok) throw new Error(`GitHub branches HTTP ${res.status}`)
+    return (await res.json()) as GithubBranchApi[]
+  }
+
+  listCommits = async (
+    token: string,
+    owner: string,
+    repo: string,
+    baseUrl?: string | null,
+    branch?: string,
+    perPage = 30,
+  ): Promise<GithubCommitApi[]> => {
+    const sha = branch ? `&sha=${encodeURIComponent(branch)}` : ''
+    const url = `${this.apiBase(baseUrl)}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?per_page=${perPage}${sha}`
+    const res = await fetch(url, { headers: this.headers(token) })
+    if (!res.ok) throw new Error(`GitHub commits HTTP ${res.status}`)
+    return (await res.json()) as GithubCommitApi[]
+  }
+
+  listPullRequests = async (
+    token: string,
+    owner: string,
+    repo: string,
+    baseUrl?: string | null,
+    state: 'open' | 'closed' | 'all' = 'all',
+    perPage = 30,
+  ): Promise<GithubPullRequestApi[]> => {
+    const url = `${this.apiBase(baseUrl)}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls?state=${state}&per_page=${perPage}&sort=updated`
+    const res = await fetch(url, { headers: this.headers(token) })
+    if (!res.ok) throw new Error(`GitHub pull requests HTTP ${res.status}`)
+    return (await res.json()) as GithubPullRequestApi[]
+  }
+
+  listRepoHooks = async (
+    token: string,
+    owner: string,
+    repo: string,
+    baseUrl?: string | null,
+  ): Promise<GithubHookApi[]> => {
+    const url = `${this.apiBase(baseUrl)}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/hooks`
+    const res = await fetch(url, { headers: this.headers(token) })
+    if (!res.ok) throw new Error(`GitHub hooks HTTP ${res.status}`)
+    return (await res.json()) as GithubHookApi[]
+  }
+
+  listWorkflowRuns = async (
+    token: string,
+    owner: string,
+    repo: string,
+    baseUrl?: string | null,
+    perPage = 15,
+  ): Promise<GithubWorkflowRunApi[]> => {
+    const url = `${this.apiBase(baseUrl)}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=${perPage}`
+    const res = await fetch(url, { headers: this.headers(token) })
+    if (res.status === 404 || res.status === 403) return []
+    if (!res.ok) throw new Error(`GitHub workflow runs HTTP ${res.status}`)
+    const body = (await res.json()) as { workflow_runs?: GithubWorkflowRunApi[] }
+    return body.workflow_runs ?? []
   }
 
   private headers = (token: string): Record<string, string> => ({

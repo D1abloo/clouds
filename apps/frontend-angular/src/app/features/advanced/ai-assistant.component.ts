@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   HostListener,
   OnInit,
@@ -9,6 +10,7 @@ import {
   inject,
   signal,
 } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { DatePipe } from '@angular/common'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { Router } from '@angular/router'
@@ -16,7 +18,11 @@ import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatIconModule } from '@angular/material/icon'
 import { MatTooltipModule } from '@angular/material/tooltip'
-import { delay, of } from 'rxjs'
+import { catchError, delay, of } from 'rxjs'
+import { CopilotApiService } from '../../core/services/copilot-api.service'
+import { RealtimeService } from '../../core/services/realtime.service'
+import { PlatformCacheService } from '../../core/services/platform-cache.service'
+import type { CopilotContextDomain, CopilotStatus, CopilotTask } from '../../core/models/api.models'
 import { PageHeaderComponent, type PageHeaderAction } from '../../shared/components/page-header/page-header.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
 import { PlatformActionService } from '../../shared/platform/platform-action.service'
@@ -80,9 +86,14 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
             Escribe en español natural o usa las sugerencias para obtener respuestas accionables.
           </p>
           <ul class="cop-intro__meta">
-            <li><mat-icon>schedule</mat-icon> Datos demo · sync ~3 min</li>
+            @if (pro.proMode()) {
+              <li><mat-icon>memory</mat-icon> {{ providerLabel() }}</li>
+              <li><mat-icon>hub</mat-icon> {{ modeLabel() }}</li>
+            } @else {
+              <li><mat-icon>schedule</mat-icon> Datos demo · sync ~3 min</li>
+              <li><mat-icon>memory</mat-icon> Modelo simulado</li>
+            }
             <li><mat-icon>language</mat-icon> Español</li>
-            <li><mat-icon>memory</mat-icon> Modelo simulado</li>
           </ul>
         </div>
         <ul class="cop-intro__stats">
@@ -99,7 +110,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
             <span>{{ activeDomain().label }}</span>
           </li>
           <li>
-            <strong>94%</strong>
+            <strong>{{ globalHealth() }}</strong>
             <span>Salud global</span>
           </li>
         </ul>
@@ -107,7 +118,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
 
       @if (loading()) {
         <app-loading-state message="Inicializando Copilot…" />
-      } @else if (pro.proMode()) {
+      } @else if (pro.proMode() && !copilotReady()) {
         <app-connection-required moduleId="ai-assistant" variant="inline" icon="smart_toy" />
       } @else {
         <div class="cop-layout">
@@ -131,18 +142,49 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
               </span>
               <span class="cop-live-context__chip cop-live-context__chip--sync">
                 <i class="cop-live-dot"></i>
-                En línea · demo
+                {{ pro.proMode() ? 'En línea · PRO' : 'En línea · demo' }}
               </span>
             </div>
 
+            @if (pro.proMode() && copilotStatus()?.allowAutonomous) {
+              <section class="cop-tasks">
+                <header class="cop-sidebar__head cop-sidebar__head--sub">
+                  <mat-icon>rocket_launch</mat-icon>
+                  <div>
+                    <h3>Tareas autónomas</h3>
+                    <p>El Copilot ejecuta sin interacción</p>
+                  </div>
+                </header>
+                <form class="cop-tasks__form" (submit)="handleTaskSubmit($event)">
+                  <mat-form-field appearance="outline" class="cop-tasks__field">
+                    <mat-label>Instrucción autónoma…</mat-label>
+                    <input matInput [formControl]="taskControl" [disabled]="taskSubmitting()" aria-label="Tarea autónoma" />
+                  </mat-form-field>
+                  <button type="submit" class="cop-tasks__btn" [disabled]="taskSubmitting() || !taskControl.value.trim()">
+                    <mat-icon>play_arrow</mat-icon>
+                  </button>
+                </form>
+                <ul class="cop-tasks__list">
+                  @for (task of autonomousTasks(); track task.id) {
+                    <li [class]="'cop-task cop-task--' + task.status.toLowerCase()">
+                      <strong>{{ taskStatusLabel(task.status) }}</strong>
+                      <span>{{ task.prompt }}</span>
+                    </li>
+                  } @empty {
+                    <li class="cop-task cop-task--empty">Sin tareas recientes</li>
+                  }
+                </ul>
+              </section>
+            }
+
             <div class="cop-chips">
-              @for (chip of contextDomains; track chip.id) {
+              @for (chip of contextChips(); track chip.id) {
                 <button
                   type="button"
                   class="cop-chip"
                   [class.cop-chip--on]="activeContext() === chip.id"
                   [attr.aria-pressed]="activeContext() === chip.id"
-                  (click)="selectContext(chip.id)"
+                  (click)="selectContext($any(chip.id))"
                 >
                   <mat-icon>{{ chip.icon }}</mat-icon>
                   <span class="cop-chip__text">
@@ -280,6 +322,24 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
                           <mat-icon>content_copy</mat-icon>
                         </button>
                       </footer>
+
+                      @if (msg.launchProgress) {
+                        <div
+                          class="cop-launch-progress"
+                          role="progressbar"
+                          [attr.aria-valuenow]="msg.launchProgress.percent"
+                          aria-valuemin="0"
+                          aria-valuemax="100"
+                        >
+                          <div class="cop-launch-progress__head">
+                            <span>{{ msg.launchProgress.step || 'Provisionando…' }}</span>
+                            <strong>{{ msg.launchProgress.percent }}%</strong>
+                          </div>
+                          <div class="cop-launch-progress__bar">
+                            <span [style.width.%]="msg.launchProgress.percent"></span>
+                          </div>
+                        </div>
+                      }
 
                       @if (msg.actions?.length) {
                         <div class="cop-msg__actions">
@@ -598,6 +658,25 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
       &:hover { background: ${ADMIN_SETTINGS_ACCENT_LIGHT}; }
     }
 
+    .cop-launch-progress {
+      margin-top: 0.35rem; padding: 0.45rem 0.55rem; border-radius: 8px;
+      border: 1px solid ${ADMIN_COPILOT_ACCENT_BORDER};
+      background: color-mix(in srgb, ${ADMIN_COPILOT_ACCENT} 4%, #fff);
+    }
+    .cop-launch-progress__head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.62rem; color: #64748b; margin-bottom: 0.3rem;
+      strong { color: ${ADMIN_COPILOT_ACCENT}; font-size: 0.72rem; }
+    }
+    .cop-launch-progress__bar {
+      height: 5px; border-radius: 999px; background: #e2e8f0; overflow: hidden;
+      span {
+        display: block; height: 100%; border-radius: inherit;
+        background: linear-gradient(90deg, ${ADMIN_COPILOT_ACCENT}, ${ADMIN_SETTINGS_ACCENT});
+        transition: width 0.35s ease;
+      }
+    }
+
     .cop-msg__typing {
       display: inline-flex; align-items: center; gap: 0.55rem;
       padding: 0.55rem 0.75rem !important;
@@ -633,6 +712,28 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
     .cop-input__field { flex: 1; margin: 0; }
     .cop-send { flex-shrink: 0; align-self: center; min-height: 42px; }
 
+    .cop-tasks {
+      margin-top: 0.25rem; padding-top: 0.55rem; border-top: 1px solid ${ADMIN_SETTINGS_ACCENT_BORDER};
+    }
+    .cop-tasks__form { display: flex; gap: 0.35rem; align-items: flex-start; margin-bottom: 0.45rem; }
+    .cop-tasks__field { flex: 1; margin: 0; font-size: 0.72rem; }
+    .cop-tasks__btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2.25rem; height: 2.25rem; border-radius: 8px; border: none;
+      background: ${ADMIN_COPILOT_ACCENT}; color: #fff; cursor: pointer;
+      &:disabled { opacity: 0.5; cursor: not-allowed; }
+    }
+    .cop-tasks__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.32rem; max-height: 140px; overflow-y: auto; }
+    .cop-task {
+      padding: 0.38rem 0.5rem; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff;
+      font-size: 0.6rem; color: #64748b; line-height: 1.35;
+      strong { display: block; font-size: 0.58rem; text-transform: uppercase; margin-bottom: 0.12rem; }
+    }
+    .cop-task--completed strong { color: #15803d; }
+    .cop-task--failed strong { color: #dc2626; }
+    .cop-task--running strong, .cop-task--pending strong { color: ${ADMIN_COPILOT_ACCENT}; }
+    .cop-task--empty { text-align: center; font-style: italic; border-style: dashed; }
+
     @media (max-width: 900px) {
       .cop-layout { grid-template-columns: 1fr; }
       .cop-intro__stats { grid-template-columns: repeat(2, 1fr); width: 100%; }
@@ -646,18 +747,26 @@ export class AiAssistantComponent implements OnInit {
   private readonly toast = inject(ToastService)
   private readonly router = inject(Router)
   private readonly auth = inject(AuthService)
+  private readonly copilotApi = inject(CopilotApiService)
+  private readonly platformCache = inject(PlatformCacheService)
+  private readonly realtime = inject(RealtimeService)
+  private readonly destroyRef = inject(DestroyRef)
 
   @ViewChild('messagesEl') messagesEl?: ElementRef<HTMLElement>
   @ViewChild('inputEl') inputEl?: ElementRef<HTMLInputElement>
 
-  readonly contextDomains = COPILOT_CONTEXT_DOMAINS
   readonly emptyPrompts = COPILOT_QUICK_PROMPTS.slice(0, 4)
   readonly inputControl = new FormControl('', { nonNullable: true })
+  readonly taskControl = new FormControl('', { nonNullable: true })
   readonly loading = signal(true)
   readonly typing = signal(false)
+  readonly taskSubmitting = signal(false)
   readonly activeContext = signal<CopilotContextId>('instances')
   readonly queryCount = signal(0)
   readonly sessionId = signal(`ses-${Date.now()}`)
+  readonly threadId = signal<string | null>(null)
+  readonly copilotStatus = signal<CopilotStatus | null>(null)
+  readonly autonomousTasks = signal<CopilotTask[]>([])
 
   readonly headerActions: PageHeaderAction[] = [
     { label: 'Limpiar chat', icon: 'delete_sweep' },
@@ -667,11 +776,48 @@ export class AiAssistantComponent implements OnInit {
 
   readonly messages = signal<CopilotMessage[]>([])
 
+  readonly contextChips = computed((): CopilotContextDomain[] => {
+    if (this.pro.proMode()) {
+      const live = this.copilotStatus()?.context?.domains
+      if (live?.length) return live
+      return COPILOT_CONTEXT_DOMAINS.map((d) => ({
+        ...d,
+        count: d.id === 'instances' ? '0' : d.count,
+        hint: d.id === 'instances' ? 'Sin datos en caché · panel en vivo' : d.hint,
+      }))
+    }
+    return COPILOT_CONTEXT_DOMAINS
+  })
+
   readonly activeDomain = computed(() =>
-    this.contextDomains.find((d) => d.id === this.activeContext()) ?? this.contextDomains[0],
+    this.contextChips().find((d) => d.id === this.activeContext()) ?? this.contextChips()[0],
   )
 
-  readonly filteredPrompts = computed(() => copilotPromptsForContext(this.activeContext()))
+  readonly globalHealth = computed(() => {
+    if (this.pro.proMode()) {
+      const score = this.copilotStatus()?.context?.healthScore
+      if (score != null) return `${score}%`
+      return '—'
+    }
+    return '94%'
+  })
+
+  readonly filteredPrompts = computed(() => {
+    const base = copilotPromptsForContext(this.activeContext())
+    if (this.pro.proMode() && this.copilotStatus()?.allowLaunch) {
+      return [
+        {
+          id: 'launch-instance',
+          question: 'Lanza una instancia t3.micro en eu-west-1 llamada copilot-web',
+          label: 'Lanzar instancia',
+          icon: 'rocket_launch',
+          context: 'instances' as CopilotContextId,
+        },
+        ...base,
+      ]
+    }
+    return base
+  })
 
   readonly inputQuickPrompts = computed(() => {
     const ctx = this.activeContext()
@@ -694,7 +840,55 @@ export class AiAssistantComponent implements OnInit {
       : 'Pregunta sobre instancias, costes, alertas o Kubernetes. El Copilot usa los datos conectados de tu organización.',
   )
 
+  readonly copilotReady = computed(() => {
+    const s = this.copilotStatus()
+    if (!this.pro.proMode()) return true
+    return Boolean(s?.configured)
+  })
+
+  readonly providerLabel = computed(() => {
+    const s = this.copilotStatus()
+    if (!s?.provider) return 'Proveedor no configurado'
+    return `${s.provider} · ${s.model ?? 'modelo por defecto'}`
+  })
+
+  readonly modeLabel = computed(() => {
+    const s = this.copilotStatus()
+    if (!s) return 'Cargando…'
+    return s.mode === 'llm' ? 'LLM en vivo' : 'Modo asistido (sin LLM)'
+  })
+
+  private readonly onLaunchProgress = (payload: unknown): void => {
+    const p = payload as { percent?: number; step?: string; status?: string }
+    const percent = p.percent ?? 0
+    const status = (p.status === 'success' || p.status === 'error' ? p.status : 'running') as 'running' | 'success' | 'error'
+    this.messages.update((msgs) => {
+      const idx = [...msgs].reverse().findIndex((m) => m.role === 'assistant')
+      if (idx < 0) return msgs
+      const realIdx = msgs.length - 1 - idx
+      const updated = [...msgs]
+      updated[realIdx] = {
+        ...updated[realIdx],
+        launchProgress: { percent, step: p.step ?? '', status },
+      }
+      return updated
+    })
+    if (status === 'success') {
+      this.platformCache.clearAll()
+      this.refreshCopilotStatus(false)
+    }
+  }
+
   ngOnInit(): void {
+    this.realtime.connect()
+    this.realtime.on('instance.launch.progress', this.onLaunchProgress)
+    this.destroyRef.onDestroy(() => this.realtime.off('instance.launch.progress', this.onLaunchProgress))
+
+    if (this.pro.proMode()) {
+      this.platformCache.clearAll()
+      this.refreshCopilotStatus()
+      return
+    }
     window.setTimeout(() => this.loading.set(false), 300)
   }
 
@@ -708,7 +902,7 @@ export class AiAssistantComponent implements OnInit {
 
   selectContext = (id: CopilotContextId): void => {
     this.activeContext.set(id)
-    this.toast.info(`Contexto: ${this.contextDomains.find((d) => d.id === id)?.label ?? id}`)
+    this.toast.info(`Contexto: ${this.contextChips().find((d) => d.id === id)?.label ?? id}`)
   }
 
   handleHeader = (label: string): void => {
@@ -751,6 +945,43 @@ export class AiAssistantComponent implements OnInit {
     this.typing.set(true)
     this.scrollToBottom()
 
+    if (this.pro.proMode()) {
+      this.copilotApi.chat(question, this.threadId() ?? undefined).pipe(
+        catchError(() => {
+          this.toast.error('No se pudo contactar con el Copilot')
+          return of(null)
+        }),
+      ).subscribe((res) => {
+        if (!res) {
+          this.typing.set(false)
+          return
+        }
+        this.threadId.set(res.threadId)
+        const hasLaunch = (res.launchSteps?.length ?? 0) > 0 || (res.actionsExecuted ?? 0) > 0
+        this.messages.update((m) => [
+          ...m,
+          {
+            role: 'assistant',
+            text: res.message,
+            ts: Date.now(),
+            sources: res.mode === 'llm' ? ['LLM', 'Panel en vivo'] : ['Panel en vivo'],
+            launchProgress: hasLaunch
+              ? { percent: res.launchSteps?.length ? 5 : 0, step: res.launchSteps?.[0]?.label ?? 'Iniciando…', status: 'running' as const }
+              : undefined,
+          },
+        ])
+        if (res.actionsExecuted) {
+          this.toast.success(`Copilot ejecutó ${res.actionsExecuted} acción(es)`)
+        }
+        if (res.actionErrors?.length) {
+          this.toast.error(res.actionErrors[0])
+        }
+        this.typing.set(false)
+        this.scrollToBottom()
+      })
+      return
+    }
+
     const ctx = this.activeContext()
     of(null)
       .pipe(delay(750 + Math.random() * 450))
@@ -769,6 +1000,61 @@ export class AiAssistantComponent implements OnInit {
         this.typing.set(false)
         this.scrollToBottom()
       })
+  }
+
+  handleTaskSubmit = (e: Event): void => {
+    e.preventDefault()
+    const prompt = this.taskControl.value.trim()
+    if (!prompt || this.taskSubmitting()) return
+    this.taskSubmitting.set(true)
+    this.copilotApi.createTask(prompt).subscribe({
+      next: () => {
+        this.taskControl.setValue('')
+        this.taskSubmitting.set(false)
+        this.toast.success('Tarea autónoma enviada')
+        this.loadTasks()
+        window.setTimeout(() => {
+          this.platformCache.clearAll()
+          this.refreshCopilotStatus(false)
+        }, 2500)
+      },
+      error: (err) => {
+        this.taskSubmitting.set(false)
+        this.toast.error(err?.error?.message ?? 'No se pudo crear la tarea')
+      },
+    })
+  }
+
+  taskStatusLabel = (status: CopilotTask['status']): string => {
+    const labels: Record<CopilotTask['status'], string> = {
+      PENDING: 'Pendiente',
+      RUNNING: 'Ejecutando',
+      COMPLETED: 'Completada',
+      FAILED: 'Fallida',
+    }
+    return labels[status] ?? status
+  }
+
+  private refreshCopilotStatus = (showLoading = true): void => {
+    if (showLoading) this.loading.set(true)
+    this.copilotApi.getStatus().subscribe({
+      next: (status) => {
+        this.copilotStatus.set(status)
+        if (status.allowAutonomous) this.loadTasks()
+        this.loading.set(false)
+      },
+      error: () => {
+        this.copilotStatus.set(null)
+        this.loading.set(false)
+      },
+    })
+  }
+
+  private loadTasks = (): void => {
+    this.copilotApi.listTasks().subscribe({
+      next: (tasks) => this.autonomousTasks.set(tasks.slice(0, 8)),
+      error: () => this.autonomousTasks.set([]),
+    })
   }
 
   copyMessage = (text: string): void => {
@@ -808,6 +1094,7 @@ export class AiAssistantComponent implements OnInit {
 
   newSession = (): void => {
     this.sessionId.set(`ses-${Date.now()}`)
+    this.threadId.set(null)
     this.queryCount.set(0)
     this.messages.set([])
     this.actions.runPageAction('ai-assistant', 'new-session', 'Nueva sesión', { area: 'admin' })

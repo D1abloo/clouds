@@ -1,0 +1,268 @@
+/* Spendlyx — global responsive utilities (mobile ≤767, tablet 768–1023, desktop ≥1024) */
+
+:root {
+  --bp-mobile-max: 767px;
+  --bp-tablet-min: 768px;
+  --bp-tablet-max: 1023px;
+  --bp-desktop-min: 1024px;
+  --touch-target-min: 44px;
+}
+
+/* —— Content overflow guard —— */
+.layout-main-scroll,
+.layout-page,
+.page-container,
+.cloud-page,
+.cloud-page-host {
+  max-width: 100%;
+}
+
+.layout-main-scroll {
+  overflow-x: clip;
+}
+
+/* —— Tables —— */
+.table-scroll,
+.data-table-wrap {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.table-scroll .mat-mdc-table,
+.data-table-wrap .mat-mdc-table,
+.table-scroll table,
+.data-table-wrap table {
+  min-width: min(100%, 640px);
+}
+
+.table-card .table-scroll,
+.table-card .data-table-wrap {
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem 0.5rem;
+}
+
+/* —— KPI / metric grids —— */
+.kpi-grid,
+.metrics-grid-responsive {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.responsive-stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.responsive-stack--between {
+  justify-content: space-between;
+}
+
+/* —— Page headers (shared) —— */
+@media (max-width: 767px) {
+  .page-header-premium {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem 0.85rem;
+    gap: 0.85rem;
+  }
+
+  .page-header-premium__main {
+    min-width: 0;
+  }
+
+  .page-header-premium__title-row h1 {
+    font-size: clamp(1.2rem, 5vw, 1.55rem);
+  }
+
+  .page-header-premium__actions {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .page-header-premium__actions .page-action-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: var(--touch-target-min);
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+
+    h1 {
+      font-size: clamp(1.25rem, 5vw, 1.75rem);
+    }
+  }
+
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-row mat-form-field {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .hub-tab-panel {
+    padding: 0.75rem 0.65rem 1rem;
+  }
+
+  .metric-row {
+    grid-template-columns: 28px 1fr;
+    gap: 0.5rem 0.65rem;
+  }
+
+  .metric-row__end {
+    grid-column: 2;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .metric-row__value {
+    text-align: left;
+  }
+
+  .kpi-grid,
+  .metrics-grid-responsive {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-placeholder {
+    min-height: 200px;
+    width: 100%;
+  }
+
+  canvas,
+  .chart-host,
+  .echarts,
+  apx-chart {
+    max-width: 100% !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .kpi-grid,
+  .metrics-grid-responsive {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* —— Touch targets (admin) —— */
+@media (max-width: 1023px) {
+  .topbar-btn,
+  .mat-mdc-icon-button.topbar-btn {
+    width: var(--touch-target-min) !important;
+    height: var(--touch-target-min) !important;
+    line-height: var(--touch-target-min) !important;
+  }
+
+  .page-action-btn {
+    min-height: var(--touch-target-min);
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .module-area-tab {
+    min-height: var(--touch-target-min);
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+  }
+
+  .layout-root--sections-only .layout-main-scroll {
+    padding: 0.45rem 0.55rem 0.75rem;
+  }
+}
+
+/* —— Material dialogs on small screens —— */
+@media (max-width: 767px) {
+  .cdk-overlay-pane {
+    max-width: 100vw !important;
+  }
+
+  .mat-mdc-dialog-container {
+    max-width: 100vw !important;
+    width: 100vw !important;
+    margin: 0 !important;
+  }
+
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    max-height: 100dvh !important;
+    border-radius: var(--app-radius-md) var(--app-radius-md) 0 0 !important;
+  }
+
+  .mat-mdc-dialog-content {
+    max-height: calc(100dvh - 8rem) !important;
+  }
+}
+
+/* —— Soft tabs scroll on tablet —— */
+@media (max-width: 1023px) {
+  .soft-tabs .mat-mdc-tab-header {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* —— Card-style table rows (optional utility) —— */
+@media (max-width: 767px) {
+  .table-cards-mobile .mat-mdc-table {
+    display: block;
+  }
+
+  .table-cards-mobile .mat-mdc-header-row {
+    display: none;
+  }
+
+  .table-cards-mobile .mat-mdc-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem;
+    margin-bottom: 0.65rem;
+    border-radius: var(--app-radius-md);
+    background: color-mix(in srgb, var(--app-accent) 4%, var(--app-card));
+  }
+
+  .table-cards-mobile .mat-mdc-cell {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.15rem 0 !important;
+    border: none !important;
+  }
+
+  .table-cards-mobile .mat-mdc-cell::before {
+    content: attr(data-label);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+    flex-shrink: 0;
+  }
+}

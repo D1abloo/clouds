@@ -25,6 +25,9 @@ import { createPageLoader } from '../../core/utils/page-load.util'
 import {
   JenkinsCreateJobDialogComponent,
 } from './jenkins-create-job-dialog.component'
+import { JenkinsConnectDialogComponent } from './jenkins-connect-dialog.component'
+import { JenkinsService } from '../../core/services/jenkins.service'
+import { ToastService } from '../../core/services/toast.service'
 import { jobToRow, normalizeJenkinsInventory } from './jenkins.util'
 import { ProModeService } from '../../core/services/pro-mode.service'
 import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
@@ -130,6 +133,8 @@ export class JenkinsPageComponent implements OnInit {
   private readonly actions = inject(PlatformActionService)
 
   private readonly inventorySvc = inject(InventoryService)
+  private readonly jenkinsApi = inject(JenkinsService)
+  private readonly toast = inject(ToastService)
   private readonly pro = inject(ProModeService)
   private readonly dialog = inject(MatDialog)
   private readonly route = inject(ActivatedRoute)
@@ -210,7 +215,8 @@ export class JenkinsPageComponent implements OnInit {
 
   requiresJenkinsConfig = (): boolean => {
     const inv = this.inventory()
-    return this.pro.proMode() && inv !== null && inv.jobItems.length === 0
+    if (!this.pro.proMode() || !inv) return false
+    return inv.serverCount === 0 && inv.servers.length === 0
   }
 
   load = (): void => {
@@ -263,6 +269,42 @@ export class JenkinsPageComponent implements OnInit {
     this.workspaceTab.set(2)
   }
 
+  openConnectDialog = (): void => {
+    this.dialog
+      .open(JenkinsConnectDialogComponent, {
+        width: 'min(480px, 94vw)',
+        maxWidth: '94vw',
+        panelClass: 'jenkins-connect-dialog-panel',
+      })
+      .afterClosed()
+      .subscribe((server) => {
+        if (!server) return
+        this.load()
+      })
+  }
+
+  validateFirstServer = (): void => {
+    this.jenkinsApi.listServers().subscribe({
+      next: (servers) => {
+        const server = servers[0]
+        if (!server) {
+          this.toast.info('Añade un controlador Jenkins primero')
+          this.openConnectDialog()
+          return
+        }
+        this.jenkinsApi.validate(server.id).subscribe({
+          next: (res) => {
+            const msg = (res as { message?: string })?.message ?? 'Conexión OK'
+            this.toast.success(msg)
+            this.load()
+          },
+          error: () => this.toast.error('No se pudo validar la conexión'),
+        })
+      },
+      error: () => this.toast.error('No se pudieron listar controladores'),
+    })
+  }
+
   openCreateJobDialog = (): void => {
     const inv = this.inventory()
     if (!inv) return
@@ -299,11 +341,11 @@ export class JenkinsPageComponent implements OnInit {
       return
     }
     if (label === 'Añadir controlador') {
-      this.actions.simulate('Añadir controlador Jenkins', 700).subscribe()
+      this.openConnectDialog()
       return
     }
     if (label === 'Validar conexión') {
-      this.actions.simulate('Validación Jenkins', 900, 'Conexión OK (demo)').subscribe()
+      this.validateFirstServer()
       return
     }
     this.load()

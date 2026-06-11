@@ -6,6 +6,7 @@ import { SidebarService } from './sidebar.service'
 import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
 import { SidebarNavBranchComponent } from './sidebar-nav-branch.component'
 import type { SidebarMainModule } from '../../core/routing/area-nav.config'
+import { navHintForRoute } from './sidebar-nav-hints.config'
 
 @Component({
   selector: 'app-sidebar-nav-group',
@@ -23,7 +24,7 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
           matTooltipPosition="right"
           [attr.aria-label]="module().label"
         >
-          <span class="nav-group__icon" [class]="'tone-' + module().tone">
+          <span class="nav-group__icon nav-group__icon--animated" [class]="'tone-' + module().tone" [class.nav-group__icon--active]="active()">
             <mat-icon>{{ module().icon }}</mat-icon>
           </span>
         </a>
@@ -36,10 +37,15 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
           (click)="handleHeadClick()"
           [attr.aria-expanded]="open()"
         >
-          <span class="nav-group__icon" [class]="'tone-' + module().tone">
+          <span class="nav-group__icon nav-group__icon--animated" [class]="'tone-' + module().tone" [class.nav-group__icon--active]="active()">
             <mat-icon>{{ module().icon }}</mat-icon>
           </span>
-          <span class="nav-group__label">{{ module().label }}</span>
+          <span class="nav-group__text">
+            <span class="nav-group__label">{{ module().label }}</span>
+            @if (module().description) {
+              <span class="nav-group__desc">{{ module().description }}</span>
+            }
+          </span>
           <mat-icon class="nav-group__chev">{{ open() ? 'expand_less' : 'expand_more' }}</mat-icon>
         </button>
       </div>
@@ -58,6 +64,7 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
             @for (tab of visibleTabs(); track tab.id) {
               <app-sidebar-nav-leaf
                 [label]="tab.label"
+                [hint]="tab.hint ?? navHint(tab.route)"
                 [route]="tab.route"
                 [icon]="tab.icon"
                 [logo]="tab.logo"
@@ -86,7 +93,7 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
       border-radius: 12px;
       background: color-mix(in srgb, var(--sidebar-primary) 5%, transparent);
       cursor: pointer;
-      color: var(--sidebar-text-muted);
+      color: var(--sidebar-text);
       transition: background 0.2s, color 0.2s, transform 0.18s;
       text-align: left;
     }
@@ -107,7 +114,20 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      transition: transform 0.22s ease, box-shadow 0.25s ease;
       mat-icon { font-size: 1.05rem; width: 1.05rem; height: 1.05rem; }
+    }
+    .nav-group__icon--animated:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 14px color-mix(in srgb, var(--sidebar-primary) 30%, transparent);
+    }
+    .nav-group__icon--active {
+      animation: groupIconPulse 2.4s ease-in-out infinite;
+      box-shadow: 0 0 12px color-mix(in srgb, #6366f1 40%, transparent);
+    }
+    @keyframes groupIconPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
     .tone-violet { background: color-mix(in srgb, #a78bfa 22%, transparent); mat-icon { color: #a78bfa; } }
     .tone-cyan { background: color-mix(in srgb, #22d3ee 22%, transparent); mat-icon { color: #22d3ee; } }
@@ -116,12 +136,30 @@ import type { SidebarMainModule } from '../../core/routing/area-nav.config'
     .tone-green { background: color-mix(in srgb, #34d399 22%, transparent); mat-icon { color: #34d399; } }
     .tone-pink { background: color-mix(in srgb, #f472b6 22%, transparent); mat-icon { color: #f472b6; } }
     .tone-slate { background: color-mix(in srgb, #94a3b8 18%, transparent); mat-icon { color: #94a3b8; } }
-    .nav-group__label {
+    .nav-group__text {
       flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .nav-group__label {
       font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+    }
+    .nav-group__desc {
+      font-size: 0.62rem;
+      font-weight: 500;
+      line-height: 1.35;
+      color: var(--sidebar-text-faint);
+      text-transform: none;
+      letter-spacing: normal;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .nav-group__chev {
       font-size: 1.1rem !important;
@@ -173,7 +211,8 @@ export class SidebarNavGroupComponent {
         b.children.some(
           (c) =>
             c.label.toLowerCase().includes(q) ||
-            c.route.toLowerCase().includes(q),
+            c.route.toLowerCase().includes(q) ||
+            (navHintForRoute(c.route) ?? '').toLowerCase().includes(q),
         ),
     )
   })
@@ -186,9 +225,13 @@ export class SidebarNavGroupComponent {
       (t) =>
         t.label.toLowerCase().includes(q) ||
         t.route.toLowerCase().includes(q) ||
-        this.module().label.toLowerCase().includes(q),
+        (t.hint ?? navHintForRoute(t.route) ?? '').toLowerCase().includes(q) ||
+        this.module().label.toLowerCase().includes(q) ||
+        (this.module().description ?? '').toLowerCase().includes(q),
     )
   })
+
+  navHint = (route: string): string | undefined => navHintForRoute(route)
 
   handleHeadClick = (): void => {
     if (this.collapsed()) return

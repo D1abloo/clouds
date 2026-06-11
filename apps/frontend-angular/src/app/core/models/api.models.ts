@@ -1,4 +1,4 @@
-export type CloudProvider = 'AWS' | 'GCP' | 'AZURE' | 'VPS'
+export type CloudProvider = 'AWS' | 'GCP' | 'AZURE' | 'CLOUDING' | 'VPS'
 
 export type ResourceStatus =
   | 'running'
@@ -40,10 +40,12 @@ export interface Instance {
   id: string
   name: string
   provider: CloudProvider | string
+  externalId?: string
   region?: string
   status?: string
   instanceType?: string
   cloudAccountId?: string
+  cloudAccount?: { id?: string; name?: string; provider?: string }
   publicIp?: string
   privateIp?: string
   os?: string
@@ -153,6 +155,11 @@ export interface IntegrationConfigDto {
   lastSync: string | null
   createdAt: string
   updatedAt: string
+  events24h?: number
+  connectRoute?: string | null
+  kind?: 'platform' | 'webhook'
+  accountConnected?: boolean
+  accountSummary?: string
 }
 
 export interface IntegrationsStatusDto {
@@ -170,7 +177,7 @@ export interface IntegrationDeliveryDto {
   eventType: string
   title: string
   body: string
-  status: 'sent' | 'simulated' | 'failed'
+  status: 'sent' | 'simulated' | 'failed' | 'routed' | 'logged'
   httpStatus: number | null
   latencyMs: number | null
   error: string | null
@@ -189,8 +196,95 @@ export interface IntegrationPlatformSourceDto {
   label: string
   module: string
   events: string[]
+  route?: string
+  connectRoute?: string
+  connected?: boolean
+  summary?: string
 }
 
 export interface IntegrationSourcesResponseDto {
   sources: IntegrationPlatformSourceDto[]
+}
+
+export type CopilotAiProvider = 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | 'OPENROUTER'
+export type CopilotScopeMode = 'PANEL_ONLY'
+export type CopilotTaskStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+
+export interface CopilotContextDomain {
+  id: string
+  label: string
+  icon: string
+  count: string
+  hint: string
+}
+
+export interface CopilotStatus {
+  configured: boolean
+  enabled: boolean
+  hasApiKey: boolean
+  provider: CopilotAiProvider | null
+  model: string | null
+  allowAutonomous: boolean
+  allowLaunch: boolean
+  mode: 'llm' | 'fallback'
+  context: {
+    domains: CopilotContextDomain[]
+    healthScore: number
+    instancesTotal: number
+  }
+}
+
+export interface CopilotSettings {
+  enabled: boolean
+  provider: CopilotAiProvider
+  model: string
+  apiKeyHint: string | null
+  hasApiKey: boolean
+  scopeMode: CopilotScopeMode
+  allowAutonomous: boolean
+  allowLaunch: boolean
+  maxTokens: number
+  temperature: number
+  systemPrompt: string | null
+  updatedAt: string
+}
+
+export interface UpdateCopilotSettingsPayload {
+  enabled?: boolean
+  provider?: CopilotAiProvider
+  model?: string
+  apiKey?: string
+  scopeMode?: CopilotScopeMode
+  allowAutonomous?: boolean
+  allowLaunch?: boolean
+  maxTokens?: number
+  temperature?: number
+  systemPrompt?: string
+}
+
+export interface CopilotLaunchStep {
+  order: number
+  label: string
+  detail: string
+}
+
+export interface CopilotChatResponse {
+  threadId: string
+  message: string
+  mode: 'llm' | 'fallback'
+  provider?: string
+  model?: string
+  actionsExecuted?: number
+  actionErrors?: string[]
+  launchSteps?: CopilotLaunchStep[]
+}
+
+export interface CopilotTask {
+  id: string
+  prompt: string
+  status: CopilotTaskStatus
+  result: string | null
+  actions: unknown
+  createdAt: string
+  updatedAt: string
 }

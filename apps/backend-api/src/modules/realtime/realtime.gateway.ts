@@ -63,4 +63,28 @@ export class RealtimeGateway {
   emitGithubDeployment(data: unknown) {
     this.server?.emit('github.deployment', data)
   }
+
+  emitGithubSyncProgress(data: unknown) {
+    this.server?.emit('github.sync.progress', data)
+  }
+
+  emitGithubDeploymentProgress(data: unknown) {
+    this.server?.emit('github.deployment.progress', data)
+  }
+
+  emitGitlabSynced(data: unknown) {
+    this.server?.emit('gitlab.synced', data)
+  }
+
+  emitGitlabSyncProgress(data: unknown) {
+    this.server?.emit('gitlab.sync.progress', data)
+  }
+
+  emitGitlabDeployment(data: unknown) {
+    this.server?.emit('gitlab.deployment', data)
+  }
+
+  emitInstanceLaunchProgress(data: unknown) {
+    this.server?.emit('instance.launch.progress', data)
+  }
 }

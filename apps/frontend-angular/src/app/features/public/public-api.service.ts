@@ -13,6 +13,16 @@ export type RegisterPayload = {
   website?: string
 }
 
+export type PublicStats = {
+  organizations: number
+  users: number
+  cloudAccounts: { aws: number; gcp: number; azure: number; total: number }
+  activeInstances: number
+  totalInstances: number
+  uptimePercent: string
+  updatedAt: string
+}
+
 export type ContactPayload = {
   name: string
   email: string
@@ -42,4 +52,6 @@ export class PublicApiService {
 
   contact = (payload: ContactPayload) =>
     this.api.post<{ message: string }>('public/contact', payload)
+
+  getStats = () => this.api.get<PublicStats>('public/stats')
 }

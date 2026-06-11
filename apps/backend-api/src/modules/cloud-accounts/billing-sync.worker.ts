@@ -6,7 +6,7 @@ import { BillingService } from '../billing/billing.service'
 export class BillingSyncWorker {
   constructor(private readonly billing: BillingService) {}
 
-  syncForAccount = async (provider: CloudProvider, accountId: string) => {
-    return this.billing.syncBilling(provider, accountId)
+  syncForAccount = async (provider: CloudProvider, accountId: string, userId: string) => {
+    return this.billing.syncBilling(provider, accountId, userId)
   }
 }

@@ -124,6 +124,7 @@ export class InstanceStartConfirmDialogComponent {
               <mat-option value="STOPPED">Detenida</mat-option>
               <mat-option value="WARNING">Advertencia</mat-option>
               <mat-option value="ERROR">Error</mat-option>
+              <mat-option value="TERMINATED">Borradas / Terminadas</mat-option>
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Entorno</mat-label>
@@ -242,6 +243,21 @@ export class InstanceStartConfirmDialogComponent {
       &:hover { box-shadow: var(--app-shadow-md); transform: translateY(-2px); }
     }
     .empty-action { margin-top: 0.75rem; }
+    @media (max-width: 767px) {
+      .bulk-bar {
+        flex-wrap: wrap;
+      }
+      .bulk-bar button {
+        min-height: 44px;
+      }
+      .instance-grid {
+        grid-template-columns: 1fr;
+      }
+      .filter-row mat-form-field {
+        width: 100%;
+        min-width: 0;
+      }
+    }
   `,
 })
 export class InstancesListComponent implements OnInit {
@@ -299,9 +315,10 @@ export class InstancesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.load()
+    this.statusControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load())
     this.liveSync.startPolling(() => {
-      this.liveSync.syncAllAccounts().subscribe({ next: () => this.load() })
-    }, 15000)
+      this.liveSync.syncAllAccountsSilent().subscribe({ next: () => this.loadSilent() })
+    })
     this.destroyRef.onDestroy(() => this.liveSync.stopPolling())
   }
 
@@ -319,10 +336,23 @@ export class InstancesListComponent implements OnInit {
     })
   }
 
+  private listFilters = (): { status?: string } => {
+    const status = this.statusControl.value
+    if (status === 'TERMINATED') return { status: 'TERMINATED' }
+    if (status) return { status }
+    return {}
+  }
+
   load = (): void => {
-    this.page.run(this.service.list(), {
+    this.page.run(this.service.list(this.listFilters()), {
       onSuccess: (data) => this.instances.set(data),
       errorMessage: 'No se pudieron cargar las instancias',
+    })
+  }
+
+  loadSilent = (): void => {
+    this.service.list(this.listFilters()).subscribe({
+      next: (data) => this.instances.set(data),
     })
   }
 

@@ -1,4 +1,4 @@
-import { Component, Input, output, signal, computed } from '@angular/core'
+import { Component, input, output, signal, computed } from '@angular/core'
 import { RouterLink } from '@angular/router'
 import { DatePipe, SlicePipe } from '@angular/common'
 import { MatButtonModule } from '@angular/material/button'
@@ -7,7 +7,7 @@ import { MatTabsModule } from '@angular/material/tabs'
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component'
 import { type GlobalBranchRow } from '../utils/repositories-global.util'
 import { RepositoriesQuickLinksComponent } from '../components/repositories-quick-links.component'
-import { repoRoute } from '../repositories-section.config'
+import { repoRoute, type RepositoryProvider } from '../repositories-section.config'
 
 const TAB_FILTERS = [
   (b: GlobalBranchRow) => true,
@@ -26,7 +26,7 @@ const TAB_LABELS = ['Todas', 'GitHub', 'GitLab', 'Protegidas', 'Sin actividad', 
   imports: [RouterLink, DatePipe, SlicePipe, MatButtonModule, MatIconModule, MatTabsModule, StatusBadgeComponent, RepositoriesQuickLinksComponent],
   template: `
     <div class="repo-section repo-section--branches">
-      <app-repositories-quick-links current="branches" title="Relacionado" />
+      <app-repositories-quick-links current="branches" [provider]="provider()" title="Relacionado" />
 
       <div class="repo-toolbar">
         <button mat-flat-button color="primary" type="button" (click)="sync.emit()">
@@ -35,10 +35,10 @@ const TAB_LABELS = ['Todas', 'GitHub', 'GitLab', 'Protegidas', 'Sin actividad', 
         <button mat-stroked-button type="button" (click)="compare.emit()">
           <mat-icon>compare_arrows</mat-icon> Comparar ramas
         </button>
-        <a mat-button [routerLink]="routes.commits">
+        <a mat-button [routerLink]="routes().commits">
           <mat-icon>history_edu</mat-icon> Commits
         </a>
-        <a mat-button [routerLink]="routes.deployments">
+        <a mat-button [routerLink]="routes().deployments">
           <mat-icon>rocket_launch</mat-icon> Despliegues
         </a>
       </div>
@@ -138,7 +138,14 @@ const TAB_LABELS = ['Todas', 'GitHub', 'GitLab', 'Protegidas', 'Sin actividad', 
             </footer>
           </article>
         } @empty {
-          <div class="repo-empty"><mat-icon>account_tree</mat-icon><p>No hay ramas en esta pestaña</p></div>
+          <div class="repo-empty">
+            <mat-icon>account_tree</mat-icon>
+            @if (provider() === 'gitlab') {
+              <p>No hay ramas GitLab. Conecta una cuenta y sincroniza proyectos en <a routerLink="/repositories/gitlab">GitLab</a>.</p>
+            } @else {
+              <p>No hay ramas en esta pestaña. Sincroniza tu cuenta GitHub en <a routerLink="/repositories/github">Repositorios</a>.</p>
+            }
+          </div>
         }
       </div>
     </div>
@@ -225,14 +232,15 @@ const TAB_LABELS = ['Todas', 'GitHub', 'GitLab', 'Protegidas', 'Sin actividad', 
   `,
 })
 export class BranchesGlobalSectionComponent {
-  @Input() branches: GlobalBranchRow[] = []
+  readonly branches = input<GlobalBranchRow[]>([])
+  readonly provider = input<RepositoryProvider>('github')
 
-  readonly routes = {
-    commits: repoRoute('commits'),
-    deployments: repoRoute('deployments'),
-    github: repoRoute('github'),
-    gitlab: repoRoute('gitlab'),
-  }
+  readonly routes = computed(() => ({
+    commits: repoRoute('commits', this.provider()),
+    deployments: repoRoute('deployments', this.provider()),
+    github: repoRoute('github', 'github'),
+    gitlab: repoRoute('gitlab', 'gitlab'),
+  }))
 
   readonly tabLabels = TAB_LABELS
   readonly tabIndex = signal(0)
@@ -244,7 +252,7 @@ export class BranchesGlobalSectionComponent {
 
   visibleRows = computed(() => {
     const fn = TAB_FILTERS[this.tabIndex()] ?? TAB_FILTERS[0]
-    return this.branches.filter(fn)
+    return this.branches().filter(fn)
   })
 
   summaryStats = computed(() => {

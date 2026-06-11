@@ -1,7 +1,15 @@
 import { Injectable, inject, signal, computed } from '@angular/core'
-import { catchError, of, tap } from 'rxjs'
+import { catchError, Observable, of, tap } from 'rxjs'
 import { ApiClientService } from './api-client.service'
 import { environment } from '../../../environments/environment'
+
+export type PlatformSecurityDto = {
+  tls: boolean
+  credentialsEncryption: string
+  passwordHashing: string
+  workspaceIsolation: boolean
+  jwtSessions: boolean
+}
 
 export type PlatformStatusDto = {
   demoMode: boolean
@@ -9,10 +17,12 @@ export type PlatformStatusDto = {
   appEnv?: string
   authUrl: string
   appUrl?: string
-  oauth: { google: boolean; github: boolean }
+  oauth: { google: boolean; github: boolean; gitlab?: boolean }
   message: string
   database?: { connected: boolean; latencyMs: number | null; error?: string }
   counts?: { users: number; instances: number; alerts: number }
+  multiUser?: { organizations: number; memberships: number; workspaceScoping: boolean }
+  security?: PlatformSecurityDto
 }
 
 @Injectable({ providedIn: 'root' })
@@ -31,29 +41,34 @@ export class ProModeService {
   })
   readonly databaseConnected = computed(() => this.status()?.database?.connected ?? false)
   readonly oauthGithubEnabled = computed(() => this.status()?.oauth?.github ?? false)
+  readonly oauthGitlabEnabled = computed(() => this.status()?.oauth?.gitlab ?? false)
+  readonly workspaceIsolation = computed(
+    () => this.status()?.multiUser?.workspaceScoping ?? this.status()?.security?.workspaceIsolation ?? true,
+  )
+  readonly security = computed(() => this.status()?.security ?? null)
+
+  loadStatus$ = (): Observable<PlatformStatusDto | null> =>
+    this.api.get<PlatformStatusDto>('platform/status').pipe(
+      tap((s) => {
+        this.status.set(s)
+        this.loaded.set(true)
+      }),
+      catchError(() => {
+        this.status.set({
+          demoMode: environment.demoMode,
+          proMode: environment.proMode,
+          authUrl: environment.authUrl ?? 'http://localhost:4200',
+          oauth: { google: false, github: false, gitlab: false },
+          message: environment.proMode
+            ? 'Modo PRO — conecta tus integraciones en Configuración'
+            : 'Entorno local — backend no disponible',
+        })
+        this.loaded.set(true)
+        return of(null)
+      }),
+    )
 
   loadStatus = (): void => {
-    this.api
-      .get<PlatformStatusDto>('platform/status')
-      .pipe(
-        tap((s) => {
-          this.status.set(s)
-          this.loaded.set(true)
-        }),
-        catchError(() => {
-          this.status.set({
-            demoMode: environment.demoMode,
-            proMode: environment.proMode,
-            authUrl: environment.authUrl ?? 'http://localhost:4200',
-            oauth: { google: false, github: false },
-            message: environment.proMode
-              ? 'Modo PRO — conecta tus integraciones en Configuración'
-              : 'Entorno local — backend no disponible',
-          })
-          this.loaded.set(true)
-          return of(null)
-        }),
-      )
-      .subscribe()
+    this.loadStatus$().subscribe()
   }
 }

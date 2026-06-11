@@ -12,3 +12,11 @@ export const bindPublicScroll = (): (() => void) => {
 export const scrollPublicToTop = (): void => {
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
 }
+
+export const scrollPublicAnchor = (id: string): void => {
+  const el = document.getElementById(id)
+  if (!el) return
+  const headerOffset = 72
+  const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
+  window.scrollTo({ top, behavior: 'smooth' })
+}

@@ -100,6 +100,45 @@ const randomNumericPassword = (length = 10) => {
   return out.slice(0, length)
 }
 
+const ROBUST_CHARS = {
+  lower: 'abcdefghijkmnopqrstuvwxyz',
+  upper: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+  digit: '23456789',
+  symbol: '!@#$%&*-_+=?',
+}
+
+const randomRobustPassword = (length = 20) => {
+  const buckets = [
+    ROBUST_CHARS.lower,
+    ROBUST_CHARS.upper,
+    ROBUST_CHARS.digit,
+    ROBUST_CHARS.symbol,
+  ]
+  const chars = []
+  for (const bucket of buckets) {
+    chars.push(bucket[crypto.randomInt(0, bucket.length)])
+  }
+  const all = buckets.join('')
+  while (chars.length < length) {
+    chars.push(all[crypto.randomInt(0, all.length)])
+  }
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(0, i + 1)
+    ;[chars[i], chars[j]] = [chars[j], chars[i]]
+  }
+  return chars.join('')
+}
+
+const isRobustPassword = (password) => {
+  const value = String(password ?? '')
+  if (value.length < 16) return false
+  if (!/[a-z]/.test(value)) return false
+  if (!/[A-Z]/.test(value)) return false
+  if (!/[0-9]/.test(value)) return false
+  if (!/[^A-Za-z0-9]/.test(value)) return false
+  return true
+}
+
 const normalizeRole = (role) => {
   const raw = String(role ?? '').trim().toLowerCase()
   const mapped = ROLE_ALIASES[raw] ?? raw
@@ -165,10 +204,12 @@ const upsertPanelUser = async ({
   membership,
   organization,
   project,
+  verifyEmail = false,
 }) => {
   const normalizedRole = normalizeRole(role)
   const roleRow = await resolveRole(normalizedRole)
   const passwordHash = await bcrypt.hash(password, 12)
+  const verifiedAt = verifyEmail ? new Date() : undefined
 
   const user = await prisma.user.upsert({
     where: { email },
@@ -177,12 +218,14 @@ const upsertPanelUser = async ({
       passwordHash,
       name,
       isActive: true,
+      ...(verifiedAt ? { emailVerifiedAt: verifiedAt } : {}),
     },
     update: {
       passwordHash,
       name,
       isActive: true,
       deletedAt: null,
+      ...(verifiedAt ? { emailVerifiedAt: verifiedAt } : {}),
     },
   })
 
@@ -269,9 +312,11 @@ const run = async () => {
   if (args.admin) {
     const email = String(args.email ?? 'admin@spendlyx.com').trim().toLowerCase()
     const name = String(args.name ?? 'Administrador Spendlyx').trim()
-    const password = String(args.password ?? randomNumericPassword(10))
-    if (!/^\d{10}$/.test(password)) {
-      throw new Error('La contraseña admin debe ser numérica de 10 dígitos')
+    const password = String(args.password ?? randomRobustPassword(20))
+    if (!isRobustPassword(password)) {
+      throw new Error(
+        'La contraseña admin debe tener ≥16 caracteres con mayúsculas, minúsculas, números y símbolos',
+      )
     }
 
     const result = await upsertPanelUser({
@@ -282,6 +327,7 @@ const run = async () => {
       membership: 'OWNER',
       organization: ctx.organization,
       project: ctx.project,
+      verifyEmail: true,
     })
 
     console.log('==> Administrador PRO creado/actualizado (acceso total)')
@@ -360,7 +406,7 @@ const run = async () => {
   }
 
   console.log(`Uso:
-  node provision-panel-users.js --admin [--email admin@spendlyx.com] [--password 1234567890]
+  node provision-panel-users.js --admin [--email admin@spendlyx.com] [--password 'Robusta!2026Segura']
   node provision-panel-users.js --presets
   node provision-panel-users.js --user email@dominio.com --name "Nombre" --role operador [--password 1234567890]
   node provision-panel-users.js --list`)

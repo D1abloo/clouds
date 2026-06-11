@@ -1,0 +1,396 @@
+<div
+  class="cld"
+  [class.cld--aws]="data.slug === 'aws'"
+  [class.cld--azure]="data.slug === 'azure'"
+  [class.cld--gcp]="data.slug === 'gcp'"
+  [class.cld--clouding]="data.slug === 'clouding'"
+  [style.--cld-accent]="theme().accent"
+  [style.--cld-accent-dark]="theme().accentDark"
+  [style.--cld-accent-muted]="theme().accentMuted"
+  [style.--cld-header-text]="theme().headerText"
+>
+  <header class="cld__hero" [style.background]="theme().headerBg">
+    <div class="cld__hero-brand">
+      <app-brand-logo [logo]="theme().logo" size="lg" />
+      <div class="cld__hero-copy">
+        <p class="cld__hero-eyebrow">{{ theme().consoleSubtitle }} · {{ data.accountName }}</p>
+        <h2 mat-dialog-title class="cld__hero-title">{{ theme().consoleTitle }}</h2>
+        @if (data.slug === 'gcp') {
+          <p class="cld__hero-sub">{{ theme().regionLabel }}: {{ form.value.region || data.defaultRegion || '—' }}</p>
+        }
+      </div>
+    </div>
+    @if (data.slug !== 'gcp') {
+      <div class="cld__hero-meta" aria-hidden="true">
+        <span>{{ data.provider }}</span>
+        <span>{{ form.value.region || data.defaultRegion || '—' }}</span>
+      </div>
+    }
+  </header>
+
+  @if (theme().stepLayout === 'sidebar') {
+    <div class="cld__shell">
+      <nav class="cld__sidebar" aria-label="Pasos del asistente de lanzamiento">
+        @for (s of options().steps; track s.id; let i = $index) {
+          <button
+            type="button"
+            class="cld__sidebar-step"
+            [class.cld__sidebar-step--on]="activeStep() === s.id"
+            [class.cld__sidebar-step--done]="stepIndex() > i"
+            [disabled]="launching()"
+            (click)="goToStep(s.id)"
+            [attr.aria-current]="activeStep() === s.id ? 'step' : null"
+          >
+            <span class="cld__sidebar-num">{{ i + 1 }}</span>
+            <span class="cld__sidebar-label">{{ s.label }}</span>
+          </button>
+        }
+      </nav>
+      <div class="cld__main">
+        <ng-container *ngTemplateOutlet="bodyTpl" />
+        <ng-container *ngTemplateOutlet="actionsTpl" />
+      </div>
+    </div>
+  } @else {
+    <nav
+      class="cld__steps"
+      [class.cld__steps--azure]="data.slug === 'azure'"
+      [class.cld__steps--gcp]="data.slug === 'gcp'"
+      [class.cld__steps--clouding]="data.slug === 'clouding'"
+      aria-label="Pasos del asistente de lanzamiento"
+    >
+      @for (s of options().steps; track s.id; let i = $index) {
+        <button
+          type="button"
+          class="cld__step"
+          [class.cld__step--on]="activeStep() === s.id"
+          [class.cld__step--done]="stepIndex() > i"
+          [disabled]="launching()"
+          (click)="goToStep(s.id)"
+          [attr.aria-current]="activeStep() === s.id ? 'step' : null"
+        >
+          <mat-icon>{{ s.icon }}</mat-icon>
+          <span>{{ s.shortLabel ?? s.label }}</span>
+        </button>
+      }
+      @if (data.slug === 'clouding') {
+        <div class="cld__steps-bar" role="progressbar" [attr.aria-valuenow]="progressPct()" aria-valuemin="0" aria-valuemax="100">
+          <span [style.width.%]="progressPct()"></span>
+        </div>
+      }
+    </nav>
+    <ng-container *ngTemplateOutlet="bodyTpl" />
+    <ng-container *ngTemplateOutlet="actionsTpl" />
+  }
+</div>
+
+<ng-template #bodyTpl>
+  <mat-dialog-content class="cld__body">
+    @if (launchProgress()) {
+      <app-cloud-launch-progress [progress]="launchProgress()" />
+    }
+
+    @if (catalogLoading()) {
+      <app-loading-state message="Cargando catálogo operativo…" />
+    } @else {
+      @switch (activeStep()) {
+        @case ('image') {
+          <section class="cld__section" aria-labelledby="cld-image-h">
+            <header class="cld__panel-head">
+              <div>
+                <h3 id="cld-image-h">{{ options().imageSectionTitle }}</h3>
+                <p>{{ options().imageSectionHint }}</p>
+              </div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cld__search">
+                <mat-label>{{ options().searchImageLabel }}</mat-label>
+                <input matInput [value]="imageSearch()" (input)="onImageSearch($event)" placeholder="Ubuntu, Debian, Windows…" />
+                <mat-icon matPrefix>search</mat-icon>
+              </mat-form-field>
+            </header>
+            @if (imageOsTabs().length) {
+              <nav class="cld__os-tabs" aria-label="Filtrar por sistema operativo">
+                @for (tab of imageOsTabs(); track tab.id) {
+                  <button
+                    type="button"
+                    class="cld__os-tab"
+                    [class.cld__os-tab--on]="imageOsTab() === tab.id"
+                    (click)="selectImageOsTab(tab.id)"
+                  >
+                    {{ tab.label }}
+                  </button>
+                }
+              </nav>
+            }
+            <div class="cld__images" role="list">
+              @for (img of filteredImages(); track img.id) {
+                <button
+                  type="button"
+                  class="cld__image-card"
+                  role="listitem"
+                  [class.cld__image-card--on]="form.value.imageId === img.id"
+                  (click)="selectImage(img)"
+                >
+                  <span class="cld__image-os">{{ osIcon(img) }}</span>
+                  <strong>{{ img.name }}</strong>
+                  <span class="cld__image-meta">{{ img.architecture ?? 'x86_64' }} · {{ img.os ?? 'linux' }}</span>
+                  <code class="cld__image-id">{{ shortId(img.id) }}</code>
+                  <span class="cld__badge">{{ imageBadgeLabel() }}</span>
+                </button>
+              } @empty {
+                <p class="cld__empty">Sin imágenes en esta región. Cambia de región o valida la cuenta.</p>
+              }
+            </div>
+          </section>
+        }
+
+        @case ('compute') {
+          <section class="cld__section" aria-labelledby="cld-compute-h">
+            <header class="cld__panel-head">
+              <div>
+                <h3 id="cld-compute-h">{{ options().instanceSectionTitle }}</h3>
+                <p>{{ options().instanceSectionHint }}</p>
+              </div>
+            </header>
+            <div [formGroup]="form">
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>{{ options().instanceNameLabel }}</mat-label>
+                <input matInput formControlName="name" placeholder="web-prod-01" />
+              </mat-form-field>
+            </div>
+            @if (data.slug === 'gcp') {
+              <div class="cld__chip-grid" role="list">
+                @for (t of types(); track t.id) {
+                  <button
+                    type="button"
+                    class="cld__chip"
+                    role="listitem"
+                    [class.cld__chip--on]="form.value.instanceType === t.id"
+                    (click)="selectType(t.id)"
+                  >
+                    <strong>{{ t.name }}</strong>
+                    @if (t.vcpus) {
+                      <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB</span>
+                      <em>{{ typeMonthlyCost(t) }}</em>
+                    }
+                  </button>
+                } @empty {
+                  <p class="cld__empty">No hay tipos disponibles en esta región.</p>
+                }
+              </div>
+            } @else {
+              <div class="cld__type-grid" role="list">
+                @for (t of types(); track t.id) {
+                  <button
+                    type="button"
+                    class="cld__type-card"
+                    role="listitem"
+                    [class.cld__type-card--on]="form.value.instanceType === t.id"
+                    (click)="selectType(t.id)"
+                  >
+                    <mat-icon>memory</mat-icon>
+                    <strong>{{ t.name }}</strong>
+                    @if (t.vcpus) {
+                      <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB RAM</span>
+                      <em>{{ typeMonthlyCost(t) }}</em>
+                    }
+                  </button>
+                } @empty {
+                  <p class="cld__empty">No hay tipos disponibles en esta región.</p>
+                }
+              </div>
+            }
+          </section>
+        }
+
+        @case ('network') {
+          <section class="cld__section" aria-labelledby="cld-network-h">
+            <header class="cld__panel-head">
+              <div>
+                <h3 id="cld-network-h">{{ options().networkSectionTitle }}</h3>
+                <p>{{ options().networkSectionHint }}</p>
+              </div>
+            </header>
+            <div class="cld__form-grid" [formGroup]="form">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ theme().regionLabel }}</mat-label>
+                <mat-select formControlName="region" (selectionChange)="onRegionChange()">
+                  @for (r of regions(); track r.id) {
+                    <mat-option [value]="r.id">{{ r.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ options().azLabel }}</mat-label>
+                <mat-select formControlName="availabilityZone">
+                  @for (z of options().zones; track z) {
+                    <mat-option [value]="z">{{ z }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (options().resourceGroups?.length) {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ options().resourceGroupLabel }}</mat-label>
+                  <mat-select formControlName="resourceGroup">
+                    @for (rg of options().resourceGroups!; track rg) {
+                      <mat-option [value]="rg">{{ rg }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
+              <mat-form-field appearance="outline">
+                <mat-label>{{ options().subnetLabel }}</mat-label>
+                <mat-select formControlName="subnetId">
+                  @for (n of networks(); track n.id) {
+                    <mat-option [value]="n.id">{{ n.name }} ({{ n.type ?? 'red' }})</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ theme().sgLabel }}</mat-label>
+                <mat-select formControlName="securityGroupId">
+                  @for (sg of securityGroups(); track sg.id) {
+                    <mat-option [value]="sg.id">{{ sg.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <div class="cld__toggle-row cld__span-2">
+                <mat-slide-toggle formControlName="publicIp" color="primary">
+                  {{ options().publicIpLabel }}
+                </mat-slide-toggle>
+              </div>
+            </div>
+          </section>
+        }
+
+        @case ('storage') {
+          <section class="cld__section" aria-labelledby="cld-storage-h">
+            <header class="cld__panel-head">
+              <div>
+                <h3 id="cld-storage-h">{{ options().storageSectionTitle }}</h3>
+                <p>{{ options().storageSectionHint }}</p>
+              </div>
+            </header>
+            <div class="cld__form-grid" [formGroup]="form">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ options().keyPairLabel }}</mat-label>
+                <mat-select formControlName="keyPair">
+                  @for (kp of options().keyPairs; track kp) {
+                    <mat-option [value]="kp">{{ kp }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ options().diskSizeLabel }}</mat-label>
+                <input matInput type="number" formControlName="diskGb" min="8" max="2048" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ options().volumeTypeLabel }}</mat-label>
+                <mat-select formControlName="diskType">
+                  @for (vt of options().volumeTypes; track vt.id) {
+                    <mat-option [value]="vt.id">{{ vt.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="cld__span-2">
+                <mat-label>{{ options().tagsLabel }}</mat-label>
+                <input matInput formControlName="tags" [placeholder]="options().tagHint" />
+                <mat-hint>Formato: clave=valor, clave2=valor2</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="cld__span-2">
+                <mat-label>{{ options().userDataLabel }}</mat-label>
+                <textarea matInput formControlName="userData" rows="4" placeholder="#!/bin/bash&#10;apt-get update"></textarea>
+              </mat-form-field>
+              <div class="cld__toggle-row cld__span-2">
+                <mat-slide-toggle formControlName="monitoring" color="primary">
+                  {{ options().monitoringLabel }}
+                </mat-slide-toggle>
+              </div>
+            </div>
+          </section>
+        }
+
+        @case ('review') {
+          <section class="cld__section" aria-labelledby="cld-review-h">
+            <header class="cld__panel-head">
+              <div>
+                <h3 id="cld-review-h">{{ options().reviewSectionTitle }}</h3>
+                <p>{{ options().reviewSectionHint }}</p>
+              </div>
+            </header>
+            <div class="cld__review-grid">
+              <ul class="cld__summary">
+                @for (row of reviewRows(); track row.label) {
+                  <li>
+                    <span>{{ row.label }}</span>
+                    <strong [class.cld__mono]="row.mono">{{ row.value }}</strong>
+                  </li>
+                }
+              </ul>
+              <app-cloud-launch-infra-preview
+                [slug]="data.slug"
+                [region]="form.value.region ?? ''"
+                [network]="networkLabel()"
+                [securityGroup]="sgLabel()"
+                [instanceType]="form.value.instanceType ?? ''"
+                [imageName]="selectedImage()?.name ?? ''"
+                [instanceName]="form.value.name ?? ''"
+                [specs]="typeSpecs()"
+                [monthlyCost]="costHint()"
+                [launchPercent]="progressPct()"
+                [diskGb]="form.value.diskGb ?? undefined"
+                [diskType]="form.value.diskType ?? ''"
+                [keyPair]="form.value.keyPair ?? ''"
+                [publicIp]="form.value.publicIp ?? false"
+              />
+            </div>
+          </section>
+        }
+      }
+    }
+  </mat-dialog-content>
+</ng-template>
+
+<ng-template #actionsTpl>
+  <mat-dialog-actions class="cld__actions" align="end">
+    <button
+      mat-button
+      type="button"
+      (click)="dialogRef.close()"
+      [disabled]="launching()"
+      [class.cld__btn-cancel--link]="theme().cancelStyle === 'link'"
+    >
+      {{ options().cancelLabel }}
+    </button>
+    @if (stepIndex() > 0) {
+      <button mat-stroked-button type="button" (click)="handleBack()" [disabled]="launching()">
+        <mat-icon>arrow_back</mat-icon>
+        {{ options().backLabel }}
+      </button>
+    }
+    @if (activeStep() !== 'review') {
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        [class]="theme().primaryBtnClass"
+        [disabled]="!canAdvance() || launching() || catalogLoading()"
+        (click)="handleNext()"
+      >
+        {{ options().nextLabel }}
+        <mat-icon>arrow_forward</mat-icon>
+      </button>
+    } @else {
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        [class]="theme().primaryBtnClass"
+        [disabled]="form.invalid || launching() || !images().length"
+        (click)="handleLaunch()"
+      >
+        <mat-icon>rocket_launch</mat-icon>
+        {{ options().launchLabel }}
+      </button>
+    }
+  </mat-dialog-actions>
+</ng-template>

@@ -11,8 +11,8 @@ import { PUBLIC_THEME } from './public-theme'
   template: `
     <header class="pub-page-hero">
       <div class="pub-wrap" style="text-align: center">
-        <h1>Planes</h1>
-        <p>Acceso PRO para equipos que necesitan operar infraestructura y cloud con control total.</p>
+        <h1>Planes Spendlyx</h1>
+        <p>Acceso PRO para equipos que operan infraestructura multi-cloud con control de costes y RBAC.</p>
       </div>
     </header>
     <div class="pub pub-page-body">

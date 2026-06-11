@@ -10,7 +10,7 @@ import { PUBLIC_THEME } from './public-theme'
     <header class="pub-page-hero">
       <div class="pub-wrap">
         <h1>Producto Spendlyx</h1>
-        <p>Panel live para gestión cloud y operaciones — diseñado para usuarios, no para administradores de servidores.</p>
+        <p>Plano de control multi-cloud con visibilidad, automatización y facturación — el mismo panel que operas en producción.</p>
       </div>
     </header>
     <div class="pub pub-page-body">

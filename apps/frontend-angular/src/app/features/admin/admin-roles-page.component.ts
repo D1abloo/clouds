@@ -31,6 +31,8 @@ import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { AdminRoleDetailDialogComponent } from './admin-role-detail-dialog.component'
 import { AdminRoleAssignmentEditDialogComponent } from './admin-role-assignment-edit-dialog.component'
 import { ProConfigGateComponent } from '../../shared/components/pro-config-gate/pro-config-gate.component'
+import { AuthService } from '../../core/services/auth.service'
+import { canManageRoles } from '../../core/utils/rbac.util'
 
 type RoleTab = 'roles' | 'permissions' | 'assignments'
 
@@ -57,9 +59,16 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
         title="Roles"
         description="Define roles RBAC, matriz de permisos y asignaciones por usuario y ámbito."
         icon="manage_accounts"
-        [actions]="headerActions"
+        [actions]="canEdit() ? headerActions : readOnlyHeaderActions"
         (actionClick)="handleHeader($event)"
       />
+
+      @if (!canEdit()) {
+        <p class="rol-readonly-banner" role="status">
+          <mat-icon>visibility</mat-icon>
+          Vista de solo lectura — solo administradores pueden modificar roles y permisos.
+        </p>
+      }
 
       <section class="rol-intro">
         <div class="rol-intro__main">
@@ -151,7 +160,9 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
                         <td><span class="rol-type" [class.rol-type--sys]="row.builtin">{{ row.builtin ? 'Sistema' : 'Custom' }}</span></td>
                         <td><app-status-badge [value]="row.status" /></td>
                         <td (click)="$event.stopPropagation()">
-                          <button mat-icon-button type="button" [matMenuTriggerFor]="roleMenu" aria-label="Acciones" (click)="selectedRole.set(row)"><mat-icon>more_vert</mat-icon></button>
+                          @if (canEdit()) {
+                            <button mat-icon-button type="button" [matMenuTriggerFor]="roleMenu" aria-label="Acciones" (click)="selectedRole.set(row)"><mat-icon>more_vert</mat-icon></button>
+                          }
                         </td>
                       </tr>
                     }
@@ -208,7 +219,9 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
                         <td>{{ row.assignedAt | date:'dd MMM yyyy' }}</td>
                         <td><app-status-badge [value]="row.status" /></td>
                         <td (click)="$event.stopPropagation()">
-                          <button mat-icon-button type="button" [matMenuTriggerFor]="assignMenu" aria-label="Acciones" (click)="selectedAssignment.set(row)"><mat-icon>more_vert</mat-icon></button>
+                          @if (canEdit()) {
+                            <button mat-icon-button type="button" [matMenuTriggerFor]="assignMenu" aria-label="Acciones" (click)="selectedAssignment.set(row)"><mat-icon>more_vert</mat-icon></button>
+                          }
                         </td>
                       </tr>
                     }
@@ -291,6 +304,20 @@ type RoleTab = 'roles' | 'permissions' | 'assignments'
     .perm-cell { text-align: center; font-weight: 600; color: #cbd5e1; &--on { color: ${ADMIN_ROLES_ACCENT}; font-weight: 800; } }
     ::ng-deep .rol-context-menu .rol-menu-header { opacity: 1 !important; height: auto !important; line-height: 1.35 !important; padding: 0.55rem 1rem 0.35rem !important; cursor: default !important; strong { display: block; font-size: 0.78rem; color: #0f172a; } span { display: block; font-size: 0.64rem; color: #64748b; font-weight: 400; } }
     ::ng-deep .rol-context-menu .mat-mdc-menu-item span { display: flex; flex-direction: column; line-height: 1.35; em { font-style: normal; font-size: 0.58rem; color: #94a3b8; font-weight: 400; margin-top: 0.08rem; } }
+    .rol-readonly-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin: 0;
+      padding: 0.55rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid ${ADMIN_ROLES_ACCENT_BORDER};
+      background: #fff;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #64748b;
+      mat-icon { font-size: 1rem; width: 1rem; height: 1rem; color: ${ADMIN_ROLES_ACCENT}; }
+    }
     @media (max-width: 900px) { .rol-charts { grid-template-columns: 1fr; } .rol-bar { flex-direction: column; align-items: stretch; } .rol-search { max-width: none; margin-left: 0; } }
   `,
 })
@@ -300,6 +327,9 @@ export class AdminRolesPageComponent implements OnInit {
   private readonly dialog = inject(MatDialog)
   private readonly api = inject(ApiClientService)
   private readonly pro = inject(ProModeService)
+  private readonly auth = inject(AuthService)
+
+  readonly canEdit = () => canManageRoles(this.auth.user()?.roles)
 
   readonly roles = signal<AdminRoleRow[]>([])
   readonly permissions = signal<AdminPermissionRow[]>([])
@@ -311,6 +341,10 @@ export class AdminRolesPageComponent implements OnInit {
   readonly headerActions: PageHeaderAction[] = [
     { label: 'Asignar rol', icon: 'assignment_ind', primary: true },
     { label: 'Crear rol', icon: 'add' },
+    { label: 'Exportar matriz', icon: 'download' },
+  ]
+
+  readonly readOnlyHeaderActions: PageHeaderAction[] = [
     { label: 'Exportar matriz', icon: 'download' },
   ]
 
@@ -449,6 +483,10 @@ export class AdminRolesPageComponent implements OnInit {
 
   handleHeader = (label: string): void => {
     if (label === 'Exportar matriz') { this.handleExport(); return }
+    if (!this.canEdit()) {
+      this.toast.info('Solo administradores pueden modificar roles')
+      return
+    }
     if (label === 'Asignar rol') { this.openAssignDialog(); return }
     this.actions.runPageAction('roles', 'create', label, { area: 'admin' })
   }
@@ -476,6 +514,10 @@ export class AdminRolesPageComponent implements OnInit {
   }
 
   openAssignDialog = (defaultRole?: string): void => {
+    if (!this.canEdit()) {
+      this.toast.info('Solo administradores pueden asignar roles')
+      return
+    }
     const ref = this.dialog.open(AdminRoleAssignmentEditDialogComponent, {
       width: 'min(780px, 94vw)',
       maxWidth: '94vw',
@@ -492,6 +534,10 @@ export class AdminRolesPageComponent implements OnInit {
   }
 
   openEditAssignment = (row: AdminRoleAssignmentRow): void => {
+    if (!this.canEdit()) {
+      this.toast.info('Solo administradores pueden editar asignaciones')
+      return
+    }
     if (row.status === 'stopped') {
       this.toast.info('Usuario suspendido — reactiva antes de cambiar rol')
       return
@@ -509,6 +555,10 @@ export class AdminRolesPageComponent implements OnInit {
   }
 
   runAssignRow = (actionId: string, label: string): void => {
+    if (!this.canEdit()) {
+      this.toast.info('Solo administradores pueden modificar asignaciones')
+      return
+    }
     const row = this.selectedAssignment()
     if (!row) return
     if (actionId === 'revoke') {

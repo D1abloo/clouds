@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator'
 import { IntegrationsService } from './integrations.service'
-import { PLATFORM_EVENT_SOURCES } from './integrations.platform-events'
 import { UpdateIntegrationDto } from './dto/update-integration.dto'
 import { DispatchIntegrationEventDto } from './dto/dispatch-integration-event.dto'
 
@@ -18,13 +17,14 @@ export class IntegrationsController {
   }
 
   @Get('sources')
-  listSources() {
-    return { sources: PLATFORM_EVENT_SOURCES }
+  async listSources(@CurrentUser() user: JwtPayload) {
+    const sources = await this.service.listSourcesLive(user.sub)
+    return { sources }
   }
 
   @Get()
-  list() {
-    return this.service.list()
+  list(@CurrentUser() user: JwtPayload) {
+    return this.service.list(user.sub)
   }
 
   @Get('deliveries')

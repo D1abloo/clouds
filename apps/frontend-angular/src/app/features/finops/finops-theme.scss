@@ -1,0 +1,79 @@
+.finops-page {
+  --finops-bg: linear-gradient(145deg, #0b1120 0%, #111827 45%, #0f172a 100%);
+  --finops-card: color-mix(in srgb, #1e293b 88%, #0f172a);
+  --finops-border: color-mix(in srgb, #6366f1 22%, #334155);
+  --finops-electric: #38bdf8;
+  --finops-purple: #a78bfa;
+  --finops-savings: #34d399;
+  --finops-overcost: #fb7185;
+  --finops-text: #e2e8f0;
+  --finops-muted: #94a3b8;
+  background: var(--finops-bg);
+  color: var(--finops-text);
+  min-height: calc(100dvh - 52px);
+  margin: -1rem -1rem 0;
+  padding: 1.25rem 1rem 2rem;
+}
+
+.finops-hero {
+  border-radius: 18px;
+  padding: 1.75rem 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, #6366f1 18%, #0f172a), color-mix(in srgb, #0284c7 14%, #0f172a));
+  border: 1px solid var(--finops-border);
+  margin-bottom: 1.25rem;
+}
+
+.finops-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.finops-card {
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  background: var(--finops-card);
+  border: 1px solid color-mix(in srgb, var(--finops-border) 60%, transparent);
+  transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.2s;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    border-color: color-mix(in srgb, var(--finops-electric) 40%, transparent);
+  }
+}
+
+.finops-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  &--savings { background: color-mix(in srgb, var(--finops-savings) 20%, transparent); color: var(--finops-savings); }
+  &--warn { background: color-mix(in srgb, #fbbf24 20%, transparent); color: #fbbf24; }
+  &--over { background: color-mix(in srgb, var(--finops-overcost) 20%, transparent); color: var(--finops-overcost); }
+}
+
+.finops-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.finops-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--finops-text);
+  background: color-mix(in srgb, #1e293b 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--finops-purple) 25%, transparent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.2s;
+  &:hover { background: color-mix(in srgb, #6366f1 18%, #1e293b); transform: translateX(3px); }
+}

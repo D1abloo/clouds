@@ -15,7 +15,7 @@ export class JenkinsService {
       .get<unknown>('jenkins/servers')
       .pipe(map((res) => unwrapList<JenkinsServer>(res)))
 
-  createServer = (body: Partial<JenkinsServer>): Observable<JenkinsServer> =>
+  createServer = (body: Partial<JenkinsServer> & { secretRef?: string; username?: string; apiToken?: string }): Observable<JenkinsServer> =>
     this.api.post<JenkinsServer>('jenkins/servers', body)
 
   validate = (id: string): Observable<unknown> =>

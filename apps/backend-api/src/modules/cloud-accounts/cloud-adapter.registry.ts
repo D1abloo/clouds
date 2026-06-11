@@ -3,6 +3,7 @@ import { CloudProvider } from '@prisma/client'
 import { AwsAdapterService } from './adapters/aws.adapter.service'
 import { GcpAdapterService } from './adapters/gcp.adapter.service'
 import { AzureAdapterService } from './adapters/azure.adapter.service'
+import { CloudingAdapterService } from './adapters/clouding.adapter.service'
 import {
   CloudAdapterContext,
   CloudProviderAdapter,
@@ -17,6 +18,7 @@ export class CloudAdapterRegistry {
     private readonly aws: AwsAdapterService,
     private readonly gcp: GcpAdapterService,
     private readonly azure: AzureAdapterService,
+    private readonly clouding: CloudingAdapterService,
   ) {}
 
   private pick(provider: CloudProvider): CloudProviderAdapter {
@@ -27,6 +29,8 @@ export class CloudAdapterRegistry {
         return this.gcp
       case CloudProvider.AZURE:
         return this.azure
+      case CloudProvider.CLOUDING:
+        return this.clouding
       default:
         throw new BadRequestException('Unsupported cloud provider')
     }

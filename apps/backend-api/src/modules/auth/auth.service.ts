@@ -61,6 +61,11 @@ export class AuthService {
       })
     }
 
+    await this.orgScope.ensurePersonalWorkspace(user.id, {
+      displayName: user.name ?? undefined,
+      companyName: user.company ?? user.name ?? undefined,
+    })
+
     const roles = user.userRoles.map((ur) => ur.role.name)
     const payload = await this.buildAuthPayload(user.id, user.email, roles)
 
@@ -306,7 +311,6 @@ export class AuthService {
     })
 
     if (!user) {
-      const viewerRole = await this.prisma.role.findUnique({ where: { name: 'solo_lectura' } })
       const passwordHash = await bcrypt.hash(`oauth-${provider}-${Date.now()}`, 12)
       user = await this.prisma.user.create({
         data: {
@@ -314,8 +318,15 @@ export class AuthService {
           passwordHash,
           name: displayName ?? email.split('@')[0],
           emailVerifiedAt: new Date(),
-          userRoles: viewerRole ? { create: [{ roleId: viewerRole.id }] } : undefined,
         },
+        include: { userRoles: { include: { role: true } } },
+      })
+      await this.orgScope.ensurePersonalWorkspace(user.id, {
+        displayName: displayName ?? email.split('@')[0],
+        companyName: displayName ?? email.split('@')[0],
+      })
+      user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
         include: { userRoles: { include: { role: true } } },
       })
     } else {
@@ -332,6 +343,14 @@ export class AuthService {
           include: { userRoles: { include: { role: true } } },
         })
       }
+      await this.orgScope.ensurePersonalWorkspace(user.id, {
+        displayName: user.name ?? displayName,
+        companyName: user.company ?? user.name ?? undefined,
+      })
+      user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+        include: { userRoles: { include: { role: true } } },
+      })
     }
 
     await this.prisma.oAuthAccount.upsert({

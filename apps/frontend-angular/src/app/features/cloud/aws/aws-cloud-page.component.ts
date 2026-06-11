@@ -246,6 +246,7 @@ import {
                     <mat-option value="RUNNING">En ejecución</mat-option>
                     <mat-option value="STOPPED">Detenida</mat-option>
                     <mat-option value="WARNING">Advertencia</mat-option>
+                    <mat-option value="TERMINATED">Borradas / Terminadas</mat-option>
                   </mat-select>
                 </mat-form-field>
               </div>
@@ -956,12 +957,20 @@ export class AwsCloudPageComponent implements OnInit {
       this.section.set(awsSectionFromSlug(params.get('section')))
     })
     this.load()
+    this.statusControl.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load())
+  }
+
+  private instanceListFilters = (): { provider: 'AWS'; status?: string } => {
+    const status = this.statusControl.value
+    if (status === 'TERMINATED') return { provider: 'AWS', status: 'TERMINATED' }
+    if (status) return { provider: 'AWS', status }
+    return { provider: 'AWS' }
   }
 
   private load = (): void => {
     this.loading.set(true)
     forkJoin({
-      instances: this.instancesSvc.list({ provider: 'AWS' }).pipe(catchError(() => of([] as Instance[]))),
+      instances: this.instancesSvc.list(this.instanceListFilters()).pipe(catchError(() => of([] as Instance[]))),
       accounts: this.accountsSvc.list(undefined, 'AWS').pipe(catchError(() => of([]))),
     }).subscribe(({ instances, accounts }) => {
       this.snapshot.set(
@@ -1002,10 +1011,8 @@ export class AwsCloudPageComponent implements OnInit {
   handleAddAccount = (): void => {
     this.dialog
       .open(CloudAccountFormDialogComponent, {
-        width: '760px',
-        maxWidth: '95vw',
-        panelClass: 'cloud-account-wizard-panel',
-        data: { suggestedProvider: 'AWS' as const },
+        ...CloudAccountFormDialogComponent.dialogConfig,
+        data: { suggestedProvider: 'AWS' as const, scope: 'cloud' },
       })
       .afterClosed()
       .subscribe((res) => {

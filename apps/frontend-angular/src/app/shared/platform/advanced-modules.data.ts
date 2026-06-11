@@ -113,12 +113,19 @@ export interface CopilotAction {
   route?: string
 }
 
+export interface CopilotLaunchProgress {
+  percent: number
+  step: string
+  status: 'running' | 'success' | 'error'
+}
+
 export interface CopilotMessage {
   role: 'user' | 'assistant'
   text: string
   ts: number
   actions?: CopilotAction[]
   sources?: string[]
+  launchProgress?: CopilotLaunchProgress
 }
 
 export type CopilotContextId =

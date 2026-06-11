@@ -441,3 +441,35 @@ export const buildRepositoriesSectionMetrics = (opts: {
     deploymentCount: opts.deployments.length,
   }
 }
+
+export const mapApiBranchRow = (item: Record<string, unknown>): GlobalBranchRow => ({
+  id: `${item['provider'] ?? 'github'}-b-${item['repoFullName'] ?? item['projectPath']}-${item['name']}`,
+  provider: (item['provider'] as 'github' | 'gitlab') ?? 'github',
+  repoOrProject: String(item['repoFullName'] ?? item['projectPath'] ?? ''),
+  name: String(item['name'] ?? ''),
+  protected: Boolean(item['protected']),
+  default: Boolean(item['default']),
+  stale: false,
+  lastCommitMessage: String(item['lastCommitMessage'] ?? ''),
+  lastCommitAt: String(item['lastCommitAt'] ?? item['date'] ?? new Date().toISOString()),
+  lastCommitSha: String(item['lastCommitSha'] ?? item['lastSha'] ?? ''),
+  lastCommitAuthor: String(item['lastCommitAuthor'] ?? ''),
+  ciStatus: 'unknown',
+  deployStatus: 'none',
+})
+
+export const mapApiCommitRow = (item: Record<string, unknown>): GlobalCommitRow => ({
+  id: `${item['provider'] ?? 'github'}-c-${item['sha']}`,
+  provider: (item['provider'] as 'github' | 'gitlab') ?? 'github',
+  repoOrProject: String(item['repoFullName'] ?? item['projectPath'] ?? ''),
+  sha: String(item['sha'] ?? ''),
+  message: String(item['message'] ?? ''),
+  author: String(item['author'] ?? ''),
+  branch: String(item['branch'] ?? 'main'),
+  date: String(item['date'] ?? new Date().toISOString()),
+  ciStatus: 'unknown',
+  additions: 0,
+  deletions: 0,
+  filesChanged: 0,
+  deployStatus: 'none',
+})

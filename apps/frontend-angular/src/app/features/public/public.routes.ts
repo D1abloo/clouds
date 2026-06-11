@@ -11,7 +11,7 @@ export const PUBLIC_ROUTES: Routes = [
       {
         path: '',
         loadComponent: () => import('./home-page.component').then((m) => m.HomePageComponent),
-        data: { seo: { title: 'Spendlyx | Panel live para gestión cloud y operaciones', description: 'Spendlyx centraliza nubes, infraestructura, automatización y observabilidad en un panel PRO multi-usuario.', path: '/' } },
+        data: { seo: { title: 'Spendlyx | Panel multi-cloud, automatización y facturación', description: 'Controla AWS, GCP, Azure, Jenkins, Terraform y Kubernetes desde un panel PRO en español con facturación por instancia.', path: '/' } },
       },
       {
         path: 'producto',
@@ -26,7 +26,14 @@ export const PUBLIC_ROUTES: Routes = [
       {
         path: 'docs',
         loadComponent: () => import('./docs-page.component').then((m) => m.DocsPageComponent),
-        data: { seo: { title: 'Documentación | Spendlyx', description: 'Guía de uso del panel Spendlyx para usuarios.', path: '/docs' } },
+        data: {
+          seo: {
+            title: 'Documentación de usuario | Spendlyx',
+            description:
+              'Guías completas del panel Spendlyx: nubes AWS/GCP, facturación, automatización, repositorios, seguridad y buenas prácticas.',
+            path: '/docs',
+          },
+        },
       },
       {
         path: 'planes',

@@ -110,11 +110,20 @@ import { CloudAccountFormDialogComponent } from './cloud-account-form-dialog.com
                 <button
                   mat-icon-button
                   type="button"
-                  matTooltip="Sync inventory"
-                  aria-label="Sync"
+                  matTooltip="Sincronizar inventario"
+                  aria-label="Sincronizar"
                   (click)="handleSync(row)"
                 >
                   <mat-icon>sync</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  type="button"
+                  matTooltip="Eliminar cuenta"
+                  aria-label="Eliminar cuenta"
+                  (click)="handleDelete(row)"
+                >
+                  <mat-icon>delete</mat-icon>
                 </button>
               </td>
             </ng-container>
@@ -191,10 +200,8 @@ export class CloudAccountsPageComponent implements OnInit {
   openAddAccountWizard = (): void => {
     this.dialog
       .open(CloudAccountFormDialogComponent, {
-        width: '760px',
-        maxWidth: '95vw',
-        panelClass: 'cloud-account-wizard-panel',
-        data: { suggestedProvider: this.provider },
+        ...CloudAccountFormDialogComponent.dialogConfig,
+        data: { suggestedProvider: this.provider, scope: 'cloud' },
       })
       .afterClosed()
       .subscribe((res) => {
@@ -204,9 +211,9 @@ export class CloudAccountsPageComponent implements OnInit {
 
   handleSync = (account: CloudAccount): void => {
     const data: ConfirmDialogData = {
-      title: 'Sync inventory',
-      message: `Sync instances from ${account.name}?`,
-      confirmLabel: 'Sync',
+      title: 'Sincronizar inventario',
+      message: `¿Sincronizar instancias de «${account.name}»?`,
+      confirmLabel: 'Sincronizar',
     }
     this.dialog
       .open(ConfirmDialogComponent, { data, width: '400px' })
@@ -214,8 +221,31 @@ export class CloudAccountsPageComponent implements OnInit {
       .subscribe((confirmed) => {
         if (!confirmed) return
         this.service.sync(account.id).subscribe({
-          next: () => this.toast.success('Sync started'),
-          error: () => this.toast.error('Sync failed'),
+          next: () => this.toast.success('Sincronización iniciada'),
+          error: () => this.toast.error('Error al sincronizar'),
+        })
+      })
+  }
+
+  handleDelete = (account: CloudAccount): void => {
+    const data: ConfirmDialogData = {
+      title: 'Eliminar cuenta cloud',
+      message: `¿Eliminar «${account.name}»? Las instancias vinculadas se marcarán como terminadas. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+    }
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '440px' })
+      .afterClosed()
+      .subscribe((confirmed) => {
+        if (!confirmed) return
+        this.service.delete(account.id).subscribe({
+          next: (res) => {
+            this.toast.success(res.message ?? 'Cuenta eliminada')
+            this.loadAccounts()
+          },
+          error: () => this.toast.error(`No se pudo eliminar ${account.name}`),
         })
       })
   }

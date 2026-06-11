@@ -25,6 +25,7 @@ import {
   isWizardFormValid,
   reviewSummaryLine,
 } from './cloud-account-wizard.validation'
+import { cloudAccountWizardTheme, WIZARD_STEP_ICONS } from './cloud-account-wizard-theme.util'
 
 export interface WizardInitOptions {
   suggestedProvider?: ConnectionProviderId | CloudProvider
@@ -52,6 +53,7 @@ export class CloudAccountWizardFacade {
   readonly wizardSubtitle = WIZARD_SUBTITLE
   readonly credentialTypeLabel = credentialTypeLabel
   readonly maskSecret = maskSecret
+  readonly stepIcons = WIZARD_STEP_ICONS
 
   readonly step = signal<WizardStep>('provider')
   readonly selectedProvider = signal<ConnectionProviderId | null>(null)
@@ -81,6 +83,19 @@ export class CloudAccountWizardFacade {
     const p = this.selectedProvider()
     return p ? providerCard(p) : undefined
   })
+
+  readonly wizardTheme = computed(() =>
+    cloudAccountWizardTheme(this.selectedProvider(), this.providerMeta()?.shortName),
+  )
+
+  readonly stepProgress = computed(() => {
+    const idx = this.stepIndex()
+    const total = this.steps.length
+    if (total <= 1) return 100
+    return Math.round(((idx + 1) / total) * 100)
+  })
+
+  readonly showScopeTabs = computed(() => this.scopeFilter() === 'all')
 
   readonly providerLabel = computed(() => this.providerMeta()?.shortName ?? 'cloud')
 
@@ -162,6 +177,14 @@ export class CloudAccountWizardFacade {
       if (options.initialStep === undefined && options.suggestedProvider) {
         this.step.set('method')
       }
+    }
+  }
+
+  setScopeFilter = (scope: 'all' | 'cloud' | 'vps' | 'platform'): void => {
+    this.scopeFilter.set(scope)
+    const current = this.selectedProvider()
+    if (current && !this.providerCards().some((c) => c.id === current)) {
+      this.selectedProvider.set(null)
     }
   }
 
