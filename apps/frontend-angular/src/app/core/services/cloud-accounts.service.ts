@@ -5,6 +5,8 @@ import { ProModeService } from './pro-mode.service'
 import { CloudAccount, CloudProvider } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 
+export type CloudKeyPairRow = { id: string; name: string; region: string; fingerprint?: string }
+
 export interface CreateCloudAccountPayload {
   projectId: string
   name: string
@@ -31,6 +33,30 @@ export interface LaunchInstancePayload {
   diskType?: string
   userData?: string
   monitoring?: boolean
+}
+
+export type LaunchPreflightCheck = {
+  id: string
+  level: 'error' | 'warning' | 'ok'
+  message: string
+  field?: string
+  suggestion?: string
+}
+
+export type LaunchPreflightResult = {
+  valid: boolean
+  checks: LaunchPreflightCheck[]
+  resolvedSubnetId?: string
+  resolvedVpcId?: string
+}
+
+export type CreateSubnetPayload = {
+  region: string
+  vpcId: string
+  availabilityZone: string
+  cidrBlock: string
+  name?: string
+  mapPublicIpOnLaunch?: boolean
 }
 
 @Injectable({ providedIn: 'root' })
@@ -78,19 +104,34 @@ export class CloudAccountsService {
     this.api.post('cloud-accounts/sync-all')
 
   regions = (id: string): Observable<{ id: string; name: string }[]> =>
-    this.api.get(`cloud-accounts/${id}/regions`)
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/regions`, undefined, { timeoutMs: 60_000 })
+      .pipe(map((res) => unwrapList<{ id: string; name: string }>(res)))
 
   networks = (id: string, region?: string): Observable<unknown[]> =>
-    this.api.get(`cloud-accounts/${id}/networks`, { region })
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/networks`, { region }, { timeoutMs: 60_000 })
+      .pipe(map((res) => unwrapList(res)))
 
   securityGroups = (id: string, region?: string): Observable<unknown[]> =>
-    this.api.get(`cloud-accounts/${id}/security-groups`, { region })
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/security-groups`, { region }, { timeoutMs: 60_000 })
+      .pipe(map((res) => unwrapList(res)))
 
   images = (id: string, region?: string): Observable<unknown[]> =>
-    this.api.get(`cloud-accounts/${id}/images`, region ? { region } : undefined)
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/images`, region ? { region } : undefined, { timeoutMs: 90_000 })
+      .pipe(map((res) => unwrapList(res)))
 
   instanceTypes = (id: string, region?: string): Observable<unknown[]> =>
-    this.api.get(`cloud-accounts/${id}/instance-types`, region ? { region } : undefined)
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/instance-types`, region ? { region } : undefined, { timeoutMs: 90_000 })
+      .pipe(map((res) => unwrapList(res)))
+
+  keyPairs = (id: string, region?: string): Observable<CloudKeyPairRow[]> =>
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/key-pairs`, region ? { region } : undefined, { timeoutMs: 60_000 })
+      .pipe(map((res) => unwrapList<CloudKeyPairRow>(res)))
 
   listInstances = (id: string, region?: string): Observable<unknown[]> =>
     this.api
@@ -99,6 +140,22 @@ export class CloudAccountsService {
 
   launch = (id: string, body: LaunchInstancePayload): Observable<unknown> =>
     this.api.post(`cloud-accounts/${id}/instances`, body)
+
+  validateLaunch = (id: string, body: LaunchInstancePayload): Observable<LaunchPreflightResult> =>
+    this.api.post<LaunchPreflightResult>(`cloud-accounts/${id}/validate-launch`, body)
+
+  createSubnet = (id: string, body: CreateSubnetPayload): Observable<unknown> =>
+    this.api.post(`cloud-accounts/${id}/networks/subnets`, body)
+
+  availabilityZones = (id: string, region: string): Observable<string[]> =>
+    this.api
+      .get<unknown>(`cloud-accounts/${id}/availability-zones`, { region }, { timeoutMs: 30_000 })
+      .pipe(
+        map((res) => {
+          if (Array.isArray(res)) return res as string[]
+          return unwrapList<string>(res)
+        }),
+      )
 
   syncMetrics = (id: string): Observable<unknown> => this.api.post(`cloud-accounts/${id}/sync-metrics`)
 

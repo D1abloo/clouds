@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, BadRequestException } from '@nestjs/common'
 import { CloudProvider, InstanceStatus } from '@prisma/client'
 import {
   ActionResult,
@@ -13,6 +13,7 @@ import {
   LaunchInstanceInput,
   ValidationResult,
 } from './cloud-provider.adapter'
+import type { CreateSubnetDto, LaunchPreflightResult } from '../dto/launch-preflight.dto'
 import {
   buildValidation,
   mockImages,
@@ -174,6 +175,10 @@ export class AzureAdapterService implements CloudProviderAdapter {
     ]
   }
 
+  async listKeyPairs(_ctx: CloudAdapterContext, _region?: string): Promise<import('./cloud-provider.adapter').CloudKeyPair[]> {
+    return []
+  }
+
   async listInstances(ctx: CloudAdapterContext, region?: string): Promise<CloudInstance[]> {
     if (isDemoMode(ctx)) {
       const all = synthesizeInstances(ctx)
@@ -323,6 +328,25 @@ export class AzureAdapterService implements CloudProviderAdapter {
       provider: CloudProvider.AZURE,
       metadata: { ...launchMeta, vmName: vm.name, isDemo: false },
     }
+  }
+
+  async listAvailabilityZones(_ctx: CloudAdapterContext, region: string): Promise<string[]> {
+    return [`${region}-1`, `${region}-2`, `${region}-3`]
+  }
+
+  async validateLaunchPreflight(_ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<LaunchPreflightResult> {
+    const checks: LaunchPreflightResult['checks'] = []
+    if (!input.region) checks.push({ id: 'region', level: 'error', message: 'Región requerida', field: 'region' })
+    if (!input.instanceType) checks.push({ id: 'size', level: 'error', message: 'VM size requerido', field: 'instanceType' })
+    if (!input.imageId) checks.push({ id: 'image', level: 'error', message: 'Imagen requerida', field: 'imageId' })
+    if (checks.every((c) => c.level !== 'error')) {
+      checks.push({ id: 'ok', level: 'ok', message: 'Configuración Azure válida' })
+    }
+    return { valid: !checks.some((c) => c.level === 'error'), checks }
+  }
+
+  async createSubnet(_ctx: CloudAdapterContext, _input: CreateSubnetDto): Promise<CloudNetwork> {
+    throw new BadRequestException('Creación de subnet Azure desde el wizard — próximamente')
   }
 
   async syncInventory(ctx: CloudAdapterContext): Promise<CloudInstance[]> {

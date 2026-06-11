@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, BadRequestException } from '@nestjs/common'
 import { CloudProvider, InstanceStatus } from '@prisma/client'
 import {
   ActionResult,
@@ -13,6 +13,7 @@ import {
   LaunchInstanceInput,
   ValidationResult,
 } from './cloud-provider.adapter'
+import type { CreateSubnetDto, LaunchPreflightResult } from '../dto/launch-preflight.dto'
 import {
   buildValidation,
   mockImages,
@@ -136,6 +137,10 @@ export class GcpAdapterService implements CloudProviderAdapter {
       { id: 'e2-medium', name: 'e2-medium', region: r, vcpus: 2, memoryGb: 4, pricePerHour: 0.04 },
       { id: 'n2-standard-2', name: 'n2-standard-2', region: r, vcpus: 2, memoryGb: 8, pricePerHour: 0.09 },
     ]
+  }
+
+  async listKeyPairs(_ctx: CloudAdapterContext, _region?: string): Promise<import('./cloud-provider.adapter').CloudKeyPair[]> {
+    return []
   }
 
   async listInstances(ctx: CloudAdapterContext, region?: string): Promise<CloudInstance[]> {
@@ -292,6 +297,26 @@ export class GcpAdapterService implements CloudProviderAdapter {
       provider: CloudProvider.GCP,
       metadata: { ...launchMeta, zone, operation: operation?.latestResponse?.name, isDemo: false },
     }
+  }
+
+  async listAvailabilityZones(_ctx: CloudAdapterContext, region: string): Promise<string[]> {
+    const { region: r } = parseGcpZone(region)
+    return [`${r}-a`, `${r}-b`, `${r}-c`]
+  }
+
+  async validateLaunchPreflight(_ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<LaunchPreflightResult> {
+    const checks: LaunchPreflightResult['checks'] = []
+    if (!input.region) checks.push({ id: 'region', level: 'error', message: 'Región requerida', field: 'region' })
+    if (!input.instanceType) checks.push({ id: 'type', level: 'error', message: 'Machine type requerido', field: 'instanceType' })
+    if (!input.imageId) checks.push({ id: 'image', level: 'error', message: 'Imagen requerida', field: 'imageId' })
+    if (checks.every((c) => c.level !== 'error')) {
+      checks.push({ id: 'ok', level: 'ok', message: 'Configuración GCP válida' })
+    }
+    return { valid: !checks.some((c) => c.level === 'error'), checks }
+  }
+
+  async createSubnet(_ctx: CloudAdapterContext, _input: CreateSubnetDto): Promise<CloudNetwork> {
+    throw new BadRequestException('Creación de subnet GCP desde el wizard — próximamente')
   }
 
   async syncInventory(ctx: CloudAdapterContext): Promise<CloudInstance[]> {

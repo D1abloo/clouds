@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { CloudProvider, InstanceStatus } from '@prisma/client'
 import {
   ActionResult,
@@ -13,6 +13,7 @@ import {
   LaunchInstanceInput,
   ValidationResult,
 } from './cloud-provider.adapter'
+import type { CreateSubnetDto, LaunchPreflightResult } from '../dto/launch-preflight.dto'
 import {
   buildValidation,
   mockImages,
@@ -79,6 +80,11 @@ export class CloudingAdapterService implements CloudProviderAdapter {
     ]
   }
 
+  async listKeyPairs(_ctx: CloudAdapterContext, region?: string): Promise<import('./cloud-provider.adapter').CloudKeyPair[]> {
+    const r = region ?? 'eu-west-1'
+    return [{ id: 'clouding-ssh', name: 'clouding-ssh', region: r }]
+  }
+
   async listInstances(ctx: CloudAdapterContext, _region?: string): Promise<CloudInstance[]> {
     return synthesizeInstances(ctx)
   }
@@ -130,6 +136,25 @@ export class CloudingAdapterService implements CloudProviderAdapter {
         launchedAt: new Date().toISOString(),
       },
     }
+  }
+
+  async listAvailabilityZones(_ctx: CloudAdapterContext, region: string): Promise<string[]> {
+    return [`${region}-a`, `${region}-b`]
+  }
+
+  async validateLaunchPreflight(_ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<LaunchPreflightResult> {
+    const checks: LaunchPreflightResult['checks'] = []
+    if (!input.region) checks.push({ id: 'region', level: 'error', message: 'Región requerida', field: 'region' })
+    if (!input.instanceType) checks.push({ id: 'type', level: 'error', message: 'Tipo de instancia requerido', field: 'instanceType' })
+    if (!input.imageId) checks.push({ id: 'image', level: 'error', message: 'Imagen requerida', field: 'imageId' })
+    if (checks.every((c) => c.level !== 'error')) {
+      checks.push({ id: 'ok', level: 'ok', message: 'Configuración válida' })
+    }
+    return { valid: !checks.some((c) => c.level === 'error'), checks }
+  }
+
+  async createSubnet(_ctx: CloudAdapterContext, _input: CreateSubnetDto): Promise<CloudNetwork> {
+    throw new BadRequestException('Creación de subnet no disponible para Clouding')
   }
 
   async syncInventory(ctx: CloudAdapterContext): Promise<CloudInstance[]> {

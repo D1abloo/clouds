@@ -10,12 +10,16 @@ export class ApiClientService {
   private readonly http = inject(HttpClient)
   private readonly baseUrl = environment.apiUrl
 
-  get<T>(path: string, params?: Record<string, string | undefined>): Observable<T> {
+  get<T>(
+    path: string,
+    params?: Record<string, string | undefined>,
+    options?: { timeoutMs?: number },
+  ): Observable<T> {
     return this.http
       .get<T>(`${this.baseUrl}/${path}`, {
         params: this.buildParams(params),
       })
-      .pipe(timeout(REQUEST_TIMEOUT_MS))
+      .pipe(timeout(options?.timeoutMs ?? REQUEST_TIMEOUT_MS))
   }
 
   post<T>(path: string, body?: unknown): Observable<T> {

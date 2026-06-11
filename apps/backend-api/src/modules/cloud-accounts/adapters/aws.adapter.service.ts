@@ -1,25 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import { CloudProvider, InstanceStatus } from '@prisma/client'
 import {
-  DescribeImagesCommand,
   DescribeInstancesCommand,
-  DescribeInstanceTypesCommand,
+  DescribeKeyPairsCommand,
   DescribeRegionsCommand,
   DescribeSecurityGroupsCommand,
-  DescribeSubnetsCommand,
-  DescribeVpcsCommand,
   RebootInstancesCommand,
   RunInstancesCommand,
-  type RunInstancesCommandInput,
   StartInstancesCommand,
   StopInstancesCommand,
 } from '@aws-sdk/client-ec2'
+import type { CreateSubnetDto } from '../dto/launch-preflight.dto'
+import type { LaunchPreflightResult } from '../dto/launch-preflight.dto'
 import {
   ActionResult,
   CloudAdapterContext,
   CloudImage,
   CloudInstance,
   CloudInstanceType,
+  CloudKeyPair,
   CloudNetwork,
   CloudProviderAdapter,
   CloudRegion,
@@ -37,6 +36,18 @@ import {
   synthesizeInstances,
 } from './cloud-adapter.helpers'
 import { createEc2Client, validateAwsSts } from './sdk/aws-client.factory'
+import { fetchAllAwsAmisBySection, sanitizeAmiId, verifyAmiInRegion, isValidAwsAmiId } from './sdk/aws-ami-sections.util'
+import {
+  buildRunInput,
+  createAwsSubnet,
+  fetchAwsNetworks,
+  listAwsAvailabilityZones,
+  pickSubnetForLaunch,
+  validateAwsLaunchPreflight,
+} from './sdk/aws-network.util'
+import { AWS_STATIC_INSTANCE_CATALOG } from './sdk/aws-static-instance-catalog'
+import { fetchAllAwsInstanceTypes } from './sdk/aws-instance-types.util'
+import { awsOnDemandPricePerHour, awsPricePerMinute } from './sdk/aws-pricing.util'
 import {
   instancesOnSyncError,
   isDemoMode,
@@ -47,11 +58,16 @@ import {
 
 const AWS_PERMS = [
   'ec2:DescribeInstances',
+  'ec2:DescribeInstanceTypes',
+  'ec2:DescribeImages',
+  'ec2:DescribeKeyPairs',
+  'ec2:RunInstances',
   'ec2:StartInstances',
   'ec2:StopInstances',
   'ec2:RebootInstances',
   'sts:GetCallerIdentity',
   'ec2:DescribeVpcs',
+  'ec2:DescribeSubnets',
   'ec2:DescribeSecurityGroups',
 ]
 
@@ -108,32 +124,51 @@ export class AwsAdapterService implements CloudProviderAdapter {
     if (isDemoMode(ctx)) return mockNetworks(ctx, r)
     try {
       const ec2 = await createEc2Client(ctx, r)
-      const [vpcs, subnets] = await Promise.all([
-        ec2.send(new DescribeVpcsCommand({})),
-        ec2.send(new DescribeSubnetsCommand({})),
-      ])
-      const networks: CloudNetwork[] =
-        vpcs.Vpcs?.map((v) => ({
-          id: v.VpcId ?? '',
-          name: v.Tags?.find((t) => t.Key === 'Name')?.Value ?? v.VpcId ?? 'vpc',
-          region: r,
-          cidr: v.CidrBlock,
-          type: 'vpc',
-        })) ?? []
-      subnets.Subnets?.forEach((s) => {
-        networks.push({
-          id: s.SubnetId ?? '',
-          name: s.Tags?.find((t) => t.Key === 'Name')?.Value ?? s.SubnetId ?? 'subnet',
-          region: r,
-          cidr: s.CidrBlock,
-          type: 'subnet',
-        })
-      })
+      const networks = await fetchAwsNetworks(ec2, r)
       return networks.length ? networks : mockNetworks(ctx, r)
     } catch (err) {
       this.logger.warn(`AWS listNetworks fallback: ${sdkErrorMessage(err)}`)
       return mockNetworks(ctx, r)
     }
+  }
+
+  async listAvailabilityZones(ctx: CloudAdapterContext, region: string): Promise<string[]> {
+    if (isDemoMode(ctx)) return [`${region}a`, `${region}b`, `${region}c`]
+    try {
+      const ec2 = await createEc2Client(ctx, region)
+      const zones = await listAwsAvailabilityZones(ec2, region)
+      return zones.length ? zones : [`${region}a`, `${region}b`, `${region}c`]
+    } catch (err) {
+      this.logger.warn(`AWS listAvailabilityZones fallback: ${sdkErrorMessage(err)}`)
+      return [`${region}a`, `${region}b`, `${region}c`]
+    }
+  }
+
+  async createSubnet(ctx: CloudAdapterContext, input: CreateSubnetDto): Promise<CloudNetwork> {
+    if (isDemoMode(ctx)) {
+      return {
+        id: `subnet-demo-${Date.now()}`,
+        name: input.name ?? 'demo-subnet',
+        region: input.region,
+        cidr: input.cidrBlock,
+        type: 'subnet',
+        availabilityZone: input.availabilityZone,
+        vpcId: input.vpcId,
+        mapPublicIpOnLaunch: input.mapPublicIpOnLaunch,
+      }
+    }
+    const ec2 = await createEc2Client(ctx, input.region)
+    return createAwsSubnet(ec2, input.region, input)
+  }
+
+  async validateLaunchPreflight(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<LaunchPreflightResult> {
+    if (isDemoMode(ctx)) {
+      return { valid: true, checks: [{ id: 'demo', level: 'ok', message: 'Demo mode — validación simulada' }] }
+    }
+    const ec2 = await createEc2Client(ctx, input.region)
+    const networks = await fetchAwsNetworks(ec2, input.region)
+    const sgs = await this.listSecurityGroups(ctx, input.region)
+    return validateAwsLaunchPreflight(ec2, input, networks, sgs)
   }
 
   async listSecurityGroups(ctx: CloudAdapterContext, region?: string): Promise<CloudSecurityGroup[]> {
@@ -161,52 +196,72 @@ export class AwsAdapterService implements CloudProviderAdapter {
     if (isDemoMode(ctx)) return mockImages(ctx, region)
     try {
       const ec2 = await createEc2Client(ctx, region)
-      const res = await ec2.send(
-        new DescribeImagesCommand({
-          Owners: ['amazon'],
-          Filters: [{ Name: 'state', Values: ['available'] }],
-        }),
-      )
-      const items =
-        res.Images?.filter((img) => (img.State ?? 'available') === 'available')
-          .slice(0, 30)
-          .map((img) => ({
-            id: img.ImageId ?? '',
-            name: img.Name ?? img.ImageId ?? 'ami',
-            region,
-            os: img.PlatformDetails ?? img.Platform ?? 'Linux/UNIX',
-            architecture: img.Architecture ?? 'x86_64',
-            status: 'available',
-            description: img.Description,
-          })) ?? []
-      return items.length ? items : mockImages(ctx, region)
+      const items = await fetchAllAwsAmisBySection(ec2, region)
+      if (items.length) return items
+      throw new Error(`No AMIs resolved in ${region}`)
     } catch (err) {
       this.logger.warn(`AWS listImages fallback: ${sdkErrorMessage(err)}`)
-      return mockImages(ctx, region)
+      return []
     }
   }
 
   async listInstanceTypes(ctx: CloudAdapterContext, region: string): Promise<CloudInstanceType[]> {
-    if (isDemoMode(ctx)) {
-      return mockInstanceTypes(ctx, region).map((t) => ({ ...t, id: `t3.${t.name}`, name: `t3.${t.name}` }))
+    if (isDemoMode(ctx)) return mockInstanceTypes(ctx, region)
+    const enrich = (t: CloudInstanceType): CloudInstanceType => {
+      const hourly = awsOnDemandPricePerHour(t.id, region, t.vcpus ?? 2, t.memoryGb ?? 4)
+      return { ...t, pricePerHour: hourly, pricePerMinute: awsPricePerMinute(hourly) }
     }
+    const fromStatic = (): CloudInstanceType[] =>
+      AWS_STATIC_INSTANCE_CATALOG.map((t) =>
+        enrich({ id: t.id, name: t.id, region, vcpus: t.vcpus, memoryGb: t.memoryGb }),
+      )
+
     try {
       const ec2 = await createEc2Client(ctx, region)
-      const res = await ec2.send(new DescribeInstanceTypesCommand({ MaxResults: 50 }))
-      const items =
-        res.InstanceTypes?.slice(0, 30).map((t) => ({
-          id: t.InstanceType ?? '',
-          name: t.InstanceType ?? '',
-          region,
-          vcpus: t.VCpuInfo?.DefaultVCpus ?? 2,
-          memoryGb: (t.MemoryInfo?.SizeInMiB ?? 4096) / 1024,
-        })) ?? []
-      return items.length
-        ? items
-        : mockInstanceTypes(ctx, region).map((t) => ({ ...t, id: `t3.${t.name}`, name: `t3.${t.name}` }))
+      const rows = await fetchAllAwsInstanceTypes(ec2)
+      if (rows.length) {
+        return rows.map((t) =>
+          enrich({
+            id: t.InstanceType ?? '',
+            name: t.InstanceType ?? '',
+            region,
+            vcpus: t.VCpuInfo?.DefaultVCpus ?? 2,
+            memoryGb: Math.round(((t.MemoryInfo?.SizeInMiB ?? 4096) / 1024) * 10) / 10,
+          }),
+        )
+      }
     } catch (err) {
       this.logger.warn(`AWS listInstanceTypes fallback: ${sdkErrorMessage(err)}`)
-      return mockInstanceTypes(ctx, region).map((t) => ({ ...t, id: `t3.${t.name}`, name: `t3.${t.name}` }))
+    }
+
+    const staticCatalog = fromStatic()
+    return staticCatalog.length ? staticCatalog : mockInstanceTypes(ctx, region).map(enrich)
+  }
+
+  async listKeyPairs(ctx: CloudAdapterContext, region?: string): Promise<CloudKeyPair[]> {
+    const r = region ?? ctx.defaultRegion ?? 'us-east-1'
+    if (isDemoMode(ctx)) {
+      return [
+        { id: 'kp-demo-1', name: 'cloudops-ec2-prod', region: r },
+        { id: 'kp-demo-2', name: 'cloudops-ec2-staging', region: r },
+      ]
+    }
+    try {
+      const ec2 = await createEc2Client(ctx, r)
+      const res = await ec2.send(new DescribeKeyPairsCommand({}))
+      const items =
+        res.KeyPairs?.filter((kp) => kp.KeyName)
+          .map((kp) => ({
+            id: kp.KeyPairId ?? kp.KeyName!,
+            name: kp.KeyName!,
+            region: r,
+            fingerprint: kp.KeyFingerprint,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)) ?? []
+      return items
+    } catch (err) {
+      this.logger.warn(`AWS listKeyPairs fallback: ${sdkErrorMessage(err)}`)
+      return []
     }
   }
 
@@ -313,56 +368,30 @@ export class AwsAdapterService implements CloudProviderAdapter {
         metadata: { ...launchMeta, isDemo: true },
       }
     }
+
+    const imageId = sanitizeAmiId(input.imageId)
+    if (!isValidAwsAmiId(imageId)) {
+      throw new BadRequestException(
+        `AMI inválida (${input.imageId}). Elige una imagen del catálogo en la región ${input.region}.`,
+      )
+    }
+
     const ec2 = await createEc2Client(ctx, input.region)
-    const tagEntries = [{ Key: 'Name', Value: input.name }]
-    if (input.tags) {
-      for (const [key, value] of Object.entries(input.tags)) {
-        if (key !== 'Name') tagEntries.push({ Key: key, Value: value })
-      }
+    const preflight = await this.validateLaunchPreflight(ctx, input)
+    if (!preflight.valid) {
+      const err = preflight.checks.find((c) => c.level === 'error')
+      throw new BadRequestException(err?.message ?? 'Validación de lanzamiento fallida')
     }
 
-    const runInput: RunInstancesCommandInput = {
-      ImageId: input.imageId,
-      InstanceType: input.instanceType as RunInstancesCommandInput['InstanceType'],
-      MinCount: 1,
-      MaxCount: 1,
-      KeyName: input.keyPair,
-      UserData: input.userData ? Buffer.from(input.userData, 'utf8').toString('base64') : undefined,
-      Monitoring: { Enabled: input.monitoring ?? false },
-      TagSpecifications: [{ ResourceType: 'instance', Tags: tagEntries }],
-    }
+    const subnetId = preflight.resolvedSubnetId ?? input.subnetId
+    const runInput = buildRunInput(input, imageId, subnetId, input.securityGroupIds?.filter(Boolean))
 
-    if (input.diskGb || input.diskType) {
-      runInput.BlockDeviceMappings = [
-        {
-          DeviceName: '/dev/xvda',
-          Ebs: {
-            VolumeSize: input.diskGb ?? 30,
-            VolumeType: (input.diskType ?? 'gp3') as never,
-            DeleteOnTermination: true,
-          },
-        },
-      ]
+    let res
+    try {
+      res = await ec2.send(new RunInstancesCommand(runInput))
+    } catch (err) {
+      throw new BadRequestException(sdkErrorMessage(err))
     }
-
-    if (input.subnetId) {
-      runInput.NetworkInterfaces = [
-        {
-          DeviceIndex: 0,
-          SubnetId: input.subnetId,
-          Groups: input.securityGroupIds,
-          AssociatePublicIpAddress: input.publicIp !== false,
-        },
-      ]
-    } else {
-      runInput.SecurityGroupIds = input.securityGroupIds
-      runInput.SubnetId = input.subnetId
-      if (input.availabilityZone) {
-        runInput.Placement = { AvailabilityZone: input.availabilityZone }
-      }
-    }
-
-    const res = await ec2.send(new RunInstancesCommand(runInput))
     const inst = res.Instances?.[0]
     return {
       id: inst?.InstanceId ?? `i-pending-${Date.now()}`,

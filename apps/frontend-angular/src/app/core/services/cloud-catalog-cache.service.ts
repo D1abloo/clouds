@@ -19,6 +19,7 @@ export class CloudCatalogCacheService {
   }
 
   set<T>(key: string, data: T): void {
+    if (Array.isArray(data) && data.length === 0) return
     this.store.set(key, { data, at: Date.now() })
   }
 

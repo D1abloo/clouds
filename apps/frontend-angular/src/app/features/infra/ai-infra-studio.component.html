@@ -1,0 +1,330 @@
+<div class="ais page-container">
+  <header class="ais__hero" [style.--ais-accent]="theme().accent">
+    <div class="ais__hero-main">
+      <div class="ais__hero-icon" aria-hidden="true"><mat-icon>auto_awesome</mat-icon></div>
+      <div>
+        <p class="ais__eyebrow">Infraestructura asistida por IA</p>
+        <h1>AI Infra Studio</h1>
+        <p class="ais__lead">
+          Lanza instancias en AWS, GCP o Azure con catálogo operativo real, validación de cuenta y progreso en vivo.
+          Tras la prueba, elimina la instancia desde el inventario.
+        </p>
+      </div>
+    </div>
+    <div class="ais__hero-kpis">
+      <article>
+        <span>Cuenta activa</span>
+        <strong>{{ selectedAccount()?.name ?? 'Sin conectar' }}</strong>
+      </article>
+      <article>
+        <span>Coste est.</span>
+        <strong>{{ estimatedMonthly() }}/mes</strong>
+      </article>
+      <article>
+        <span>Paso</span>
+        <strong>{{ step() }} / 5</strong>
+      </article>
+    </div>
+  </header>
+
+  <div class="ais__progress" role="progressbar" [attr.aria-valuenow]="progressPct()" aria-valuemin="0" aria-valuemax="100">
+    <span [style.width.%]="progressPct()"></span>
+  </div>
+
+  <div class="ais__layout">
+    <section class="ais__wizard">
+      <nav class="ais__steps" aria-label="Pasos del asistente">
+        @for (s of stepLabels; track s.n) {
+          <button
+            type="button"
+            class="ais__step"
+            [class.ais__step--on]="step() >= s.n"
+            [class.ais__step--current]="step() === s.n"
+            (click)="goToStep(s.n)"
+            [disabled]="launching()"
+          >
+            <mat-icon>{{ s.icon }}</mat-icon>
+            <span>{{ s.label }}</span>
+          </button>
+        }
+      </nav>
+
+      @if (step() === 1) {
+        <div class="ais__panel">
+          <h2><mat-icon>cloud</mat-icon> Proveedor y cuenta</h2>
+          <p class="ais__hint">Selecciona el proveedor cloud y la cuenta conectada con credenciales válidas en Spendlyx.</p>
+          <div class="ais__providers">
+            @for (p of providers; track p.id) {
+              <button
+                type="button"
+                class="ais__provider"
+                [class.ais__provider--on]="provider() === p.id"
+                (click)="selectProvider(p.id)"
+              >
+                <app-brand-logo [logo]="p.logo" size="lg" />
+                <strong>{{ p.label }}</strong>
+                <span>{{ accounts().length }} cuenta(s)</span>
+              </button>
+            }
+          </div>
+          @if (accounts().length) {
+            <label class="ais__field">
+              Cuenta cloud
+              <select class="ais__select" [ngModel]="selectedAccountId()" (ngModelChange)="onAccountChange($event)">
+                @for (a of accounts(); track a.id) {
+                  <option [value]="a.id">{{ a.name }} · {{ a.defaultRegion ?? 'sin región' }}</option>
+                }
+              </select>
+            </label>
+          } @else {
+            <div class="ais__warn">
+              <mat-icon>link_off</mat-icon>
+              <div>
+                <strong>Sin cuentas {{ provider() }}</strong>
+                <p>Conecta una cuenta en <a routerLink="/settings/integrations">Integraciones</a> para continuar.</p>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (step() >= 2 && !hasAccount()) {
+        <div class="ais__warn">
+          <mat-icon>link_off</mat-icon>
+          <div>
+            <strong>Cuenta cloud requerida</strong>
+            <p>Conecta {{ provider() }} en <a routerLink="/settings/integrations">Integraciones</a> y vuelve al paso 1.</p>
+          </div>
+        </div>
+      }
+
+      @if (step() === 2 && hasAccount()) {
+        <div class="ais__panel">
+          <h2><mat-icon>public</mat-icon> Región y zona</h2>
+          <p class="ais__hint">Usa una región del catálogo del proveedor. En GCP/Azure las zonas se adaptan automáticamente.</p>
+          <div class="ais__grid-2">
+            <label class="ais__field">
+              {{ theme().regionLabel }}
+              <select class="ais__select" [ngModel]="region()" (ngModelChange)="onRegionChange($event)">
+                @for (r of regions(); track r.id) {
+                  <option [value]="r.id">{{ r.name || r.id }}</option>
+                }
+              </select>
+            </label>
+            <label class="ais__field">
+              Zona de disponibilidad
+              <select class="ais__select" [ngModel]="availabilityZone()" (ngModelChange)="availabilityZone.set($event)">
+                @for (z of zoneOptions(); track z) {
+                  <option [value]="z">{{ z }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          <dl class="ais__meta">
+            <div><dt>Proveedor</dt><dd>{{ provider() }}</dd></div>
+            <div><dt>Cuenta</dt><dd>{{ selectedAccount()?.name ?? '—' }}</dd></div>
+            <div><dt>Red</dt><dd>{{ theme().networkKind }}</dd></div>
+          </dl>
+        </div>
+      }
+
+      @if (step() === 3 && hasAccount()) {
+        <div class="ais__panel">
+          <h2><mat-icon>memory</mat-icon> Tipo de instancia</h2>
+          <p class="ais__hint">Catálogo operativo en {{ region() }} · {{ types().length }} tipos</p>
+          <label class="ais__field ais__field--search">
+            Buscar tipo
+            <input class="ais__input" [ngModel]="typeSearch()" (ngModelChange)="typeSearch.set($event)" placeholder="t3.medium, m5.large…" />
+          </label>
+          @if (catalogLoading()) {
+            <div class="ais__loading"><mat-spinner diameter="28" /> Cargando tipos…</div>
+          } @else if (!types().length) {
+            <p class="ais__warn-text">No hay tipos en esta región. Cambia de región o valida la cuenta.</p>
+          } @else {
+            <div class="ais__type-grid">
+              @for (t of filteredTypes(); track t.id) {
+                <button
+                  type="button"
+                  class="ais__type-card"
+                  [class.ais__type-card--on]="instanceType() === t.id"
+                  (click)="instanceType.set(t.id)"
+                >
+                  <mat-icon>memory</mat-icon>
+                  <strong>{{ t.name }}</strong>
+                  @if (t.vcpus) {
+                    <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB</span>
+                    <span class="ais__type-price">
+                      <em>{{ typePriceDetail(t).hourly }}</em>
+                      <em>{{ typePriceDetail(t).minute }}</em>
+                    </span>
+                    <small>{{ typeMonthly(t) }}</small>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (step() === 4 && hasAccount()) {
+        <div class="ais__panel">
+          <h2><mat-icon>image</mat-icon> Imagen operativa</h2>
+          <p class="ais__hint">AMI / imagen en estado <strong>available</strong> en la región seleccionada.</p>
+          @if (catalogLoading()) {
+            <div class="ais__loading"><mat-spinner diameter="28" /> Cargando imágenes…</div>
+          } @else if (!images().length) {
+            <p class="ais__warn-text">Sin imágenes disponibles. Cambia región o sincroniza la cuenta.</p>
+          } @else {
+            @if (provider() === 'AWS') {
+              <nav class="ais__ami-sections">
+                @for (sec of awsImageSections(); track sec.id) {
+                  <button type="button" class="ais__ami-section" [class.ais__ami-section--on]="imageSection() === sec.id" (click)="imageSection.set(sec.id)">
+                    {{ sec.label }} ({{ sectionCount(images(), sec.id) }})
+                  </button>
+                }
+              </nav>
+            }
+            <div class="ais__image-grid">
+              @for (img of filteredStudioImages(); track img.id) {
+                <button
+                  type="button"
+                  class="ais__image-card"
+                  [class.ais__image-card--on]="imageId() === img.id"
+                  (click)="imageId.set(img.id)"
+                >
+                  <span class="ais__image-os">
+                    <img [src]="imageLogo(img)" [alt]="imageVendor(img)" width="28" height="28" loading="lazy" />
+                  </span>
+                  <strong>{{ img.name }}</strong>
+                  <span class="ais__image-vendor">{{ imageVendor(img) }}</span>
+                  <span>{{ img.architecture ?? 'x86_64' }} · {{ img.os ?? 'linux' }}</span>
+                  <code>{{ img.id }}</code>
+                </button>
+              }
+            </div>
+          }
+          <label class="ais__field">
+            Nombre de la instancia
+            <input class="ais__input" [ngModel]="instanceName()" (ngModelChange)="instanceName.set($event)" placeholder="ai-studio-prod-01" />
+          </label>
+          @if (provider() === 'AWS') {
+            <label class="ais__field">
+              Key pair (SSH)
+              <select class="ais__select" [ngModel]="keyPair()" (ngModelChange)="keyPair.set($event)">
+                @for (kp of keyPairs(); track kp.id) {
+                  <option [value]="kp.name">{{ kp.name }}</option>
+                }
+              </select>
+              @if (!keyPairs().length && !catalogLoading()) {
+                <span class="ais__warn-text">Sin key pairs en esta región. Créalo en EC2 y recarga.</span>
+              }
+            </label>
+          }
+        </div>
+      }
+
+      @if (step() === 5 && hasAccount()) {
+        <div class="ais__panel ais__panel--review">
+          <h2><mat-icon>rocket_launch</mat-icon> Revisar y lanzar</h2>
+          @if (launching()) {
+            <div class="ais__launch-live">
+              <p>{{ launchStep() }}</p>
+              <mat-progress-bar mode="determinate" [value]="launchPercent()" />
+              <span class="ais__pct">{{ launchPercent() }} %</span>
+            </div>
+          } @else if (launchDone()) {
+            <div class="ais__success">
+              <mat-icon>check_circle</mat-icon>
+              <div>
+                <strong>Instancia provisionada</strong>
+                <p>Elimínala cuando termines la prueba desde el inventario cloud.</p>
+                @if (launchedInstanceId()) {
+                  <code>ID: {{ launchedInstanceId() }}</code>
+                }
+                <a mat-stroked-button routerLink="/cloud/aws/instances" class="ais__link-btn">Ver instancias</a>
+              </div>
+            </div>
+          } @else {
+            <div class="ais__review-grid">
+              <dl class="ais__review">
+                <div><dt>Proveedor</dt><dd>{{ provider() }}</dd></div>
+                <div><dt>Cuenta</dt><dd>{{ selectedAccount()?.name ?? '—' }}</dd></div>
+                <div><dt>Región</dt><dd>{{ region() }}</dd></div>
+                <div><dt>Zona</dt><dd>{{ availabilityZone() }}</dd></div>
+                <div><dt>Tipo</dt><dd>{{ selectedType()?.name ?? instanceType() }}</dd></div>
+                <div><dt>Imagen</dt><dd>{{ selectedImage()?.name ?? imageId() }}</dd></div>
+                <div><dt>Nombre</dt><dd>{{ instanceName() }}</dd></div>
+                @if (keyPair()) {
+                  <div><dt>Key pair</dt><dd>{{ keyPair() }}</dd></div>
+                }
+                <div><dt>Coste est.</dt><dd>{{ estimatedMonthly() }}/mes</dd></div>
+              </dl>
+              <aside class="ais__review-aside">
+                <h3>Qué ocurre al lanzar</h3>
+                <ul>
+                  <li>Validación de imagen y región</li>
+                  <li>Reserva de capacidad compute</li>
+                  <li>Configuración de red y security group</li>
+                  <li>Disco raíz {{ launchOptions().defaultVolumeGb }} GB</li>
+                  <li>Registro en inventario Spendlyx</li>
+                </ul>
+              </aside>
+            </div>
+            @if (launchError()) {
+              <div class="ais__error" role="alert">
+                <mat-icon>error</mat-icon>
+                <div>
+                  <strong>No se pudo lanzar</strong>
+                  <p>{{ launchError() }}</p>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <footer class="ais__nav">
+        @if (step() > 1 && !launching() && !launchDone()) {
+          <button mat-stroked-button type="button" (click)="prev()"><mat-icon>arrow_back</mat-icon> Anterior</button>
+        }
+        <span class="flex-1"></span>
+        @if (step() < 5) {
+          <button mat-flat-button color="primary" type="button" (click)="next()" [disabled]="!canNext()">
+            Siguiente <mat-icon>arrow_forward</mat-icon>
+          </button>
+        } @else if (!launchDone() && !launching()) {
+          <button mat-flat-button color="primary" type="button" (click)="handleLaunch()" [disabled]="!canNext()">
+            <mat-icon>rocket_launch</mat-icon> Lanzar instancia
+          </button>
+        }
+      </footer>
+    </section>
+
+    <aside class="ais__copilot">
+      <header>
+        <mat-icon>smart_toy</mat-icon>
+        <div>
+          <h2>Copilot Infra</h2>
+          <p>Pregunta por tipos económicos, regiones o mejores prácticas.</p>
+        </div>
+      </header>
+      <div class="ais__chat">
+        @for (m of copilotMessages(); track $index) {
+          <div class="ais__msg" [class.ais__msg--user]="m.role === 'user'">
+            @if (m.role === 'assistant') { <mat-icon>auto_awesome</mat-icon> }
+            <p>{{ m.text }}</p>
+          </div>
+        }
+      </div>
+      <form class="ais__prompt" (submit)="handleCopilot($event)">
+        <input [(ngModel)]="copilotPrompt" name="prompt" placeholder="Ej: ¿Qué tipo usar para API ligera en GCP?" />
+        <button mat-icon-button type="submit" aria-label="Enviar"><mat-icon>send</mat-icon></button>
+      </form>
+      <div class="ais__tips">
+        <strong>Sugerencias</strong>
+        <button type="button" (click)="askCopilot('Sugiere tipo económico para web en ' + provider())">Tipo económico</button>
+        <button type="button" (click)="askCopilot('Explica el paso ' + step() + ' del lanzamiento')">Paso actual</button>
+      </div>
+    </aside>
+  </div>
+</div>

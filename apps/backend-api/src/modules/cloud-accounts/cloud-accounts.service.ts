@@ -5,6 +5,7 @@ import { OrganizationScopeService } from '../../common/organization/organization
 import { AuditService } from '../audit/audit.service'
 import { CreateCloudAccountDto } from './dto/create-cloud-account.dto'
 import { LaunchInstanceDto } from './dto/launch-instance.dto'
+import { CreateSubnetDto, LaunchPreflightDto } from './dto/launch-preflight.dto'
 import { CloudAdapterRegistry } from './cloud-adapter.registry'
 import { CloudSyncService } from './cloud-sync.service'
 import { SecretsVaultService } from './secrets-vault.service'
@@ -212,6 +213,13 @@ export class CloudAccountsService {
     return this.registry.listInstanceTypes(id, resolved)
   }
 
+  async listKeyPairs(id: string, region: string, userId?: string) {
+    if (userId) await this.assertAccountAccess(id, userId)
+    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
+    const resolved = region || account?.defaultRegion || 'us-east-1'
+    return this.registry.listKeyPairs(id, resolved)
+  }
+
   async syncInventory(id: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
     return this.sync.fullSync(id, userId)
@@ -220,6 +228,21 @@ export class CloudAccountsService {
   async launchInstance(id: string, dto: LaunchInstanceDto, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
     return this.sync.launchInstance(id, dto, userId)
+  }
+
+  async validateLaunchPreflight(id: string, dto: LaunchPreflightDto, userId?: string) {
+    if (userId) await this.assertAccountAccess(id, userId)
+    return this.registry.validateLaunchPreflight(id, dto)
+  }
+
+  async createSubnet(id: string, dto: CreateSubnetDto, userId?: string) {
+    if (userId) await this.assertAccountAccess(id, userId)
+    return this.registry.createSubnet(id, dto)
+  }
+
+  async listAvailabilityZones(id: string, region: string, userId?: string) {
+    if (userId) await this.assertAccountAccess(id, userId)
+    return this.registry.listAvailabilityZones(id, region)
   }
 
   async remove(id: string, userId?: string) {

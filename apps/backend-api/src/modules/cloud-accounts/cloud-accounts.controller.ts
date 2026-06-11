@@ -4,6 +4,7 @@ import { CloudProvider } from '@prisma/client'
 import { CloudAccountsService } from './cloud-accounts.service'
 import { CreateCloudAccountDto } from './dto/create-cloud-account.dto'
 import { LaunchInstanceDto } from './dto/launch-instance.dto'
+import { CreateSubnetDto, LaunchPreflightDto } from './dto/launch-preflight.dto'
 import { InstanceSyncWorker } from './instance-sync.worker'
 import { MetricsSyncWorker } from './metrics-sync.worker'
 import { BillingSyncWorker } from './billing-sync.worker'
@@ -136,10 +137,50 @@ export class CloudAccountsController {
     return this.service.listInstanceTypes(id, region ?? '', user.sub)
   }
 
+  @Get(':id/key-pairs')
+  @ApiOperation({ summary: 'List SSH key pairs for cloud account' })
+  listKeyPairs(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Query('region') region?: string,
+  ) {
+    return this.service.listKeyPairs(id, region ?? '', user.sub)
+  }
+
   @Post(':id/sync')
   @ApiOperation({ summary: 'Full inventory sync (regions, networks, instances)' })
   sync(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.service.syncInventory(id, user.sub)
+  }
+
+  @Post(':id/validate-launch')
+  @ApiOperation({ summary: 'Validate launch configuration before provisioning' })
+  validateLaunch(
+    @Param('id') id: string,
+    @Body() dto: LaunchPreflightDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.service.validateLaunchPreflight(id, dto, user.sub)
+  }
+
+  @Post(':id/networks/subnets')
+  @ApiOperation({ summary: 'Create subnet in VPC for launch wizard' })
+  createSubnet(
+    @Param('id') id: string,
+    @Body() dto: CreateSubnetDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.service.createSubnet(id, dto, user.sub)
+  }
+
+  @Get(':id/availability-zones')
+  @ApiOperation({ summary: 'List availability zones for region' })
+  listAvailabilityZones(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Query('region') region: string,
+  ) {
+    return this.service.listAvailabilityZones(id, region, user.sub)
   }
 
   @Post(':id/instances')

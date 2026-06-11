@@ -9,6 +9,7 @@ import {
   CloudSecurityGroup,
   ValidationResult,
 } from './cloud-provider.adapter'
+import { awsOnDemandPricePerHour, awsPricePerMinute } from './sdk/aws-pricing.util'
 
 const hash = (s: string): number => {
   let h = 0
@@ -72,11 +73,30 @@ export const mockImages = (ctx: CloudAdapterContext, region: string): CloudImage
   ]
 }
 
-export const mockInstanceTypes = (_ctx: CloudAdapterContext, region: string): CloudInstanceType[] => [
-  { id: 'small', name: 'small', region, vcpus: 2, memoryGb: 4, pricePerHour: 0.04 },
-  { id: 'medium', name: 'medium', region, vcpus: 4, memoryGb: 8, pricePerHour: 0.08 },
-  { id: 'large', name: 'large', region, vcpus: 8, memoryGb: 16, pricePerHour: 0.16 },
+const awsType = (id: string, region: string, vcpus: number, memoryGb: number): CloudInstanceType => {
+  const pricePerHour = awsOnDemandPricePerHour(id, region, vcpus, memoryGb)
+  return { id, name: id, region, vcpus, memoryGb, pricePerHour, pricePerMinute: awsPricePerMinute(pricePerHour) }
+}
+
+export const awsMockInstanceTypes = (region: string): CloudInstanceType[] => [
+  awsType('t3.micro', region, 2, 1),
+  awsType('t3.small', region, 2, 2),
+  awsType('t3.medium', region, 2, 4),
+  awsType('t3.large', region, 2, 8),
+  awsType('m5.large', region, 2, 8),
+  awsType('m5.xlarge', region, 4, 16),
+  awsType('c5.large', region, 2, 4),
+  awsType('r5.large', region, 2, 16),
 ]
+
+export const mockInstanceTypes = (ctx: CloudAdapterContext, region: string): CloudInstanceType[] => {
+  if (ctx.provider === 'AWS') return awsMockInstanceTypes(region)
+  return [
+    { id: 'small', name: 'small', region, vcpus: 2, memoryGb: 4, pricePerHour: 0.04 },
+    { id: 'medium', name: 'medium', region, vcpus: 4, memoryGb: 8, pricePerHour: 0.08 },
+    { id: 'large', name: 'large', region, vcpus: 8, memoryGb: 16, pricePerHour: 0.16 },
+  ]
+}
 
 /** IDs generados por synthesizeInstances cuando no hay inventario real (solo demo). */
 export const isSynthesizedExternalId = (provider: CloudProvider, accountId: string, externalId: string): boolean => {

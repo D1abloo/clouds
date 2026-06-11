@@ -4,8 +4,10 @@ import { AwsAdapterService } from './adapters/aws.adapter.service'
 import { GcpAdapterService } from './adapters/gcp.adapter.service'
 import { AzureAdapterService } from './adapters/azure.adapter.service'
 import { CloudingAdapterService } from './adapters/clouding.adapter.service'
+import type { CreateSubnetDto, LaunchPreflightResult } from './dto/launch-preflight.dto'
 import {
   CloudAdapterContext,
+  CloudNetwork,
   CloudProviderAdapter,
   LaunchInstanceInput,
 } from './adapters/cloud-provider.adapter'
@@ -64,6 +66,9 @@ export class CloudAdapterRegistry {
   listInstanceTypes = (accountId: string, region: string) =>
     this.withContext(accountId, (ctx, a) => a.listInstanceTypes(ctx, region))
 
+  listKeyPairs = (accountId: string, region?: string) =>
+    this.withContext(accountId, (ctx, a) => a.listKeyPairs(ctx, region))
+
   listInstances = (accountId: string, region?: string) =>
     this.withContext(accountId, (ctx, a) => a.listInstances(ctx, region))
 
@@ -81,6 +86,15 @@ export class CloudAdapterRegistry {
 
   launchInstance = (accountId: string, input: LaunchInstanceInput) =>
     this.withContext(accountId, (ctx, a) => a.launchInstance(ctx, input))
+
+  validateLaunchPreflight = (accountId: string, input: LaunchInstanceInput): Promise<LaunchPreflightResult> =>
+    this.withContext(accountId, (ctx, a) => a.validateLaunchPreflight(ctx, input))
+
+  createSubnet = (accountId: string, input: CreateSubnetDto): Promise<CloudNetwork> =>
+    this.withContext(accountId, (ctx, a) => a.createSubnet(ctx, input))
+
+  listAvailabilityZones = (accountId: string, region: string): Promise<string[]> =>
+    this.withContext(accountId, (ctx, a) => a.listAvailabilityZones(ctx, region))
 
   syncInventory = (accountId: string) =>
     this.withContext(accountId, (ctx, a) => a.syncInventory(ctx))

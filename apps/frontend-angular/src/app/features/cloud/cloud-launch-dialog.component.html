@@ -15,17 +15,15 @@
       <div class="cld__hero-copy">
         <p class="cld__hero-eyebrow">{{ theme().consoleSubtitle }} · {{ data.accountName }}</p>
         <h2 mat-dialog-title class="cld__hero-title">{{ theme().consoleTitle }}</h2>
-        @if (data.slug === 'gcp') {
-          <p class="cld__hero-sub">{{ theme().regionLabel }}: {{ form.value.region || data.defaultRegion || '—' }}</p>
+        @if (form.value.region) {
+          <p class="cld__hero-sub">{{ theme().regionLabel }}: {{ form.value.region }}</p>
         }
       </div>
     </div>
-    @if (data.slug !== 'gcp') {
-      <div class="cld__hero-meta" aria-hidden="true">
-        <span>{{ data.provider }}</span>
-        <span>{{ form.value.region || data.defaultRegion || '—' }}</span>
-      </div>
-    }
+    <div class="cld__hero-meta" aria-hidden="true">
+      <span>{{ data.provider }}</span>
+      <span>{{ progressPct() }}%</span>
+    </div>
   </header>
 
   @if (theme().stepLayout === 'sidebar') {
@@ -90,126 +88,60 @@
       <app-cloud-launch-progress [progress]="launchProgress()" />
     }
 
-    @if (catalogLoading()) {
-      <app-loading-state message="Cargando catálogo operativo…" />
-    } @else {
-      @switch (activeStep()) {
-        @case ('image') {
-          <section class="cld__section" aria-labelledby="cld-image-h">
-            <header class="cld__panel-head">
-              <div>
-                <h3 id="cld-image-h">{{ options().imageSectionTitle }}</h3>
-                <p>{{ options().imageSectionHint }}</p>
+    @switch (activeStep()) {
+      @case ('account') {
+        <section class="cld__section" aria-labelledby="cld-account-h">
+          <header class="cld__panel-head">
+            <div>
+              <h3 id="cld-account-h">{{ options().accountSectionTitle }}</h3>
+              <p>{{ options().accountSectionHint }}</p>
+            </div>
+          </header>
+          @if (accountLoading()) {
+            <app-loading-state message="Validando credenciales…" />
+          } @else {
+            <div class="cld__account-card">
+              <div class="cld__account-row">
+                <mat-icon>{{ accountValid() ? 'verified' : 'error_outline' }}</mat-icon>
+                <div>
+                  <strong>{{ data.accountName }}</strong>
+                  <span>{{ data.provider }} · {{ data.accountId | slice:0:12 }}…</span>
+                </div>
+                <span class="cld__badge" [class.cld__badge--ok]="accountValid()" [class.cld__badge--err]="!accountValid()">
+                  {{ accountValid() ? 'Conectada' : 'Error' }}
+                </span>
               </div>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cld__search">
-                <mat-label>{{ options().searchImageLabel }}</mat-label>
-                <input matInput [value]="imageSearch()" (input)="onImageSearch($event)" placeholder="Ubuntu, Debian, Windows…" />
-                <mat-icon matPrefix>search</mat-icon>
-              </mat-form-field>
-            </header>
-            @if (imageOsTabs().length) {
-              <nav class="cld__os-tabs" aria-label="Filtrar por sistema operativo">
-                @for (tab of imageOsTabs(); track tab.id) {
-                  <button
-                    type="button"
-                    class="cld__os-tab"
-                    [class.cld__os-tab--on]="imageOsTab() === tab.id"
-                    (click)="selectImageOsTab(tab.id)"
-                  >
-                    {{ tab.label }}
-                  </button>
+              <p class="cld__account-msg">{{ accountMessage() }}</p>
+              <ul class="cld__perm-list" aria-label="Permisos requeridos">
+                @for (perm of options().permissionLabels; track perm; let i = $index) {
+                  <li [class.cld__perm--ok]="accountValid()">
+                    <mat-icon>{{ accountValid() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+                    {{ perm }}
+                  </li>
                 }
-              </nav>
-            }
-            <div class="cld__images" role="list">
-              @for (img of filteredImages(); track img.id) {
-                <button
-                  type="button"
-                  class="cld__image-card"
-                  role="listitem"
-                  [class.cld__image-card--on]="form.value.imageId === img.id"
-                  (click)="selectImage(img)"
-                >
-                  <span class="cld__image-os">{{ osIcon(img) }}</span>
-                  <strong>{{ img.name }}</strong>
-                  <span class="cld__image-meta">{{ img.architecture ?? 'x86_64' }} · {{ img.os ?? 'linux' }}</span>
-                  <code class="cld__image-id">{{ shortId(img.id) }}</code>
-                  <span class="cld__badge">{{ imageBadgeLabel() }}</span>
+              </ul>
+              @if (!accountValid()) {
+                <button mat-stroked-button type="button" (click)="loadAccountValidation()">
+                  <mat-icon>refresh</mat-icon>
+                  Revalidar conexión
                 </button>
-              } @empty {
-                <p class="cld__empty">Sin imágenes en esta región. Cambia de región o valida la cuenta.</p>
               }
             </div>
-          </section>
-        }
+          }
+        </section>
+      }
 
-        @case ('compute') {
-          <section class="cld__section" aria-labelledby="cld-compute-h">
-            <header class="cld__panel-head">
-              <div>
-                <h3 id="cld-compute-h">{{ options().instanceSectionTitle }}</h3>
-                <p>{{ options().instanceSectionHint }}</p>
-              </div>
-            </header>
-            <div [formGroup]="form">
-              <mat-form-field appearance="outline" class="full">
-                <mat-label>{{ options().instanceNameLabel }}</mat-label>
-                <input matInput formControlName="name" placeholder="web-prod-01" />
-              </mat-form-field>
+      @case ('region') {
+        <section class="cld__section" aria-labelledby="cld-region-h">
+          <header class="cld__panel-head">
+            <div>
+              <h3 id="cld-region-h">{{ options().regionSectionTitle }}</h3>
+              <p>{{ options().regionSectionHint }}</p>
             </div>
-            @if (data.slug === 'gcp') {
-              <div class="cld__chip-grid" role="list">
-                @for (t of types(); track t.id) {
-                  <button
-                    type="button"
-                    class="cld__chip"
-                    role="listitem"
-                    [class.cld__chip--on]="form.value.instanceType === t.id"
-                    (click)="selectType(t.id)"
-                  >
-                    <strong>{{ t.name }}</strong>
-                    @if (t.vcpus) {
-                      <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB</span>
-                      <em>{{ typeMonthlyCost(t) }}</em>
-                    }
-                  </button>
-                } @empty {
-                  <p class="cld__empty">No hay tipos disponibles en esta región.</p>
-                }
-              </div>
-            } @else {
-              <div class="cld__type-grid" role="list">
-                @for (t of types(); track t.id) {
-                  <button
-                    type="button"
-                    class="cld__type-card"
-                    role="listitem"
-                    [class.cld__type-card--on]="form.value.instanceType === t.id"
-                    (click)="selectType(t.id)"
-                  >
-                    <mat-icon>memory</mat-icon>
-                    <strong>{{ t.name }}</strong>
-                    @if (t.vcpus) {
-                      <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB RAM</span>
-                      <em>{{ typeMonthlyCost(t) }}</em>
-                    }
-                  </button>
-                } @empty {
-                  <p class="cld__empty">No hay tipos disponibles en esta región.</p>
-                }
-              </div>
-            }
-          </section>
-        }
-
-        @case ('network') {
-          <section class="cld__section" aria-labelledby="cld-network-h">
-            <header class="cld__panel-head">
-              <div>
-                <h3 id="cld-network-h">{{ options().networkSectionTitle }}</h3>
-                <p>{{ options().networkSectionHint }}</p>
-              </div>
-            </header>
+          </header>
+          @if (catalogLoading() || azLoading()) {
+            <app-loading-state message="Cargando red y zonas…" />
+          } @else {
             <div class="cld__form-grid" [formGroup]="form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ theme().regionLabel }}</mat-label>
@@ -221,8 +153,8 @@
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ options().azLabel }}</mat-label>
-                <mat-select formControlName="availabilityZone">
-                  @for (z of options().zones; track z) {
+                <mat-select formControlName="availabilityZone" (selectionChange)="onAzChange()">
+                  @for (z of availabilityZones(); track z) {
                     <mat-option [value]="z">{{ z }}</mat-option>
                   }
                 </mat-select>
@@ -237,13 +169,29 @@
                   </mat-select>
                 </mat-form-field>
               }
+              @if (vpcs().length) {
+                <mat-form-field appearance="outline">
+                  <mat-label>{{ options().vpcLabel }}</mat-label>
+                  <mat-select formControlName="vpcId" (selectionChange)="onVpcChange()">
+                    @for (v of vpcs(); track v.id) {
+                      <mat-option [value]="v.id">{{ v.name }} ({{ v.cidr ?? v.id }})</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              }
               <mat-form-field appearance="outline">
                 <mat-label>{{ options().subnetLabel }}</mat-label>
                 <mat-select formControlName="subnetId">
-                  @for (n of networks(); track n.id) {
-                    <mat-option [value]="n.id">{{ n.name }} ({{ n.type ?? 'red' }})</mat-option>
+                  @for (n of subnetsForAz(); track n.id) {
+                    <mat-option [value]="n.id">
+                      {{ n.name }} ({{ n.cidr ?? n.id }})
+                      @if (n.isDefaultForAz) { · default }
+                    </mat-option>
                   }
                 </mat-select>
+                @if (!subnetsForAz().length) {
+                  <mat-hint>Sin subnets en esta zona — crea una o cambia de AZ</mat-hint>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ theme().sgLabel }}</mat-label>
@@ -259,25 +207,112 @@
                 </mat-slide-toggle>
               </div>
             </div>
-          </section>
-        }
 
-        @case ('storage') {
-          <section class="cld__section" aria-labelledby="cld-storage-h">
-            <header class="cld__panel-head">
-              <div>
-                <h3 id="cld-storage-h">{{ options().storageSectionTitle }}</h3>
-                <p>{{ options().storageSectionHint }}</p>
+            @if (subnetIssue(); as issue) {
+              <aside class="cld__resolution" [class.cld__resolution--error]="issue.level === 'error'" [class.cld__resolution--warn]="issue.level === 'warning'" role="alert">
+                <header>
+                  <mat-icon>{{ issue.level === 'error' ? 'error' : 'warning' }}</mat-icon>
+                  <strong>{{ issue.title }}</strong>
+                </header>
+                <p>{{ issue.message }}</p>
+                <ul>
+                  @for (s of issue.suggestions; track s) {
+                    <li>{{ s }}</li>
+                  }
+                </ul>
+                <div class="cld__resolution-actions">
+                  <button mat-stroked-button type="button" (click)="showCreateSubnet.set(!showCreateSubnet())">
+                    <mat-icon>add</mat-icon>
+                    Crear subnet en esta VPC
+                  </button>
+                </div>
+              </aside>
+            }
+
+            @if (showCreateSubnet()) {
+              <div class="cld__create-subnet" [formGroup]="form">
+                <h4>Crear subnet en {{ form.value.availabilityZone }}</h4>
+                <div class="cld__form-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>CIDR block</mat-label>
+                    <input matInput formControlName="newSubnetCidr" placeholder="10.0.1.0/24" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nombre</mat-label>
+                    <input matInput formControlName="newSubnetName" placeholder="subnet-launch" />
+                  </mat-form-field>
+                </div>
+                <button mat-flat-button type="button" [class]="theme().primaryBtnClass" [disabled]="creatingSubnet()" (click)="handleCreateSubnet()">
+                  @if (creatingSubnet()) {
+                    <mat-spinner diameter="18" />
+                  } @else {
+                    <mat-icon>add_circle</mat-icon>
+                  }
+                  Crear subnet
+                </button>
               </div>
-            </header>
-            <div class="cld__form-grid" [formGroup]="form">
+            }
+          }
+        </section>
+      }
+
+      @case ('compute') {
+        <section class="cld__section" aria-labelledby="cld-compute-h">
+          <header class="cld__panel-head">
+            <div>
+              <h3 id="cld-compute-h">{{ options().instanceSectionTitle }}</h3>
+              <p>{{ options().instanceSectionHint }} · {{ types().length }} tipos</p>
+            </div>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cld__search">
+              <mat-label>Buscar tipo</mat-label>
+              <input matInput [value]="typeSearch()" (input)="onTypeSearch($event)" placeholder="t3.medium, m5.large…" />
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+          </header>
+          @if (catalogLoading()) {
+            <app-loading-state message="Cargando tipos de instancia…" />
+          } @else {
+            <div [formGroup]="form">
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>{{ options().instanceNameLabel }}</mat-label>
+                <input matInput formControlName="name" placeholder="web-prod-01" />
+              </mat-form-field>
+            </div>
+            <div class="cld__type-grid" role="list">
+              @for (t of filteredTypes(); track t.id) {
+                <button
+                  type="button"
+                  class="cld__type-card"
+                  role="listitem"
+                  [class.cld__type-card--on]="form.value.instanceType === t.id"
+                  (click)="selectType(t.id)"
+                >
+                  <mat-icon>memory</mat-icon>
+                  <strong>{{ t.name }}</strong>
+                  @if (t.vcpus) {
+                    <span>{{ t.vcpus }} vCPU · {{ t.memoryGb }} GB RAM</span>
+                    <span class="cld__type-price">
+                      <em>{{ typePriceDetail(t).hourly }}</em>
+                      <em>{{ typePriceDetail(t).minute }}</em>
+                    </span>
+                    <small>{{ typeMonthlyCost(t) }}</small>
+                  }
+                </button>
+              } @empty {
+                <p class="cld__empty">No hay tipos disponibles en esta región.</p>
+              }
+            </div>
+            <div class="cld__form-grid cld__storage-inline" [formGroup]="form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ options().keyPairLabel }}</mat-label>
                 <mat-select formControlName="keyPair">
-                  @for (kp of options().keyPairs; track kp) {
-                    <mat-option [value]="kp">{{ kp }}</mat-option>
+                  @for (kp of keyPairs(); track kp.id) {
+                    <mat-option [value]="kp.name">{{ kp.name }}</mat-option>
                   }
                 </mat-select>
+                @if (!keyPairs().length) {
+                  <mat-hint>Sin key pairs — créalo en la consola del proveedor</mat-hint>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ options().diskSizeLabel }}</mat-label>
@@ -294,11 +329,6 @@
               <mat-form-field appearance="outline" class="cld__span-2">
                 <mat-label>{{ options().tagsLabel }}</mat-label>
                 <input matInput formControlName="tags" [placeholder]="options().tagHint" />
-                <mat-hint>Formato: clave=valor, clave2=valor2</mat-hint>
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="cld__span-2">
-                <mat-label>{{ options().userDataLabel }}</mat-label>
-                <textarea matInput formControlName="userData" rows="4" placeholder="#!/bin/bash&#10;apt-get update"></textarea>
               </mat-form-field>
               <div class="cld__toggle-row cld__span-2">
                 <mat-slide-toggle formControlName="monitoring" color="primary">
@@ -306,45 +336,177 @@
                 </mat-slide-toggle>
               </div>
             </div>
-          </section>
-        }
+          }
+        </section>
+      }
 
-        @case ('review') {
-          <section class="cld__section" aria-labelledby="cld-review-h">
-            <header class="cld__panel-head">
-              <div>
-                <h3 id="cld-review-h">{{ options().reviewSectionTitle }}</h3>
-                <p>{{ options().reviewSectionHint }}</p>
+      @case ('image') {
+        <section class="cld__section" aria-labelledby="cld-image-h">
+          <header class="cld__panel-head">
+            <div>
+              <h3 id="cld-image-h">{{ options().imageSectionTitle }}</h3>
+              <p>{{ options().imageSectionHint }}</p>
+              @if (data.slug === 'aws') {
+                <p class="cld__region-banner">
+                  <mat-icon>public</mat-icon>
+                  AMIs en región <strong>{{ form.value.region }}</strong>
+                </p>
+              }
+            </div>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cld__search">
+              <mat-label>{{ options().searchImageLabel }}</mat-label>
+              <input matInput [value]="imageSearch()" (input)="onImageSearch($event)" placeholder="Ubuntu, Debian, Windows…" />
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+          </header>
+          @if (catalogLoading()) {
+            <app-loading-state message="Cargando imágenes…" />
+          } @else if (data.slug === 'aws') {
+            <div class="cld__ami-browser">
+              <nav class="cld__ami-sections" aria-label="Categorías AMI">
+                @for (sec of awsImageSections(); track sec.id) {
+                  <button
+                    type="button"
+                    class="cld__ami-section"
+                    [class.cld__ami-section--on]="imageSection() === sec.id"
+                    (click)="selectImageSection(sec.id)"
+                  >
+                    @if (sec.logo) {
+                      <img [src]="sec.logo" [alt]="" width="18" height="18" />
+                    }
+                    <span>{{ sec.label }}</span>
+                    <em>{{ sectionCount(images(), sec.id) }}</em>
+                  </button>
+                }
+              </nav>
+              <div class="cld__ami-grid" role="list">
+                @for (img of filteredImages(); track img.id) {
+                  <button
+                    type="button"
+                    class="cld__image-card cld__image-card--aws"
+                    role="listitem"
+                    [class.cld__image-card--on]="form.value.imageId === img.id"
+                    (click)="selectImage(img)"
+                  >
+                    <span class="cld__image-os">
+                      <img [src]="imageLogo(img)" [alt]="imageVendor(img)" width="32" height="32" loading="lazy" />
+                    </span>
+                    <strong>{{ img.name }}</strong>
+                    <span class="cld__image-vendor">{{ imageVendor(img) }}</span>
+                    <span class="cld__image-meta">{{ img.architecture ?? 'x86_64' }} · {{ img.os ?? 'Linux' }}</span>
+                    <code class="cld__image-id">{{ img.id }}</code>
+                    <span class="cld__badge">{{ imageBadgeLabel() }}</span>
+                  </button>
+                } @empty {
+                  <p class="cld__empty">Sin AMIs en esta sección para {{ form.value.region }}.</p>
+                }
               </div>
-            </header>
-            <div class="cld__review-grid">
-              <ul class="cld__summary">
-                @for (row of reviewRows(); track row.label) {
-                  <li>
-                    <span>{{ row.label }}</span>
-                    <strong [class.cld__mono]="row.mono">{{ row.value }}</strong>
+            </div>
+          } @else {
+            @if (gcpImageTabs().length && data.slug === 'gcp') {
+              <nav class="cld__os-tabs cld__os-tabs--gcp" aria-label="Filtrar imágenes">
+                @for (tab of gcpImageTabs(); track tab.id) {
+                  <button type="button" class="cld__os-tab" [class.cld__os-tab--on]="imageOsTab() === tab.id" (click)="imageOsTab.set(tab.id)">{{ tab.label }}</button>
+                }
+              </nav>
+            }
+            @if (azureImageTabs().length && data.slug === 'azure') {
+              <nav class="cld__os-tabs cld__os-tabs--azure" aria-label="Filtrar imágenes">
+                @for (tab of azureImageTabs(); track tab.id) {
+                  <button type="button" class="cld__os-tab" [class.cld__os-tab--on]="imageOsTab() === tab.id" (click)="imageOsTab.set(tab.id)">{{ tab.label }}</button>
+                }
+              </nav>
+            }
+            <div class="cld__images" role="list">
+              @for (img of filteredImages(); track img.id) {
+                <button
+                  type="button"
+                  class="cld__image-card"
+                  role="listitem"
+                  [class.cld__image-card--on]="form.value.imageId === img.id"
+                  (click)="selectImage(img)"
+                >
+                  <span class="cld__image-os">
+                    <img [src]="imageLogo(img)" [alt]="imageVendor(img)" width="32" height="32" loading="lazy" />
+                  </span>
+                  <strong>{{ img.name }}</strong>
+                  <span class="cld__image-vendor">{{ imageVendor(img) }}</span>
+                  <span class="cld__image-meta">{{ img.architecture ?? 'x86_64' }} · {{ img.os ?? 'linux' }}</span>
+                  <code class="cld__image-id">{{ shortId(img.id) }}</code>
+                  <span class="cld__badge">{{ imageBadgeLabel() }}</span>
+                </button>
+              } @empty {
+                <p class="cld__empty">Sin imágenes en esta región. Cambia de región o valida la cuenta.</p>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      @case ('review') {
+        <section class="cld__section" aria-labelledby="cld-review-h">
+          <header class="cld__panel-head">
+            <div>
+              <h3 id="cld-review-h">{{ options().reviewSectionTitle }}</h3>
+              <p>{{ options().reviewSectionHint }}</p>
+            </div>
+            <button mat-stroked-button type="button" [disabled]="preflightLoading()" (click)="runPreflight()">
+              @if (preflightLoading()) {
+                <mat-spinner diameter="18" />
+              } @else {
+                <mat-icon>fact_check</mat-icon>
+              }
+              Revalidar
+            </button>
+          </header>
+
+          @if (preflightLoading()) {
+            <app-loading-state message="Ejecutando preflight…" />
+          } @else {
+            @if (preflight(); as pf) {
+              <ul class="cld__preflight" aria-label="Resultados de validación">
+                @for (c of pf.checks; track c.id) {
+                  <li [class]="'cld__preflight-item cld__preflight-item--' + c.level">
+                    <mat-icon>{{ checkIcon(c) }}</mat-icon>
+                    <div>
+                      <span>{{ c.message }}</span>
+                      @if (c.suggestion) {
+                        <small>{{ c.suggestion }}</small>
+                      }
+                    </div>
                   </li>
                 }
               </ul>
-              <app-cloud-launch-infra-preview
-                [slug]="data.slug"
-                [region]="form.value.region ?? ''"
-                [network]="networkLabel()"
-                [securityGroup]="sgLabel()"
-                [instanceType]="form.value.instanceType ?? ''"
-                [imageName]="selectedImage()?.name ?? ''"
-                [instanceName]="form.value.name ?? ''"
-                [specs]="typeSpecs()"
-                [monthlyCost]="costHint()"
-                [launchPercent]="progressPct()"
-                [diskGb]="form.value.diskGb ?? undefined"
-                [diskType]="form.value.diskType ?? ''"
-                [keyPair]="form.value.keyPair ?? ''"
-                [publicIp]="form.value.publicIp ?? false"
-              />
-            </div>
-          </section>
-        }
+            }
+          }
+
+          <div class="cld__review-grid">
+            <ul class="cld__summary">
+              @for (row of reviewRows(); track row.label) {
+                <li>
+                  <span>{{ row.label }}</span>
+                  <strong [class.cld__mono]="row.mono">{{ row.value }}</strong>
+                </li>
+              }
+            </ul>
+            <app-cloud-launch-infra-preview
+              [slug]="data.slug"
+              [region]="form.value.region ?? ''"
+              [network]="networkLabel()"
+              [securityGroup]="sgLabel()"
+              [instanceType]="form.value.instanceType ?? ''"
+              [imageName]="selectedImage()?.name ?? ''"
+              [instanceName]="form.value.name ?? ''"
+              [specs]="typeSpecs()"
+              [monthlyCost]="costHint()"
+              [launchPercent]="progressPct()"
+              [diskGb]="form.value.diskGb ?? undefined"
+              [diskType]="form.value.diskType ?? ''"
+              [keyPair]="form.value.keyPair ?? ''"
+              [publicIp]="form.value.publicIp ?? false"
+            />
+          </div>
+        </section>
       }
     }
   </mat-dialog-content>
@@ -373,7 +535,7 @@
         color="primary"
         type="button"
         [class]="theme().primaryBtnClass"
-        [disabled]="!canAdvance() || launching() || catalogLoading()"
+        [disabled]="!canAdvance() || launching() || (activeStep() === 'region' && (catalogLoading() || azLoading())) || (activeStep() === 'compute' && catalogLoading()) || (activeStep() === 'image' && catalogLoading()) || (activeStep() === 'account' && accountLoading())"
         (click)="handleNext()"
       >
         {{ options().nextLabel }}
@@ -385,7 +547,7 @@
         color="primary"
         type="button"
         [class]="theme().primaryBtnClass"
-        [disabled]="form.invalid || launching() || !images().length"
+        [disabled]="!canLaunch() || launching()"
         (click)="handleLaunch()"
       >
         <mat-icon>rocket_launch</mat-icon>

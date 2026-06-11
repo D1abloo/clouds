@@ -1,4 +1,5 @@
 import { CloudProvider, InstanceStatus } from '@prisma/client'
+import type { CreateSubnetDto, LaunchPreflightResult } from '../dto/launch-preflight.dto'
 
 export interface CloudRegion {
   id: string
@@ -13,6 +14,10 @@ export interface CloudNetwork {
   region: string
   cidr?: string
   type?: string
+  availabilityZone?: string
+  vpcId?: string
+  mapPublicIpOnLaunch?: boolean
+  isDefaultForAz?: boolean
 }
 
 export interface CloudSecurityGroup {
@@ -31,6 +36,7 @@ export interface CloudImage {
   architecture?: string
   status?: string
   description?: string
+  category?: string
 }
 
 export interface CloudInstanceType {
@@ -40,6 +46,14 @@ export interface CloudInstanceType {
   vcpus: number
   memoryGb: number
   pricePerHour?: number
+  pricePerMinute?: number
+}
+
+export interface CloudKeyPair {
+  id: string
+  name: string
+  region: string
+  fingerprint?: string
 }
 
 export interface CloudInstance {
@@ -110,11 +124,15 @@ export interface CloudProviderAdapter {
   listSecurityGroups(ctx: CloudAdapterContext, region?: string): Promise<CloudSecurityGroup[]>
   listImages(ctx: CloudAdapterContext, region: string): Promise<CloudImage[]>
   listInstanceTypes(ctx: CloudAdapterContext, region: string): Promise<CloudInstanceType[]>
+  listKeyPairs(ctx: CloudAdapterContext, region?: string): Promise<CloudKeyPair[]>
   listInstances(ctx: CloudAdapterContext, region?: string): Promise<CloudInstance[]>
   getInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<CloudInstance | null>
   startInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<ActionResult>
   stopInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<ActionResult>
   restartInstance(ctx: CloudAdapterContext, instanceId: string, region?: string): Promise<ActionResult>
   launchInstance(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<CloudInstance>
+  validateLaunchPreflight(ctx: CloudAdapterContext, input: LaunchInstanceInput): Promise<LaunchPreflightResult>
+  createSubnet(ctx: CloudAdapterContext, input: CreateSubnetDto): Promise<CloudNetwork>
+  listAvailabilityZones(ctx: CloudAdapterContext, region: string): Promise<string[]>
   syncInventory(ctx: CloudAdapterContext): Promise<CloudInstance[]>
 }
