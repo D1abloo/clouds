@@ -66,6 +66,7 @@ import { imageOsLabel, imageOsLogoSrc, isCloudImageAvailable, isValidAwsAmiId, s
 import { AWS_IMAGE_SECTIONS, sectionCount, type AwsImageSectionId } from './cloud-ami-sections.util'
 import { instancePriceLabels } from './cloud-instance-pricing.util'
 import { extractApiErrorMessage, suggestSubnetCidr } from './cloud-subnet-cidr.util'
+import { pageReveal, staggerCards, stepTransition } from '../../shared/animations/ui-motion.animations'
 
 export type CloudLaunchWizardData = {
   accountId: string
@@ -255,6 +256,7 @@ const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
     CloudLaunchLogsComponent,
     CloudCostEstimateCardComponent,
   ],
+  animations: [pageReveal, staggerCards, stepTransition],
   templateUrl: './cloud-launch-wizard.component.html',
   styleUrl: './cloud-launch-wizard.component.scss',
 })

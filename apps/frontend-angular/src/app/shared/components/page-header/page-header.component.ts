@@ -8,6 +8,7 @@ import { NavIconComponent } from '../nav-icon/nav-icon.component'
 import { resolvePageVisual, type NavVisualTone } from '../../theme/nav-visual.config'
 import type { NavLogoKey } from '../../theme/nav-logo.types'
 import { ProModeService } from '../../../core/services/pro-mode.service'
+import { panelReveal } from '../../animations/ui-motion.animations'
 
 export interface PageHeaderAction {
   label: string
@@ -20,9 +21,11 @@ export interface PageHeaderAction {
   selector: 'app-page-header',
   standalone: true,
   imports: [MatIconModule, RealtimeStatusBadgeComponent, NavIconComponent],
+  animations: [panelReveal],
   template: `
     <header
       class="page-header-premium animate-fade-in"
+      @panelReveal
       [class.page-header-premium--actions-only]="actionsOnly"
       [class.surface-elevated]="!actionsOnly"
     >

@@ -1,12 +1,14 @@
 import { Component, Input } from '@angular/core'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
+import { panelReveal } from '../../animations/ui-motion.animations'
 
 @Component({
   selector: 'app-loading-state',
   standalone: true,
   imports: [MatProgressSpinnerModule],
+  animations: [panelReveal],
   template: `
-    <div class="state-container animate-fade-in" role="status" [attr.aria-label]="message">
+    <div class="state-container animate-fade-in" role="status" [attr.aria-label]="message" @panelReveal>
       <div class="spinner-wrap">
         <mat-spinner diameter="44" />
       </div>

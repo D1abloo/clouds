@@ -12,6 +12,11 @@ body.dark-theme {
   --status-stopped: #94a3b8;
   --status-info: #3b82f6;
   --status-pending: #0ea5e9;
+  --status-running-soft: #ecfdf3;
+  --status-warning-soft: #fffbeb;
+  --status-error-soft: #fef2f2;
+  --status-info-soft: #eff6ff;
+  --status-stopped-soft: #f1f5f9;
 
   /* Module brands */
   --brand-aws: #ff9900;

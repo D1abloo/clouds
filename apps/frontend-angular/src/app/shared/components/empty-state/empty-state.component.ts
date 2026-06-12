@@ -1,13 +1,15 @@
 import { Component, Input, output } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 import { MatButtonModule } from '@angular/material/button'
+import { emptyStateReveal } from '../../animations/ui-motion.animations'
 
 @Component({
   selector: 'app-empty-state',
   standalone: true,
   imports: [MatIconModule, MatButtonModule],
+  animations: [emptyStateReveal],
   template: `
-    <div class="state-container animate-fade-in" role="status">
+    <div class="state-container animate-fade-in" role="status" @emptyStateReveal>
       <div class="state-icon-wrap">
         <mat-icon class="state-icon">{{ icon }}</mat-icon>
       </div>

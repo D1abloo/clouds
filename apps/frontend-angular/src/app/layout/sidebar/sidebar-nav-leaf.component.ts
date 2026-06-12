@@ -5,15 +5,18 @@ import { MatTooltipModule } from '@angular/material/tooltip'
 import { NavIconComponent } from '../../shared/components/nav-icon/nav-icon.component'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
 import { SidebarService } from './sidebar.service'
+import { panelReveal } from '../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-sidebar-nav-leaf',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule, NavIconComponent],
+  animations: [panelReveal],
   template: `
     <a
       class="nav-leaf"
+      @panelReveal
       #link="routerLinkActive"
       [routerLink]="route()"
       routerLinkActive="nav-leaf--active"

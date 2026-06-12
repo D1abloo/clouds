@@ -13,6 +13,13 @@ import type { LaunchInstanceInput } from '../cloud-provider.adapter'
 import type { LaunchPreflightCheck, LaunchPreflightResult } from '../../dto/launch-preflight.dto'
 import { sanitizeAmiId, verifyAmiInRegion } from './aws-ami-sections.util'
 
+const isAwsDryRunSuccess = (err: unknown): boolean => {
+  if (!(err instanceof Error)) return false
+  const name = (err as { name?: string }).name ?? ''
+  const msg = err.message.toLowerCase()
+  return name === 'DryRunOperation' || msg.includes('dryrunoperation') || msg.includes('dry run flag is set')
+}
+
 export type AwsSubnetRow = CloudNetwork & {
   availabilityZone: string
   vpcId: string
@@ -379,8 +386,10 @@ export const validateAwsLaunchPreflight = async (
       await ec2.send(new RunInstancesCommand({ ...runInput, DryRun: true }))
       checks.push({ id: 'dryrun', level: 'ok', message: 'EC2 DryRun superada — listo para lanzar' })
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (!msg.toLowerCase().includes('dryrunoperation')) {
+      if (isAwsDryRunSuccess(err)) {
+        checks.push({ id: 'dryrun', level: 'ok', message: 'EC2 DryRun superada — listo para lanzar' })
+      } else {
+        const msg = err instanceof Error ? err.message : String(err)
         const isDefaultSubnet = /no default subnet/i.test(msg)
         checks.push({
           id: 'dryrun',
@@ -393,8 +402,6 @@ export const validateAwsLaunchPreflight = async (
             ? 'Cambia de zona, selecciona una subnet existente o crea una nueva en la VPC'
             : 'Revisa red, permisos IAM o cuotas',
         })
-      } else {
-        checks.push({ id: 'dryrun', level: 'ok', message: 'EC2 DryRun superada — listo para lanzar' })
       }
     }
   }

@@ -7,7 +7,7 @@ sleep 3
 echo "==> Running migrations..."
 npx prisma migrate deploy --schema=./prisma/schema.prisma
 
-if [ "${DEMO_MODE:-true}" = "false" ]; then
+if [ "${DEMO_MODE:-false}" = "false" ]; then
   export SEED_MODE=production
 fi
 
@@ -16,7 +16,7 @@ npx prisma db seed --schema=./prisma/schema.prisma 2>/dev/null || echo "Prisma s
 echo "==> Ensuring default login users..."
 node /app/ensure-users.js
 
-if [ "${AUTO_DEMO_SEED:-true}" = "true" ] && [ "${DEMO_MODE:-true}" = "true" ]; then
+if [ "${AUTO_DEMO_SEED:-false}" = "true" ] && [ "${DEMO_MODE:-false}" = "true" ]; then
   echo "==> Checking demo dataset..."
   node <<'NODE'
 const { PrismaClient } = require('@prisma/client')
@@ -39,8 +39,7 @@ const run = async () => {
 }
 
 run().catch((e) => {
-  console.error('Demo auto-seed failed:', e.message)
-  process.exit(1)
+  console.warn('Demo auto-seed skipped:', e.message)
 })
 NODE
 fi

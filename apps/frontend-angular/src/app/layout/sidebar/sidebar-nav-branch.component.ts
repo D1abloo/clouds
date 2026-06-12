@@ -9,14 +9,16 @@ import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
 import type { SidebarNavBranch } from '../../core/routing/area-nav.config'
 import { navHintForRoute } from './sidebar-nav-hints.config'
 import { SIDEBAR_BRANCH_HINTS, branchTooltip } from './sidebar-nav-branch-hints.config'
+import { collapseExpand, panelReveal } from '../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-sidebar-nav-branch',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule, MatTooltipModule, NavIconComponent, BrandLogoComponent, SidebarNavLeafComponent],
+  animations: [collapseExpand, panelReveal],
   template: `
-    <div class="nav-branch">
+    <div class="nav-branch" @panelReveal>
       <button
         type="button"
         class="nav-branch__head"
@@ -50,7 +52,7 @@ import { SIDEBAR_BRANCH_HINTS, branchTooltip } from './sidebar-nav-branch-hints.
         }
       </button>
       @if (open() && !collapsed()) {
-        <div class="nav-branch__children">
+        <div class="nav-branch__children" @collapseExpand>
           @for (leaf of visibleChildren(); track leaf.id) {
             <app-sidebar-nav-leaf
               [label]="leaf.label"
@@ -174,13 +176,7 @@ import { SIDEBAR_BRANCH_HINTS, branchTooltip } from './sidebar-nav-branch-hints.
       height: 1.1rem !important;
       opacity: 0.7;
     }
-    .nav-branch__children {
-      animation: branchIn 0.22s ease;
-    }
-    @keyframes branchIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    .nav-branch__children { overflow: hidden; }
   `,
 })
 export class SidebarNavBranchComponent {

@@ -262,7 +262,11 @@ export class GcpAdapterService implements CloudProviderAdapter {
         : `projects/debian-cloud/global/images/${input.imageId}`,
     }
     if (input.diskGb) initializeParams.diskSizeGb = input.diskGb
-    if (input.diskType) initializeParams.diskType = input.diskType
+    if (input.diskType) {
+      initializeParams.diskType = input.diskType.startsWith('zones/')
+        ? input.diskType
+        : `zones/${zone}/diskTypes/${input.diskType.split('/').pop()}`
+    }
 
     const accessConfigs =
       input.publicIp !== false ? [{ type: 'ONE_TO_ONE_NAT' as const, name: 'External NAT' }] : []

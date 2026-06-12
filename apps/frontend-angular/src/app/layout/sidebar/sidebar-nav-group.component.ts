@@ -7,14 +7,16 @@ import { SidebarNavLeafComponent } from './sidebar-nav-leaf.component'
 import { SidebarNavBranchComponent } from './sidebar-nav-branch.component'
 import type { SidebarMainModule } from '../../core/routing/area-nav.config'
 import { navHintForRoute } from './sidebar-nav-hints.config'
+import { collapseExpand, panelReveal } from '../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-sidebar-nav-group',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule, MatTooltipModule, RouterLink, SidebarNavLeafComponent, SidebarNavBranchComponent],
+  animations: [collapseExpand, panelReveal],
   template: `
-    <div class="nav-group">
+    <div class="nav-group" @panelReveal>
       @if (collapsed()) {
         <a
           class="nav-group__collapsed"
@@ -50,7 +52,7 @@ import { navHintForRoute } from './sidebar-nav-hints.config'
         </button>
       </div>
       @if (open()) {
-        <div class="nav-group__body">
+        <div class="nav-group__body" @collapseExpand>
           @if (hasBranches()) {
             @for (branch of visibleBranches(); track branch.id) {
               <app-sidebar-nav-branch
@@ -170,11 +172,6 @@ import { navHintForRoute } from './sidebar-nav-hints.config'
     }
     .nav-group__body {
       padding: 0.1rem 0 0.2rem;
-      animation: groupIn 0.22s ease;
-    }
-    @keyframes groupIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
     }
     .nav-group__collapsed {
       display: flex;

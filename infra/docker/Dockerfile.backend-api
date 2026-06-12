@@ -29,7 +29,10 @@ FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV API_PORT=3000
-ENV DEMO_MODE=true
+ENV APP_ENV=production
+ENV DEMO_MODE=false
+ENV PRO_MODE=true
+ENV AUTO_DEMO_SEED=false
 RUN apt-get update && apt-get install -y --no-install-recommends wget openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/apps/backend-api/dist ./dist
@@ -38,6 +41,9 @@ COPY --from=builder /app/apps/backend-api/prisma ./prisma
 COPY --from=builder /app/node_modules ./node_modules
 COPY infra/docker/docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY infra/docker/ensure-users.js /app/ensure-users.js
+COPY scripts/cleanup-production-demo-data.ts /app/scripts/cleanup-production-demo-data.ts
+COPY scripts/cleanup-production-demo-vps.ts /app/scripts/cleanup-production-demo-vps.ts
+COPY scripts/lib /app/scripts/lib
 COPY apps/backend-api/scripts/provision-pro-resources.js /app/scripts/provision-pro-resources.js
 COPY apps/backend-api/scripts/provision-panel-users.js /app/scripts/provision-panel-users.js
 RUN chmod +x /app/docker-entrypoint.sh

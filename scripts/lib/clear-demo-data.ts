@@ -1,22 +1,22 @@
-import type { PrismaClient } from '@prisma/client'
+import type { Prisma, PrismaClient } from '@prisma/client'
 
-const DEMO_GITHUB_ACCOUNT_WHERE = {
+const DEMO_GITHUB_ACCOUNT_WHERE: Prisma.GithubAccountWhereInput = {
   OR: [
     { id: { startsWith: 'demo-github' } },
     { tokenRef: 'demo' },
     { tokenRef: { startsWith: 'demo:' } },
   ],
-} as const
+}
 
-const demoInstanceWhere = {
+const demoInstanceWhere: Prisma.InstanceWhereInput = {
   OR: [
     { id: { startsWith: 'demo-inst-' } },
-    { externalId: { contains: 'demo', mode: 'insensitive' as const } },
-    { name: { contains: 'demo', mode: 'insensitive' as const } },
-    { name: { contains: 'aws-producción-vm-', mode: 'insensitive' as const } },
-    { name: { contains: 'aws-produccion-vm-', mode: 'insensitive' as const } },
+    { externalId: { contains: 'demo', mode: 'insensitive' } },
+    { name: { contains: 'demo', mode: 'insensitive' } },
+    { name: { contains: 'aws-producción-vm-', mode: 'insensitive' } },
+    { name: { contains: 'aws-produccion-vm-', mode: 'insensitive' } },
   ],
-} as const
+}
 
 /** Elimina registros demo/sintéticos en PostgreSQL. Preserva cuentas cloud/GitHub reales conectadas. */
 export const clearDemoData = async (prisma: PrismaClient): Promise<void> => {

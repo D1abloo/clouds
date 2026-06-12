@@ -1,14 +1,16 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
+import { logReveal } from '../../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-cloud-launch-logs',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule],
+  animations: [logReveal],
   template: `
     @if (lines().length) {
-      <section class="logs" aria-label="Logs de lanzamiento en tiempo real">
+      <section class="logs" aria-label="Logs de lanzamiento en tiempo real" @logReveal>
         <header>
           <mat-icon>article</mat-icon>
           <strong>{{ title() }}</strong>

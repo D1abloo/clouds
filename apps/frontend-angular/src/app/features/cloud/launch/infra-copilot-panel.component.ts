@@ -2,14 +2,16 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 import { CloudArchitecturePreviewComponent } from './cloud-architecture-preview.component'
 import type { CloudSlug } from '../cloud-provider.data'
+import { slideInRight } from '../../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-infra-copilot-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule, CloudArchitecturePreviewComponent],
+  animations: [slideInRight],
   template: `
-    <aside class="copilot" aria-label="Copilot Infra">
+    <aside class="copilot" aria-label="Copilot Infra" @slideInRight>
       <header class="copilot__head">
         <mat-icon>assistant</mat-icon>
         <div>

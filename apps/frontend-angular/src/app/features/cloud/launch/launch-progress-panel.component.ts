@@ -2,14 +2,16 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
 import { type CloudLaunchProgressState } from '../cloud-launch-progress.component'
 import { LaunchProgressComponent } from './launch-progress.component'
+import { panelReveal } from '../../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-launch-progress-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatIconModule, LaunchProgressComponent],
+  animations: [panelReveal],
   template: `
-    <section class="lpp">
+    <section class="lpp" @panelReveal>
       <header>
         <mat-icon>sync</mat-icon>
         <strong>{{ title() }}</strong>

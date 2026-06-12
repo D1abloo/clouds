@@ -11,8 +11,8 @@ $light-theme: mat.define-theme((
     tertiary: mat.$blue-palette,
   ),
   typography: (
-    brand-family: Inter,
-    plain-family: Inter,
+    brand-family: Aptos,
+    plain-family: Aptos,
   ),
   density: (scale: 0),
 ));
@@ -24,8 +24,8 @@ $dark-theme: mat.define-theme((
     tertiary: mat.$blue-palette,
   ),
   typography: (
-    brand-family: Inter,
-    plain-family: Inter,
+    brand-family: Aptos,
+    plain-family: Aptos,
   ),
   density: (scale: 0),
 ));
@@ -39,7 +39,7 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  font-family: Inter, 'Helvetica Neue', sans-serif;
+  font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, sans-serif;
 }
 
 app-root {
@@ -50,24 +50,45 @@ app-root {
 
 body.light-theme {
   @include mat.all-component-themes($light-theme);
-  --app-bg: #eef1f6;
-  --app-surface: #f4f6f9;
-  --app-card: #ffffff;
+  --bg-main: #f6f8fc;
+  --bg-card: #ffffff;
+  --primary: #0057d9;
+  --primary-hover: #0047b3;
+  --primary-soft: #eef4ff;
+  --secondary: #6c63ff;
+  --accent: #00c2ff;
+  --success: #16a34a;
+  --success-soft: #ecfdf3;
+  --warning: #f59e0b;
+  --warning-soft: #fffbeb;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --info: #0284c7;
+  --info-soft: #eff6ff;
+  --border: #d8def0;
+  --border-soft: #edf0f7;
+  --text-main: #101828;
+  --text-muted: #667085;
+  --text-soft: #98a2b3;
+  --panel-help: #eef0ff;
+  --app-bg: var(--bg-main);
+  --app-surface: #f4f7fb;
+  --app-card: var(--bg-card);
   --app-elevated: #ffffff;
   --app-sidebar: #ffffff;
   --app-topbar: rgba(255, 255, 255, 0.92);
-  --app-text: #0f172a;
-  --app-text-muted: #64748b;
-  --app-border: transparent;
-  --app-divider: rgba(226, 232, 240, 0.45);
-  --app-accent: #2563eb;
-  --app-accent-dark: #1d4ed8;
-  --app-success: #16a34a;
-  --app-warning: #d97706;
-  --app-danger: #dc2626;
-  --app-info: #0284c7;
-  --app-purple: #7c3aed;
-  --app-cyan: #0891b2;
+  --app-text: var(--text-main);
+  --app-text-muted: var(--text-muted);
+  --app-border: var(--border);
+  --app-divider: var(--border-soft);
+  --app-accent: var(--primary);
+  --app-accent-dark: var(--primary-hover);
+  --app-success: var(--success);
+  --app-warning: var(--warning);
+  --app-danger: var(--danger);
+  --app-info: var(--info);
+  --app-purple: var(--secondary);
+  --app-cyan: var(--accent);
   --chart-vivid-1: #6366f1;
   --chart-vivid-2: #0ea5e9;
   --chart-vivid-3: #a855f7;
@@ -87,19 +108,40 @@ body.light-theme {
   --app-shadow-md: 0 8px 28px rgba(15, 23, 42, 0.08);
   --app-shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.12);
   /* Sidebar design tokens */
-  --sidebar-bg: #f7f8fc;
-  --sidebar-primary: #7F77DD;
-  --sidebar-text: #000000;
-  --sidebar-text-muted: #000000;
-  --sidebar-text-faint: #333333;
-  --sidebar-border: rgba(42, 45, 58, 0.06);
-  --sidebar-item-hover: rgba(127, 119, 221, 0.08);
-  --sidebar-item-active: rgba(127, 119, 221, 0.14);
+  --sidebar-bg: #ffffff;
+  --sidebar-primary: var(--primary);
+  --sidebar-text: var(--text-main);
+  --sidebar-text-muted: var(--text-muted);
+  --sidebar-text-faint: var(--text-soft);
+  --sidebar-border: var(--border-soft);
+  --sidebar-item-hover: color-mix(in srgb, var(--primary) 7%, transparent);
+  --sidebar-item-active: color-mix(in srgb, var(--primary) 12%, transparent);
   --sidebar-dropdown-bg: #ffffff;
 }
 
 body.dark-theme {
   @include mat.all-component-colors($dark-theme);
+  --bg-main: #080b14;
+  --bg-card: #111827;
+  --primary: #60a5fa;
+  --primary-hover: #93c5fd;
+  --primary-soft: rgba(96, 165, 250, 0.14);
+  --secondary: #a78bfa;
+  --accent: #22d3ee;
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.14);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --info: #38bdf8;
+  --info-soft: rgba(56, 189, 248, 0.14);
+  --border: rgba(148, 163, 184, 0.2);
+  --border-soft: rgba(148, 163, 184, 0.12);
+  --text-main: #f8fafc;
+  --text-muted: #cbd5e1;
+  --text-soft: #94a3b8;
+  --panel-help: rgba(96, 165, 250, 0.12);
   --app-bg: #080b14;
   --app-surface: #0c0f18;
   --app-card: #151a28;
@@ -1493,7 +1535,7 @@ body.dark-theme {
 
 body,
 .mat-typography {
-  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, sans-serif;
 }
 
 .table-toolbar {
@@ -1955,4 +1997,3 @@ html.pub-site body::-webkit-scrollbar-thumb:hover {
   background: transparent;
   box-shadow: none;
 }
-

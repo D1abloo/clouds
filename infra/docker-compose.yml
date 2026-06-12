@@ -37,8 +37,11 @@ services:
     environment:
       NODE_ENV: production
       API_PORT: 3000
-      DEMO_MODE: "true"
-      AUTO_DEMO_SEED: "true"
+      APP_ENV: ${APP_ENV:-production}
+      DEMO_MODE: "${DEMO_MODE:-false}"
+      PRO_MODE: "${PRO_MODE:-true}"
+      AUTO_DEMO_SEED: "${AUTO_DEMO_SEED:-false}"
+      INTEGRATIONS_LIVE: "${INTEGRATIONS_LIVE:-true}"
       DATABASE_URL: postgresql://cloudops:${POSTGRES_PASSWORD:-cloudops_dev_password}@postgres:5432/cloudops
       REDIS_URL: redis://redis:6379
       JWT_SECRET: change_me_in_production_use_long_random_string

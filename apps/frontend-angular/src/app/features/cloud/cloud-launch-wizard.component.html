@@ -1,5 +1,6 @@
 <div
   class="clw"
+  @pageReveal
   [class.clw--embedded]="embedded"
   [class.clw--dialog]="!embedded && !studioMode"
   [class.clw--aws]="effectiveSlug() === 'aws'"
@@ -18,11 +19,11 @@
     <span class="clw__hero-pct" aria-hidden="true">{{ progressPct() }}%</span>
   </header>
 
-  <nav class="clw__stepper" aria-label="Pasos del asistente de lanzamiento">
+  <nav class="clw__stepper" aria-label="Pasos del asistente de lanzamiento" [@staggerCards]="steps().length">
     @for (s of steps(); track s.id; let i = $index) {
       <button
         type="button"
-        class="clw__step"
+        class="clw__step motion-card"
         [class.clw__step--current]="activeStep() === s.id"
         [class.clw__step--on]="activeStep() === s.id"
         [class.clw__step--done]="stepIndex() > i"
@@ -36,8 +37,8 @@
     }
   </nav>
 
-  <div class="clw__grid">
-    <main class="clw__card">
+  <div class="clw__grid" [@staggerCards]="activeStep()">
+    <main class="clw__card motion-card" [@stepTransition]="activeStep()">
       @switch (activeStep()) {
         @case ('provider') {
           <h3 class="clw__section-title">Selecciona proveedor cloud</h3>

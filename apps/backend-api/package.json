@@ -17,6 +17,10 @@
     "prisma:seed:prod": "SEED_MODE=production DEMO_MODE=false TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed.ts",
     "prisma:seed:demo": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed-demo.ts",
     "prisma:seed:demo:reset": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node prisma/seed-demo.ts --reset",
+    "cleanup:demo:dry-run": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/cleanup-production-demo-data.ts",
+    "cleanup:demo:production": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/cleanup-production-demo-data.ts --production",
+    "cleanup:vps-demo:dry-run": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/cleanup-production-demo-vps.ts",
+    "cleanup:vps-demo:production": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' ts-node scripts/cleanup-production-demo-vps.ts --production",
     "github:demo:verify": "npx --yes tsx scripts/verify-github-demo-catalog.mjs",
     "github:demo:test": "node scripts/test-github-demo.mjs"
   },

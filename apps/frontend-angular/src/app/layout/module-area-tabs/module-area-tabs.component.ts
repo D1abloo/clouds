@@ -16,19 +16,21 @@ import {
   type SidebarMainModule,
   type AreaNavTab,
 } from '../../core/routing/area-nav.config'
+import { staggerCards } from '../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-module-area-tabs',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, RouterLinkActive, MatIconModule, NavIconComponent],
+  animations: [staggerCards],
   template: `
     @if (area(); as a) {
       <nav class="module-area-tabs module-area-tabs--centered" [attr.aria-label]="a.label + ' sections'">
-        <div class="module-area-tabs__scroll">
+        <div class="module-area-tabs__scroll" [@staggerCards]="sectionTabs().length">
           @for (tab of sectionTabs(); track tab.id) {
             <a
-              class="module-area-tab"
+              class="module-area-tab motion-card"
               [routerLink]="tab.route"
               routerLinkActive="module-area-tab--active"
               [routerLinkActiveOptions]="tab.route === '/dashboard'

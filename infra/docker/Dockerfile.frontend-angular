@@ -3,6 +3,7 @@
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+ENV NODE_OPTIONS=--max_old_space_size=1536
 COPY package.json package-lock.json* ./
 COPY apps/frontend-angular/package.json ./apps/frontend-angular/
 COPY packages/ui/package.json ./packages/ui/

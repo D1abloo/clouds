@@ -78,8 +78,38 @@ ENV
   chmod 600 .env
 fi
 
-echo "==> Reconstruyendo stack PRO..."
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --build postgres redis backend-api
+echo "==> Forzando flags PRO/live en infra/.env"
+grep -q '^APP_ENV=' .env && sed -i 's/^APP_ENV=.*/APP_ENV=production/' .env || echo 'APP_ENV=production' >> .env
+grep -q '^DEMO_MODE=' .env && sed -i 's/^DEMO_MODE=.*/DEMO_MODE=false/' .env || echo 'DEMO_MODE=false' >> .env
+grep -q '^PRO_MODE=' .env && sed -i 's/^PRO_MODE=.*/PRO_MODE=true/' .env || echo 'PRO_MODE=true' >> .env
+grep -q '^AUTO_DEMO_SEED=' .env && sed -i 's/^AUTO_DEMO_SEED=.*/AUTO_DEMO_SEED=false/' .env || echo 'AUTO_DEMO_SEED=false' >> .env
+grep -q '^INTEGRATIONS_LIVE=' .env && sed -i 's/^INTEGRATIONS_LIVE=.*/INTEGRATIONS_LIVE=true/' .env || echo 'INTEGRATIONS_LIVE=true' >> .env
+
+echo "==> Limpiando cachés de build en el servidor..."
+cd "${REMOTE_DIR}"
+rm -rf .angular/cache apps/frontend-angular/.angular/cache node_modules/.cache apps/*/node_modules/.cache dist build .next apps/*/dist
+if command -v npm >/dev/null 2>&1; then
+  npm cache verify || true
+fi
+
+cd "${REMOTE_DIR}/infra"
+echo "==> Asegurando swap de build sin tocar volúmenes de datos..."
+if ! swapon --show | grep -q /swapfile-cloudops; then
+  fallocate -l 4G /swapfile-cloudops
+  chmod 600 /swapfile-cloudops
+  mkswap /swapfile-cloudops >/dev/null
+  swapon /swapfile-cloudops
+  grep -q /swapfile-cloudops /etc/fstab || echo '/swapfile-cloudops none swap sw 0 0' >> /etc/fstab
+fi
+
+echo "==> Construyendo backend PRO sin caché..."
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env build --no-cache backend-api
+
+echo "==> Construyendo frontend PRO sin caché..."
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env build --no-cache frontend
+
+echo "==> Reiniciando contenedores PRO sin borrar volúmenes..."
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --force-recreate postgres redis backend-api frontend
 
 for i in $(seq 1 48); do
   if docker compose -f docker-compose.yml -f docker-compose.production.yml exec -T backend-api wget -qO- http://127.0.0.1:3000/api/v1/health >/dev/null 2>&1; then
@@ -92,10 +122,21 @@ for i in $(seq 1 48); do
   sleep 5
 done
 
-echo "==> Reconstruyendo imagen frontend (sin caché)..."
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env build --no-cache frontend
-echo "==> Reiniciando contenedor frontend..."
-docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env up -d --force-recreate frontend
+echo "==> Backup PostgreSQL antes de limpiar datos demo..."
+mkdir -p /root/backups
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env exec -T postgres \
+  sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' \
+  > "/root/backups/spendlyx-pre-demo-cleanup-$(date +%Y%m%d-%H%M%S).sql" || echo "==> AVISO: backup PostgreSQL omitido"
+
+echo "==> Limpieza acotada de datos demo (dry-run y ejecución confirmada)..."
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env exec -T backend-api \
+  sh -c 'cd /app && npm run cleanup:demo:dry-run' || echo "==> AVISO: dry-run demo general no disponible"
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env exec -T backend-api \
+  sh -c 'cd /app && CONFIRM_DELETE_DEMO_DATA=true npm run cleanup:demo:production' || echo "==> AVISO: limpieza demo general omitida"
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env exec -T backend-api \
+  sh -c 'cd /app && npm run cleanup:vps-demo:dry-run' || echo "==> AVISO: dry-run VPS demo no disponible"
+docker compose -f docker-compose.yml -f docker-compose.production.yml --env-file .env exec -T backend-api \
+  sh -c 'cd /app && CONFIRM_DELETE_DEMO_VPS=true npm run cleanup:vps-demo:production' || echo "==> AVISO: limpieza VPS demo omitida"
 
 docker compose -f docker-compose.yml -f docker-compose.production.yml ps
 echo "Panel: https://spendlyx.com"

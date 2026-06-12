@@ -182,7 +182,7 @@ const runCleanup = async (dryRun: boolean): Promise<void> => {
 
   await prisma.auditLog.create({
     data: {
-      action: 'production.demo_cleanup',
+      action: 'production.synthetic_data_cleanup',
       resource: 'database',
       ipAddress: '127.0.0.1',
       metadata: {

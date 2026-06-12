@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing'
+import { provideNoopAnimations } from '@angular/platform-browser/animations'
 import { provideRouter } from '@angular/router'
 import { of } from 'rxjs'
 import { RepositoryConnectionWizardComponent } from './repository-connection-wizard.component'
@@ -14,6 +15,7 @@ describe('RepositoryConnectionWizardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [RepositoryConnectionWizardComponent],
       providers: [
+        provideNoopAnimations(),
         provideRouter([]),
         {
           provide: GithubService,

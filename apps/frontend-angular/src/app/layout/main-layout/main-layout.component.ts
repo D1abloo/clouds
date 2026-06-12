@@ -17,11 +17,13 @@ import { ModuleAreaTabsComponent } from '../module-area-tabs/module-area-tabs.co
 import { RealtimeService } from '../../core/services/realtime.service'
 import { SidebarService } from '../sidebar/sidebar.service'
 import { isCompactNavViewport } from '../layout-breakpoints'
+import { pageReveal } from '../../shared/animations/ui-motion.animations'
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
   imports: [RouterOutlet, SidebarComponent, TopbarComponent, DemoBannerComponent, ModuleAreaTabsComponent],
+  animations: [pageReveal],
   template: `
     <div
       class="layout-root layout-root--sections-only"
@@ -43,7 +45,7 @@ import { isCompactNavViewport } from '../layout-breakpoints'
         <div class="layout-main-scroll" #mainScroll>
           <app-demo-banner />
           <app-module-area-tabs />
-          <main class="layout-page">
+          <main class="layout-page" [@pageReveal]="currentUrl()">
             <router-outlet />
           </main>
         </div>
@@ -155,6 +157,7 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
   private navSub?: Subscription
 
   readonly compactNav = signal(isCompactNavViewport())
+  readonly currentUrl = signal(this.router.url)
 
   @HostListener('window:resize')
   onResize(): void {
@@ -167,7 +170,8 @@ export class MainLayoutComponent implements OnInit, OnDestroy {
 
     this.navSub = this.router.events
       .pipe(filter((e) => e instanceof NavigationEnd))
-      .subscribe(() => {
+      .subscribe((e) => {
+        this.currentUrl.set((e as NavigationEnd).urlAfterRedirects)
         this.resetMainScroll()
         if (isCompactNavViewport()) this.sidebarSvc.setCollapsed(true)
       })
