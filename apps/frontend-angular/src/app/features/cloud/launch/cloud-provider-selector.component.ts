@@ -21,6 +21,13 @@ import type { ProviderCard } from './cloud-launch.types'
           <app-brand-logo [logo]="p.logo" size="lg" />
           <strong>{{ p.label }}</strong>
           <span>{{ p.tagline }}</span>
+          @if (p.description) {
+            <p>{{ p.description }}</p>
+          }
+          <footer>
+            <em>{{ p.connectionState ?? 'Cuenta requerida' }}</em>
+            <small>{{ p.initialCost ?? 'Coste según selección' }}</small>
+          </footer>
           @if (selected() === p.slug) {
             <mat-icon class="cps__check">check_circle</mat-icon>
           }

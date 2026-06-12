@@ -171,6 +171,13 @@
   margin-top: 0.75rem;
 }
 
+.clw__inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 .clw__create-subnet {
   margin-top: 1rem;
   padding: 1rem;

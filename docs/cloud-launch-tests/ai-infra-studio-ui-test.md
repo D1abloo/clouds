@@ -1,8 +1,8 @@
 # AI Infra Studio — Prueba UI del asistente de lanzamiento
 
-**Fecha:** 2026-06-12  
-**Build frontend:** OK (`npm run build` local + rebuild Docker en VPS)  
-**Deploy:** https://spendlyx.com — `proMode: true`, API 200
+**Fecha:** 2026-06-12
+**Build frontend:** OK (`npm run build -w apps/frontend-angular`)
+**Dev server local:** `http://localhost:4200/`
 
 ## Componentes verificados (código + build)
 
@@ -13,11 +13,22 @@
 | AwsLaunchForm | `app-aws-launch-form` | OK |
 | GcpLaunchForm | `app-gcp-launch-form` | OK |
 | IonosVpsLaunchForm | `app-ionos-vps-launch-form` | OK |
+| CloudAccountStep | `app-cloud-account-step` | OK |
+| CloudRegionZoneStep | `app-cloud-region-zone-step` | OK |
+| CloudNetworkStep | `app-cloud-network-step` | OK |
+| CloudComputeStep | `app-cloud-compute-step` | OK |
+| CloudImageStep | `app-cloud-image-step` | OK |
 | LaunchReview | `app-launch-review` | OK |
+| LaunchProgress | `app-launch-progress` | OK |
 | LaunchProgressPanel | `app-launch-progress-panel` | OK |
+| LaunchTestPanel | `app-launch-test-panel` | OK |
+| LaunchDeletePanel | `app-launch-delete-panel` | OK |
 | LaunchErrorCard | `app-launch-error-card` | OK |
 | CloudResourceInventoryCard | `app-cloud-resource-inventory-card` | OK |
 | InfraCopilotPanel | `app-infra-copilot-panel` | OK |
+| CloudLaunchLogs | `app-cloud-launch-logs` | OK |
+| CloudCostEstimateCard | `app-cloud-cost-estimate-card` | OK |
+| CloudArchitecturePreview | `app-cloud-architecture-preview` | OK |
 
 ## Pasos del wizard (studioMode)
 
@@ -35,28 +46,32 @@
 
 | Ruta | Componente |
 |------|------------|
-| `/infra/ai-studio` | `AiInfraStudioComponent` → wizard `studioMode=true` |
-| `/cloud/aws/launch` | `CloudLaunchPageComponent` |
-| `/admin/infraestructura/instancias/lanzar` | `CloudLaunchPageComponent` |
+| `/automation/ai-infra-studio` | `AiInfraStudioComponent` → wizard `studioMode=true` |
+| `/infra/ai-studio` | Redirect compatible |
+| `/cloud/aws/instances` | CTA `Lanzar instancia AWS` → wizard con `provider=aws` |
+| `/cloud/gcp/overview` | CTA `Lanzar instancia GCP` → wizard con `provider=gcp` |
+| `/vps/ionos/servers` | CTA `Crear VPS IONOS` → wizard con `provider=ionos` |
+| `/instances/all-instances` | Inventario backend + actividad del wizard |
+| `/logs` | Logs de actividad del wizard |
 
 ## Pruebas funcionales API (relacionadas)
 
-- AWS subnet/AZ: error UI + API 400 documentado
-- GCP launch + stop: OK
-- IONOS: UI OK, backend pendiente credenciales host
+- AWS subnet/AZ: error UI documentado con acciones de cambio de zona, subnet, VPC temporal y cancelacion.
+- GCP: UI propia y preflight conectado a `CloudAccountsService`; lanzamiento real no ejecutado en esta sesion por falta de variables cloud locales.
+- IONOS: UI propia, registro local, prueba y eliminacion simulada; lanzamiento real pendiente de `IONOS_TOKEN`/adaptador backend.
 
 ## Screenshots
 
 Carpeta `screenshots/` reservada para capturas manuales post-login en:
 
-- `/infra/ai-studio`
+- `/automation/ai-infra-studio`
 - `/cloud/aws/launch` (paso Red con error subnet)
 
 ## Build
 
 ```
-cd apps/frontend-angular && npm run build
-→ Output: dist/frontend-angular (exit 0)
+npm run build -w apps/frontend-angular
+→ Output: apps/frontend-angular/dist/frontend-angular (exit 0)
 ```
 
 ## Secrets

@@ -15,6 +15,7 @@ import {
 } from '@angular/core'
 import { HttpErrorResponse } from '@angular/common/http'
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms'
+import { Router } from '@angular/router'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatSelectModule } from '@angular/material/select'
@@ -41,10 +42,18 @@ import { InfraCopilotPanelComponent } from './launch/infra-copilot-panel.compone
 import { LaunchErrorCardComponent } from './launch/launch-error-card.component'
 import { LaunchReviewComponent } from './launch/launch-review.component'
 import { LaunchProgressPanelComponent } from './launch/launch-progress-panel.component'
-import { CloudResourceInventoryCardComponent } from './launch/cloud-resource-inventory-card.component'
 import { AwsLaunchFormComponent } from './launch/aws-launch-form.component'
 import { GcpLaunchFormComponent } from './launch/gcp-launch-form.component'
 import { IonosVpsLaunchFormComponent } from './launch/ionos-vps-launch-form.component'
+import { CloudAccountStepComponent } from './launch/cloud-account-step.component'
+import { CloudRegionZoneStepComponent } from './launch/cloud-region-zone-step.component'
+import { CloudNetworkStepComponent } from './launch/cloud-network-step.component'
+import { CloudComputeStepComponent } from './launch/cloud-compute-step.component'
+import { CloudImageStepComponent } from './launch/cloud-image-step.component'
+import { LaunchTestPanelComponent } from './launch/launch-test-panel.component'
+import { LaunchDeletePanelComponent } from './launch/launch-delete-panel.component'
+import { CloudLaunchLogsComponent } from './launch/cloud-launch-logs.component'
+import { CloudCostEstimateCardComponent } from './launch/cloud-cost-estimate-card.component'
 import { InstancesService } from '../../core/services/instances.service'
 import {
   CloudLaunchActivityService,
@@ -118,9 +127,36 @@ type LaunchPayload = {
 type LaunchProviderSlug = CloudSlug | 'ionos'
 
 const LAUNCH_PROVIDERS: ProviderCard[] = [
-  { slug: 'aws', provider: 'AWS', label: 'Amazon Web Services', tagline: 'EC2 · VPC · AMI', logo: 'aws' },
-  { slug: 'gcp', provider: 'GCP', label: 'Google Cloud', tagline: 'Compute Engine · VPC', logo: 'gcp' },
-  { slug: 'ionos', provider: 'IONOS_VPS', label: 'IONOS VPS', tagline: 'VPS cloud · datacenter EU', logo: 'ionos' },
+  {
+    slug: 'aws',
+    provider: 'AWS',
+    label: 'AWS EC2',
+    tagline: 'Amazon Web Services',
+    logo: 'aws',
+    description: 'Instancias EC2, VPC, subnets, security groups, key pairs y AMIs.',
+    connectionState: 'Credenciales IAM',
+    initialCost: '~$0.012/h',
+  },
+  {
+    slug: 'gcp',
+    provider: 'GCP',
+    label: 'GCP Compute Engine',
+    tagline: 'Google Cloud',
+    logo: 'gcp',
+    description: 'VMs, proyectos, zonas, VPC networks, firewall rules e imágenes públicas.',
+    connectionState: 'Service account',
+    initialCost: '~$0.010/h',
+  },
+  {
+    slug: 'ionos',
+    provider: 'IONOS_VPS',
+    label: 'IONOS VPS',
+    tagline: 'IONOS Cloud',
+    logo: 'ionos',
+    description: 'VPS, datacenters europeos, planes, imágenes Linux y SSH keys.',
+    connectionState: 'API token',
+    initialCost: '~17.52$/mes',
+  },
 ]
 
 const slugToProvider = (slug: CloudSlug | 'ionos'): CloudProvider =>
@@ -206,10 +242,18 @@ const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
     LaunchErrorCardComponent,
     LaunchReviewComponent,
     LaunchProgressPanelComponent,
-    CloudResourceInventoryCardComponent,
     AwsLaunchFormComponent,
     GcpLaunchFormComponent,
     IonosVpsLaunchFormComponent,
+    CloudAccountStepComponent,
+    CloudRegionZoneStepComponent,
+    CloudNetworkStepComponent,
+    CloudComputeStepComponent,
+    CloudImageStepComponent,
+    LaunchTestPanelComponent,
+    LaunchDeletePanelComponent,
+    CloudLaunchLogsComponent,
+    CloudCostEstimateCardComponent,
   ],
   templateUrl: './cloud-launch-wizard.component.html',
   styleUrl: './cloud-launch-wizard.component.scss',
@@ -229,6 +273,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   private readonly toast = inject(ToastService)
   private readonly realtime = inject(RealtimeService)
   private readonly activity = inject(CloudLaunchActivityService)
+  private readonly router = inject(Router)
 
   readonly launching = signal(false)
   readonly catalogLoading = signal(false)
@@ -430,6 +475,19 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
 
   readonly selectedImage = computed(() => this.images().find((i) => i.id === this.form.value.imageId))
+
+  readonly costEstimate = computed(() => {
+    const t = this.types().find((x) => x.id === this.form.value.instanceType)
+    if (!t) return { hourly: '', monthly: '', hint: 'Selecciona un tipo para calcular coste.' }
+    const labels = this.typePriceDetail(t)
+    return {
+      hourly: labels.hourly,
+      monthly: labels.monthly,
+      hint: this.isIonos()
+        ? 'Estimación mensual de VPS IONOS con disco incluido.'
+        : 'Estimación on-demand, sin descuentos, impuestos ni tráfico saliente.',
+    }
+  })
 
   readonly ionosPlansForForm = computed(() =>
     this.types().map((t) => ({
@@ -1174,6 +1232,16 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.cancelled.emit()
   }
 
+  handleViewLogs = (): void => {
+    if (!this.launchLogLines().length) {
+      this.appendLaunchLog('Logs listos. Inicia el lanzamiento para ver eventos en tiempo real.')
+    }
+  }
+
+  goToInventory = (): void => {
+    void this.router.navigate(['/instances/all-instances'])
+  }
+
   handleCycleAz = (): void => {
     const zones = this.availabilityZones()
     if (zones.length < 2) return
@@ -1200,6 +1268,35 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     const next = list[(idx + 1) % list.length]
     this.form.patchValue({ vpcId: next.id })
     this.onVpcChange()
+  }
+
+  handleCreateTemporaryVpc = (): void => {
+    const az = this.form.value.availabilityZone ?? this.availabilityZones()[0] ?? ''
+    const idSuffix = Date.now().toString(36).slice(-5)
+    const vpcId = `vpc-ais-${idSuffix}`
+    const subnetId = `subnet-ais-${idSuffix}`
+    const vpc: NetworkRow = {
+      id: vpcId,
+      name: 'ais-temporary-vpc',
+      type: 'vpc',
+      cidr: '10.42.0.0/16',
+    }
+    const subnet: NetworkRow = {
+      id: subnetId,
+      name: 'ais-temporary-public-subnet',
+      type: 'subnet',
+      cidr: '10.42.1.0/24',
+      availabilityZone: az,
+      vpcId,
+      mapPublicIpOnLaunch: true,
+      isDefaultForAz: true,
+    }
+    this.allNetworks.update((rows) => [vpc, subnet, ...rows])
+    this.form.patchValue({ vpcId, subnetId })
+    this.showCreateSubnet.set(false)
+    this.preflight.set(null)
+    this.appendLaunchLog(`VPC temporal de prueba preparada en ${az || 'zona seleccionada'}`)
+    this.toast.success('VPC temporal de prueba preparada')
   }
 
   private onLaunchSuccess = (res?: Record<string, unknown>): void => {

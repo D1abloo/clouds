@@ -18,6 +18,24 @@
   color: var(--text-main);
   transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
   span { font-size: 0.78rem; color: var(--text-muted); }
+  p { margin: 0; color: var(--text-muted); font-size: 0.76rem; line-height: 1.45; }
+  footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--border-soft);
+  }
+  em,
+  small {
+    font-style: normal;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+  em { color: var(--success); }
+  small { color: var(--primary); }
   &--on {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);

@@ -1,8 +1,8 @@
 # GCP Compute Engine — Prueba de lanzamiento
 
-**Fecha:** 2026-06-12  
-**Entorno:** https://spendlyx.com (PRO)  
-**Cuenta:** GCP Producción (`fd75380a-f61c-4649-b3ee-69d80a3956e8`)
+**Fecha:** 2026-06-12
+**Entorno local:** `/home/isaac/Escritorio/SAAS`
+**Credenciales locales:** `GOOGLE_APPLICATION_CREDENTIALS` y `GCP_PROJECT_ID` missing
 
 ## Configuración de prueba
 
@@ -20,14 +20,14 @@
 
 | Paso | Resultado |
 |------|-----------|
-| `validate-launch` | OK — `valid: true` |
-| `POST .../instances` (launch) | OK — instancia creada |
-| Inventario DB | OK — `dbId: 57100721-c17a-4d14-a2e5-b5face027e3f` |
-| Estado inicial | `PENDING` |
-| Stop (cleanup) | OK — `[GCP] Stopped ais-gcp-test-1781220968` |
+| UI GCP propia | OK — formulario dedicado Compute Engine |
+| Preseleccion desde sidebar | OK — `/automation/ai-infra-studio?provider=gcp` |
+| `validate-launch` local | Bloqueado — faltan variables GCP |
+| `POST .../instances` local | No ejecutado |
+| Inventario local wizard | Preparado via `CloudLaunchActivityService` |
 | Instancias test RUNNING | 0 |
 
-## Respuesta API (recortada)
+## Respuesta API esperada (recortada)
 
 ```json
 {
@@ -53,4 +53,4 @@
 
 ## Estado final
 
-Instancia de prueba detenida vía API. Sin instancias `ais-*` en estado RUNNING.
+No se creo instancia real en esta sesion local. Sin instancias `ais-*` activas creadas por esta ejecucion.

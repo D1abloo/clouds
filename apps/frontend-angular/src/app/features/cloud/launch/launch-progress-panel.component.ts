@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
-import { CloudLaunchProgressComponent, type CloudLaunchProgressState } from '../cloud-launch-progress.component'
+import { type CloudLaunchProgressState } from '../cloud-launch-progress.component'
+import { LaunchProgressComponent } from './launch-progress.component'
 
 @Component({
   selector: 'app-launch-progress-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, CloudLaunchProgressComponent],
+  imports: [MatIconModule, LaunchProgressComponent],
   template: `
     <section class="lpp">
       <header>
@@ -14,7 +15,7 @@ import { CloudLaunchProgressComponent, type CloudLaunchProgressState } from '../
         <strong>{{ title() }}</strong>
       </header>
       @if (progress()) {
-        <app-cloud-launch-progress [progress]="progress()" />
+        <app-launch-progress [progress]="progress()" />
       } @else {
         <p class="lpp__idle">{{ idleText() }}</p>
       }

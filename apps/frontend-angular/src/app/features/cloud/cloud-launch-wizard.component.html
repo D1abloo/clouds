@@ -50,8 +50,14 @@
         }
 
         @case ('account') {
-          <h3 class="clw__section-title">{{ options().accountSectionTitle }}</h3>
-          <p class="clw__section-hint">{{ options().accountSectionHint }}</p>
+          <app-cloud-account-step
+            [title]="options().accountSectionTitle"
+            [hint]="options().accountSectionHint"
+            [provider]="effectiveData().provider"
+            [accountName]="effectiveData().accountName"
+            [valid]="accountValid()"
+            [message]="accountMessage()"
+          >
           @if (accountLoading()) {
             <app-loading-state message="Validando credenciales…" />
           } @else {
@@ -95,11 +101,17 @@
               }
             </div>
           }
+          </app-cloud-account-step>
         }
 
         @case ('region') {
-          <h3 class="clw__section-title">{{ options().regionSectionTitle }}</h3>
-          <p class="clw__section-hint">{{ options().regionSectionHint }}</p>
+          <app-cloud-region-zone-step
+            [title]="options().regionSectionTitle"
+            [hint]="options().regionSectionHint"
+            [region]="form.value.region ?? ''"
+            [zone]="form.value.availabilityZone ?? ''"
+            [zoneFallback]="isIonos() ? 'Sin datacenter' : 'Sin zona'"
+          >
           @if (catalogLoading() || azLoading()) {
             <app-loading-state message="Cargando regiones y zonas…" />
           } @else {
@@ -181,15 +193,22 @@
                     <mat-icon>add</mat-icon>
                     Crear subnet
                   </button>
+                  <button mat-stroked-button type="button" (click)="handleCreateTemporaryVpc()">
+                    <mat-icon>add_home_work</mat-icon>
+                    Crear VPC temporal
+                  </button>
                 </div>
               }
             }
           }
+          </app-cloud-region-zone-step>
         }
 
         @case ('network') {
-          <h3 class="clw__section-title">Configuración de red</h3>
-          <p class="clw__section-hint">VPC, subnet, security groups y acceso público.</p>
+          <app-cloud-network-step
+            [issueTitle]="subnetIssue()?.title ?? ''"
+            [hasIssue]="!!subnetIssue()"
+          >
           @if (catalogLoading()) {
             <app-loading-state message="Cargando redes…" />
           } @else if (isIonos()) {
@@ -279,6 +298,10 @@
                 <mat-icon>add</mat-icon>
                 Crear subnet
               </button>
+              <button mat-stroked-button type="button" (click)="handleCreateTemporaryVpc()">
+                <mat-icon>add_home_work</mat-icon>
+                Crear VPC temporal
+              </button>
               <button mat-stroked-button type="button" (click)="handleCancel()">
                 <mat-icon>close</mat-icon>
                 Cancelar
@@ -309,11 +332,17 @@
               </button>
             </div>
           }
+          </app-cloud-network-step>
         }
 
         @case ('compute') {
-          <h3 class="clw__section-title">{{ options().instanceSectionTitle }}</h3>
-          <p class="clw__section-hint">{{ options().instanceSectionHint }}</p>
+          <app-cloud-compute-step
+            [title]="options().instanceSectionTitle"
+            [hint]="options().instanceSectionHint"
+            [name]="form.value.name ?? ''"
+            [instanceType]="form.value.instanceType ?? ''"
+            [diskGb]="form.value.diskGb"
+          >
           @if (catalogLoading()) {
             <app-loading-state message="Cargando tipos de instancia…" />
           } @else {
@@ -370,11 +399,15 @@
               </div>
             </div>
           }
+          </app-cloud-compute-step>
         }
 
         @case ('image') {
-          <h3 class="clw__section-title">{{ options().imageSectionTitle }}</h3>
-          <p class="clw__section-hint">{{ options().imageSectionHint }}</p>
+          <app-cloud-image-step
+            [title]="options().imageSectionTitle"
+            [hint]="options().imageSectionHint"
+            [imageCount]="images().length"
+          >
           @if (catalogLoading()) {
             <app-loading-state message="Cargando imágenes…" />
           } @else {
@@ -414,6 +447,7 @@
               }
             </div>
           }
+          </app-cloud-image-step>
         }
 
         @case ('review') {
@@ -422,6 +456,14 @@
           @if (preflightLoading()) {
             <app-loading-state message="Ejecutando preflight…" />
           } @else {
+            <app-cloud-cost-estimate-card
+              [provider]="effectiveData().provider"
+              [region]="form.value.region ?? ''"
+              [instanceType]="form.value.instanceType ?? ''"
+              [hourly]="costEstimate().hourly"
+              [monthly]="costEstimate().monthly"
+              [hint]="costEstimate().hint"
+            />
             <app-launch-review
               [rows]="reviewRows()"
               [checks]="preflight()?.checks ?? []"
@@ -429,7 +471,7 @@
             />
             <button mat-stroked-button type="button" [disabled]="preflightLoading()" (click)="runPreflight()">
               <mat-icon>fact_check</mat-icon>
-              Revalidar
+              Validar configuración
             </button>
           }
         }
@@ -442,49 +484,42 @@
             [title]="launching() ? 'Provisionando…' : 'Listo para lanzar'"
             [idleText]="'Pulsa el botón para iniciar el despliegue en la nube.'"
           />
+          <div class="clw__inline-actions">
+            <button mat-stroked-button type="button" (click)="handleViewLogs()">
+              <mat-icon>article</mat-icon>
+              Ver logs
+            </button>
+            <button mat-stroked-button type="button" (click)="goToInventory()">
+              <mat-icon>inventory_2</mat-icon>
+              Ir a inventario
+            </button>
+          </div>
         }
 
         @case ('test') {
           <h3 class="clw__section-title">Prueba de conectividad</h3>
           <p class="clw__section-hint">Verifica que la instancia responde y aparece en inventario.</p>
-          <app-cloud-resource-inventory-card
+          <app-launch-test-panel
             [resource]="launchedResource()"
+            [testing]="testing()"
+            [result]="testResult()"
             (test)="handleTest()"
             (remove)="handleDelete()"
           />
-          @if (testing()) {
-            <app-loading-state message="Ejecutando prueba de conectividad…" />
-          }
-          @if (testResult()) {
-            <p class="clw__test-result">{{ testResult() }}</p>
-          }
         }
 
         @case ('delete') {
           <h3 class="clw__section-title">Eliminar recurso de prueba</h3>
           <p class="clw__section-hint">Detiene y retira la instancia creada con etiqueta auto_delete=true.</p>
-          @if (deleting()) {
-            <app-loading-state message="Eliminando recurso…" />
-          } @else if (launchedResource()) {
-            <app-cloud-resource-inventory-card
-              [resource]="launchedResource()"
-              (remove)="handleDelete()"
-            />
-          } @else {
-            <p class="clw__empty">Recurso eliminado correctamente. Puedes lanzar otra instancia.</p>
-          }
+          <app-launch-delete-panel
+            [resource]="launchedResource()"
+            [deleting]="deleting()"
+            (remove)="handleDelete()"
+          />
         }
       }
 
-      @if (launchLogLines().length) {
-        <section class="clw__log-stream" aria-label="Logs de lanzamiento en tiempo real">
-          <header>
-            <mat-icon>article</mat-icon>
-            <strong>Logs en tiempo real</strong>
-          </header>
-          <pre>{{ launchLogLines().join('\n') }}</pre>
-        </section>
-      }
+      <app-cloud-launch-logs [lines]="launchLogLines()" />
 
       <footer class="clw__actions">
         <button mat-button type="button" (click)="handleCancel()" [disabled]="launching()">
@@ -565,6 +600,8 @@
     <app-infra-copilot-panel
       [slug]="effectiveSlug()"
       [stepLabel]="currentStepLabel()"
+      [provider]="effectiveData().provider"
+      [account]="effectiveData().accountName"
       [region]="form.value.region ?? ''"
       [zone]="form.value.availabilityZone ?? ''"
       [network]="networkLabel()"

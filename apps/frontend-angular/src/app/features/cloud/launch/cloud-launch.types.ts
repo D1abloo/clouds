@@ -29,6 +29,9 @@ export type ProviderCard = {
   label: string
   tagline: string
   logo: NavLogoKey
+  description?: string
+  connectionState?: string
+  initialCost?: string
 }
 
 export type LaunchPreflightUiCheck = {

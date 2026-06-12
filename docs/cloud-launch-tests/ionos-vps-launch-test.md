@@ -1,7 +1,8 @@
 # IONOS VPS — Prueba de integración
 
-**Fecha:** 2026-06-12  
-**Entorno:** https://spendlyx.com (PRO)
+**Fecha:** 2026-06-12
+**Entorno local:** `/home/isaac/Escritorio/SAAS`
+**Credenciales locales:** `IONOS_TOKEN` missing
 
 ## Objetivo
 
@@ -10,34 +11,32 @@ Integrar IONOS VPS en el mismo wizard (`IonosVpsLaunchForm`, proveedor en select
 ## UI implementada
 
 - Selector de proveedor incluye **IONOS VPS**
-- Formulario dedicado: datacenter, plan, SO, SSH key, nombre
-- Paso Red en studioMode usa `app-ionos-vps-launch-form`
+- Formulario dedicado: cuenta IONOS, region, datacenter, plan VPS, CPU, RAM, disco, sistema operativo, SSH key y nombre.
+- Paso Red en `studioMode` usa `app-ionos-vps-launch-form`.
+- Lanzamiento local registra inventario, logs, coste y permite probar/eliminar desde UI.
 
 ## Prueba de conectividad VPS
 
-| Variable | Estado en `infra/.env` (VPS) |
+| Variable | Estado local |
 |----------|------------------------------|
-| `IONOS_VPS_HOST` | Vacío |
-| `IONOS_VPS_PORT` | Configurado |
-| `IONOS_VPS_USER` | Configurado |
-| `IONOS_VPS_SSH_KEY` | Presente (redactado) |
+| `IONOS_TOKEN` | missing |
 
-**Resultado SSH:** No ejecutable — `IONOS_VPS_HOST` sin valor en producción.
+**Resultado API real:** No ejecutado — falta token IONOS.
 
 ## Backend
 
-- No existe adaptador `VPS`/`IONOS` en `CloudAdapterRegistry` (solo AWS, GCP, AZURE, CLOUDING).
-- Lanzamiento real IONOS requiere API token IONOS Cloud o host SSH configurado.
+- Lanzamiento real IONOS requiere `IONOS_TOKEN` y adaptador backend IONOS.
+- Mientras tanto, el wizard usa registro local para inventario/logs/FinOps y simula creacion/prueba/eliminacion sin dejar recursos activos.
 
 ## Estado
 
 | Ítem | Estado |
 |------|--------|
 | UI wizard IONOS | Completado |
-| Lanzamiento real | Bloqueado — sin host ni adaptador cloud |
+| Lanzamiento real | Bloqueado — falta `IONOS_TOKEN`/adaptador cloud |
 | Instancias test | 0 |
 
 ## Acción recomendada
 
-1. Completar `IONOS_VPS_HOST` en `infra/.env` del servidor.
-2. O conectar cuenta IONOS vía panel VPS (`/vps/ionos/accounts`).
+1. Configurar `IONOS_TOKEN` fuera del repositorio.
+2. Implementar adaptador backend IONOS si se quiere crear VPS reales desde API.
