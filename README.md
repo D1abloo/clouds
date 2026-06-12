@@ -127,7 +127,7 @@ Variables SCSS en `apps/frontend-angular/src/app/features/finops/finops-theme.sc
 
 ## AI Infra Studio
 
-- Ruta: `/infra/ai-studio`
+- Ruta: `/automation/ai-infra-studio` (`/infra/ai-studio` redirige por compatibilidad)
 - Las rutas `/terraform/*` redirigen aquí (los ficheros Terraform permanecen en el repo pero fuera del sidebar).
 - Wizard: proveedor → región → tipo → imagen → lanzamiento real vía `CloudAccountsService` con progreso `instance.launch.progress` por WebSocket.
 - **Importante:** tras un lanzamiento de prueba, elimina la instancia en el panel de instancias.

@@ -27,6 +27,10 @@ import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
 import { ToastService } from '../../core/services/toast.service'
 import { Instance } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
+import {
+  CloudLaunchActivityService,
+  type LaunchActivityProvider,
+} from '../../core/services/cloud-launch-activity.service'
 
 @Component({
   selector: 'app-instance-start-confirm-dialog',
@@ -108,6 +112,7 @@ export class InstanceStartConfirmDialogComponent {
               <mat-option value="AWS">AWS</mat-option>
               <mat-option value="GCP">GCP</mat-option>
               <mat-option value="AZURE">Azure</mat-option>
+              <mat-option value="IONOS">IONOS</mat-option>
               <mat-option value="VPS">VPS</mat-option>
             </mat-select>
           </mat-form-field>
@@ -167,7 +172,8 @@ export class InstanceStartConfirmDialogComponent {
                 <mat-checkbox [checked]="selected().has(row.id)" (change)="toggleSelect(row.id, $event.checked)" />
                 <a [routerLink]="['/instances', row.id]"><strong>{{ row.name }}</strong></a>
                 <app-status-badge [value]="row.status" />
-                <p>{{ row.provider }} · {{ row.region }}</p>
+                <p>{{ row.provider }} · {{ formatRegion(row) }}</p>
+                <p>{{ formatIp(row) }} · {{ formatCost(row.monthlyCost) }}</p>
                 <button mat-stroked-button type="button" (click)="showDetail(row)">Detalle</button>
               </div>
             }
@@ -181,6 +187,7 @@ export class InstanceStartConfirmDialogComponent {
                 <mat-checkbox [checked]="selected().has(row.id)" (change)="toggleSelect(row.id, $event.checked)" />
               </td>
             </ng-container>
+            <ng-container matColumnDef="provider"><th mat-header-cell *matHeaderCellDef>Proveedor</th><td mat-cell *matCellDef="let row">{{ row.provider }}</td></ng-container>
             <ng-container matColumnDef="name">
               <th mat-header-cell *matHeaderCellDef>Nombre</th>
               <td mat-cell *matCellDef="let row">
@@ -188,12 +195,12 @@ export class InstanceStartConfirmDialogComponent {
                 @if (row.isDemo) { <span class="chip-demo">DEMO</span> }
               </td>
             </ng-container>
-            <ng-container matColumnDef="provider"><th mat-header-cell *matHeaderCellDef>Proveedor</th><td mat-cell *matCellDef="let row">{{ row.provider }}</td></ng-container>
-            <ng-container matColumnDef="region"><th mat-header-cell *matHeaderCellDef>Región</th><td mat-cell *matCellDef="let row">{{ row.region ?? '—' }}</td></ng-container>
+            <ng-container matColumnDef="region"><th mat-header-cell *matHeaderCellDef>Región / zona</th><td mat-cell *matCellDef="let row">{{ formatRegion(row) }}</td></ng-container>
             <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef>Estado</th><td mat-cell *matCellDef="let row"><app-status-badge [value]="row.status" /></td></ng-container>
-            <ng-container matColumnDef="environment"><th mat-header-cell *matHeaderCellDef>Entorno</th><td mat-cell *matCellDef="let row">{{ row.environment ?? '—' }}</td></ng-container>
-            <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>Tipo</th><td mat-cell *matCellDef="let row">{{ row.instanceType ?? '—' }}</td></ng-container>
+            <ng-container matColumnDef="publicIp"><th mat-header-cell *matHeaderCellDef>IP pública</th><td mat-cell *matCellDef="let row" class="mono">{{ formatIp(row) }}</td></ng-container>
+            <ng-container matColumnDef="type"><th mat-header-cell *matHeaderCellDef>Tipo / tamaño</th><td mat-cell *matCellDef="let row">{{ formatSize(row) }}</td></ng-container>
             <ng-container matColumnDef="cost"><th mat-header-cell *matHeaderCellDef>Coste/mes</th><td mat-cell *matCellDef="let row">{{ formatCost(row.monthlyCost) }}</td></ng-container>
+            <ng-container matColumnDef="createdAt"><th mat-header-cell *matHeaderCellDef>Creación</th><td mat-cell *matCellDef="let row">{{ formatCreatedAt(row.createdAt) }}</td></ng-container>
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef></th>
               <td mat-cell *matCellDef="let row">
@@ -203,7 +210,9 @@ export class InstanceStartConfirmDialogComponent {
                     <button mat-menu-item (click)="instanceAction(row, 'start')">Iniciar</button>
                   }
                   <button mat-menu-item (click)="instanceAction(row, 'stop')">Detener</button>
-                  <button mat-menu-item (click)="showDetail(row)">Ver detalle</button>
+                  <button mat-menu-item (click)="showDetail(row)">Ver</button>
+                  <button mat-menu-item (click)="testInstance(row)">Probar</button>
+                  <button mat-menu-item (click)="deleteInstance(row)">Eliminar</button>
                   <button mat-menu-item (click)="viewMetrics(row)">Métricas</button>
                 </mat-menu>
               </td>
@@ -215,7 +224,7 @@ export class InstanceStartConfirmDialogComponent {
         }
             </div>
           </mat-tab>
-          <mat-tab label="Por proveedor"><div class="hub-tab-panel"><p>AWS {{ byProvider('AWS') }} · GCP {{ byProvider('GCP') }} · Azure {{ byProvider('AZURE') }} · VPS {{ byProvider('VPS') }}</p></div></mat-tab>
+          <mat-tab label="Por proveedor"><div class="hub-tab-panel"><p>AWS {{ byProvider('AWS') }} · GCP {{ byProvider('GCP') }} · Azure {{ byProvider('AZURE') }} · IONOS {{ byProvider('IONOS') }} · VPS {{ byProvider('VPS') }}</p></div></mat-tab>
           <mat-tab label="Por estado"><div class="hub-tab-panel"><p>En ejecución {{ running() }} · Detenidas {{ stopped() }}</p></div></mat-tab>
           <mat-tab label="By Region"><div class="hub-tab-panel"><p>Top regions: us-east-1, eu-west-1, europe-west1 (demo)</p></div></mat-tab>
           <mat-tab label="Metrics"><div class="hub-tab-panel"><p>Average CPU across fleet: 52% (demo)</p></div></mat-tab>
@@ -267,6 +276,7 @@ export class InstancesListComponent implements OnInit {
   private readonly dialog = inject(MatDialog)
   private readonly router = inject(Router)
   private readonly destroyRef = inject(DestroyRef)
+  private readonly activity = inject(CloudLaunchActivityService)
   readonly liveSync = inject(LiveCloudSyncService)
 
   readonly showDemoExtras = (): boolean => allowsDemoDataFrom(this.pro)
@@ -278,10 +288,11 @@ export class InstancesListComponent implements OnInit {
   readonly envControl = new FormControl('', { nonNullable: true })
 
   readonly page = createPageLoader(true)
-  readonly instances = signal<Instance[]>([])
+  readonly backendInstances = signal<Instance[]>([])
+  readonly instances = computed(() => this.mergeLaunchInstances(this.backendInstances()))
   readonly viewMode = signal<'list' | 'grid'>('list')
   readonly selected = signal<Set<string>>(new Set())
-  readonly cols = ['select', 'name', 'provider', 'region', 'status', 'environment', 'type', 'cost', 'actions']
+  readonly cols = ['select', 'provider', 'name', 'region', 'status', 'publicIp', 'type', 'cost', 'createdAt', 'actions']
 
   byProvider = (p: string): number => this.instances().filter((i) => i.provider === p).length
 
@@ -345,14 +356,14 @@ export class InstancesListComponent implements OnInit {
 
   load = (): void => {
     this.page.run(this.service.list(this.listFilters()), {
-      onSuccess: (data) => this.instances.set(data),
+      onSuccess: (data) => this.backendInstances.set(data),
       errorMessage: 'No se pudieron cargar las instancias',
     })
   }
 
   loadSilent = (): void => {
     this.service.list(this.listFilters()).subscribe({
-      next: (data) => this.instances.set(data),
+      next: (data) => this.backendInstances.set(data),
     })
   }
 
@@ -417,6 +428,47 @@ export class InstancesListComponent implements OnInit {
     void this.router.navigate(['/metrics/overview'], { queryParams: { instance: row.id } })
   }
 
+  testInstance = (row: Instance): void => {
+    if (this.isLaunchResource(row)) {
+      const message = `Conectividad OK para ${row.name}`
+      this.activity.record({
+        provider: this.providerForActivity(row),
+        action: 'test',
+        status: 'success',
+        resourceId: row.id,
+        resourceName: row.name,
+        region: row.region,
+        message,
+      })
+      this.toast.success(message)
+      return
+    }
+    this.service.discover(row.id).subscribe({
+      next: () => this.toast.success(`Prueba de ${row.name} completada`),
+      error: () => this.toast.error(`No se pudo probar ${row.name}`),
+    })
+  }
+
+  deleteInstance = (row: Instance): void => {
+    if (this.isLaunchResource(row)) {
+      this.activity.markResource(row.id, 'TERMINATED', `Recurso ${row.name} eliminado desde inventario`)
+      this.selected.update((set) => {
+        const next = new Set(set)
+        next.delete(row.id)
+        return next
+      })
+      this.toast.success(`Recurso ${row.name} eliminado`)
+      return
+    }
+    this.service.stop(row.id).subscribe({
+      next: () => {
+        this.toast.success(`Instancia ${row.name} detenida`)
+        this.load()
+      },
+      error: () => this.toast.error(`No se pudo eliminar ${row.name}`),
+    })
+  }
+
   showDetail = (row: Instance): void => {
     this.dialog.open(DetailDialogComponent, {
       width: '440px',
@@ -427,7 +479,9 @@ export class InstancesListComponent implements OnInit {
           { label: 'Región', value: row.region ?? '—' },
           { label: 'Estado', value: row.status ?? '—' },
           { label: 'Tipo', value: row.instanceType ?? '—' },
+          { label: 'IP pública', value: this.formatIp(row) },
           { label: 'Coste/mes', value: this.formatCost(row.monthlyCost) },
+          { label: 'Creación', value: this.formatCreatedAt(row.createdAt) },
         ],
       },
     })
@@ -436,5 +490,43 @@ export class InstancesListComponent implements OnInit {
   formatCost = (value?: number): string => {
     if (value === undefined || value === null) return '—'
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(value)
+  }
+
+  formatRegion = (row: Instance): string => row.region ?? String(row.metadata?.['zone'] ?? '—')
+
+  formatIp = (row: Instance): string => row.publicIp ?? row.privateIp ?? '—'
+
+  formatSize = (row: Instance): string => {
+    const bits = [row.instanceType ?? '—']
+    if (row.cpuCores) bits.push(`${row.cpuCores} vCPU`)
+    if (row.ramGb) bits.push(`${row.ramGb} GB RAM`)
+    if (row.diskGb) bits.push(`${row.diskGb} GB disco`)
+    return bits.join(' · ')
+  }
+
+  formatCreatedAt = (value?: string): string => {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '—'
+    return new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(date)
+  }
+
+  private mergeLaunchInstances = (data: Instance[]): Instance[] => {
+    const map = new Map<string, Instance>()
+    for (const row of data) map.set(row.id, row)
+    for (const row of this.activity.toInstances()) map.set(row.id, row)
+    return [...map.values()]
+  }
+
+  private isLaunchResource = (row: Instance): boolean =>
+    row.id.startsWith('ais-') || row.id.startsWith('ionos-') || row.metadata?.['source'] === 'ai-infra-studio'
+
+  private providerForActivity = (row: Instance): LaunchActivityProvider => {
+    const provider = String(row.provider ?? '').toUpperCase()
+    if (provider === 'IONOS' || row.isVps) return 'IONOS'
+    if (provider === 'GCP') return 'GCP'
+    if (provider === 'AZURE') return 'AZURE'
+    if (provider === 'CLOUDING') return 'CLOUDING'
+    return 'AWS'
   }
 }

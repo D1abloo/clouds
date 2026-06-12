@@ -100,6 +100,7 @@ export class CloudLaunchProgressComponent {
     if (provider === 'GCP') return 'gcp'
     if (provider === 'AZURE') return 'azure'
     if (provider === 'CLOUDING') return 'clouding'
+    if (provider === 'IONOS') return 'ionos'
     return 'aws'
   }
 }

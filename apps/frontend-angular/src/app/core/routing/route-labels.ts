@@ -80,6 +80,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   'repositories/deployments': 'Despliegues',
   jenkins: 'Jenkins',
   'jenkins/jobs': 'Jobs Jenkins',
+  'automation/ai-infra-studio': 'AI Infra Studio',
   'infra/ai-studio': 'AI Infra Studio',
   finops: 'FinOps',
   'finops/dashboard': 'Panel FinOps',

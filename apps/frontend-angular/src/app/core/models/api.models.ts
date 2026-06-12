@@ -58,6 +58,9 @@ export interface Instance {
   diskGb?: number
   monthlyCost?: number
   mtdCost?: number
+  metadata?: Record<string, unknown>
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface VpsHost {

@@ -89,6 +89,12 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
             <mat-icon>sync</mat-icon>
             Actualizar ahora
           </button>
+          @if (isIonos()) {
+            <button mat-flat-button color="primary" type="button" (click)="handleCreateIonosVps()">
+              <mat-icon>rocket_launch</mat-icon>
+              Crear VPS IONOS
+            </button>
+          }
           <button mat-flat-button color="primary" type="button" (click)="handleConnectAccount()">
             <mat-icon>link</mat-icon>
             Conectar cuenta
@@ -114,8 +120,8 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
           <app-empty-state
             title="Sin servidores VPS conectados"
             description="Añade un servidor VPS o Bare Metal para comenzar a gestionarlo desde el panel."
-            actionLabel="Añadir servidor VPS"
-            (actionClick)="handleAddVps()"
+            [actionLabel]="emptyActionLabel()"
+            (actionClick)="handlePrimaryVpsAction()"
           />
         } @else {
           @switch (section()) {
@@ -162,6 +168,12 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
               <section class="vps-panel">
                 <header class="vps-panel__head">
                   <h3><mat-icon>dns</mat-icon> Inventario de servidores</h3>
+                  @if (isIonos()) {
+                    <button mat-stroked-button type="button" (click)="handleCreateIonosVps()">
+                      <mat-icon>rocket_launch</mat-icon>
+                      Crear VPS IONOS
+                    </button>
+                  }
                 </header>
                 <div class="vps-table-wrap">
                   <table class="vps-table">
@@ -353,6 +365,8 @@ export class VpsProviderPageComponent implements OnInit {
   readonly cfg = computed(() => vpsProviderConfig(this.slug()))
   readonly sections = computed(() => vpsSectionsFor(this.slug()))
   readonly lastSyncLabel = computed(() => formatLastSync(this.liveSync.lastSyncAt()))
+  readonly isIonos = computed(() => this.slug() === 'ionos')
+  readonly emptyActionLabel = computed(() => (this.isIonos() ? 'Crear VPS IONOS' : 'Añadir servidor VPS'))
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -426,6 +440,18 @@ export class VpsProviderPageComponent implements OnInit {
 
   handleAddVps = (): void => {
     void this.router.navigate(['/admin/infraestructura/vps/nuevo'])
+  }
+
+  handleCreateIonosVps = (): void => {
+    void this.router.navigate(['/automation/ai-infra-studio'], { queryParams: { provider: 'ionos' } })
+  }
+
+  handlePrimaryVpsAction = (): void => {
+    if (this.isIonos()) {
+      this.handleCreateIonosVps()
+      return
+    }
+    this.handleAddVps()
   }
 
   handleConnectAccount = (): void => {

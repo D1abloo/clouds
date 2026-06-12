@@ -205,8 +205,8 @@ export class SidebarService {
 
   syncNavigationExpand = (path: string): void => {
     const area = resolveAreaFromPath(path)
-    const cloud = path.match(/^\/cloud\/(aws|gcp|azure)/)?.[1]
-    const vps = path.match(/^\/vps\/(digitalocean|hetzner|linode|ovh)/)?.[1]
+    const cloud = path.match(/^\/cloud\/(aws|gcp|azure|clouding)/)?.[1]
+    const vps = path.match(/^\/vps\/(digitalocean|hetzner|linode|ovh|ionos|vultr|scaleway)/)?.[1]
     const mobile = isCompactNavViewport()
 
     this._expanded.update((prev) => {

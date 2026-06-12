@@ -99,6 +99,12 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
         </div>
         <div class="cloud-hero__meta">
           <span class="cloud-live"><i aria-hidden="true"></i> Sync {{ data().lastSync }}</span>
+          @if (canOpenStudioLaunch()) {
+            <button mat-flat-button color="primary" type="button" (click)="handleLaunch()">
+              <mat-icon>rocket_launch</mat-icon>
+              {{ launchActionLabel() }}
+            </button>
+          }
           <button mat-stroked-button type="button" (click)="handleSync()" [disabled]="loading()">
             <mat-icon>sync</mat-icon>
             Sincronizar
@@ -323,7 +329,7 @@ import { downloadAllCloudInvoicesPdf, downloadCloudInvoicePdf } from './cloud-in
                 </div>
                 <button mat-stroked-button type="button" (click)="handleLaunch()">
                   <mat-icon>rocket_launch</mat-icon>
-                  Lanzar instancia
+                  {{ launchActionLabel() }}
                 </button>
               </header>
               <div class="cloud-filters">
@@ -2588,7 +2594,19 @@ export class CloudProviderPageComponent implements OnInit {
   }
 
   handleLaunch = (): void => {
+    if (this.canOpenStudioLaunch()) {
+      void this.router.navigate(['/automation/ai-infra-studio'], { queryParams: { provider: this.slug() } })
+      return
+    }
     void this.router.navigate(['/cloud', this.slug(), 'launch'])
+  }
+
+  canOpenStudioLaunch = (): boolean => this.slug() === 'aws' || this.slug() === 'gcp'
+
+  launchActionLabel = (): string => {
+    if (this.slug() === 'aws') return 'Lanzar instancia AWS'
+    if (this.slug() === 'gcp') return 'Lanzar instancia GCP'
+    return 'Lanzar instancia'
   }
 
   openLaunchDialog = (preselectedImageId?: string): void => {

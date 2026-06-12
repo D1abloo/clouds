@@ -249,7 +249,7 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     description: 'CI/CD, AI Infra Studio, despliegues y runbooks',
     tabs: [
       { id: 'jenkins', label: 'Jenkins', route: '/jenkins/jobs', logo: 'jenkins', badgeKey: 'jenkins' },
-      { id: 'ai-studio', label: 'AI Infra Studio', route: '/infra/ai-studio', icon: 'auto_awesome' },
+      { id: 'ai-studio', label: 'AI Infra Studio', route: '/automation/ai-infra-studio', icon: 'auto_awesome' },
       { id: 'deployments', label: 'Despliegues', route: '/deployments', icon: 'rocket_launch', badgeKey: 'deployments' },
       { id: 'active-sessions', label: 'Sesiones activas', route: '/terminal/active-sessions', icon: 'terminal' },
       { id: 'history', label: 'Historial', route: '/terminal/history', icon: 'history' },
@@ -260,6 +260,7 @@ export const SIDEBAR_MAIN_MODULES: SidebarMainModule[] = [
     ],
     match: prefix(
       '/jenkins',
+      '/automation',
       '/infra',
       '/deployments',
       '/terminal',

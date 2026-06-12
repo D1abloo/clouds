@@ -13,6 +13,7 @@ import type { FinopsCloudProvider } from '../data/mock-billing'
       <mat-button-toggle value="AWS">AWS</mat-button-toggle>
       <mat-button-toggle value="GCP">GCP</mat-button-toggle>
       <mat-button-toggle value="Azure">Azure</mat-button-toggle>
+      <mat-button-toggle value="IONOS">IONOS</mat-button-toggle>
     </mat-button-toggle-group>
   `,
   styles: `

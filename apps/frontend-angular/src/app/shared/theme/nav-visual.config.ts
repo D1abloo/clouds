@@ -55,7 +55,7 @@ const entries: { match: (p: string) => boolean; meta: NavVisualMeta }[] = [
   { match: (p) => p.startsWith('/repositories/deployments'), meta: { icon: 'rocket_launch', tone: 'violet', label: 'Despliegues' } },
   { match: (p) => p.startsWith('/repositories'), meta: { icon: 'folder_special', tone: 'violet', label: 'Repositorios' } },
   { match: (p) => p.startsWith('/jenkins'), meta: { logo: 'jenkins', tone: 'jenkins', label: 'Jenkins' } },
-  { match: (p) => p.startsWith('/infra/ai-studio'), meta: { icon: 'auto_awesome', tone: 'violet', label: 'AI Infra Studio' } },
+  { match: (p) => p.startsWith('/automation/ai-infra-studio') || p.startsWith('/infra/ai-studio'), meta: { icon: 'auto_awesome', tone: 'violet', label: 'AI Infra Studio' } },
   { match: (p) => p.startsWith('/finops'), meta: { icon: 'savings', tone: 'green', label: 'FinOps' } },
   { match: (p) => p.startsWith('/deployments'), meta: { icon: 'rocket_launch', tone: 'amber', label: 'Despliegues' } },
   { match: (p) => p.startsWith('/terminal'), meta: { icon: 'terminal', tone: 'slate', label: 'Terminal' } },

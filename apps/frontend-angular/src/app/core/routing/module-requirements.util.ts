@@ -39,6 +39,7 @@ const PATH_PREFIX_TO_MODULE: [string, string][] = [
   ['/backups', 'backups'],
   ['/capacity-planner', 'capacity-planner'],
   ['/jenkins', 'jenkins'],
+  ['/automation/ai-infra-studio', 'ai-assistant'],
   ['/infra/ai-studio', 'ai-assistant'],
   ['/finops', 'finops'],
   ['/deployments', 'deployments'],

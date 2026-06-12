@@ -26,6 +26,7 @@ import { SecretsManagerPageComponent } from '../security/secrets-manager-page.co
 import { CompliancePageComponent } from '../security/compliance-page.component'
 import { AccessControlPageComponent } from '../security/access-control-page.component'
 import { AdminUsersPageComponent } from '../admin/admin-users-page.component'
+import { LaunchLogsPanelComponent } from '../observability/launch-logs-panel.component'
 
 @Component({
   selector: 'app-command-center',
@@ -80,8 +81,11 @@ export class SecretsManagerComponent {}
   selector: 'app-logs-center',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PlatformModulePageComponent],
-  template: `<app-platform-module-page [config]="config" />`,
+  imports: [PlatformModulePageComponent, LaunchLogsPanelComponent],
+  template: `
+    <app-launch-logs-panel />
+    <app-platform-module-page [config]="config" />
+  `,
 })
 export class LogsCenterComponent {
   readonly config = LOGS_CONFIG

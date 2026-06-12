@@ -5,6 +5,7 @@
   [class.clw--aws]="effectiveSlug() === 'aws'"
   [class.clw--gcp]="effectiveSlug() === 'gcp'"
   [class.clw--clouding]="effectiveSlug() === 'clouding'"
+  [class.clw--ionos]="isIonos()"
 >
   <header class="clw__hero">
     <div>
@@ -54,6 +55,18 @@
           @if (accountLoading()) {
             <app-loading-state message="Validando credenciales…" />
           } @else {
+            @if (studioAccounts().length) {
+              <div class="clw__form-grid clw__form-grid--account" [formGroup]="form">
+                <mat-form-field appearance="outline" class="clw__span-2">
+                  <mat-label>{{ isIonos() ? 'Cuenta IONOS' : effectiveSlug() === 'gcp' ? 'Cuenta / proyecto GCP' : 'Cuenta cloud' }}</mat-label>
+                  <mat-select [value]="effectiveData().accountId" (selectionChange)="selectStudioAccount($event.value)">
+                    @for (a of studioAccounts(); track a.id) {
+                      <mat-option [value]="a.id">{{ a.name }} · {{ a.defaultRegion ?? 'sin region' }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            }
             <div class="clw__account-card">
               <div class="clw__account-row">
                 <mat-icon>{{ accountValid() ? 'verified' : 'error_outline' }}</mat-icon>
@@ -67,7 +80,7 @@
               </div>
               <p>{{ accountMessage() }}</p>
               <ul class="clw__perm-list">
-                @for (perm of options().permissionLabels; track perm) {
+                @for (perm of (accountPermissions().length ? accountPermissions() : options().permissionLabels); track perm) {
                   <li>
                     <mat-icon>{{ accountValid() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
                     {{ perm }}
@@ -180,7 +193,15 @@
           @if (catalogLoading()) {
             <app-loading-state message="Cargando redes…" />
           } @else if (isIonos()) {
-            <app-ionos-vps-launch-form [form]="form" />
+            <app-ionos-vps-launch-form
+              [form]="form"
+              [regions]="regions()"
+              [datacenters]="availabilityZones()"
+              [plans]="ionosPlansForForm()"
+              [images]="images()"
+              [keyPairs]="keyPairNames()"
+              (regionChange)="onRegionChange()"
+            />
           } @else if (effectiveSlug() === 'aws') {
             <app-aws-launch-form
               [form]="form"
@@ -414,7 +435,7 @@
         }
 
         @case ('launch') {
-          <h3 class="clw__section-title">Lanzar instancia</h3>
+          <h3 class="clw__section-title">{{ isIonos() ? 'Crear VPS IONOS' : 'Lanzar instancia' }}</h3>
           <p class="clw__section-hint">Provisionando recurso en {{ effectiveData().provider }}…</p>
           <app-launch-progress-panel
             [progress]="launchProgress()"
@@ -455,6 +476,16 @@
         }
       }
 
+      @if (launchLogLines().length) {
+        <section class="clw__log-stream" aria-label="Logs de lanzamiento en tiempo real">
+          <header>
+            <mat-icon>article</mat-icon>
+            <strong>Logs en tiempo real</strong>
+          </header>
+          <pre>{{ launchLogLines().join('\n') }}</pre>
+        </section>
+      }
+
       <footer class="clw__actions">
         <button mat-button type="button" (click)="handleCancel()" [disabled]="launching()">
           {{ options().cancelLabel }}
@@ -486,7 +517,7 @@
               (click)="handleLaunch()"
             >
               <mat-icon>rocket_launch</mat-icon>
-              {{ options().launchLabel }}
+              {{ isIonos() ? 'Crear VPS IONOS' : options().launchLabel }}
             </button>
           }
         } @else if (activeStep() === 'launch') {
@@ -498,7 +529,7 @@
             (click)="handleLaunch()"
           >
             <mat-icon>rocket_launch</mat-icon>
-            {{ options().launchLabel }}
+            {{ isIonos() ? 'Crear VPS IONOS' : options().launchLabel }}
           </button>
         } @else if (activeStep() === 'test') {
           <button mat-flat-button type="button" class="clw__btn-primary" [disabled]="testing()" (click)="handleTest()">
@@ -523,6 +554,12 @@
           </button>
         }
       </footer>
+      @if (advanceBlocker() && !launching()) {
+        <p class="clw__advance-hint" role="status">
+          <mat-icon>info</mat-icon>
+          {{ advanceBlocker() }}
+        </p>
+      }
     </main>
 
     <app-infra-copilot-panel

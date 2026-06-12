@@ -1,4 +1,4 @@
-export type FinopsCloudProvider = 'AWS' | 'GCP' | 'Azure'
+export type FinopsCloudProvider = 'AWS' | 'GCP' | 'Azure' | 'IONOS'
 
 export interface FinopsInvoice {
   id: string
@@ -24,4 +24,5 @@ export const FINOPS_BILLING_CHART = [
   { label: 'AWS', value: 18420 },
   { label: 'GCP', value: 9280 },
   { label: 'Azure', value: 11240 },
+  { label: 'IONOS', value: 0 },
 ]

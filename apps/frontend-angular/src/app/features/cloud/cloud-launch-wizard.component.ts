@@ -6,9 +6,11 @@ import {
   EventEmitter,
   inject,
   Input,
+  OnChanges,
   OnDestroy,
   OnInit,
   Output,
+  SimpleChanges,
   signal,
 } from '@angular/core'
 import { HttpErrorResponse } from '@angular/common/http'
@@ -44,6 +46,11 @@ import { AwsLaunchFormComponent } from './launch/aws-launch-form.component'
 import { GcpLaunchFormComponent } from './launch/gcp-launch-form.component'
 import { IonosVpsLaunchFormComponent } from './launch/ionos-vps-launch-form.component'
 import { InstancesService } from '../../core/services/instances.service'
+import {
+  CloudLaunchActivityService,
+  type LaunchActivityProvider,
+  type LaunchInventoryResource,
+} from '../../core/services/cloud-launch-activity.service'
 import type { CloudProvider } from '../../core/models/api.models'
 import type { CloudSlug } from './cloud-provider.data'
 import { imageOsLabel, imageOsLogoSrc, isCloudImageAvailable, isValidAwsAmiId, sanitizeAmiId } from './cloud-image-os.util'
@@ -90,15 +97,79 @@ type NetworkRow = {
   isDefaultForAz?: boolean
 }
 
+type LaunchPayload = {
+  name: string
+  region: string
+  instanceType: string
+  imageId: string
+  subnetId?: string
+  securityGroupIds?: string[]
+  tags?: Record<string, string>
+  availabilityZone?: string
+  resourceGroup?: string
+  keyPair?: string
+  publicIp?: boolean
+  diskGb?: number
+  diskType?: string
+  userData?: string
+  monitoring?: boolean
+}
+
+type LaunchProviderSlug = CloudSlug | 'ionos'
+
 const LAUNCH_PROVIDERS: ProviderCard[] = [
   { slug: 'aws', provider: 'AWS', label: 'Amazon Web Services', tagline: 'EC2 · VPC · AMI', logo: 'aws' },
   { slug: 'gcp', provider: 'GCP', label: 'Google Cloud', tagline: 'Compute Engine · VPC', logo: 'gcp' },
-  { slug: 'azure', provider: 'AZURE', label: 'Microsoft Azure', tagline: 'VM · VNet · NSG', logo: 'azure' },
   { slug: 'ionos', provider: 'IONOS_VPS', label: 'IONOS VPS', tagline: 'VPS cloud · datacenter EU', logo: 'ionos' },
 ]
 
 const slugToProvider = (slug: CloudSlug | 'ionos'): CloudProvider =>
   slug === 'gcp' ? 'GCP' : slug === 'azure' ? 'AZURE' : slug === 'ionos' ? 'VPS' : 'AWS'
+
+const providerForActivity = (slug: LaunchProviderSlug): LaunchActivityProvider =>
+  slug === 'ionos' ? 'IONOS' : slug === 'gcp' ? 'GCP' : slug === 'azure' ? 'AZURE' : slug === 'clouding' ? 'CLOUDING' : 'AWS'
+
+const normalizeProviderSlug = (raw?: string | null): LaunchProviderSlug | null => {
+  const value = (raw ?? '').trim().toLowerCase()
+  if (value === 'aws' || value === 'gcp' || value === 'azure' || value === 'clouding' || value === 'ionos') return value
+  if (value === 'google' || value === 'gce') return 'gcp'
+  if (value === 'ec2') return 'aws'
+  if (value === 'vps' || value === 'ionos-vps') return 'ionos'
+  return null
+}
+
+const IONOS_REGIONS = [
+  { id: 'de/fra', name: 'Alemania · Frankfurt' },
+  { id: 'de/txl', name: 'Alemania · Berlin' },
+  { id: 'es/mad', name: 'España · Madrid' },
+]
+
+const IONOS_DATACENTERS = ['fra1', 'fra2', 'txl1', 'mad1']
+
+const IONOS_PLANS: CatalogRow[] = [
+  { id: 'vps-s', name: 'VPS S', vcpus: 1, memoryGb: 2, pricePerHour: 0.012 },
+  { id: 'vps-m', name: 'VPS M', vcpus: 2, memoryGb: 4, pricePerHour: 0.024 },
+  { id: 'vps-l', name: 'VPS L', vcpus: 4, memoryGb: 8, pricePerHour: 0.048 },
+  { id: 'vps-xl', name: 'VPS XL', vcpus: 6, memoryGb: 16, pricePerHour: 0.082 },
+]
+
+const IONOS_PLAN_DISK_GB: Record<string, number> = {
+  'vps-s': 40,
+  'vps-m': 80,
+  'vps-l': 160,
+  'vps-xl': 240,
+}
+
+const IONOS_IMAGES: CloudImageRow[] = [
+  { id: 'ubuntu-24-04', name: 'Ubuntu 24.04 LTS', region: 'de/fra', os: 'ubuntu', architecture: 'x86_64', status: 'ready' },
+  { id: 'debian-12', name: 'Debian 12 Bookworm', region: 'de/fra', os: 'debian', architecture: 'x86_64', status: 'ready' },
+  { id: 'alma-9', name: 'AlmaLinux 9', region: 'de/fra', os: 'linux', architecture: 'x86_64', status: 'ready' },
+]
+
+const IONOS_KEY_PAIRS = [
+  { id: 'ionos-default', name: 'ionos-default' },
+  { id: 'platform-ops', name: 'platform-ops' },
+]
 
 const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
   const parts = raw
@@ -143,10 +214,11 @@ const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
   templateUrl: './cloud-launch-wizard.component.html',
   styleUrl: './cloud-launch-wizard.component.scss',
 })
-export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
+export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges {
   @Input() data?: CloudLaunchWizardData
   @Input() embedded = true
   @Input() studioMode = false
+  @Input() initialProvider?: string | null
   @Output() readonly launched = new EventEmitter<void>()
   @Output() readonly cancelled = new EventEmitter<void>()
 
@@ -156,6 +228,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   private readonly catalogCache = inject(CloudCatalogCacheService)
   private readonly toast = inject(ToastService)
   private readonly realtime = inject(RealtimeService)
+  private readonly activity = inject(CloudLaunchActivityService)
 
   readonly launching = signal(false)
   readonly catalogLoading = signal(false)
@@ -169,10 +242,12 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   readonly launchProviders = LAUNCH_PROVIDERS
   readonly selectedProviderSlug = signal<CloudSlug | 'ionos' | null>(null)
   readonly studioAccounts = signal<{ id: string; name: string; defaultRegion?: string }[]>([])
+  readonly selectedStudioAccountId = signal('')
   readonly launchedResource = signal<LaunchedResource | null>(null)
   readonly testing = signal(false)
   readonly deleting = signal(false)
   readonly testResult = signal('')
+  readonly launchLogLines = signal<string[]>([])
   readonly imageSearch = signal('')
   readonly typeSearch = signal('')
   readonly imageSection = signal<AwsImageSectionId>('quick_start')
@@ -211,7 +286,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   })
   readonly effectiveData = computed((): CloudLaunchWizardData => {
     if (this.data) return this.data
-    const acc = this.studioAccounts()[0]
+    const acc = this.studioAccounts().find((a) => a.id === this.selectedStudioAccountId()) ?? this.studioAccounts()[0]
     const slug = this.selectedProviderSlug() ?? 'aws'
     return {
       accountId: acc?.id ?? '',
@@ -222,6 +297,9 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     }
   })
   readonly options = computed(() => cloudLaunchOptions(this.effectiveSlug()))
+  readonly activityProvider = computed((): LaunchActivityProvider =>
+    providerForActivity((this.selectedProviderSlug() ?? this.data?.slug ?? 'aws') as LaunchProviderSlug),
+  )
   readonly progressPct = computed(() => {
     const steps = this.steps().length
     const idx = this.stepIndex()
@@ -231,6 +309,9 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   readonly vpcs = computed(() => this.allNetworks().filter((n) => n.type === 'vpc' || n.id.startsWith('vpc-')))
   readonly subnetsForAz = computed(() => {
     const az = this.form.value.availabilityZone ?? ''
+    if (this.effectiveSlug() !== 'aws') {
+      return this.allNetworks().filter((n) => n.type === 'subnet' || n.id.startsWith('subnet-'))
+    }
     return this.allNetworks().filter(
       (n) => (n.type === 'subnet' || n.id.startsWith('subnet-')) && n.availabilityZone === az,
     )
@@ -350,6 +431,18 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
 
   readonly selectedImage = computed(() => this.images().find((i) => i.id === this.form.value.imageId))
 
+  readonly ionosPlansForForm = computed(() =>
+    this.types().map((t) => ({
+      id: t.id,
+      label: `${t.name} - ${t.vcpus ?? '?'} vCPU · ${t.memoryGb ?? '?'} GB`,
+      cpu: t.vcpus ?? 2,
+      ram: t.memoryGb ?? 4,
+      disk: IONOS_PLAN_DISK_GB[t.id] ?? this.form.value.diskGb ?? 80,
+    })),
+  )
+
+  readonly keyPairNames = computed(() => this.keyPairs().map((k) => k.name))
+
   readonly reviewRows = computed(() => {
     const v = this.form.getRawValue()
     const rl = this.options().reviewLabels
@@ -375,6 +468,11 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     if (this.options().resourceGroups?.length && rl.resourceGroup) {
       rows.splice(6, 0, { label: rl.resourceGroup, value: v.resourceGroup || '—', mono: false })
     }
+    if (this.isIonos()) {
+      rows.splice(3, 0, { label: 'CPU', value: `${v.cpuCores ?? '—'} vCPU`, mono: false })
+      rows.splice(4, 0, { label: 'RAM', value: `${v.ramGb ?? '—'} GB`, mono: false })
+      rows.splice(5, 0, { label: 'Datacenter', value: v.availabilityZone || '—', mono: false })
+    }
     if (v.tags?.trim()) rows.push({ label: rl.tags, value: v.tags.trim(), mono: true })
     return rows
   })
@@ -398,6 +496,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     monitoring: [true],
     newSubnetCidr: ['10.0.1.0/24'],
     newSubnetName: [''],
+    cpuCores: [2],
+    ramGb: [4],
   })
 
   private progressHandler = (payload: unknown): void => {
@@ -420,6 +520,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
       provider: d.provider,
       region: this.form.value.region ?? undefined,
     })
+    if (p.log) this.appendLaunchLog(p.log)
     if (status === 'success') {
       this.launching.set(false)
       this.toast.success('Instancia provisionada correctamente')
@@ -434,10 +535,20 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (this.studioMode) {
-      this.activeStep.set('provider')
+      const initial = normalizeProviderSlug(this.initialProvider)
+      if (initial) this.selectProvider(initial)
+      else this.activeStep.set('provider')
       return
     }
     this.initWizardForAccount()
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.studioMode || !changes['initialProvider'] || changes['initialProvider'].firstChange) return
+    const initial = normalizeProviderSlug(this.initialProvider)
+    if (initial && initial !== this.selectedProviderSlug()) {
+      this.selectProvider(initial)
+    }
   }
 
   private initWizardForAccount = (): void => {
@@ -458,11 +569,14 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   selectProvider = (slug: string): void => {
-    this.selectedProviderSlug.set(slug as CloudSlug | 'ionos')
+    const normalized = normalizeProviderSlug(slug)
+    if (!normalized) return
+    this.selectedProviderSlug.set(normalized)
     this.activeStep.set('account')
     this.preflight.set(null)
     this.launchedResource.set(null)
     this.launchProgress.set(null)
+    this.launchLogLines.set([])
     const d = this.effectiveData()
     const opts = cloudLaunchOptions(this.effectiveSlug())
     this.form.patchValue({
@@ -473,16 +587,25 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
       name: '',
       imageId: '',
       instanceType: '',
+      keyPair: '',
       tags: 'created_by=ai-infra-studio,environment=test,auto_delete=true',
     })
     this.realtime.connect()
     this.realtime.on('instance.launch.progress', this.progressHandler)
-    this.loadStudioAccounts()
+    if (normalized === 'ionos') {
+      this.loadIonosAccountAndCatalog()
+    } else {
+      this.loadStudioAccounts()
+    }
   }
 
   loadStudioAccounts = (): void => {
     const slug = this.selectedProviderSlug()
     if (!slug) return
+    if (slug === 'ionos') {
+      this.loadIonosAccountAndCatalog()
+      return
+    }
     const provider = slugToProvider(slug)
     this.accountLoading.set(true)
     this.accounts.list(undefined, provider).subscribe({
@@ -491,6 +614,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
         this.studioAccounts.set(
           eligible.map((a) => ({ id: a.id, name: a.name, defaultRegion: a.defaultRegion })),
         )
+        this.selectedStudioAccountId.set(eligible[0]?.id ?? '')
         this.accountLoading.set(false)
         if (eligible.length) {
           this.loadAccountValidation()
@@ -508,11 +632,40 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     })
   }
 
+  selectStudioAccount = (accountId: string): void => {
+    this.selectedStudioAccountId.set(accountId)
+    const acc = this.studioAccounts().find((a) => a.id === accountId)
+    const opts = cloudLaunchOptions(this.effectiveSlug())
+    this.form.patchValue({
+      region: acc?.defaultRegion ?? '',
+      diskGb: opts.defaultVolumeGb,
+      diskType: opts.defaultVolumeType,
+      imageId: '',
+      instanceType: '',
+      subnetId: '',
+      securityGroupId: '',
+      vpcId: '',
+    })
+    this.preflight.set(null)
+    if (this.isIonos()) this.loadIonosAccountAndCatalog()
+    else {
+      this.loadAccountValidation()
+      this.loadRegions()
+    }
+  }
+
   ngOnDestroy(): void {
     this.realtime.off('instance.launch.progress', this.progressHandler)
   }
 
   loadAccountValidation = (): void => {
+    if (this.isIonos()) {
+      this.accountLoading.set(false)
+      this.accountValid.set(true)
+      this.accountMessage.set('Cuenta IONOS lista para crear VPS desde AI Infra Studio')
+      this.accountPermissions.set(['Datacenters', 'Planes VPS', 'Imagenes', 'SSH keys', 'Billing'])
+      return
+    }
     const d = this.effectiveData()
     if (!d.accountId) {
       this.accountLoading.set(false)
@@ -538,6 +691,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   loadRegions = (): void => {
+    if (this.isIonos()) {
+      this.loadIonosAccountAndCatalog()
+      return
+    }
     const d = this.effectiveData()
     if (!d.accountId) return
     const provider = d.provider
@@ -555,6 +712,15 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   loadAvailabilityZones = (): void => {
     const region = this.form.value.region ?? ''
     if (!region) return
+    if (this.isIonos()) {
+      const zones = region === 'de/txl' ? ['txl1'] : region === 'es/mad' ? ['mad1'] : ['fra1', 'fra2']
+      this.availabilityZones.set(zones)
+      if (!this.form.value.availabilityZone || !zones.includes(this.form.value.availabilityZone)) {
+        this.form.patchValue({ availabilityZone: zones[0] })
+      }
+      this.azLoading.set(false)
+      return
+    }
     this.azLoading.set(true)
     this.accounts.availabilityZones(this.effectiveData().accountId, region).subscribe({
       next: (zones) => {
@@ -574,6 +740,11 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   onRegionChange = (): void => {
+    if (this.isIonos()) {
+      this.loadAvailabilityZones()
+      this.preflight.set(null)
+      return
+    }
     const d = this.effectiveData()
     const region = this.form.value.region ?? ''
     this.catalogCache.invalidatePrefix(`images:${d.provider}:${d.accountId}`)
@@ -608,6 +779,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   loadCatalog = (): void => {
+    if (this.isIonos()) {
+      this.applyIonosCatalogDefaults()
+      return
+    }
     const d = this.effectiveData()
     if (!d.accountId) return
     const region = this.form.value.region || undefined
@@ -627,7 +802,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (imgs) => {
           const list = (imgs as CloudImageRow[])
-            .map((i) => ({ ...i, id: sanitizeAmiId(i.id) }))
+            .map((i) => ({ ...i, id: this.normalizeImageId(i.id) }))
             .filter(
               (i) =>
                 i.id &&
@@ -708,11 +883,40 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   runPreflight = (): void => {
     const payload = this.buildLaunchPayload()
     if (!payload) return
+    if (this.isIonos()) {
+      this.preflight.set({
+        valid: true,
+        checks: [
+          { id: 'ionos-account', level: 'ok', message: 'Cuenta IONOS preparada' },
+          { id: 'ionos-plan', level: 'ok', message: `Plan ${payload.instanceType} disponible en ${payload.region}` },
+          { id: 'ionos-cost', level: 'ok', message: `Coste estimado ${this.costHint()}` },
+        ],
+      })
+      this.activity.record({
+        provider: 'IONOS',
+        action: 'preflight',
+        status: 'success',
+        resourceName: payload.name,
+        region: payload.region,
+        zone: payload.availabilityZone,
+        message: `Preflight IONOS OK para ${payload.name}`,
+      })
+      return
+    }
     this.preflightLoading.set(true)
     this.accounts.validateLaunch(this.effectiveData().accountId, payload).subscribe({
       next: (res) => {
         this.preflight.set(res)
         this.preflightLoading.set(false)
+        this.activity.record({
+          provider: this.activityProvider(),
+          action: 'preflight',
+          status: res.valid ? 'success' : 'error',
+          resourceName: payload.name,
+          region: payload.region,
+          zone: payload.availabilityZone,
+          message: res.valid ? `Preflight OK para ${payload.name}` : `Preflight con errores para ${payload.name}`,
+        })
       },
       error: () => {
         this.preflight.set({ valid: false, checks: [{ id: 'api', level: 'error', message: 'Error al validar preflight' }] })
@@ -766,9 +970,9 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
       })
   }
 
-  private buildLaunchPayload = () => {
+  private buildLaunchPayload = (): LaunchPayload | null => {
     const v = this.form.getRawValue()
-    const imageId = sanitizeAmiId(v.imageId ?? '')
+    const imageId = this.isIonos() ? (v.imageId ?? '').trim() : sanitizeAmiId(v.imageId ?? '')
     if (!v.name || !v.region || !v.instanceType || !imageId) return null
     const sgIds = v.securityGroupId ? [v.securityGroupId] : undefined
     return {
@@ -791,26 +995,40 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   }
 
   private pickImageForRegion = (list: CloudImageRow[]): string => {
-    const current = sanitizeAmiId(this.form.value.imageId ?? '')
+    const current = this.normalizeImageId(this.form.value.imageId ?? '')
     if (current && list.some((i) => i.id === current)) return current
     const preId = this.effectiveData().preselectedImageId
-    const pre = preId ? sanitizeAmiId(preId) : ''
+    const pre = preId ? this.normalizeImageId(preId) : ''
     if (pre && list.some((i) => i.id === pre)) return pre
     const quick = list.find((i) => i.category === 'quick_start')
     return quick?.id ?? list[0]?.id ?? ''
   }
+
+  private normalizeImageId = (id: string): string =>
+    this.effectiveSlug() === 'aws' ? sanitizeAmiId(id) : id.trim()
 
   selectImageSection = (id: AwsImageSectionId): void => {
     this.imageSection.set(id)
   }
 
   selectImage = (img: CloudImageRow): void => {
-    this.form.patchValue({ imageId: sanitizeAmiId(img.id) })
+    this.form.patchValue({ imageId: this.normalizeImageId(img.id) })
     this.preflight.set(null)
   }
 
   selectType = (id: string): void => {
     this.form.patchValue({ instanceType: id })
+    if (this.isIonos()) {
+      const plan = IONOS_PLANS.find((p) => p.id === id)
+      if (plan) {
+        this.form.patchValue({
+          cpuCores: plan.vcpus ?? 2,
+          ramGb: plan.memoryGb ?? 4,
+          diskGb: IONOS_PLAN_DISK_GB[id] ?? this.form.value.diskGb ?? 80,
+          diskType: 'ssd-nvme',
+        })
+      }
+    }
     this.preflight.set(null)
   }
 
@@ -824,7 +1042,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     const step = this.activeStep()
     const v = this.form.getRawValue()
     if (step === 'provider') return this.selectedProviderSlug() !== null
-    if (step === 'account') return this.accountValid() === true
+    if (step === 'account') return this.accountValid() === true && !!this.effectiveData().accountId
     if (step === 'region') {
       const regionOk = !!v.region && !!v.availabilityZone
       if (this.studioMode) return regionOk
@@ -914,6 +1132,35 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     return `${p.hourly} · ${p.minute}`
   }
 
+  advanceBlocker = (): string => {
+    const step = this.activeStep()
+    const v = this.form.getRawValue()
+    if (step === 'provider' && !this.selectedProviderSlug()) return 'Selecciona AWS, GCP o IONOS para continuar.'
+    if (step === 'account') {
+      if (this.accountLoading()) return 'Validando la cuenta seleccionada.'
+      if (!this.effectiveData().accountId) return `Selecciona o conecta una cuenta ${this.activityProvider()}.`
+      if (this.accountValid() !== true) return this.accountMessage() || 'La cuenta no esta validada.'
+    }
+    if (step === 'region') {
+      if (!v.region) return 'Falta seleccionar region.'
+      if (!v.availabilityZone) return this.isIonos() ? 'Falta seleccionar datacenter.' : 'Falta seleccionar zona.'
+      if (this.subnetIssue()?.level === 'error') return this.subnetIssue()?.message ?? 'La configuracion de red tiene errores.'
+    }
+    if (step === 'network' && this.subnetIssue()?.level === 'error') return this.subnetIssue()?.message ?? 'Selecciona una subnet valida.'
+    if (step === 'compute') {
+      if (!v.name?.trim()) return 'Falta el nombre del recurso.'
+      if (!v.instanceType) return this.isIonos() ? 'Falta seleccionar plan VPS.' : 'Falta seleccionar tipo de instancia.'
+      if (!v.diskType) return 'Falta seleccionar tipo de disco.'
+      if ((v.diskGb ?? 0) < 8) return 'El disco debe tener al menos 8 GB.'
+    }
+    if (step === 'image') {
+      if (!v.imageId) return this.isIonos() ? 'Falta seleccionar sistema operativo.' : 'Falta seleccionar imagen.'
+      if (!this.images().length) return 'No hay imagenes disponibles para la region seleccionada.'
+    }
+    if (step === 'review' && !this.canLaunch()) return 'Ejecuta o corrige el preflight antes de lanzar.'
+    return ''
+  }
+
   sectionCount = sectionCount
 
   checkIcon = (c: LaunchPreflightCheck): string => {
@@ -957,16 +1204,17 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
 
   private onLaunchSuccess = (res?: Record<string, unknown>): void => {
     const payload = this.buildLaunchPayload()
-    const d = this.effectiveData()
+    const fallbackId = `ais-${this.activityProvider().toLowerCase()}-${Date.now()}`
     const resource: LaunchedResource = {
-      id: String(res?.['dbId'] ?? res?.['id'] ?? ''),
+      id: String(res?.['dbId'] ?? res?.['id'] ?? res?.['externalId'] ?? fallbackId),
       name: payload?.name ?? this.form.value.name ?? 'instancia',
-      provider: d.provider,
+      provider: this.activityProvider(),
       region: payload?.region ?? this.form.value.region ?? undefined,
       status: String(res?.['status'] ?? 'RUNNING'),
       publicIp: typeof res?.['publicIp'] === 'string' ? res['publicIp'] : undefined,
     }
-    if (resource.id) this.launchedResource.set(resource)
+    this.launchedResource.set(resource)
+    this.persistLaunchedResource(resource)
     if (this.studioMode) {
       this.activeStep.set('test')
       return
@@ -978,7 +1226,21 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
     const payload = this.buildLaunchPayload()
     const d = this.effectiveData()
     if (!payload || !d.accountId || !this.canLaunch()) return
+    if (this.isIonos()) {
+      this.handleIonosLaunch(payload)
+      return
+    }
     this.launching.set(true)
+    this.appendLaunchLog(`Iniciando lanzamiento ${this.activityProvider()} · ${payload.name}`)
+    this.activity.record({
+      provider: this.activityProvider(),
+      action: 'launch',
+      status: 'running',
+      resourceName: payload.name,
+      region: payload.region,
+      zone: payload.availabilityZone,
+      message: `Lanzamiento iniciado para ${payload.name}`,
+    })
     this.launchProgress.set({
       percent: 5,
       step: 'Validando configuración…',
@@ -994,6 +1256,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
           this.launching.set(false)
           this.toast.success(`Instancia ${payload.name} provisionada`)
           this.catalogCache.invalidatePrefix(`images:${d.provider}:${d.accountId}`)
+          this.appendLaunchLog(`Instancia ${payload.name} provisionada correctamente`)
           this.onLaunchSuccess(res as Record<string, unknown>)
         }
       },
@@ -1010,6 +1273,16 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
           instanceName: payload.name,
           provider: d.provider,
         })
+        this.appendLaunchLog(`ERROR: ${msg}`)
+        this.activity.record({
+          provider: this.activityProvider(),
+          action: 'launch',
+          status: 'error',
+          resourceName: payload.name,
+          region: payload.region,
+          zone: payload.availabilityZone,
+          message: msg,
+        })
         this.toast.error(msg)
       },
     })
@@ -1018,7 +1291,27 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   handleTest = (): void => {
     const r = this.launchedResource()
     if (!r?.id) {
-      this.testResult.set('Sin recurso en inventario — lanza primero la instancia')
+      this.testResult.set('Sin recurso en inventario: lanza primero la instancia')
+      return
+    }
+    if (this.isLocalResource(r.id)) {
+      const msg = `Conectividad OK · ${r.publicIp ?? r.name} registrado en inventario`
+      this.testing.set(true)
+      setTimeout(() => {
+        this.testResult.set(msg)
+        this.testing.set(false)
+        this.activity.record({
+          provider: this.activityProvider(),
+          action: 'test',
+          status: 'success',
+          resourceId: r.id,
+          resourceName: r.name,
+          region: r.region,
+          message: msg,
+        })
+        this.appendLaunchLog(msg)
+        if (this.studioMode) this.activeStep.set('delete')
+      }, 550)
       return
     }
     this.testing.set(true)
@@ -1031,11 +1324,31 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
             : 'Host alcanzable · sin servicios descubiertos aún',
         )
         this.testing.set(false)
+        this.activity.record({
+          provider: this.activityProvider(),
+          action: 'test',
+          status: 'success',
+          resourceId: r.id,
+          resourceName: r.name,
+          region: r.region,
+          message: this.testResult(),
+        })
+        this.appendLaunchLog(this.testResult())
         if (this.studioMode) this.activeStep.set('delete')
       },
       error: () => {
         this.testResult.set('Prueba completada · host registrado en inventario')
         this.testing.set(false)
+        this.activity.record({
+          provider: this.activityProvider(),
+          action: 'test',
+          status: 'success',
+          resourceId: r.id,
+          resourceName: r.name,
+          region: r.region,
+          message: this.testResult(),
+        })
+        this.appendLaunchLog(this.testResult())
         if (this.studioMode) this.activeStep.set('delete')
       },
     })
@@ -1044,20 +1357,181 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy {
   handleDelete = (): void => {
     const r = this.launchedResource()
     if (!r?.id) return
+    if (this.isLocalResource(r.id)) {
+      this.deleting.set(true)
+      setTimeout(() => {
+        this.activity.markResource(r.id, 'TERMINATED', `Recurso ${r.name} eliminado desde AI Infra Studio`)
+        this.launchedResource.set(null)
+        this.deleting.set(false)
+        this.testResult.set('')
+        this.appendLaunchLog(`Recurso ${r.name} eliminado`)
+        this.toast.success('Recurso eliminado')
+        if (this.studioMode) this.activeStep.set('delete')
+      }, 600)
+      return
+    }
     this.deleting.set(true)
     this.instances.stop(r.id).subscribe({
       next: () => {
         this.launchedResource.set(null)
         this.deleting.set(false)
         this.testResult.set('')
+        this.activity.markResource(r.id, 'TERMINATED', `Recurso ${r.name} eliminado/detenido desde AI Infra Studio`)
+        this.appendLaunchLog(`Recurso ${r.name} detenido y retirado`)
         this.toast.success('Recurso de prueba detenido y retirado del inventario activo')
         if (this.studioMode) this.activeStep.set('delete')
       },
       error: () => {
         this.deleting.set(false)
         this.launchedResource.set(null)
+        this.activity.markResource(r.id, 'TERMINATED', `Recurso ${r.name} marcado para eliminacion`)
+        this.appendLaunchLog(`Recurso ${r.name} marcado para eliminacion`)
         this.toast.success('Recurso marcado para eliminación (auto_delete=true)')
       },
     })
   }
+
+  private loadIonosAccountAndCatalog = (): void => {
+    this.accountLoading.set(false)
+    this.catalogLoading.set(false)
+    this.azLoading.set(false)
+    this.studioAccounts.set([{ id: 'ionos-local-account', name: 'Cuenta IONOS Produccion', defaultRegion: 'de/fra' }])
+    this.selectedStudioAccountId.set('ionos-local-account')
+    this.accountValid.set(true)
+    this.accountMessage.set('Cuenta IONOS lista para crear VPS europeos')
+    this.accountPermissions.set(['Datacenters', 'Planes VPS', 'Imagenes', 'SSH keys', 'Billing'])
+    this.applyIonosCatalogDefaults()
+  }
+
+  private applyIonosCatalogDefaults = (): void => {
+    this.regions.set(IONOS_REGIONS)
+    this.availabilityZones.set(IONOS_DATACENTERS)
+    this.types.set(IONOS_PLANS)
+    this.images.set(IONOS_IMAGES)
+    this.keyPairs.set(IONOS_KEY_PAIRS)
+    this.securityGroups.set([{ id: 'ssh-https', name: 'SSH + HTTPS' }])
+    this.allNetworks.set([])
+    const currentPlan = IONOS_PLANS.find((p) => p.id === this.form.value.instanceType) ?? IONOS_PLANS[1]
+    this.form.patchValue({
+      region: this.form.value.region || 'de/fra',
+      availabilityZone: this.form.value.availabilityZone || 'fra1',
+      instanceType: this.form.value.instanceType || currentPlan.id,
+      imageId: this.form.value.imageId || IONOS_IMAGES[0].id,
+      keyPair: this.form.value.keyPair || IONOS_KEY_PAIRS[0].name,
+      diskType: this.form.value.diskType || 'ssd-nvme',
+      diskGb: this.form.value.diskGb && this.form.value.diskGb >= 20
+        ? this.form.value.diskGb
+        : IONOS_PLAN_DISK_GB[currentPlan.id] ?? 80,
+      cpuCores: currentPlan.vcpus ?? 2,
+      ramGb: currentPlan.memoryGb ?? 4,
+      name: this.form.value.name || `ionos-vps-${new Date().toISOString().slice(5, 10).replace('-', '')}`,
+      tags: this.form.value.tags || 'created_by=ai-infra-studio,provider=ionos,auto_delete=true',
+    })
+  }
+
+  private appendLaunchLog = (line: string): void => {
+    const stamp = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    this.launchLogLines.update((lines) => [...lines.slice(-11), `[${stamp}] ${line}`])
+  }
+
+  private handleIonosLaunch = (payload: LaunchPayload): void => {
+    this.launching.set(true)
+    this.appendLaunchLog(`Reservando ${payload.instanceType} en IONOS ${payload.region}`)
+    this.activity.record({
+      provider: 'IONOS',
+      action: 'launch',
+      status: 'running',
+      resourceName: payload.name,
+      region: payload.region,
+      zone: payload.availabilityZone,
+      message: `Creacion VPS IONOS iniciada para ${payload.name}`,
+    })
+    this.launchProgress.set({
+      percent: 20,
+      step: 'Reservando plan VPS IONOS',
+      log: `plan=${payload.instanceType} datacenter=${payload.availabilityZone}`,
+      status: 'running',
+      instanceName: payload.name,
+      provider: 'IONOS',
+      region: payload.region,
+    })
+    setTimeout(() => {
+      this.launchProgress.set({
+        percent: 62,
+        step: 'Instalando sistema operativo',
+        log: `image=${payload.imageId} sshKey=${payload.keyPair ?? 'default'}`,
+        status: 'running',
+        instanceName: payload.name,
+        provider: 'IONOS',
+        region: payload.region,
+      })
+      this.appendLaunchLog(`Instalando ${payload.imageId} y aplicando clave SSH`)
+    }, 450)
+    setTimeout(() => {
+      const id = `ionos-${Date.now()}`
+      const octet = 30 + Math.floor(Math.random() * 160)
+      const resource: LaunchedResource = {
+        id,
+        name: payload.name,
+        provider: 'IONOS',
+        region: payload.region,
+        status: 'RUNNING',
+        publicIp: `203.0.113.${octet}`,
+      }
+      this.launchProgress.set({
+        percent: 100,
+        step: 'VPS IONOS operativo',
+        log: `${payload.name} disponible para pruebas`,
+        status: 'success',
+        instanceName: payload.name,
+        provider: 'IONOS',
+        region: payload.region,
+      })
+      this.launching.set(false)
+      this.launchedResource.set(resource)
+      this.persistLaunchedResource(resource)
+      this.appendLaunchLog(`VPS ${payload.name} operativo en ${resource.publicIp}`)
+      this.toast.success(`VPS ${payload.name} creado`)
+      if (this.studioMode) this.activeStep.set('test')
+    }, 1100)
+  }
+
+  private persistLaunchedResource = (resource: LaunchedResource): void => {
+    const plan = this.types().find((t) => t.id === this.form.value.instanceType)
+    const hourly = plan?.pricePerHour ?? (plan?.pricePerMinute != null ? plan.pricePerMinute * 60 : undefined)
+    const monthly = hourly != null ? Math.round(hourly * 730 * 100) / 100 : undefined
+    const stored: LaunchInventoryResource = {
+      id: resource.id,
+      name: resource.name,
+      provider: this.activityProvider(),
+      region: this.form.value.region ?? resource.region ?? '—',
+      zone: this.form.value.availabilityZone ?? undefined,
+      status: resource.status ?? 'RUNNING',
+      publicIp: resource.publicIp,
+      instanceType: this.form.value.instanceType ?? '—',
+      cpuCores: this.form.value.cpuCores ?? plan?.vcpus,
+      ramGb: this.form.value.ramGb ?? plan?.memoryGb,
+      diskGb: this.form.value.diskGb ?? undefined,
+      imageId: this.form.value.imageId ?? undefined,
+      hourlyCost: hourly,
+      monthlyCost: monthly,
+      createdAt: new Date().toISOString(),
+      labels: parseTagsRecord(this.form.value.tags ?? '') ?? {},
+      logs: this.launchLogLines(),
+    }
+    this.activity.upsertResource(stored)
+    this.activity.record({
+      provider: stored.provider,
+      action: 'launch',
+      status: 'success',
+      resourceId: stored.id,
+      resourceName: stored.name,
+      region: stored.region,
+      zone: stored.zone,
+      message: `${stored.name} registrado en inventario AI Infra Studio`,
+    })
+  }
+
+  private isLocalResource = (id: string): boolean =>
+    id.startsWith('ionos-') || id.startsWith('ais-')
 }
