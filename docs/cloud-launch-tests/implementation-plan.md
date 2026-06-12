@@ -20,7 +20,7 @@ Implementar una interfaz grafica funcional para lanzar, probar y eliminar recurs
 | Separar UI por proveedor | Done | `AwsLaunchForm`, `GcpLaunchForm`, `IonosVpsLaunchForm` |
 | Añadir componentes visibles del wizard | Done | Pasos, coste, progreso, logs, prueba, eliminacion, arquitectura |
 | Registrar inventario local del wizard | Done | `CloudLaunchActivityService` |
-| Integrar Observabilidad y FinOps | Done | Logs e instancias FinOps leen actividad del wizard |
+| Integrar Observabilidad y facturacion general | Done | Logs y datos de coste leen actividad del wizard |
 | Validar build | Done | `npm run build -w apps/frontend-angular` |
 | Pruebas reales cloud | Blocked | Variables cloud esperadas no estan configuradas localmente |
 | Push GitHub | Blocked | Credencial GitHub HTTPS devuelve 401 y SSH no tiene clave valida |

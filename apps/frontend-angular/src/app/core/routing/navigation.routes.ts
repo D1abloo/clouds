@@ -262,25 +262,25 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'finops',
     loadComponent: () =>
       import('../../features/finops/finops-hub.component').then((m) => m.FinopsHubComponent),
-    data: { breadcrumb: 'FinOps' },
+    data: { breadcrumb: 'Costes cloud' },
   },
   {
     path: 'finops/dashboard',
     loadComponent: () =>
       import('../../features/finops/finops-dashboard.component').then((m) => m.FinopsDashboardComponent),
-    data: { breadcrumb: 'Panel FinOps' },
+    data: { breadcrumb: 'Panel de costes' },
   },
   {
     path: 'finops/billing',
     loadComponent: () =>
       import('../../features/finops/finops-billing-page.component').then((m) => m.FinopsBillingPageComponent),
-    data: { breadcrumb: 'Facturación FinOps' },
+    data: { breadcrumb: 'Facturación cloud' },
   },
   {
     path: 'finops/instances',
     loadComponent: () =>
       import('../../features/finops/finops-instances-page.component').then((m) => m.FinopsInstancesPageComponent),
-    data: { breadcrumb: 'Instancias FinOps' },
+    data: { breadcrumb: 'Coste de instancias' },
   },
   {
     path: 'finops/cost-centers',
@@ -292,7 +292,7 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'finops/alerts',
     loadComponent: () =>
       import('../../features/finops/finops-alerts-page.component').then((m) => m.FinopsAlertsPageComponent),
-    data: { breadcrumb: 'Alertas FinOps' },
+    data: { breadcrumb: 'Alertas de coste' },
   },
   {
     path: 'finops/recommendations',
@@ -304,13 +304,13 @@ export const NAVIGATION_ROUTES: Routes = [
     path: 'finops/reports',
     loadComponent: () =>
       import('../../features/finops/finops-reports-page.component').then((m) => m.FinopsReportsPageComponent),
-    data: { breadcrumb: 'Informes FinOps' },
+    data: { breadcrumb: 'Informes de coste' },
   },
   {
     path: 'finops/settings',
     loadComponent: () =>
       import('../../features/finops/finops-settings-page.component').then((m) => m.FinopsSettingsPageComponent),
-    data: { breadcrumb: 'Configuración FinOps' },
+    data: { breadcrumb: 'Configuración de costes' },
   },
   {
     path: 'terminal/:section',

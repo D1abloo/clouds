@@ -13,6 +13,7 @@ describe('CloudAccountsService.validatePreview', () => {
   }
   const audit = { create: jest.fn().mockResolvedValue(undefined) }
   const config = { get: jest.fn().mockReturnValue('false') } as unknown as ConfigService
+  const orgScope = { assertProjectInScope: jest.fn().mockResolvedValue(undefined) }
 
   const service = new CloudAccountsService(
     {} as PrismaService,
@@ -21,7 +22,7 @@ describe('CloudAccountsService.validatePreview', () => {
     {} as CloudSyncService,
     {} as SecretsVaultService,
     config,
-    {} as import('../../common/organization/organization-scope.service').OrganizationScopeService,
+    orgScope as unknown as import('../../common/organization/organization-scope.service').OrganizationScopeService,
   )
 
   beforeEach(() => jest.clearAllMocks())

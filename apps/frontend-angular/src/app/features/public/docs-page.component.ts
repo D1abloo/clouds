@@ -24,8 +24,8 @@ import {
         <p class="pub-docs-hero__eyebrow">Centro de ayuda</p>
         <h1>Documentación de usuario</h1>
         <p>
-          Guías detalladas para operar Spendlyx: desde tu primera cuenta hasta facturación,
-          automatización y seguridad. Escrito para equipos operativos, sin jerga interna.
+          Guías detalladas para operar Spendlyx: desde tu primera cuenta hasta AI Infra Studio,
+          nubes, VPS, inventario, observabilidad, automatización y seguridad. Escrito para equipos operativos.
         </p>
         <div class="pub-docs-hero__search">
           <mat-icon aria-hidden="true">search</mat-icon>
@@ -70,7 +70,7 @@ import {
             </div>
 
             @if (query.trim() && searchResults().length === 0) {
-              <p class="pub-docs__empty">Sin resultados para «{{ query }}». Prueba «AWS», «login» o «facturación».</p>
+              <p class="pub-docs__empty">Sin resultados para «{{ query }}». Prueba «AI Infra Studio», «AWS», «IONOS» o «logs».</p>
             }
 
             @for (cat of visibleCategories(); track cat.id) {

@@ -22,9 +22,11 @@ import { PUBLIC_THEME } from './public-theme'
             <span>Spendlyx</span>
           </a>
           <nav class="pub-nav" aria-label="Principal">
+            <a routerLink="/producto" fragment="ai-infra-studio" routerLinkActive="active">AI Studio</a>
             <a href="/#funciones" (click)="handleAnchor($event, 'funciones')">Funciones</a>
             <a routerLink="/producto" routerLinkActive="active">Producto</a>
             <a href="/#precios" (click)="handleAnchor($event, 'precios')">Precios</a>
+            <a routerLink="/docs" routerLinkActive="active">Docs</a>
             <a href="/#faq" (click)="handleAnchor($event, 'faq')">FAQ</a>
             <a routerLink="/contacto" routerLinkActive="active">Contacto</a>
           </nav>
@@ -38,9 +40,11 @@ import { PUBLIC_THEME } from './public-theme'
         </div>
         @if (menuOpen()) {
           <nav class="pub-mobile-nav" aria-label="Menú móvil">
+            <a routerLink="/producto" fragment="ai-infra-studio" (click)="closeMenu()">AI Studio</a>
             <a href="/#funciones" (click)="handleAnchor($event, 'funciones')">Funciones</a>
             <a routerLink="/producto" (click)="closeMenu()">Producto</a>
             <a href="/#precios" (click)="handleAnchor($event, 'precios')">Precios</a>
+            <a routerLink="/docs" (click)="closeMenu()">Docs</a>
             <a href="/#faq" (click)="handleAnchor($event, 'faq')">FAQ</a>
             <a routerLink="/contacto" (click)="closeMenu()">Contacto</a>
             <a routerLink="/login" (click)="closeMenu()">Iniciar sesión</a>
@@ -55,15 +59,15 @@ import { PUBLIC_THEME } from './public-theme'
         <div class="pub-wrap pub-footer__grid">
           <div class="pub-footer__brand">
             <strong class="pub-logo pub-logo--footer">Spendlyx</strong>
-            <p>Panel live para gestión cloud, operaciones e infraestructura en un solo lugar.</p>
+            <p>Plataforma cloud e IA para lanzar, observar y automatizar infraestructura desde un solo lugar.</p>
             <a [href]="'mailto:' + contactEmail">{{ contactEmail }}</a>
           </div>
           <div>
             <h4>Producto</h4>
-            <a routerLink="/producto">Panel live</a>
-            <a routerLink="/producto">Nubes</a>
-            <a routerLink="/producto">Observabilidad</a>
-            <a routerLink="/producto">Seguridad</a>
+            <a routerLink="/producto" fragment="ai-infra-studio">AI Infra Studio</a>
+            <a routerLink="/producto" fragment="providers">Nubes y VPS</a>
+            <a routerLink="/producto" fragment="inventory">Inventario</a>
+            <a routerLink="/producto" fragment="security">Seguridad</a>
           </div>
           <div>
             <h4>Recursos</h4>

@@ -12,7 +12,7 @@ import { PUBLIC_THEME } from './public-theme'
     <header class="pub-page-hero">
       <div class="pub-wrap" style="text-align: center">
         <h1>Planes Spendlyx</h1>
-        <p>Acceso PRO para equipos que operan infraestructura multi-cloud con control de costes y RBAC.</p>
+        <p>Acceso PRO para equipos que lanzan y gobiernan infraestructura multi-cloud con IA, observabilidad y RBAC.</p>
       </div>
     </header>
     <div class="pub pub-page-body">
@@ -20,8 +20,8 @@ import { PUBLIC_THEME } from './public-theme'
         <article class="pub-card pub-pricing-card">
           <h2>Plan PRO</h2>
           <p class="pub-badge">Acceso bajo solicitud</p>
-          <p>Contacta con el equipo de Spendlyx para activar capacidades completas para tu organización.</p>
-          <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.75rem">Próximamente más opciones</p>
+          <p>Incluye AI Infra Studio, nubes AWS/GCP/Azure, VPS, inventario, logs, seguridad, repositorios y automatización.</p>
+          <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.75rem">Activación guiada para equipos con proveedores reales conectados</p>
           <div class="pub-actions" style="justify-content: center; margin-top: 1.5rem">
             <a routerLink="/registro" class="pub-btn pub-btn--primary">Crear cuenta</a>
             <a routerLink="/contacto" class="pub-btn pub-btn--outline">Contactar</a>

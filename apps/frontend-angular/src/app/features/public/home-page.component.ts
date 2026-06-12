@@ -1,6 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
-import { RouterLink } from '@angular/router'
-import { ActivatedRoute } from '@angular/router'
+import { ActivatedRoute, RouterLink } from '@angular/router'
 import { PublicApiService, PublicStats } from './public-api.service'
 import { PublicSeoService } from './public-seo.service'
 import { PUBLIC_THEME } from './public-theme'
@@ -26,25 +25,26 @@ const EMPTY_STATS: PublicStats = {
       <div class="pub-wrap pub-hero__grid">
         <div class="pub-hero__copy">
           <p class="pub-hero__eyebrow">
-            {{ stats().organizations }}+ organizaciones · Panel cloud en español
+            {{ stats().organizations }}+ organizaciones · AI Infra Studio multi-cloud
           </p>
-          <h1>Controla tu multi-cloud, automatización y costes desde un solo panel</h1>
+          <h1>Lanza y gobierna infraestructura cloud con IA desde un panel operativo</h1>
           <p>
-            Spendlyx centraliza AWS, GCP y Azure, centro de mando, facturación por instancia,
-            Jenkins, Terraform y Kubernetes — con visibilidad operativa real para tu equipo.
+            Spendlyx conecta AWS EC2, GCP Compute Engine, Azure, IONOS y proveedores VPS
+            con inventario, logs, seguridad, repositorios y automatización para equipos DevOps,
+            CloudOps y startups.
           </p>
           <div class="pub-actions">
             <a routerLink="/registro" class="pub-btn pub-btn--primary">Crear cuenta gratis</a>
             <a routerLink="/login" class="pub-btn pub-btn--ghost">Iniciar sesión</a>
           </div>
           <div class="pub-hero__trust">
-            <span>Sin tarjeta de crédito</span>
-            <span>Activación en minutos</span>
-            <span>OAuth Google y GitHub</span>
+            <span>AWS · GCP · Azure · IONOS</span>
+            <span>GitHub y GitLab</span>
+            <span>Lanzar · Probar · Eliminar</span>
           </div>
         </div>
         <div class="pub-mock pub-hero__mock" aria-hidden="true">
-          <span class="pub-mock__label">Centro de mando Spendlyx</span>
+          <span class="pub-mock__label">AI Infra Studio</span>
           <div class="pub-mock__chrome">
             <span class="pub-mock__dot pub-mock__dot--r"></span>
             <span class="pub-mock__dot pub-mock__dot--y"></span>
@@ -94,11 +94,35 @@ const EMPTY_STATS: PublicStats = {
       </div>
     </section>
 
+    <section class="pub-section pub-provider-cloud" @fadeUp>
+      <div class="pub-wrap">
+        <h2>Un flujo de lanzamiento para cloud pública y VPS</h2>
+        <p class="sub">
+          El wizard guía cada proveedor con campos propios, coste estimado, logs embebidos y acciones de prueba
+          o eliminación desde el mismo contexto operativo.
+        </p>
+        <div class="pub-provider-grid">
+          @for (provider of providers; track provider.name) {
+            <article class="pub-provider">
+              <span class="pub-provider__code">{{ provider.code }}</span>
+              <h3>{{ provider.name }}</h3>
+              <p>{{ provider.text }}</p>
+            </article>
+          }
+        </div>
+        <div class="pub-launch-strip" aria-label="Flujo de lanzamiento">
+          @for (step of launchFlow; track step) {
+            <span>{{ step }}</span>
+          }
+        </div>
+      </div>
+    </section>
+
     <section class="pub-section pub-problems" @fadeUp>
       <div class="pub-wrap">
         <div class="pub-problems__intro">
           <h2>Si esto te suena familiar, no estás solo</h2>
-          <p class="sub">Tres problemas. Una solución con tres pilares.</p>
+          <p class="sub">Tres fricciones habituales. Una plataforma pensada para operar sin saltos de contexto.</p>
         </div>
         <div class="pub-problems__grid">
           @for (p of problems; track p.num) {
@@ -117,8 +141,8 @@ const EMPTY_STATS: PublicStats = {
       <div class="pub-wrap">
         <h2>Una plataforma. Tres pilares. Toda tu operación cloud.</h2>
         <p class="sub">
-          Spendlyx no es otro dashboard suelto. Es un plano de control construido sobre visibilidad,
-          automatización y control de costes.
+          Spendlyx no es otro dashboard suelto. Es un plano de control construido sobre lanzamiento,
+          visibilidad, automatización y gobierno operativo.
         </p>
         <div class="pub-pillars__grid">
           @for (pillar of pillars; track pillar.num) {
@@ -181,7 +205,7 @@ const EMPTY_STATS: PublicStats = {
       <div class="pub-wrap" style="text-align: center">
         <h2>Empieza en minutos. Sin complicaciones.</h2>
         <p class="sub" style="margin-left: auto; margin-right: auto">
-          Tu operación cloud moderna en 3 pasos.
+          Tu operación cloud moderna en 3 pasos, con datos reales cuando conectas tus proveedores.
         </p>
         <div class="pub-steps">
           @for (step of steps; track step.num) {
@@ -224,7 +248,7 @@ const EMPTY_STATS: PublicStats = {
       <div class="pub-wrap pub-newsletter">
         <h2>Mantente al día</h2>
         <p class="sub" style="margin: 0 auto">
-          Recibe novedades sobre operaciones cloud, buenas prácticas y actualizaciones de Spendlyx.
+          Recibe novedades sobre lanzamiento de infraestructura, buenas prácticas cloud y actualizaciones de Spendlyx.
         </p>
         <form (submit)="handleNewsletter($event)" aria-label="Suscripción al boletín">
           <input
@@ -256,6 +280,52 @@ const EMPTY_STATS: PublicStats = {
     PUBLIC_THEME,
     `
     .pub-hero__mock { min-height: 280px; }
+    .pub-provider-cloud { background: #fff; }
+    .pub-provider-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      margin-top: 1.5rem;
+    }
+    .pub-provider {
+      border: 1px solid #dbeafe;
+      border-radius: 14px;
+      padding: 1rem;
+      background: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+    }
+    .pub-provider__code {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 42px;
+      min-height: 28px;
+      border-radius: 9px;
+      background: #0f172a;
+      color: #bae6fd;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.75rem;
+    }
+    .pub-provider h3 { margin: 0 0 0.35rem; font-size: 0.98rem; }
+    .pub-provider p { margin: 0; color: #64748b; font-size: 0.84rem; line-height: 1.55; }
+    .pub-launch-strip {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+    }
+    .pub-launch-strip span {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+      border-radius: 999px;
+      padding: 0.48rem 0.72rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
     `,
   ],
 })
@@ -294,21 +364,21 @@ export class HomePageComponent implements OnInit {
   readonly problems = [
     {
       num: '01',
-      label: 'Herramientas fragmentadas',
-      title: 'Consolas, scripts y hojas de cálculo',
-      text: 'Saltas entre AWS Console, GCP, Azure Portal, Jenkins y Terraform CLI. Cada acción requiere contexto distinto y pierdes trazabilidad.',
+      label: 'Lanzamientos manuales',
+      title: 'Campos, permisos y validaciones en cada consola',
+      text: 'Crear una instancia exige recordar cuenta, región, red, imagen, claves SSH, etiquetas y coste. El equipo pierde trazabilidad entre tickets, scripts y consolas.',
     },
     {
       num: '02',
-      label: 'Costes a ciegas',
-      title: 'Facturación dispersa por proveedor',
-      text: 'No sabes cuánto cuesta cada instancia ni el gasto MTD por servicio. Los presupuestos se revisan tarde y las sorpresas llegan al cierre del mes.',
+      label: 'Inventario incompleto',
+      title: 'Cloud pública, VPS y repos en silos',
+      text: 'AWS, GCP, Azure, IONOS, DigitalOcean, Hetzner, GitHub y GitLab viven separados. Nadie tiene una vista fiable del estado real de la plataforma.',
     },
     {
       num: '03',
-      label: 'Operaciones manuales',
-      title: 'Runbooks en documentos sueltos',
-      text: 'Despliegues, reinicios y sincronizaciones dependen de procedimientos manuales sin auditoría centralizada ni visibilidad para todo el equipo.',
+      label: 'Señales dispersas',
+      title: 'Logs, alertas, seguridad y despliegues sin hilo común',
+      text: 'Cuando algo falla, métricas, logs, aprobaciones, incidencias y auditoría quedan repartidas. Diagnosticar consume más tiempo que resolver.',
     },
   ]
 
@@ -316,43 +386,45 @@ export class HomePageComponent implements OnInit {
     {
       num: '01',
       label: 'Visibilidad',
-      title: 'Dashboard y centro de salud',
+      title: 'Inventario vivo y centro de salud',
       items: [
-        'Tablero con KPIs operativos y actividad reciente',
-        'Centro de mando con acciones rápidas trazables',
-        'Inventario unificado AWS, GCP y Azure',
-        'Estado live de instancias, contenedores y clústeres',
+        'Tablero, centro de mando, explorador de recursos y topología',
+        'Inventario unificado para cloud pública, VPS, Docker y Kubernetes',
+        'Estados, regiones, IPs, tamaño y coste estimado por recurso',
+        'Empty states con acciones claras cuando falta una integración',
       ],
     },
     {
       num: '02',
-      label: 'Automatización',
-      title: 'Jenkins, runbooks y programador',
+      label: 'Lanzamiento con IA',
+      title: 'AI Infra Studio para AWS, GCP e IONOS',
       items: [
-        'Pipelines Jenkins integrados al panel',
-        'Workspaces Terraform con historial de ejecuciones',
+        'Wizard con formularios propios para AWS EC2, GCP Compute e IONOS VPS',
+        'Coste estimado, logs embebidos y validaciones por proveedor',
+        'Acciones para lanzar, probar conectividad y eliminar recursos',
         'Runbooks y tareas programadas',
-        'Repositorios GitHub y GitLab conectados',
       ],
     },
     {
       num: '03',
-      label: 'Control de costes',
-      title: 'Facturación por instancia',
+      label: 'Gobierno operativo',
+      title: 'Observabilidad, seguridad y repositorios',
       items: [
-        'Desglose AWS, GCP y Azure en un solo lugar',
-        'Coste MTD y proyección mensual por instancia',
-        'Alertas de presupuesto y optimización',
-        'Exportación CSV para finanzas y reporting',
+        'Métricas, logs, alertas, incidentes e informes',
+        'RBAC, auditoría, tokens API y gestor de secretos',
+        'GitHub, GitLab, webhooks, ramas, commits y despliegues',
+        'Datos de coste preparados para facturación y optimización',
       ],
     },
   ]
 
   readonly modules = [
-    { icon: '☁', title: 'AWS / GCP / Azure', text: 'Cuentas cloud, regiones y sincronización live.' },
+    { icon: '◈', title: 'AI Infra Studio', text: 'Wizard multi-cloud para lanzar, probar y eliminar infraestructura.' },
+    { icon: '☁', title: 'AWS / GCP / Azure', text: 'Cuentas cloud, regiones, redes, métricas y sincronización live.' },
+    { icon: '▤', title: 'VPS e IONOS', text: 'Servidores europeos, planes VPS, datacenters y métricas por proveedor.' },
     { icon: '⎈', title: 'Kubernetes', text: 'Clústeres, namespaces y cargas de trabajo.' },
     { icon: '▣', title: 'Docker', text: 'Contenedores, imágenes y descubrimiento en hosts.' },
-    { icon: '▦', title: 'Terraform', text: 'Workspaces, planes y ejecuciones de IaC.' },
+    { icon: '▦', title: 'Infraestructura', text: 'Instancias, red, almacenamiento, backups y capacidad.' },
     { icon: '⟳', title: 'Jenkins', text: 'Jobs, builds y despliegues automatizados.' },
     { icon: '⎇', title: 'Repositorios', text: 'GitHub, GitLab, ramas, commits y PRs.' },
     { icon: '◐', title: 'Observabilidad', text: 'Métricas, alertas, logs y facturación.' },
@@ -361,12 +433,13 @@ export class HomePageComponent implements OnInit {
 
   readonly comparisons = [
     { before: 'Consolas separadas por proveedor', after: 'Panel multi-cloud unificado en español' },
-    { before: 'Costes en facturas PDF sin desglose', after: 'Facturación MTD por instancia y proveedor' },
-    { before: 'Despliegues manuales sin trazabilidad', after: 'Centro de mando con acciones auditadas' },
-    { before: 'Jenkins y Terraform en silos', after: 'Automatización integrada al inventario live' },
+    { before: 'Formularios repetidos para cada instancia', after: 'Wizard con proveedor preseleccionado y validaciones claras' },
+    { before: 'Instancias y VPS fuera del inventario', after: 'Recursos creados visibles en Infraestructura → Instancias' },
+    { before: 'Pruebas de conectividad manuales', after: 'Acción de probar con logs del proceso' },
+    { before: 'Jenkins y runbooks en silos', after: 'Automatización integrada al inventario live' },
     { before: 'Repos desconectados de la infra', after: 'GitHub/GitLab vinculados a despliegues' },
     { before: 'Equipos sin roles ni permisos claros', after: 'RBAC multi-usuario por organización' },
-    { before: 'Sin visibilidad de salud operativa', after: 'Dashboard y alertas centralizadas' },
+    { before: 'Sin visibilidad de salud operativa', after: 'Dashboard, logs y alertas centralizadas' },
     { before: 'Horas perdidas en context switching', after: 'Operación coordinada desde un panel' },
   ]
 
@@ -378,15 +451,24 @@ export class HomePageComponent implements OnInit {
     },
     {
       num: '02',
-      title: 'Conecta tu cloud',
-      text: 'Vincula AWS, GCP, Azure, Jenkins, Terraform y repositorios cuando lo necesites.',
+      title: 'Conecta proveedores',
+      text: 'Vincula AWS, GCP, Azure, IONOS, VPS, Jenkins y repositorios cuando lo necesites.',
     },
     {
       num: '03',
-      title: 'Opera desde el panel',
-      text: 'Monitorea, automatiza y controla costes con tu equipo desde un solo lugar.',
+      title: 'Lanza y observa',
+      text: 'Crea recursos con AI Infra Studio, prueba conectividad, consulta logs y gobierna la flota.',
     },
   ]
+
+  readonly providers = [
+    { code: 'AWS', name: 'AWS EC2', text: 'Cuenta, región, AZ, VPC, subnet, security group, key pair, AMI, tipo, disco, tags y coste.' },
+    { code: 'GCP', name: 'GCP Compute Engine', text: 'Proyecto, cuenta, región, zona, VPC network, subnet, firewall, machine type, image, SSH key y labels.' },
+    { code: 'ION', name: 'IONOS VPS', text: 'Cuenta IONOS, datacenter, región, plan VPS, CPU, RAM, disco, sistema operativo, SSH key y coste.' },
+    { code: 'VPS', name: 'VPS multi-proveedor', text: 'DigitalOcean, Hetzner, Linode, OVH, Vultr, Scaleway y Clouding preparados en la navegación real.' },
+  ]
+
+  readonly launchFlow = ['Seleccionar proveedor', 'Validar campos', 'Estimar coste', 'Lanzar o crear', 'Ver progreso', 'Probar conectividad', 'Eliminar si procede']
 
   readonly faqs = [
     {
@@ -395,7 +477,7 @@ export class HomePageComponent implements OnInit {
     },
     {
       q: '¿Necesito configurar integraciones para empezar?',
-      a: 'Puedes crear cuenta y explorar el panel de inmediato. Las secciones live muestran estado de conexión o «Configuración requerida» hasta que conectes tus servicios.',
+      a: 'Puedes crear cuenta y explorar el panel de inmediato. Las secciones live muestran estados vacíos profesionales o «Configuración requerida» hasta que conectes tus servicios.',
     },
     {
       q: '¿Es seguro? ¿Dónde se guardan mis datos?',
@@ -411,7 +493,7 @@ export class HomePageComponent implements OnInit {
     },
     {
       q: '¿Qué proveedores cloud soporta?',
-      a: 'AWS, GCP y Azure con sincronización de instancias, regiones y facturación. También VPS, Docker, Kubernetes, Jenkins y Terraform desde el mismo panel.',
+      a: 'AWS, GCP y Azure para cloud pública, IONOS y otros VPS para servidores, además de Docker, Kubernetes, Jenkins, GitHub y GitLab desde el mismo panel.',
     },
     {
       q: '¿Puedo exportar mis datos?',

@@ -28,6 +28,8 @@ describe('SidebarService', () => {
     userSignal.set(null)
     TestBed.resetTestingModule()
     shortcutsApi.list.and.returnValue(of([]))
+    shortcutsApi.add.and.returnValue(of({ id: '1', route: '/runbooks', label: 'Runbooks', position: 0, createdAt: '', updatedAt: '' }))
+    shortcutsApi.removeByRoute.and.returnValue(of({ ok: true }))
     shortcutsApi.list.calls.reset()
     shortcutsApi.add.calls.reset()
     shortcutsApi.removeByRoute.calls.reset()

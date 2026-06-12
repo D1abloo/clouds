@@ -21,6 +21,11 @@ describe('PRO production UI — sin referencias demo visibles', () => {
     expect(admin!.tabs.some((t) => t.label === 'Modo demo')).toBe(false)
   })
 
+  it('sidebar principal no muestra FinOps como sección visible', () => {
+    expect(SIDEBAR_MAIN_MODULES.some((m) => m.id === 'finops')).toBe(false)
+    expect(SIDEBAR_MAIN_MODULES.some((m) => m.label === 'FinOps')).toBe(false)
+  })
+
   it('allowsDemoDataFrom devuelve false en PRO sin demo', () => {
     const pro = {
       loaded: () => true,

@@ -23,10 +23,11 @@ import { SPENDLYX_CONTACT_EMAIL } from './public.constants'
           <p class="ok" role="status">{{ success }}</p>
         } @else {
           <form [formGroup]="form" (ngSubmit)="submit()" class="pub-form pub-card">
-            <label>Nombre<input formControlName="name" /></label>
-            <label>Email<input type="email" formControlName="email" /></label>
+            <label>Nombre<input formControlName="name" placeholder="Nombre y apellidos" autocomplete="name" /></label>
+            <label>Email<input type="email" formControlName="email" placeholder="tu@empresa.com" autocomplete="email" /></label>
             <label>Motivo
               <select formControlName="reason">
+                <option value="" disabled>Selecciona un motivo</option>
                 <option value="general">General</option>
                 <option value="ventas">Ventas</option>
                 <option value="soporte">Soporte</option>
@@ -34,10 +35,13 @@ import { SPENDLYX_CONTACT_EMAIL } from './public.constants'
                 <option value="otro">Otro</option>
               </select>
             </label>
-            <label>Asunto<input formControlName="subject" /></label>
-            <label>Mensaje<textarea formControlName="message" rows="5"></textarea></label>
+            <label>Asunto<input formControlName="subject" placeholder="Ej: Demo de AI Infra Studio para AWS y GCP" /></label>
+            <label>Mensaje<textarea formControlName="message" rows="5" placeholder="Cuéntanos proveedores, tamaño del equipo y qué flujo quieres revisar."></textarea></label>
             <input type="text" formControlName="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true" />
             @if (error) { <p class="err" role="alert">{{ error }}</p> }
+            @if (form.invalid && form.touched) {
+              <p class="err" role="alert">Revisa nombre, email, asunto y un mensaje de al menos 10 caracteres.</p>
+            }
             <button type="submit" class="pub-btn pub-btn--primary" [disabled]="form.invalid || loading">{{ loading ? 'Enviando…' : 'Enviar mensaje' }}</button>
           </form>
         }

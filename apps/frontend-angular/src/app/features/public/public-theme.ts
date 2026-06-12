@@ -1,14 +1,14 @@
 export const PUBLIC_THEME = `
 .pub {
   --pub-accent: #0284c7;
-  --pub-accent2: #6366f1;
+  --pub-accent2: #16a34a;
   --pub-accent3: #06b6d4;
-  --pub-dark: #0f172a;
+  --pub-dark: #111827;
   --pub-muted: #64748b;
   --pub-surface: #ffffff;
   --pub-border: #e2e8f0;
   --pub-glow: rgba(2, 132, 199, 0.22);
-  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+  font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, sans-serif;
   color: var(--pub-dark);
   -webkit-font-smoothing: antialiased;
 }
@@ -21,29 +21,32 @@ export const PUBLIC_THEME = `
   padding: clamp(3.5rem, 8vw, 6rem) 0 clamp(3rem, 6vw, 4.5rem);
   color: #fff;
   overflow: hidden;
-  background: linear-gradient(155deg, #0c4a6e 0%, #0f172a 42%, #1e1b4b 100%);
+  background:
+    linear-gradient(115deg, rgba(20, 184, 166, 0.18) 0 18%, transparent 18% 100%),
+    linear-gradient(155deg, #123c2f 0%, #111827 42%, #172554 100%);
 }
 .pub-hero::before,
 .pub-hero::after {
   content: '';
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
   pointer-events: none;
 }
 .pub-hero::before {
-  width: min(520px, 70vw);
-  height: min(520px, 70vw);
-  top: -120px;
-  right: -80px;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, transparent 70%);
+  inset: 0;
+  opacity: 0.24;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 42px 42px;
 }
 .pub-hero::after {
-  width: min(400px, 60vw);
-  height: min(400px, 60vw);
-  bottom: -100px;
-  left: -60px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.28) 0%, transparent 70%);
+  width: 44%;
+  height: 100%;
+  top: 0;
+  right: 0;
+  background:
+    linear-gradient(140deg, transparent 0 22%, rgba(6, 182, 212, 0.16) 22% 36%, transparent 36% 100%),
+    linear-gradient(115deg, transparent 0 48%, rgba(22, 163, 74, 0.16) 48% 62%, transparent 62% 100%);
 }
 .pub-hero__grid {
   position: relative;
@@ -311,7 +314,7 @@ export const PUBLIC_THEME = `
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 30% 50%, rgba(6, 182, 212, 0.2), transparent 55%);
+  background: linear-gradient(115deg, rgba(6, 182, 212, 0.16) 0 18%, transparent 18% 100%);
   pointer-events: none;
 }
 .pub-cta__inner { position: relative; z-index: 1; }

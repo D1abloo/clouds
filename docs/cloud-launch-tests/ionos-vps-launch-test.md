@@ -26,7 +26,7 @@ Integrar IONOS VPS en el mismo wizard (`IonosVpsLaunchForm`, proveedor en select
 ## Backend
 
 - Lanzamiento real IONOS requiere `IONOS_TOKEN` y adaptador backend IONOS.
-- Mientras tanto, el wizard usa registro local para inventario/logs/FinOps y simula creacion/prueba/eliminacion sin dejar recursos activos.
+- Mientras tanto, el wizard usa registro local para inventario/logs/facturacion general y simula creacion/prueba/eliminacion sin dejar recursos activos.
 
 ## Estado
 

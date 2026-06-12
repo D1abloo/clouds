@@ -11,12 +11,12 @@ export const PUBLIC_ROUTES: Routes = [
       {
         path: '',
         loadComponent: () => import('./home-page.component').then((m) => m.HomePageComponent),
-        data: { seo: { title: 'Spendlyx | Panel multi-cloud, automatización y facturación', description: 'Controla AWS, GCP, Azure, Jenkins, Terraform y Kubernetes desde un panel PRO en español con facturación por instancia.', path: '/' } },
+        data: { seo: { title: 'Spendlyx | Plataforma cloud e IA para infraestructura', description: 'Lanza, observa y automatiza infraestructura en AWS, GCP, Azure, IONOS y VPS desde AI Infra Studio con inventario, seguridad y repositorios integrados.', path: '/' } },
       },
       {
         path: 'producto',
         loadComponent: () => import('./product-page.component').then((m) => m.ProductPageComponent),
-        data: { seo: { title: 'Producto | Spendlyx', description: 'Descubre cómo Spendlyx ayuda a tu equipo a gestionar recursos cloud, despliegues y operaciones.', path: '/producto' } },
+        data: { seo: { title: 'Producto | Spendlyx', description: 'AI Infra Studio, inventario multi-cloud, VPS, observabilidad, seguridad, GitHub/GitLab y automatización para equipos DevOps y CloudOps.', path: '/producto' } },
       },
       {
         path: 'casos-de-uso',
@@ -30,7 +30,7 @@ export const PUBLIC_ROUTES: Routes = [
           seo: {
             title: 'Documentación de usuario | Spendlyx',
             description:
-              'Guías completas del panel Spendlyx: nubes AWS/GCP, facturación, automatización, repositorios, seguridad y buenas prácticas.',
+              'Guías completas del panel Spendlyx: AI Infra Studio, nubes AWS/GCP/Azure, VPS, inventario, observabilidad, automatización, repositorios y seguridad.',
             path: '/docs',
           },
         },
@@ -38,7 +38,7 @@ export const PUBLIC_ROUTES: Routes = [
       {
         path: 'planes',
         loadComponent: () => import('./pricing-page.component').then((m) => m.PricingPageComponent),
-        data: { seo: { title: 'Planes | Spendlyx', description: 'Plan PRO Spendlyx — acceso bajo solicitud.', path: '/planes' } },
+        data: { seo: { title: 'Planes | Spendlyx', description: 'Plan PRO Spendlyx para equipos que lanzan y gobiernan infraestructura cloud con IA.', path: '/planes' } },
       },
       {
         path: 'contacto',

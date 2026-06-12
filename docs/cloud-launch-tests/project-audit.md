@@ -14,7 +14,7 @@
 | Formularios proveedor | `features/cloud/launch/*-launch-form.component.ts` | AWS, GCP e IONOS renderizan formularios propios. |
 | Inventario | `features/instances/instances-list.component.ts` | Mezcla backend + recursos registrados por AI Infra Studio. |
 | Logs | `features/observability/launch-logs-panel.component.ts` | Observabilidad -> Logs muestra eventos del wizard. |
-| FinOps | `features/finops/finops-instances-page.component.ts` | Instancias FinOps incluye coste estimado de recursos del wizard. |
+| Facturacion general | `features/billing/billing-page.component.ts` | Los datos de coste estimado quedan preparados para facturacion y optimizacion sin depender de una seccion principal adicional. |
 
 ## Variables cloud disponibles
 

@@ -40,8 +40,8 @@ Fecha de revision: 2026-06-12
 | Automatizacion -> AI Infra Studio | `/automation/ai-infra-studio` | `AiInfraStudioComponent` | `features/infra/ai-infra-studio.component.ts` | Wizard embebido | Ruta canonica creada; `/infra/ai-studio` redirige por compatibilidad. |
 | Automatizacion -> Jenkins | `/jenkins/jobs` | `JenkinsPageComponent` | `features/jenkins/jenkins-page.component.ts` | No | Sin cambios. |
 | Observabilidad -> Logs | `/logs` | `LogsCenterComponent` | `features/platform-modules/platform-modules.component.ts` + `features/observability/launch-logs-panel.component.ts` | Si | Muestra eventos de lanzamiento/prueba/eliminacion del wizard. |
-| FinOps -> Instancias | `/finops/instances` | `FinopsInstancesPageComponent` | `features/finops/finops-instances-page.component.ts` | Si | Mezcla datos de coste generados por el wizard con la tabla FinOps. |
-| FinOps -> Facturacion | `/finops/billing` | `FinopsBillingPageComponent` | `features/finops/finops-billing-page.component.ts` | No | Preparado via datos de coste por recurso; no se reconstruye facturacion. |
+| Observabilidad -> Facturacion | `/billing/overview` | `BillingPageComponent` | `features/billing/billing-page.component.ts` | No | Recibe datos de coste preparados por el wizard sin crear una seccion principal adicional. |
+| Observabilidad -> Optimizador de costes | `/cost-optimizer` | `SectionHubComponent` | `features/section-hub/section-hub.component.ts` | No | Puede usar coste estimado por recurso cuando exista integracion live. |
 
 ## Rutas de lanzamiento encontradas
 
@@ -65,5 +65,6 @@ Fecha de revision: 2026-06-12
 ## Notas de integracion
 
 - No se debe duplicar el sidebar: todas las entradas usan `SIDEBAR_MAIN_MODULES`.
-- El inventario global ya consulta `GET /instances`, que devuelve cloud + VPS. Para IONOS sin adaptador nativo se preparara un registro local de wizard que el frontend puede mezclar en inventario, logs y FinOps.
+- El inventario global ya consulta `GET /instances`, que devuelve cloud + VPS. Para IONOS sin adaptador nativo se preparara un registro local de wizard que el frontend puede mezclar en inventario, logs y facturacion general.
 - Los logs backend de AWS/GCP llegan por `instance.launch.progress`; se mostraran embebidos y se registraran tambien en una fuente local visible desde Observabilidad -> Logs.
+- La seccion principal FinOps fue retirada del sidebar visible el 2026-06-12. Las rutas internas antiguas `/finops/*` quedan solo como compatibilidad y no deben enlazarse desde navegacion visible.

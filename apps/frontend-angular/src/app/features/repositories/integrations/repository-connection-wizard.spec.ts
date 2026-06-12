@@ -38,6 +38,7 @@ describe('RepositoryConnectionWizardComponent', () => {
         {
           provide: ProModeService,
           useValue: {
+            loaded: () => true,
             proMode: () => true,
             demoMode: () => false,
             oauthGithubEnabled: () => false,
