@@ -15,7 +15,14 @@ import { logReveal } from '../../../shared/animations/ui-motion.animations'
           <mat-icon>article</mat-icon>
           <strong>{{ title() }}</strong>
         </header>
-        <pre>{{ lines().join('\n') }}</pre>
+        <div class="logs__stream" role="log" aria-live="polite">
+          @for (line of lines(); track line) {
+            <p class="logs__line" [class.logs__line--error]="logLevel(line) === 'error'" [class.logs__line--ok]="logLevel(line) === 'ok'">
+              <mat-icon>{{ logIcon(line) }}</mat-icon>
+              <span>{{ line }}</span>
+            </p>
+          }
+        </div>
       </section>
     }
   `,
@@ -37,19 +44,47 @@ import { logReveal } from '../../../shared/animations/ui-motion.animations'
       font-size: 0.78rem;
     }
     mat-icon { font-size: 1rem; width: 1rem; height: 1rem; color: #93c5fd; }
-    pre {
+    .logs__stream {
       margin: 0;
       padding: 0.75rem;
       max-height: 190px;
       overflow: auto;
-      white-space: pre-wrap;
+      display: grid;
+      gap: 0.38rem;
+    }
+    .logs__line {
+      margin: 0;
+      display: grid;
+      grid-template-columns: 1rem minmax(0, 1fr);
+      gap: 0.45rem;
+      align-items: flex-start;
+      color: #dbeafe;
       font-size: 0.72rem;
       line-height: 1.5;
       font-family: var(--app-font-mono, ui-monospace, monospace);
     }
+    .logs__line mat-icon { margin-top: 0.12rem; color: #93c5fd; }
+    .logs__line--ok { color: #bbf7d0; }
+    .logs__line--ok mat-icon { color: #86efac; }
+    .logs__line--error { color: #fecaca; }
+    .logs__line--error mat-icon { color: #fca5a5; }
   `,
 })
 export class CloudLaunchLogsComponent {
   readonly title = input('Logs en tiempo real')
   readonly lines = input<string[]>([])
+
+  logLevel = (line: string): 'error' | 'ok' | 'info' => {
+    const value = line.toLowerCase()
+    if (value.includes('error') || value.includes('fall') || value.includes('no se pudo')) return 'error'
+    if (value.includes('ok') || value.includes('cread') || value.includes('operativo') || value.includes('provisionada')) return 'ok'
+    return 'info'
+  }
+
+  logIcon = (line: string): string => {
+    const level = this.logLevel(line)
+    if (level === 'error') return 'error'
+    if (level === 'ok') return 'check_circle'
+    return 'terminal'
+  }
 }

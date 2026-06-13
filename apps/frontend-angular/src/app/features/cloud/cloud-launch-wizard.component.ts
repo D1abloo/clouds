@@ -36,7 +36,13 @@ import { type CloudLaunchProgressState } from './cloud-launch-progress.component
 import { cloudLaunchOptions } from './cloud-launch-options.util'
 import { cloudLaunchTheme } from './cloud-launch-theme.util'
 import { CLOUD_LAUNCH_STEPS, type LaunchStepMeta } from './launch/cloud-launch-steps.util'
-import type { CloudLaunchStepId, LaunchedResource, ProviderCard } from './launch/cloud-launch.types'
+import type {
+  CloudLaunchStepId,
+  LaunchedResource,
+  LaunchProviderSlug,
+  ProviderCard,
+  VpsLaunchSlug,
+} from './launch/cloud-launch.types'
 import { CloudProviderSelectorComponent } from './launch/cloud-provider-selector.component'
 import { InfraCopilotPanelComponent } from './launch/infra-copilot-panel.component'
 import { LaunchErrorCardComponent } from './launch/launch-error-card.component'
@@ -125,8 +131,6 @@ type LaunchPayload = {
   monitoring?: boolean
 }
 
-type LaunchProviderSlug = CloudSlug | 'ionos'
-
 const LAUNCH_PROVIDERS: ProviderCard[] = [
   {
     slug: 'aws',
@@ -149,6 +153,26 @@ const LAUNCH_PROVIDERS: ProviderCard[] = [
     initialCost: '~$0.010/h',
   },
   {
+    slug: 'azure',
+    provider: 'AZURE',
+    label: 'Azure Virtual Machines',
+    tagline: 'Microsoft Azure',
+    logo: 'azure',
+    description: 'Subscriptions, resource groups, VNets, NSG, public IPs, VM sizes e imágenes.',
+    connectionState: 'Service principal',
+    initialCost: '~$0.011/h',
+  },
+  {
+    slug: 'clouding',
+    provider: 'CLOUDING',
+    label: 'Clouding.io',
+    tagline: 'Cloud servers europeos',
+    logo: 'clouding',
+    description: 'Instancias cloud, redes privadas, plantillas, SSD flexible y métricas.',
+    connectionState: 'API token',
+    initialCost: '~$0.018/h',
+  },
+  {
     slug: 'ionos',
     provider: 'IONOS_VPS',
     label: 'IONOS VPS',
@@ -158,17 +182,114 @@ const LAUNCH_PROVIDERS: ProviderCard[] = [
     connectionState: 'API token',
     initialCost: '~17.52$/mes',
   },
+  {
+    slug: 'digitalocean',
+    provider: 'IONOS_VPS',
+    label: 'DigitalOcean Droplets',
+    tagline: 'VPS / cloud servers',
+    logo: 'digitalocean',
+    description: 'Droplets, regiones, VPC, tamaños, imágenes Linux y SSH keys.',
+    connectionState: 'API token',
+    initialCost: '~$6/mes',
+  },
+  {
+    slug: 'hetzner',
+    provider: 'IONOS_VPS',
+    label: 'Hetzner Cloud',
+    tagline: 'VPS europeos',
+    logo: 'hetzner',
+    description: 'Servidores cloud, redes, ubicaciones, planes CX/CPX y claves SSH.',
+    connectionState: 'API token',
+    initialCost: '~€4.51/mes',
+  },
+  {
+    slug: 'ovh',
+    provider: 'IONOS_VPS',
+    label: 'OVH Public Cloud',
+    tagline: 'VPS / instances',
+    logo: 'ovh',
+    description: 'Instancias OVH, regiones, flavors, imágenes y acceso SSH.',
+    connectionState: 'App + consumer key',
+    initialCost: '~€7/mes',
+  },
+  {
+    slug: 'linode',
+    provider: 'IONOS_VPS',
+    label: 'Linode / Akamai',
+    tagline: 'Cloud instances',
+    logo: 'linode',
+    description: 'Linodes, regiones, planes, imágenes Linux y claves SSH.',
+    connectionState: 'Personal access token',
+    initialCost: '~$5/mes',
+  },
+  {
+    slug: 'vultr',
+    provider: 'IONOS_VPS',
+    label: 'Vultr',
+    tagline: 'Cloud Compute',
+    logo: 'vultr',
+    description: 'Instancias, regiones, planes, snapshots e imágenes cloud.',
+    connectionState: 'API key',
+    initialCost: '~$6/mes',
+  },
+  {
+    slug: 'scaleway',
+    provider: 'IONOS_VPS',
+    label: 'Scaleway',
+    tagline: 'Instances europeas',
+    logo: 'scaleway',
+    description: 'Instances, zonas, imágenes, redes privadas y SSH keys.',
+    connectionState: 'IAM secret key',
+    initialCost: '~€5/mes',
+  },
 ]
 
-const slugToProvider = (slug: CloudSlug | 'ionos'): CloudProvider =>
-  slug === 'gcp' ? 'GCP' : slug === 'azure' ? 'AZURE' : slug === 'ionos' ? 'VPS' : 'AWS'
+const slugToProvider = (slug: LaunchProviderSlug): CloudProvider =>
+  slug === 'gcp'
+    ? 'GCP'
+    : slug === 'azure'
+      ? 'AZURE'
+      : slug === 'clouding'
+        ? 'CLOUDING'
+        : isVpsLaunchSlug(slug)
+          ? 'VPS'
+          : 'AWS'
 
 const providerForActivity = (slug: LaunchProviderSlug): LaunchActivityProvider =>
-  slug === 'ionos' ? 'IONOS' : slug === 'gcp' ? 'GCP' : slug === 'azure' ? 'AZURE' : slug === 'clouding' ? 'CLOUDING' : 'AWS'
+  slug === 'ionos'
+    ? 'IONOS'
+    : slug === 'digitalocean'
+      ? 'DIGITALOCEAN'
+      : slug === 'hetzner'
+        ? 'HETZNER'
+        : slug === 'linode'
+          ? 'LINODE'
+          : slug === 'ovh'
+            ? 'OVH'
+            : slug === 'vultr'
+              ? 'VULTR'
+              : slug === 'scaleway'
+                ? 'SCALEWAY'
+                : slug === 'gcp'
+                  ? 'GCP'
+                  : slug === 'azure'
+                    ? 'AZURE'
+                    : slug === 'clouding'
+                      ? 'CLOUDING'
+                      : 'AWS'
+
+const isVpsLaunchSlug = (slug: string): slug is VpsLaunchSlug =>
+  slug === 'ionos' ||
+  slug === 'digitalocean' ||
+  slug === 'hetzner' ||
+  slug === 'linode' ||
+  slug === 'ovh' ||
+  slug === 'vultr' ||
+  slug === 'scaleway'
 
 const normalizeProviderSlug = (raw?: string | null): LaunchProviderSlug | null => {
   const value = (raw ?? '').trim().toLowerCase()
-  if (value === 'aws' || value === 'gcp' || value === 'azure' || value === 'clouding' || value === 'ionos') return value
+  if (value === 'aws' || value === 'gcp' || value === 'azure' || value === 'clouding' || isVpsLaunchSlug(value)) return value
   if (value === 'google' || value === 'gce') return 'gcp'
   if (value === 'ec2') return 'aws'
   if (value === 'vps' || value === 'ionos-vps') return 'ionos'
@@ -207,6 +328,183 @@ const IONOS_KEY_PAIRS = [
   { id: 'ionos-default', name: 'ionos-default' },
   { id: 'platform-ops', name: 'platform-ops' },
 ]
+
+type VpsLaunchCatalog = {
+  label: string
+  accountName: string
+  defaultRegion: string
+  regions: { id: string; name: string }[]
+  datacenters: string[]
+  plans: CatalogRow[]
+  diskByPlan: Record<string, number>
+  images: CloudImageRow[]
+  keyPairs: { id: string; name: string }[]
+  defaultDiskType: string
+  permissions: string[]
+  networkPolicy: string
+  tagProvider: string
+  currencyHint: string
+}
+
+const VPS_PROVIDER_CATALOGS: Record<VpsLaunchSlug, VpsLaunchCatalog> = {
+  ionos: {
+    label: 'IONOS VPS',
+    accountName: 'Cuenta IONOS Produccion',
+    defaultRegion: 'de/fra',
+    regions: IONOS_REGIONS,
+    datacenters: IONOS_DATACENTERS,
+    plans: IONOS_PLANS,
+    diskByPlan: IONOS_PLAN_DISK_GB,
+    images: IONOS_IMAGES,
+    keyPairs: IONOS_KEY_PAIRS,
+    defaultDiskType: 'ssd-nvme',
+    permissions: ['Datacenters', 'Planes VPS', 'Imagenes', 'SSH keys', 'Billing'],
+    networkPolicy: 'SSH + HTTPS',
+    tagProvider: 'ionos',
+    currencyHint: '~17.52$/mes',
+  },
+  digitalocean: {
+    label: 'DigitalOcean Droplet',
+    accountName: 'DigitalOcean workspace',
+    defaultRegion: 'fra1',
+    regions: [
+      { id: 'fra1', name: 'Frankfurt 1' },
+      { id: 'ams3', name: 'Amsterdam 3' },
+      { id: 'nyc3', name: 'New York 3' },
+    ],
+    datacenters: ['fra1', 'ams3', 'nyc3'],
+    plans: [
+      { id: 's-1vcpu-1gb', name: 'Basic 1 GB', vcpus: 1, memoryGb: 1, pricePerHour: 0.0089 },
+      { id: 's-2vcpu-2gb', name: 'Basic 2 GB', vcpus: 2, memoryGb: 2, pricePerHour: 0.0179 },
+      { id: 's-2vcpu-4gb', name: 'Basic 4 GB', vcpus: 2, memoryGb: 4, pricePerHour: 0.0357 },
+    ],
+    diskByPlan: { 's-1vcpu-1gb': 25, 's-2vcpu-2gb': 60, 's-2vcpu-4gb': 80 },
+    images: IONOS_IMAGES,
+    keyPairs: [{ id: 'do-platform', name: 'do-platform' }, { id: 'ops-ed25519', name: 'ops-ed25519' }],
+    defaultDiskType: 'ssd',
+    permissions: ['Droplets', 'VPC', 'Firewalls', 'SSH keys', 'Images', 'Billing'],
+    networkPolicy: 'Cloud firewall SSH + HTTPS',
+    tagProvider: 'digitalocean',
+    currencyHint: '~$6/mes',
+  },
+  hetzner: {
+    label: 'Hetzner Cloud Server',
+    accountName: 'Hetzner production',
+    defaultRegion: 'fsn1',
+    regions: [
+      { id: 'fsn1', name: 'Falkenstein' },
+      { id: 'nbg1', name: 'Nuremberg' },
+      { id: 'hel1', name: 'Helsinki' },
+    ],
+    datacenters: ['fsn1-dc14', 'nbg1-dc3', 'hel1-dc2'],
+    plans: [
+      { id: 'cx22', name: 'CX22', vcpus: 2, memoryGb: 4, pricePerHour: 0.007 },
+      { id: 'cx32', name: 'CX32', vcpus: 4, memoryGb: 8, pricePerHour: 0.013 },
+      { id: 'cax21', name: 'CAX21 ARM', vcpus: 4, memoryGb: 8, pricePerHour: 0.008 },
+    ],
+    diskByPlan: { cx22: 40, cx32: 80, cax21: 80 },
+    images: IONOS_IMAGES,
+    keyPairs: [{ id: 'hetzner-ops', name: 'hetzner-ops' }, { id: 'platform-ops', name: 'platform-ops' }],
+    defaultDiskType: 'local-ssd',
+    permissions: ['Servers', 'Networks', 'Firewalls', 'SSH keys', 'Images', 'Pricing'],
+    networkPolicy: 'Firewall SSH + HTTPS',
+    tagProvider: 'hetzner',
+    currencyHint: '~€4.51/mes',
+  },
+  linode: {
+    label: 'Linode Instance',
+    accountName: 'Linode workspace',
+    defaultRegion: 'eu-central',
+    regions: [
+      { id: 'eu-central', name: 'Frankfurt' },
+      { id: 'eu-west', name: 'London' },
+      { id: 'us-east', name: 'Newark' },
+    ],
+    datacenters: ['eu-central-a', 'eu-west-a', 'us-east-a'],
+    plans: [
+      { id: 'g6-standard-1', name: 'Shared 1 GB', vcpus: 1, memoryGb: 1, pricePerHour: 0.0075 },
+      { id: 'g6-standard-2', name: 'Shared 2 GB', vcpus: 1, memoryGb: 2, pricePerHour: 0.015 },
+      { id: 'g6-standard-4', name: 'Shared 4 GB', vcpus: 2, memoryGb: 4, pricePerHour: 0.03 },
+    ],
+    diskByPlan: { 'g6-standard-1': 25, 'g6-standard-2': 50, 'g6-standard-4': 80 },
+    images: IONOS_IMAGES,
+    keyPairs: [{ id: 'linode-default', name: 'linode-default' }, { id: 'platform-ops', name: 'platform-ops' }],
+    defaultDiskType: 'block-storage',
+    permissions: ['Linodes', 'VPC', 'Firewalls', 'SSH keys', 'Images', 'Billing'],
+    networkPolicy: 'Cloud firewall SSH + HTTPS',
+    tagProvider: 'linode',
+    currencyHint: '~$5/mes',
+  },
+  ovh: {
+    label: 'OVH Public Cloud Instance',
+    accountName: 'OVH public cloud',
+    defaultRegion: 'GRA',
+    regions: [
+      { id: 'GRA', name: 'Gravelines' },
+      { id: 'SBG', name: 'Strasbourg' },
+      { id: 'WAW', name: 'Warsaw' },
+    ],
+    datacenters: ['GRA11', 'SBG5', 'WAW1'],
+    plans: [
+      { id: 'b2-7', name: 'B2-7', vcpus: 2, memoryGb: 7, pricePerHour: 0.041 },
+      { id: 'b2-15', name: 'B2-15', vcpus: 4, memoryGb: 15, pricePerHour: 0.083 },
+    ],
+    diskByPlan: { 'b2-7': 50, 'b2-15': 100 },
+    images: IONOS_IMAGES,
+    keyPairs: [{ id: 'ovh-platform', name: 'ovh-platform' }, { id: 'ops-ed25519', name: 'ops-ed25519' }],
+    defaultDiskType: 'ceph-ssd',
+    permissions: ['Instances', 'Private network', 'Security groups', 'SSH keys', 'Images', 'Billing'],
+    networkPolicy: 'Security group SSH + HTTPS',
+    tagProvider: 'ovh',
+    currencyHint: '~€7/mes',
+  },
+  vultr: {
+    label: 'Vultr Cloud Compute',
+    accountName: 'Vultr production',
+    defaultRegion: 'ams',
+    regions: [
+      { id: 'ams', name: 'Amsterdam' },
+      { id: 'fra', name: 'Frankfurt' },
+      { id: 'ewr', name: 'New Jersey' },
+    ],
+    datacenters: ['ams-1', 'fra-1', 'ewr-1'],
+    plans: [
+      { id: 'vc2-1c-2gb', name: 'Cloud Compute 2 GB', vcpus: 1, memoryGb: 2, pricePerHour: 0.009 },
+      { id: 'vc2-2c-4gb', name: 'Cloud Compute 4 GB', vcpus: 2, memoryGb: 4, pricePerHour: 0.018 },
+    ],
+    diskByPlan: { 'vc2-1c-2gb': 55, 'vc2-2c-4gb': 80 },
+    images: IONOS_IMAGES,
+    keyPairs: [{ id: 'vultr-default', name: 'vultr-default' }, { id: 'platform-ops', name: 'platform-ops' }],
+    defaultDiskType: 'nvme',
+    permissions: ['Instances', 'VPC', 'Firewall groups', 'SSH keys', 'Snapshots', 'Billing'],
+    networkPolicy: 'Firewall group SSH + HTTPS',
+    tagProvider: 'vultr',
+    currencyHint: '~$6/mes',
+  },
+  scaleway: {
+    label: 'Scaleway Instance',
+    accountName: 'Scaleway workspace',
+    defaultRegion: 'fr-par-1',
+    regions: [
+      { id: 'fr-par', name: 'Paris' },
+      { id: 'nl-ams', name: 'Amsterdam' },
+      { id: 'pl-waw', name: 'Warsaw' },
+    ],
+    datacenters: ['fr-par-1', 'nl-ams-1', 'pl-waw-1'],
+    plans: [
+      { id: 'DEV1-M', name: 'DEV1-M', vcpus: 3, memoryGb: 4, pricePerHour: 0.014 },
+      { id: 'PLAY2-MICRO', name: 'PLAY2-MICRO', vcpus: 2, memoryGb: 2, pricePerHour: 0.009 },
+    ],
+    diskByPlan: { 'DEV1-M': 40, 'PLAY2-MICRO': 20 },
+    images: IONOS_IMAGES,
+    keyPairs: [{ id: 'scaleway-default', name: 'scaleway-default' }, { id: 'platform-ops', name: 'platform-ops' }],
+    defaultDiskType: 'block-ssd',
+    permissions: ['Instances', 'Private networks', 'Security groups', 'SSH keys', 'Images', 'Billing'],
+    networkPolicy: 'Security group SSH + HTTPS',
+    tagProvider: 'scaleway',
+    currencyHint: '~€5/mes',
+  },
+}
 
 const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
   const parts = raw
@@ -287,7 +585,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   readonly launchProgress = signal<CloudLaunchProgressState | null>(null)
   readonly activeStep = signal<CloudLaunchStepId>('provider')
   readonly launchProviders = LAUNCH_PROVIDERS
-  readonly selectedProviderSlug = signal<CloudSlug | 'ionos' | null>(null)
+  readonly selectedProviderSlug = signal<LaunchProviderSlug | null>(null)
   readonly studioAccounts = signal<{ id: string; name: string; defaultRegion?: string }[]>([])
   readonly selectedStudioAccountId = signal('')
   readonly launchedResource = signal<LaunchedResource | null>(null)
@@ -295,6 +593,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   readonly deleting = signal(false)
   readonly testResult = signal('')
   readonly launchLogLines = signal<string[]>([])
+  readonly createdDependencies = signal<string[]>([])
   readonly imageSearch = signal('')
   readonly typeSearch = signal('')
   readonly imageSection = signal<AwsImageSectionId>('quick_start')
@@ -324,11 +623,20 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
   readonly stepIndex = computed(() => this.steps().findIndex((s) => s.id === this.activeStep()))
   readonly currentStepLabel = computed(() => this.steps()[this.stepIndex()]?.label ?? '')
-  readonly isIonos = computed(() => this.selectedProviderSlug() === 'ionos')
+  readonly isVpsProvider = computed(() => isVpsLaunchSlug(this.selectedProviderSlug() ?? ''))
+  readonly currentVpsCatalog = computed(() => {
+    const slug = this.selectedProviderSlug()
+    return VPS_PROVIDER_CATALOGS[slug && isVpsLaunchSlug(slug) ? slug : 'ionos']
+  })
+  readonly launchProviderTitle = computed(() => {
+    const slug = this.selectedProviderSlug()
+    if (slug && isVpsLaunchSlug(slug)) return VPS_PROVIDER_CATALOGS[slug].label
+    return this.launchProviders.find((p) => p.slug === slug)?.label ?? String(this.effectiveData().provider)
+  })
   readonly effectiveSlug = computed((): CloudSlug => {
     if (this.data?.slug) return this.data.slug
     const p = this.selectedProviderSlug()
-    if (p === 'ionos') return 'clouding'
+    if (p && isVpsLaunchSlug(p)) return 'clouding'
     return (p ?? 'aws') as CloudSlug
   })
   readonly effectiveData = computed((): CloudLaunchWizardData => {
@@ -339,7 +647,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       accountId: acc?.id ?? '',
       accountName: acc?.name ?? 'Sin cuenta',
       provider: slugToProvider(slug),
-      slug: slug === 'ionos' ? 'clouding' : (slug as CloudSlug),
+      slug: isVpsLaunchSlug(slug) ? 'clouding' : (slug as CloudSlug),
       defaultRegion: acc?.defaultRegion,
     }
   })
@@ -400,9 +708,26 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     return null
   })
 
+  readonly localValidationErrors = computed(() => {
+    const v = this.form.getRawValue()
+    const errors: string[] = []
+    if (!this.effectiveData().accountId) errors.push('cuenta')
+    if (!v.region) errors.push('region')
+    if (!v.availabilityZone) errors.push(this.isVpsProvider() ? 'datacenter' : 'zona')
+    if (!this.isVpsProvider() && !v.subnetId) errors.push(this.options().subnetLabel)
+    if (!this.isVpsProvider() && !v.securityGroupId) errors.push(this.theme().sgLabel)
+    if (!v.keyPair) errors.push(this.options().keyPairLabel)
+    if (!v.name?.trim()) errors.push('nombre')
+    if (!v.instanceType) errors.push(this.isVpsProvider() ? 'plan VPS' : this.options().reviewLabels.type)
+    if (!v.imageId) errors.push(this.isVpsProvider() ? 'sistema operativo' : this.options().reviewLabels.image)
+    if (!v.diskType || (v.diskGb ?? 0) < 8) errors.push('disco')
+    return errors
+  })
+
   readonly canLaunch = computed(() => {
     const pf = this.preflight()
     if (this.preflightLoading()) return false
+    if (this.localValidationErrors().length) return false
     if (pf) return pf.valid
     return this.form.valid && this.subnetIssue()?.level !== 'error'
   })
@@ -485,19 +810,19 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     return {
       hourly: labels.hourly,
       monthly: labels.monthly,
-      hint: this.isIonos()
-        ? 'Estimación mensual de VPS IONOS con disco incluido.'
+      hint: this.isVpsProvider()
+        ? `Estimación mensual de ${this.launchProviderTitle()} con disco incluido.`
         : 'Estimación on-demand, sin descuentos, impuestos ni tráfico saliente.',
     }
   })
 
-  readonly ionosPlansForForm = computed(() =>
+  readonly vpsPlansForForm = computed(() =>
     this.types().map((t) => ({
       id: t.id,
       label: `${t.name} - ${t.vcpus ?? '?'} vCPU · ${t.memoryGb ?? '?'} GB`,
       cpu: t.vcpus ?? 2,
       ram: t.memoryGb ?? 4,
-      disk: IONOS_PLAN_DISK_GB[t.id] ?? this.form.value.diskGb ?? 80,
+      disk: this.currentVpsCatalog().diskByPlan[t.id] ?? this.form.value.diskGb ?? 80,
     })),
   )
 
@@ -528,7 +853,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     if (this.options().resourceGroups?.length && rl.resourceGroup) {
       rows.splice(6, 0, { label: rl.resourceGroup, value: v.resourceGroup || '—', mono: false })
     }
-    if (this.isIonos()) {
+    if (this.isVpsProvider()) {
       rows.splice(3, 0, { label: 'CPU', value: `${v.cpuCores ?? '—'} vCPU`, mono: false })
       rows.splice(4, 0, { label: 'RAM', value: `${v.ramGb ?? '—'} GB`, mono: false })
       rows.splice(5, 0, { label: 'Datacenter', value: v.availabilityZone || '—', mono: false })
@@ -637,6 +962,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.launchedResource.set(null)
     this.launchProgress.set(null)
     this.launchLogLines.set([])
+    this.createdDependencies.set([])
     const d = this.effectiveData()
     const opts = cloudLaunchOptions(this.effectiveSlug())
     this.form.patchValue({
@@ -652,8 +978,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     })
     this.realtime.connect()
     this.realtime.on('instance.launch.progress', this.progressHandler)
-    if (normalized === 'ionos') {
-      this.loadIonosAccountAndCatalog()
+    if (isVpsLaunchSlug(normalized)) {
+      this.loadVpsAccountAndCatalog()
     } else {
       this.loadStudioAccounts()
     }
@@ -662,8 +988,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   loadStudioAccounts = (): void => {
     const slug = this.selectedProviderSlug()
     if (!slug) return
-    if (slug === 'ionos') {
-      this.loadIonosAccountAndCatalog()
+    if (isVpsLaunchSlug(slug)) {
+      this.loadVpsAccountAndCatalog()
       return
     }
     const provider = slugToProvider(slug)
@@ -707,7 +1033,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       vpcId: '',
     })
     this.preflight.set(null)
-    if (this.isIonos()) this.loadIonosAccountAndCatalog()
+    if (this.isVpsProvider()) this.loadVpsAccountAndCatalog()
     else {
       this.loadAccountValidation()
       this.loadRegions()
@@ -719,11 +1045,11 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   }
 
   loadAccountValidation = (): void => {
-    if (this.isIonos()) {
+    if (this.isVpsProvider()) {
       this.accountLoading.set(false)
       this.accountValid.set(true)
-      this.accountMessage.set('Cuenta IONOS lista para crear VPS desde AI Infra Studio')
-      this.accountPermissions.set(['Datacenters', 'Planes VPS', 'Imagenes', 'SSH keys', 'Billing'])
+      this.accountMessage.set(`${this.launchProviderTitle()} listo para crear servidores desde AI Infra Studio`)
+      this.accountPermissions.set(this.currentVpsCatalog().permissions)
       return
     }
     const d = this.effectiveData()
@@ -751,8 +1077,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   }
 
   loadRegions = (): void => {
-    if (this.isIonos()) {
-      this.loadIonosAccountAndCatalog()
+    if (this.isVpsProvider()) {
+      this.loadVpsAccountAndCatalog()
       return
     }
     const d = this.effectiveData()
@@ -772,11 +1098,13 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   loadAvailabilityZones = (): void => {
     const region = this.form.value.region ?? ''
     if (!region) return
-    if (this.isIonos()) {
+    if (this.isVpsProvider()) {
       const zones = region === 'de/txl' ? ['txl1'] : region === 'es/mad' ? ['mad1'] : ['fra1', 'fra2']
-      this.availabilityZones.set(zones)
-      if (!this.form.value.availabilityZone || !zones.includes(this.form.value.availabilityZone)) {
-        this.form.patchValue({ availabilityZone: zones[0] })
+      const catalogZones = this.currentVpsCatalog().datacenters
+      const resolvedZones = catalogZones.length ? catalogZones : zones
+      this.availabilityZones.set(resolvedZones)
+      if (!this.form.value.availabilityZone || !resolvedZones.includes(this.form.value.availabilityZone)) {
+        this.form.patchValue({ availabilityZone: resolvedZones[0] })
       }
       this.azLoading.set(false)
       return
@@ -800,7 +1128,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   }
 
   onRegionChange = (): void => {
-    if (this.isIonos()) {
+    if (this.isVpsProvider()) {
       this.loadAvailabilityZones()
       this.preflight.set(null)
       return
@@ -839,8 +1167,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   }
 
   loadCatalog = (): void => {
-    if (this.isIonos()) {
-      this.applyIonosCatalogDefaults()
+    if (this.isVpsProvider()) {
+      this.applyVpsCatalogDefaults()
       return
     }
     const d = this.effectiveData()
@@ -851,7 +1179,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     const regionKey = region || 'default'
     this.catalogLoading.set(true)
 
-    let pending = 4
+    let pending = 5
     const done = (): void => {
       pending -= 1
       if (pending <= 0) this.catalogLoading.set(false)
@@ -935,31 +1263,48 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
           const list = (rows as { id: string; name: string }[]) ?? []
           this.keyPairs.set(list)
           if (!this.form.value.keyPair && list[0]) this.form.patchValue({ keyPair: list[0].name })
+          done()
         },
-        error: () => this.keyPairs.set([]),
+        error: () => {
+          this.keyPairs.set([])
+          done()
+        },
       })
   }
 
   runPreflight = (): void => {
     const payload = this.buildLaunchPayload()
     if (!payload) return
-    if (this.isIonos()) {
+    const missing = this.localValidationErrors()
+    if (missing.length) {
+      this.preflight.set({
+        valid: false,
+        checks: missing.map((field) => ({
+          id: `missing-${field}`,
+          level: 'error',
+          message: `Falta completar ${field}`,
+          suggestion: 'Puedes seleccionar un recurso existente o crearlo inline desde el wizard.',
+        })),
+      })
+      return
+    }
+    if (this.isVpsProvider()) {
       this.preflight.set({
         valid: true,
         checks: [
-          { id: 'ionos-account', level: 'ok', message: 'Cuenta IONOS preparada' },
-          { id: 'ionos-plan', level: 'ok', message: `Plan ${payload.instanceType} disponible en ${payload.region}` },
-          { id: 'ionos-cost', level: 'ok', message: `Coste estimado ${this.costHint()}` },
+          { id: 'vps-account', level: 'ok', message: `${this.launchProviderTitle()} preparado` },
+          { id: 'vps-plan', level: 'ok', message: `Plan ${payload.instanceType} disponible en ${payload.region}` },
+          { id: 'vps-cost', level: 'ok', message: `Coste estimado ${this.costHint()}` },
         ],
       })
       this.activity.record({
-        provider: 'IONOS',
+        provider: this.activityProvider(),
         action: 'preflight',
         status: 'success',
         resourceName: payload.name,
         region: payload.region,
         zone: payload.availabilityZone,
-        message: `Preflight IONOS OK para ${payload.name}`,
+        message: `Preflight ${this.launchProviderTitle()} OK para ${payload.name}`,
       })
       return
     }
@@ -1032,7 +1377,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
 
   private buildLaunchPayload = (): LaunchPayload | null => {
     const v = this.form.getRawValue()
-    const imageId = this.isIonos() ? (v.imageId ?? '').trim() : sanitizeAmiId(v.imageId ?? '')
+    const imageId = this.effectiveSlug() === 'aws' ? sanitizeAmiId(v.imageId ?? '') : (v.imageId ?? '').trim()
     if (!v.name || !v.region || !v.instanceType || !imageId) return null
     const sgIds = v.securityGroupId ? [v.securityGroupId] : undefined
     return {
@@ -1078,14 +1423,14 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
 
   selectType = (id: string): void => {
     this.form.patchValue({ instanceType: id })
-    if (this.isIonos()) {
-      const plan = IONOS_PLANS.find((p) => p.id === id)
+    if (this.isVpsProvider()) {
+      const plan = this.currentVpsCatalog().plans.find((p) => p.id === id)
       if (plan) {
         this.form.patchValue({
           cpuCores: plan.vcpus ?? 2,
           ramGb: plan.memoryGb ?? 4,
-          diskGb: IONOS_PLAN_DISK_GB[id] ?? this.form.value.diskGb ?? 80,
-          diskType: 'ssd-nvme',
+          diskGb: this.currentVpsCatalog().diskByPlan[id] ?? this.form.value.diskGb ?? 80,
+          diskType: this.currentVpsCatalog().defaultDiskType,
         })
       }
     }
@@ -1111,7 +1456,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     }
     if (step === 'network') {
       const subnetOk = this.effectiveSlug() !== 'aws' || !!v.subnetId || !this.subnetIssue()
-      return subnetOk && this.subnetIssue()?.level !== 'error'
+      const cloudNetworkOk = this.isVpsProvider() || (!!v.subnetId && !!v.securityGroupId)
+      return subnetOk && cloudNetworkOk && this.subnetIssue()?.level !== 'error'
     }
     if (step === 'compute') {
       return !!v.instanceType && !!v.name?.trim() && !!v.diskType && (v.diskGb ?? 0) >= 8
@@ -1195,7 +1541,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   advanceBlocker = (): string => {
     const step = this.activeStep()
     const v = this.form.getRawValue()
-    if (step === 'provider' && !this.selectedProviderSlug()) return 'Selecciona AWS, GCP o IONOS para continuar.'
+    if (step === 'provider' && !this.selectedProviderSlug()) return 'Selecciona un proveedor cloud o VPS para continuar.'
     if (step === 'account') {
       if (this.accountLoading()) return 'Validando la cuenta seleccionada.'
       if (!this.effectiveData().accountId) return `Selecciona o conecta una cuenta ${this.activityProvider()}.`
@@ -1203,21 +1549,29 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     }
     if (step === 'region') {
       if (!v.region) return 'Falta seleccionar region.'
-      if (!v.availabilityZone) return this.isIonos() ? 'Falta seleccionar datacenter.' : 'Falta seleccionar zona.'
+      if (!v.availabilityZone) return this.isVpsProvider() ? 'Falta seleccionar datacenter.' : 'Falta seleccionar zona.'
       if (this.subnetIssue()?.level === 'error') return this.subnetIssue()?.message ?? 'La configuracion de red tiene errores.'
     }
-    if (step === 'network' && this.subnetIssue()?.level === 'error') return this.subnetIssue()?.message ?? 'Selecciona una subnet valida.'
+    if (step === 'network') {
+      if (this.subnetIssue()?.level === 'error') return this.subnetIssue()?.message ?? 'Selecciona una subnet valida.'
+      if (!this.isVpsProvider() && !v.subnetId) return `Selecciona o crea ${this.options().subnetLabel}.`
+      if (!this.isVpsProvider() && !v.securityGroupId) return `Selecciona o crea ${this.theme().sgLabel}.`
+    }
     if (step === 'compute') {
       if (!v.name?.trim()) return 'Falta el nombre del recurso.'
-      if (!v.instanceType) return this.isIonos() ? 'Falta seleccionar plan VPS.' : 'Falta seleccionar tipo de instancia.'
+      if (!v.instanceType) return this.isVpsProvider() ? 'Falta seleccionar plan VPS.' : 'Falta seleccionar tipo de instancia.'
       if (!v.diskType) return 'Falta seleccionar tipo de disco.'
       if ((v.diskGb ?? 0) < 8) return 'El disco debe tener al menos 8 GB.'
     }
     if (step === 'image') {
-      if (!v.imageId) return this.isIonos() ? 'Falta seleccionar sistema operativo.' : 'Falta seleccionar imagen.'
+      if (!v.imageId) return this.isVpsProvider() ? 'Falta seleccionar sistema operativo.' : 'Falta seleccionar imagen.'
       if (!this.images().length) return 'No hay imagenes disponibles para la region seleccionada.'
     }
-    if (step === 'review' && !this.canLaunch()) return 'Ejecuta o corrige el preflight antes de lanzar.'
+    if (step === 'review' && !this.canLaunch()) {
+      const missing = this.localValidationErrors()
+      if (missing.length) return `Falta completar: ${missing.join(', ')}.`
+      return 'Ejecuta o corrige el preflight antes de lanzar.'
+    }
     return ''
   }
 
@@ -1301,6 +1655,97 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.toast.success('VPC temporal de prueba preparada')
   }
 
+  createInlineDependency = (kind: 'network' | 'subnet' | 'security' | 'key' | 'resourceGroup'): void => {
+    const slug = this.effectiveSlug()
+    const idSuffix = Date.now().toString(36).slice(-5)
+    const provider = this.launchProviderTitle()
+    const region = this.form.value.region || this.currentVpsCatalog().defaultRegion || 'global'
+    const zone = this.form.value.availabilityZone || this.availabilityZones()[0] || region
+
+    if (kind === 'resourceGroup') {
+      const name = `rg-ais-${idSuffix}`
+      this.form.patchValue({ resourceGroup: name })
+      this.rememberDependency(`${provider}: resource group ${name}`)
+      return
+    }
+
+    if (kind === 'key') {
+      const name = `${this.activityProvider().toLowerCase()}-ais-key-${idSuffix}`
+      const row = { id: name, name }
+      this.keyPairs.update((rows) => [row, ...rows.filter((k) => k.name !== name)])
+      this.form.patchValue({ keyPair: name })
+      this.rememberDependency(`${provider}: SSH key ${name}`)
+      return
+    }
+
+    if (kind === 'security') {
+      const name =
+        slug === 'azure'
+          ? `nsg-ais-${idSuffix}`
+          : slug === 'gcp'
+            ? `fw-ais-${idSuffix}`
+            : this.isVpsProvider()
+              ? `${this.currentVpsCatalog().tagProvider}-firewall-${idSuffix}`
+              : `sg-ais-${idSuffix}`
+      const row = { id: name, name, vpcId: this.form.value.vpcId || undefined }
+      this.securityGroups.update((rows) => [row, ...rows.filter((sg) => sg.id !== name)])
+      this.form.patchValue({ securityGroupId: name })
+      this.rememberDependency(`${provider}: ${this.theme().sgLabel} ${name}`)
+      return
+    }
+
+    const networkId =
+      slug === 'azure'
+        ? `vnet-ais-${idSuffix}`
+        : slug === 'gcp'
+          ? `vpc-network-ais-${idSuffix}`
+          : this.isVpsProvider()
+            ? `${this.currentVpsCatalog().tagProvider}-network-${idSuffix}`
+            : `vpc-ais-${idSuffix}`
+    const subnetId =
+      slug === 'azure'
+        ? `snet-ais-${idSuffix}`
+        : slug === 'gcp'
+          ? `subnetwork-ais-${idSuffix}`
+          : this.isVpsProvider()
+            ? `${this.currentVpsCatalog().tagProvider}-subnet-${idSuffix}`
+            : `subnet-ais-${idSuffix}`
+    const network: NetworkRow = {
+      id: networkId,
+      name: this.options().vpcLabel.includes('/') ? 'ais-launch-network' : networkId,
+      type: 'vpc',
+      cidr: '10.42.0.0/16',
+    }
+    const subnet: NetworkRow = {
+      id: subnetId,
+      name: this.options().subnetLabel.includes('privada') ? 'ais-private-network' : 'ais-launch-subnet',
+      type: 'subnet',
+      cidr: '10.42.1.0/24',
+      availabilityZone: zone,
+      vpcId: networkId,
+      mapPublicIpOnLaunch: this.form.value.publicIp ?? true,
+      isDefaultForAz: true,
+    }
+    if (kind === 'network') {
+      this.allNetworks.update((rows) => [network, subnet, ...rows])
+      this.form.patchValue({ vpcId: networkId, subnetId })
+      this.rememberDependency(`${provider}: ${this.options().vpcLabel} ${network.name}`)
+    } else {
+      const vpcId = this.form.value.vpcId || networkId
+      const finalSubnet = { ...subnet, vpcId }
+      this.allNetworks.update((rows) => [finalSubnet, ...(this.form.value.vpcId ? rows : [network, ...rows])])
+      this.form.patchValue({ vpcId, subnetId: finalSubnet.id })
+      this.rememberDependency(`${provider}: ${this.options().subnetLabel} ${finalSubnet.name}`)
+    }
+  }
+
+  private rememberDependency = (message: string): void => {
+    this.createdDependencies.update((items) => [message, ...items.filter((i) => i !== message)].slice(0, 8))
+    this.preflight.set(null)
+    this.appendLaunchLog(`Dependencia preparada inline: ${message}`)
+    this.toast.success('Dependencia preparada y seleccionada')
+  }
+
   private onLaunchSuccess = (res?: Record<string, unknown>): void => {
     const payload = this.buildLaunchPayload()
     const fallbackId = `ais-${this.activityProvider().toLowerCase()}-${Date.now()}`
@@ -1325,8 +1770,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     const payload = this.buildLaunchPayload()
     const d = this.effectiveData()
     if (!payload || !d.accountId || !this.canLaunch()) return
-    if (this.isIonos()) {
-      this.handleIonosLaunch(payload)
+    if (this.isVpsProvider()) {
+      this.handleVpsLaunch(payload)
       return
     }
     this.launching.set(true)
@@ -1490,41 +1935,48 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     })
   }
 
-  private loadIonosAccountAndCatalog = (): void => {
+  private loadVpsAccountAndCatalog = (): void => {
+    const catalog = this.currentVpsCatalog()
+    const slug = this.selectedProviderSlug() ?? 'ionos'
     this.accountLoading.set(false)
     this.catalogLoading.set(false)
     this.azLoading.set(false)
-    this.studioAccounts.set([{ id: 'ionos-local-account', name: 'Cuenta IONOS Produccion', defaultRegion: 'de/fra' }])
-    this.selectedStudioAccountId.set('ionos-local-account')
+    this.studioAccounts.set([{ id: `${slug}-local-account`, name: catalog.accountName, defaultRegion: catalog.defaultRegion }])
+    this.selectedStudioAccountId.set(`${slug}-local-account`)
     this.accountValid.set(true)
-    this.accountMessage.set('Cuenta IONOS lista para crear VPS europeos')
-    this.accountPermissions.set(['Datacenters', 'Planes VPS', 'Imagenes', 'SSH keys', 'Billing'])
-    this.applyIonosCatalogDefaults()
+    this.accountMessage.set(`${catalog.label} listo para crear servidores`)
+    this.accountPermissions.set(catalog.permissions)
+    this.applyVpsCatalogDefaults()
   }
 
-  private applyIonosCatalogDefaults = (): void => {
-    this.regions.set(IONOS_REGIONS)
-    this.availabilityZones.set(IONOS_DATACENTERS)
-    this.types.set(IONOS_PLANS)
-    this.images.set(IONOS_IMAGES)
-    this.keyPairs.set(IONOS_KEY_PAIRS)
-    this.securityGroups.set([{ id: 'ssh-https', name: 'SSH + HTTPS' }])
+  private applyVpsCatalogDefaults = (): void => {
+    const catalog = this.currentVpsCatalog()
+    this.regions.set(catalog.regions)
+    this.availabilityZones.set(catalog.datacenters)
+    this.types.set(catalog.plans)
+    this.images.set(catalog.images)
+    this.keyPairs.set(catalog.keyPairs)
+    this.securityGroups.set([{ id: 'ssh-https', name: catalog.networkPolicy }])
     this.allNetworks.set([])
-    const currentPlan = IONOS_PLANS.find((p) => p.id === this.form.value.instanceType) ?? IONOS_PLANS[1]
+    const currentPlan =
+      catalog.plans.find((p) => p.id === this.form.value.instanceType) ??
+      catalog.plans[1] ??
+      catalog.plans[0] ??
+      { id: 'vps-m', name: 'VPS M', vcpus: 2, memoryGb: 4, pricePerHour: 0.024 }
     this.form.patchValue({
-      region: this.form.value.region || 'de/fra',
-      availabilityZone: this.form.value.availabilityZone || 'fra1',
+      region: this.form.value.region || catalog.defaultRegion,
+      availabilityZone: this.form.value.availabilityZone || catalog.datacenters[0],
       instanceType: this.form.value.instanceType || currentPlan.id,
-      imageId: this.form.value.imageId || IONOS_IMAGES[0].id,
-      keyPair: this.form.value.keyPair || IONOS_KEY_PAIRS[0].name,
-      diskType: this.form.value.diskType || 'ssd-nvme',
+      imageId: this.form.value.imageId || catalog.images[0].id,
+      keyPair: this.form.value.keyPair || catalog.keyPairs[0].name,
+      diskType: this.form.value.diskType || catalog.defaultDiskType,
       diskGb: this.form.value.diskGb && this.form.value.diskGb >= 20
         ? this.form.value.diskGb
-        : IONOS_PLAN_DISK_GB[currentPlan.id] ?? 80,
+        : catalog.diskByPlan[currentPlan.id] ?? 80,
       cpuCores: currentPlan.vcpus ?? 2,
       ramGb: currentPlan.memoryGb ?? 4,
-      name: this.form.value.name || `ionos-vps-${new Date().toISOString().slice(5, 10).replace('-', '')}`,
-      tags: this.form.value.tags || 'created_by=ai-infra-studio,provider=ionos,auto_delete=true',
+      name: this.form.value.name || `${catalog.tagProvider}-srv-${new Date().toISOString().slice(5, 10).replace('-', '')}`,
+      tags: this.form.value.tags || `created_by=ai-infra-studio,provider=${catalog.tagProvider},auto_delete=true`,
     })
   }
 
@@ -1533,25 +1985,27 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.launchLogLines.update((lines) => [...lines.slice(-11), `[${stamp}] ${line}`])
   }
 
-  private handleIonosLaunch = (payload: LaunchPayload): void => {
+  private handleVpsLaunch = (payload: LaunchPayload): void => {
+    const provider = this.activityProvider()
+    const catalog = this.currentVpsCatalog()
     this.launching.set(true)
-    this.appendLaunchLog(`Reservando ${payload.instanceType} en IONOS ${payload.region}`)
+    this.appendLaunchLog(`Reservando ${payload.instanceType} en ${catalog.label} ${payload.region}`)
     this.activity.record({
-      provider: 'IONOS',
+      provider,
       action: 'launch',
       status: 'running',
       resourceName: payload.name,
       region: payload.region,
       zone: payload.availabilityZone,
-      message: `Creacion VPS IONOS iniciada para ${payload.name}`,
+      message: `Creacion ${catalog.label} iniciada para ${payload.name}`,
     })
     this.launchProgress.set({
       percent: 20,
-      step: 'Reservando plan VPS IONOS',
+      step: `Reservando plan ${catalog.label}`,
       log: `plan=${payload.instanceType} datacenter=${payload.availabilityZone}`,
       status: 'running',
       instanceName: payload.name,
-      provider: 'IONOS',
+      provider,
       region: payload.region,
     })
     setTimeout(() => {
@@ -1561,36 +2015,36 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
         log: `image=${payload.imageId} sshKey=${payload.keyPair ?? 'default'}`,
         status: 'running',
         instanceName: payload.name,
-        provider: 'IONOS',
+        provider,
         region: payload.region,
       })
       this.appendLaunchLog(`Instalando ${payload.imageId} y aplicando clave SSH`)
     }, 450)
     setTimeout(() => {
-      const id = `ionos-${Date.now()}`
+      const id = `${catalog.tagProvider}-${Date.now()}`
       const octet = 30 + Math.floor(Math.random() * 160)
       const resource: LaunchedResource = {
         id,
         name: payload.name,
-        provider: 'IONOS',
+        provider,
         region: payload.region,
         status: 'RUNNING',
         publicIp: `203.0.113.${octet}`,
       }
       this.launchProgress.set({
         percent: 100,
-        step: 'VPS IONOS operativo',
+        step: `${catalog.label} operativo`,
         log: `${payload.name} disponible para pruebas`,
         status: 'success',
         instanceName: payload.name,
-        provider: 'IONOS',
+        provider,
         region: payload.region,
       })
       this.launching.set(false)
       this.launchedResource.set(resource)
       this.persistLaunchedResource(resource)
-      this.appendLaunchLog(`VPS ${payload.name} operativo en ${resource.publicIp}`)
-      this.toast.success(`VPS ${payload.name} creado`)
+      this.appendLaunchLog(`${catalog.label} ${payload.name} operativo en ${resource.publicIp}`)
+      this.toast.success(`${catalog.label} ${payload.name} creado`)
       if (this.studioMode) this.activeStep.set('test')
     }, 1100)
   }

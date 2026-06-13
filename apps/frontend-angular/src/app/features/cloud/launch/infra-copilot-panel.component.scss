@@ -51,3 +51,45 @@
   font-size: 0.78rem;
   &--danger { background: var(--danger-soft); color: var(--danger); }
 }
+
+.copilot__recommendations,
+.copilot__deps {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border-soft));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 6%, #fff);
+  strong { color: var(--text-main); font-size: 0.8rem; }
+  p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+}
+
+.copilot__deps {
+  background: color-mix(in srgb, var(--success) 8%, #fff);
+  ul {
+    display: grid;
+    gap: 0.32rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+    color: var(--text-main);
+    font-size: 0.74rem;
+    line-height: 1.35;
+  }
+  mat-icon {
+    color: var(--success);
+    font-size: 0.95rem;
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+}

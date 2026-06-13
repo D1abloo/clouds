@@ -32,7 +32,22 @@ import { slideInRight } from '../../../shared/animations/ui-motion.animations'
         <li><span>Imagen</span><strong>{{ imageName() || '—' }}</strong></li>
         <li><span>Disco</span><strong>{{ diskGb() ? diskGb() + ' GB · ' + (diskType() || 'default') : '—' }}</strong></li>
         <li><span>Coste est.</span><strong>{{ costHint() || '—' }}</strong></li>
+        <li><span>Validaciones</span><strong>{{ validationCount() ? validationCount() + ' checks' : 'Pendiente' }}</strong></li>
       </ul>
+      <section class="copilot__recommendations" aria-label="Recomendaciones del lanzamiento">
+        <strong>Acciones sugeridas</strong>
+        <p>{{ recommendation() }}</p>
+      </section>
+      @if (dependencies().length) {
+        <section class="copilot__deps" aria-label="Dependencias creadas">
+          <strong>Dependencias preparadas</strong>
+          <ul>
+            @for (dep of dependencies(); track dep) {
+              <li><mat-icon>check_circle</mat-icon>{{ dep }}</li>
+            }
+          </ul>
+        </section>
+      }
       @if (alertTitle()) {
         <div class="copilot__alert" [class.copilot__alert--danger]="alertDanger()">
           <mat-icon>{{ alertDanger() ? 'error' : 'info' }}</mat-icon>
@@ -81,4 +96,14 @@ export class InfraCopilotPanelComponent {
   readonly publicIp = input(false)
   readonly alertTitle = input('')
   readonly alertDanger = input(false)
+  readonly dependencies = input<string[]>([])
+  readonly validationCount = input(0)
+
+  readonly recommendation = (): string => {
+    if (this.alertTitle()) return 'Resuelve la alerta de red antes de lanzar o crea la dependencia desde el paso Red.'
+    if (!this.region()) return 'Selecciona proveedor, cuenta y región para precargar catálogos en paralelo.'
+    if (!this.network()) return 'Crea o selecciona red/subnet para que el preflight pueda validar conectividad.'
+    if (!this.imageName() || !this.instanceType()) return 'Completa compute e imagen antes de validar configuración.'
+    return 'Configuración lista para preflight. Revisa coste, claves y reglas de acceso antes de lanzar.'
+  }
 }

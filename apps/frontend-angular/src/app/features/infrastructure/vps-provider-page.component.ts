@@ -89,12 +89,10 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
             <mat-icon>sync</mat-icon>
             Actualizar ahora
           </button>
-          @if (isIonos()) {
-            <button mat-flat-button color="primary" type="button" (click)="handleCreateIonosVps()">
-              <mat-icon>rocket_launch</mat-icon>
-              Crear VPS IONOS
-            </button>
-          }
+          <button mat-flat-button color="primary" type="button" (click)="handleCreateVps()">
+            <mat-icon>rocket_launch</mat-icon>
+            Crear servidor {{ cfg().title }}
+          </button>
           <button mat-flat-button color="primary" type="button" (click)="handleConnectAccount()">
             <mat-icon>link</mat-icon>
             Conectar cuenta
@@ -168,12 +166,10 @@ const mapServerRow = (host: VpsHost): VpsServerRow => {
               <section class="vps-panel">
                 <header class="vps-panel__head">
                   <h3><mat-icon>dns</mat-icon> Inventario de servidores</h3>
-                  @if (isIonos()) {
-                    <button mat-stroked-button type="button" (click)="handleCreateIonosVps()">
-                      <mat-icon>rocket_launch</mat-icon>
-                      Crear VPS IONOS
-                    </button>
-                  }
+                  <button mat-stroked-button type="button" (click)="handleCreateVps()">
+                    <mat-icon>rocket_launch</mat-icon>
+                    Crear servidor
+                  </button>
                 </header>
                 <div class="vps-table-wrap">
                   <table class="vps-table">
@@ -365,8 +361,7 @@ export class VpsProviderPageComponent implements OnInit {
   readonly cfg = computed(() => vpsProviderConfig(this.slug()))
   readonly sections = computed(() => vpsSectionsFor(this.slug()))
   readonly lastSyncLabel = computed(() => formatLastSync(this.liveSync.lastSyncAt()))
-  readonly isIonos = computed(() => this.slug() === 'ionos')
-  readonly emptyActionLabel = computed(() => (this.isIonos() ? 'Crear VPS IONOS' : 'Añadir servidor VPS'))
+  readonly emptyActionLabel = computed(() => `Crear servidor ${this.cfg().title}`)
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -442,16 +437,12 @@ export class VpsProviderPageComponent implements OnInit {
     void this.router.navigate(['/admin/infraestructura/vps/nuevo'])
   }
 
-  handleCreateIonosVps = (): void => {
-    void this.router.navigate(['/automation/ai-infra-studio'], { queryParams: { provider: 'ionos' } })
+  handleCreateVps = (): void => {
+    void this.router.navigate(['/automation/ai-infra-studio'], { queryParams: { provider: this.slug() } })
   }
 
   handlePrimaryVpsAction = (): void => {
-    if (this.isIonos()) {
-      this.handleCreateIonosVps()
-      return
-    }
-    this.handleAddVps()
+    this.handleCreateVps()
   }
 
   handleConnectAccount = (): void => {

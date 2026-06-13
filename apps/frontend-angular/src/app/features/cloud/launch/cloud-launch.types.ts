@@ -23,8 +23,11 @@ export type CloudLaunchWizardData = {
   preselectedImageId?: string
 }
 
+export type VpsLaunchSlug = 'ionos' | 'digitalocean' | 'hetzner' | 'linode' | 'ovh' | 'vultr' | 'scaleway'
+export type LaunchProviderSlug = CloudSlug | VpsLaunchSlug
+
 export type ProviderCard = {
-  slug: CloudSlug | 'ionos'
+  slug: LaunchProviderSlug
   provider: CloudProvider | 'IONOS_VPS'
   label: string
   tagline: string

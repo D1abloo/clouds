@@ -1,7 +1,18 @@
 import { Injectable, signal } from '@angular/core'
 import type { Instance } from '../models/api.models'
 
-export type LaunchActivityProvider = 'AWS' | 'GCP' | 'AZURE' | 'CLOUDING' | 'IONOS'
+export type LaunchActivityProvider =
+  | 'AWS'
+  | 'GCP'
+  | 'AZURE'
+  | 'CLOUDING'
+  | 'IONOS'
+  | 'DIGITALOCEAN'
+  | 'HETZNER'
+  | 'LINODE'
+  | 'OVH'
+  | 'VULTR'
+  | 'SCALEWAY'
 export type LaunchActivityAction = 'preflight' | 'launch' | 'test' | 'delete' | 'log'
 export type LaunchActivityStatus = 'running' | 'success' | 'error' | 'info' | 'terminated'
 
@@ -133,7 +144,7 @@ export class CloudLaunchActivityService {
       status: r.status,
       instanceType: r.instanceType,
       publicIp: r.publicIp,
-      isVps: r.provider === 'IONOS',
+      isVps: !['AWS', 'GCP', 'AZURE', 'CLOUDING'].includes(r.provider),
       cpuCores: r.cpuCores,
       ramGb: r.ramGb,
       diskGb: r.diskGb,

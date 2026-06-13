@@ -11,7 +11,7 @@ import { MatSelectModule } from '@angular/material/select'
   imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   template: `
     <div class="lf" [formGroup]="form()">
-      <h4 class="lf__title">IONOS VPS</h4>
+      <h4 class="lf__title">{{ title() }}</h4>
       <div class="lf__grid">
         <mat-form-field appearance="outline">
           <mat-label>Región</mat-label>
@@ -67,7 +67,7 @@ import { MatSelectModule } from '@angular/material/select'
         </mat-form-field>
         <mat-form-field appearance="outline" class="lf__full">
           <mat-label>Nombre del VPS</mat-label>
-          <input matInput formControlName="name" placeholder="ionos-test-01" />
+          <input matInput formControlName="name" [placeholder]="namePlaceholder()" />
         </mat-form-field>
       </div>
     </div>
@@ -80,6 +80,7 @@ import { MatSelectModule } from '@angular/material/select'
   `,
 })
 export class IonosVpsLaunchFormComponent {
+  readonly title = input('IONOS VPS')
   readonly form = input.required<FormGroup>()
   readonly regions = input<{ id: string; name: string }[]>([
     { id: 'de/fra', name: 'Alemania · Frankfurt' },
@@ -100,6 +101,9 @@ export class IonosVpsLaunchFormComponent {
   ])
   readonly keyPairs = input<string[]>(['ionos-default', 'platform-ops'])
   readonly regionChange = output<void>()
+
+  readonly namePlaceholder = (): string =>
+    `${this.title().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'vps'}-01`
 
   applyPlan = (planId: string): void => {
     const plan = this.plans().find((p) => p.id === planId)

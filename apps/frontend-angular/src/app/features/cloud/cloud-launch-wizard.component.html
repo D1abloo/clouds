@@ -6,7 +6,7 @@
   [class.clw--aws]="effectiveSlug() === 'aws'"
   [class.clw--gcp]="effectiveSlug() === 'gcp'"
   [class.clw--clouding]="effectiveSlug() === 'clouding'"
-  [class.clw--ionos]="isIonos()"
+  [class.clw--vps]="isVpsProvider()"
 >
   <header class="clw__hero">
     <div>
@@ -42,7 +42,7 @@
       @switch (activeStep()) {
         @case ('provider') {
           <h3 class="clw__section-title">Selecciona proveedor cloud</h3>
-          <p class="clw__section-hint">Elige AWS EC2, Google Compute Engine o IONOS VPS para iniciar el asistente.</p>
+          <p class="clw__section-hint">Elige AWS, Azure, GCP, Clouding o un proveedor VPS para iniciar el mismo asistente multi-cloud.</p>
           <app-cloud-provider-selector
             [providers]="launchProviders"
             [selected]="selectedProviderSlug()"
@@ -65,7 +65,7 @@
             @if (studioAccounts().length) {
               <div class="clw__form-grid clw__form-grid--account" [formGroup]="form">
                 <mat-form-field appearance="outline" class="clw__span-2">
-                  <mat-label>{{ isIonos() ? 'Cuenta IONOS' : effectiveSlug() === 'gcp' ? 'Cuenta / proyecto GCP' : 'Cuenta cloud' }}</mat-label>
+                  <mat-label>{{ isVpsProvider() ? 'Cuenta VPS' : effectiveSlug() === 'gcp' ? 'Cuenta / proyecto GCP' : effectiveSlug() === 'azure' ? 'Subscription Azure' : 'Cuenta cloud' }}</mat-label>
                   <mat-select [value]="effectiveData().accountId" (selectionChange)="selectStudioAccount($event.value)">
                     @for (a of studioAccounts(); track a.id) {
                       <mat-option [value]="a.id">{{ a.name }} · {{ a.defaultRegion ?? 'sin region' }}</mat-option>
@@ -111,7 +111,7 @@
             [hint]="options().regionSectionHint"
             [region]="form.value.region ?? ''"
             [zone]="form.value.availabilityZone ?? ''"
-            [zoneFallback]="isIonos() ? 'Sin datacenter' : 'Sin zona'"
+            [zoneFallback]="isVpsProvider() ? 'Sin datacenter' : 'Sin zona'"
           >
           @if (catalogLoading() || azLoading()) {
             <app-loading-state message="Cargando regiones y zonas…" />
@@ -133,12 +133,15 @@
                   }
                 </mat-select>
               </mat-form-field>
-              @if (!studioMode && options().resourceGroups?.length) {
+              @if (options().resourceGroups?.length) {
                 <mat-form-field appearance="outline">
                   <mat-label>{{ options().resourceGroupLabel }}</mat-label>
                   <mat-select formControlName="resourceGroup">
                     @for (rg of options().resourceGroups!; track rg) {
                       <mat-option [value]="rg">{{ rg }}</mat-option>
+                    }
+                    @if (form.value.resourceGroup && !options().resourceGroups!.includes(form.value.resourceGroup)) {
+                      <mat-option [value]="form.value.resourceGroup">{{ form.value.resourceGroup }}</mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
@@ -212,12 +215,13 @@
           >
           @if (catalogLoading()) {
             <app-loading-state message="Cargando redes…" />
-          } @else if (isIonos()) {
+          } @else if (isVpsProvider()) {
             <app-ionos-vps-launch-form
+              [title]="launchProviderTitle()"
               [form]="form"
               [regions]="regions()"
               [datacenters]="availabilityZones()"
-              [plans]="ionosPlansForForm()"
+              [plans]="vpsPlansForForm()"
               [images]="images()"
               [keyPairs]="keyPairNames()"
               (regionChange)="onRegionChange()"
@@ -266,8 +270,70 @@
                   }
                 </mat-select>
               </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ theme().sgLabel }}</mat-label>
+                <mat-select formControlName="securityGroupId">
+                  @for (sg of securityGroups(); track sg.id) {
+                    <mat-option [value]="sg.id">{{ sg.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ options().keyPairLabel }}</mat-label>
+                <mat-select formControlName="keyPair">
+                  @for (kp of keyPairs(); track kp.id) {
+                    <mat-option [value]="kp.name">{{ kp.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <div class="clw__toggle-row">
+                <mat-slide-toggle formControlName="publicIp" color="primary">
+                  {{ options().publicIpLabel }}
+                </mat-slide-toggle>
+              </div>
             </div>
           }
+
+          <section class="clw__dependency-panel" aria-label="Crear dependencias inline">
+            <header>
+              <mat-icon>add_link</mat-icon>
+              <div>
+                <strong>Dependencias antes del lanzamiento</strong>
+                <span>Reutiliza recursos existentes o prepara nuevos sin salir del wizard.</span>
+              </div>
+            </header>
+            <div class="clw__dependency-actions">
+              @if (effectiveSlug() === 'azure') {
+                <button mat-stroked-button type="button" (click)="createInlineDependency('resourceGroup')">
+                  <mat-icon>folder_open</mat-icon>
+                  Crear resource group
+                </button>
+              }
+              <button mat-stroked-button type="button" (click)="createInlineDependency('network')">
+                <mat-icon>hub</mat-icon>
+                Crear {{ options().vpcLabel }}
+              </button>
+              <button mat-stroked-button type="button" (click)="createInlineDependency('subnet')">
+                <mat-icon>lan</mat-icon>
+                Crear {{ options().subnetLabel }}
+              </button>
+              <button mat-stroked-button type="button" (click)="createInlineDependency('security')">
+                <mat-icon>shield</mat-icon>
+                Crear {{ theme().sgLabel }}
+              </button>
+              <button mat-stroked-button type="button" (click)="createInlineDependency('key')">
+                <mat-icon>vpn_key</mat-icon>
+                Crear SSH key
+              </button>
+            </div>
+            @if (createdDependencies().length) {
+              <ul class="clw__dependency-list">
+                @for (dep of createdDependencies(); track dep) {
+                  <li><mat-icon>check_circle</mat-icon>{{ dep }}</li>
+                }
+              </ul>
+            }
+          </section>
 
           @if (subnetIssue(); as issue) {
             <app-launch-error-card
@@ -478,7 +544,7 @@
         }
 
         @case ('launch') {
-          <h3 class="clw__section-title">{{ isIonos() ? 'Crear VPS IONOS' : 'Lanzar instancia' }}</h3>
+          <h3 class="clw__section-title">{{ isVpsProvider() ? 'Crear servidor VPS' : 'Lanzar instancia' }}</h3>
           <p class="clw__section-hint">Provisionando recurso en {{ effectiveData().provider }}…</p>
           <app-launch-progress-panel
             [progress]="launchProgress()"
@@ -553,7 +619,7 @@
               (click)="handleLaunch()"
             >
               <mat-icon>rocket_launch</mat-icon>
-              {{ isIonos() ? 'Crear VPS IONOS' : options().launchLabel }}
+              {{ isVpsProvider() ? 'Crear servidor VPS' : options().launchLabel }}
             </button>
           }
         } @else if (activeStep() === 'launch') {
@@ -565,7 +631,7 @@
             (click)="handleLaunch()"
           >
             <mat-icon>rocket_launch</mat-icon>
-            {{ isIonos() ? 'Crear VPS IONOS' : options().launchLabel }}
+            {{ isVpsProvider() ? 'Crear servidor VPS' : options().launchLabel }}
           </button>
         } @else if (activeStep() === 'test') {
           <button mat-flat-button type="button" class="clw__btn-primary" [disabled]="testing()" (click)="handleTest()">
@@ -619,6 +685,8 @@
       [publicIp]="form.value.publicIp ?? false"
       [alertTitle]="subnetIssue()?.title ?? ''"
       [alertDanger]="subnetIssue()?.level === 'error'"
+      [dependencies]="createdDependencies()"
+      [validationCount]="preflight()?.checks?.length ?? 0"
     />
   </div>
 </div>

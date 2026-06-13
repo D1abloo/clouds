@@ -1,6 +1,6 @@
 .cps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(188px, 1fr));
   gap: 0.85rem;
 }
 
@@ -11,8 +11,8 @@
   gap: 0.45rem;
   padding: 1rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-card);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--primary-soft) 32%, #fff));
   cursor: pointer;
   text-align: left;
   color: var(--text-main);
@@ -42,6 +42,7 @@
     background: var(--primary-soft);
   }
   &:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08); }
+  &:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 35%, transparent); outline-offset: 2px; }
 }
 
 .cps__check {

@@ -18,7 +18,7 @@ import type { ProviderCard } from './cloud-launch.types'
           [class.cps__card--on]="selected() === p.slug"
           (click)="selectedChange.emit(p.slug)"
         >
-          <app-brand-logo [logo]="p.logo" size="lg" />
+          <app-brand-logo [logo]="p.logo" size="lg" [active]="selected() === p.slug" [glow]="selected() === p.slug" />
           <strong>{{ p.label }}</strong>
           <span>{{ p.tagline }}</span>
           @if (p.description) {
