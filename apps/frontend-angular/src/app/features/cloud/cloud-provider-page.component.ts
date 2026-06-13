@@ -2601,11 +2601,14 @@ export class CloudProviderPageComponent implements OnInit {
     void this.router.navigate(['/cloud', this.slug(), 'launch'])
   }
 
-  canOpenStudioLaunch = (): boolean => this.slug() === 'aws' || this.slug() === 'gcp'
+  canOpenStudioLaunch = (): boolean =>
+    this.slug() === 'aws' || this.slug() === 'gcp' || this.slug() === 'azure' || this.slug() === 'clouding'
 
   launchActionLabel = (): string => {
     if (this.slug() === 'aws') return 'Lanzar instancia AWS'
     if (this.slug() === 'gcp') return 'Lanzar instancia GCP'
+    if (this.slug() === 'azure') return 'Crear VM Azure'
+    if (this.slug() === 'clouding') return 'Crear servidor Clouding'
     return 'Lanzar instancia'
   }
 

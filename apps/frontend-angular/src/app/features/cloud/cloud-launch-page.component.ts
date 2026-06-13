@@ -106,8 +106,7 @@ export class CloudLaunchPageComponent implements OnInit {
         const acc = rows.find((a) => a.hasCredentials) ?? rows[0]
         if (!acc?.id) {
           this.loading.set(false)
-          this.toast.error('Conecta una cuenta cloud antes de lanzar')
-          void this.router.navigate(['/cloud', slug, 'accounts'])
+          this.toast.info('Conecta una cuenta cloud para habilitar lanzamientos en tiempo real')
           return
         }
         this.wizardData.set({

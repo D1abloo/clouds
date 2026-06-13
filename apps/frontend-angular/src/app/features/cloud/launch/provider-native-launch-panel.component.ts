@@ -222,7 +222,7 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
     </section>
 
     <ng-template #networkSettings let-title="title" let-network="network" let-subnet="subnet" let-security="security">
-      <details class="native__section" open>
+      <details class="native__section" [formGroup]="form()" open>
         <summary><span>{{ title }}</span><small>Red, subred, IP pública y reglas de entrada.</small></summary>
         <div class="native__grid">
           <mat-form-field appearance="outline">
@@ -276,7 +276,7 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
     </ng-template>
 
     <ng-template #storageSettings let-title="title" let-disk="disk">
-      <details class="native__section" open>
+      <details class="native__section" [formGroup]="form()" open>
         <summary><span>{{ title }}</span><small>{{ disk }}, tipo, IOPS, throughput y cifrado.</small></summary>
         <div class="native__grid">
           <mat-form-field appearance="outline"><mat-label>Size (GB)</mat-label><input matInput type="number" formControlName="diskGb" min="8" /></mat-form-field>
@@ -296,7 +296,7 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
     </ng-template>
 
     <ng-template #advancedSettings let-title="title">
-      <details class="native__section">
+      <details class="native__section" [formGroup]="form()">
         <summary><span>{{ title }}</span><small>IAM, metadata, monitoring, protección y scripts.</small></summary>
         <div class="native__grid">
           <mat-form-field appearance="outline"><mat-label>IAM role / service account</mat-label><input matInput formControlName="iamRole" placeholder="optional" /></mat-form-field>
@@ -311,7 +311,7 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
 
     <ng-template #azurePanel>
       @for (section of azureSections(); track section) {
-        <details class="native__section" [open]="section === 'Basics' || section === 'Networking' || section === 'Review + create'">
+        <details class="native__section" [formGroup]="form()" [open]="section === 'Basics' || section === 'Networking' || section === 'Review + create'">
           <summary><span>{{ section }}</span><small>{{ azureHint(section) }}</small></summary>
           @if (section === 'Basics') {
             <div class="native__grid">
@@ -345,7 +345,7 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
 
     <ng-template #gcpPanel>
       @for (section of gcpSections(); track section) {
-        <details class="native__section" [open]="section === 'Machine configuration' || section === 'Networking' || section === 'Review'">
+        <details class="native__section" [formGroup]="form()" [open]="section === 'Machine configuration' || section === 'Networking' || section === 'Review'">
           <summary><span>{{ section }}</span><small>{{ gcpHint(section) }}</small></summary>
           @if (section === 'Machine configuration') {
             <div class="native__grid">
@@ -379,7 +379,7 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
 
     <ng-template #cloudingPanel>
       @for (section of cloudingSections(); track section) {
-        <details class="native__section" open>
+        <details class="native__section" [formGroup]="form()" open>
           <summary><span>{{ section }}</span><small>{{ cloudingHint(section) }}</small></summary>
           @if (section === 'Servidor') {
             <div class="native__grid">

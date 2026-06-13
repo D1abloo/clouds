@@ -7,6 +7,7 @@
   [class.clw--gcp]="effectiveSlug() === 'gcp'"
   [class.clw--clouding]="effectiveSlug() === 'clouding'"
   [class.clw--vps]="isVpsProvider()"
+  [class.clw--native]="nativeConsoleMode()"
 >
   <header class="clw__hero">
     <div>
@@ -40,6 +41,38 @@
   <div class="clw__grid" [@staggerCards]="activeStep()">
     <main class="clw__card motion-card" [@stepTransition]="activeStep()">
       @if (nativeConsoleMode()) {
+        <section class="clw__native-account" [class.clw__native-account--ok]="accountValid() === true">
+          <div class="clw__native-account-main">
+            <mat-icon>{{ accountValid() === true ? 'verified' : 'lock' }}</mat-icon>
+            <div>
+              <strong>{{ accountValid() === true ? 'Cuenta conectada' : 'Cuenta requerida para operar en tiempo real' }}</strong>
+              <span>{{ accountMessage() || 'Selecciona una cuenta con credenciales activas para cargar catálogos reales y ejecutar lanzamientos.' }}</span>
+            </div>
+          </div>
+
+          @if (studioAccounts().length) {
+            <mat-form-field appearance="outline" class="clw__native-account-select">
+              <mat-label>{{ effectiveSlug() === 'gcp' ? 'Proyecto / cuenta GCP' : effectiveSlug() === 'azure' ? 'Subscription Azure' : effectiveSlug() === 'clouding' ? 'Cuenta Clouding' : 'Cuenta AWS' }}</mat-label>
+              <mat-select [value]="effectiveData().accountId" (selectionChange)="selectStudioAccount($event.value)">
+                @for (a of studioAccounts(); track a.id) {
+                  <mat-option [value]="a.id">{{ a.name }} · {{ a.defaultRegion ?? 'sin región' }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          } @else {
+            <button mat-stroked-button type="button" (click)="goToProviderAccounts()">
+              <mat-icon>add_link</mat-icon>
+              Conectar cuenta
+            </button>
+          }
+
+          @if (effectiveData().accountId && accountValid() !== true) {
+            <button mat-stroked-button type="button" (click)="loadAccountValidation()" [disabled]="accountLoading()">
+              <mat-icon>refresh</mat-icon>
+              Revalidar
+            </button>
+          }
+        </section>
         <app-provider-native-launch-panel
           [slug]="effectiveSlug()"
           [logo]="theme().logo"
@@ -705,29 +738,31 @@
       }
     </main>
 
-    <app-infra-copilot-panel
-      [slug]="effectiveSlug()"
-      [stepLabel]="currentStepLabel()"
-      [provider]="effectiveData().provider"
-      [account]="effectiveData().accountName"
-      [region]="form.value.region ?? ''"
-      [zone]="form.value.availabilityZone ?? ''"
-      [network]="networkLabel()"
-      [securityGroup]="sgLabel()"
-      [instanceType]="form.value.instanceType ?? ''"
-      [imageName]="selectedImage()?.name ?? ''"
-      [instanceName]="form.value.name ?? ''"
-      [specs]="typeSpecs()"
-      [costHint]="costHint()"
-      [progressPct]="progressPct()"
-      [diskGb]="form.value.diskGb ?? undefined"
-      [diskType]="form.value.diskType ?? ''"
-      [keyPair]="form.value.keyPair ?? ''"
-      [publicIp]="form.value.publicIp ?? false"
-      [alertTitle]="subnetIssue()?.title ?? ''"
-      [alertDanger]="subnetIssue()?.level === 'error'"
-      [dependencies]="createdDependencies()"
-      [validationCount]="preflight()?.checks?.length ?? 0"
-    />
+    @if (!nativeConsoleMode()) {
+      <app-infra-copilot-panel
+        [slug]="effectiveSlug()"
+        [stepLabel]="currentStepLabel()"
+        [provider]="effectiveData().provider"
+        [account]="effectiveData().accountName"
+        [region]="form.value.region ?? ''"
+        [zone]="form.value.availabilityZone ?? ''"
+        [network]="networkLabel()"
+        [securityGroup]="sgLabel()"
+        [instanceType]="form.value.instanceType ?? ''"
+        [imageName]="selectedImage()?.name ?? ''"
+        [instanceName]="form.value.name ?? ''"
+        [specs]="typeSpecs()"
+        [costHint]="costHint()"
+        [progressPct]="progressPct()"
+        [diskGb]="form.value.diskGb ?? undefined"
+        [diskType]="form.value.diskType ?? ''"
+        [keyPair]="form.value.keyPair ?? ''"
+        [publicIp]="form.value.publicIp ?? false"
+        [alertTitle]="subnetIssue()?.title ?? ''"
+        [alertDanger]="subnetIssue()?.level === 'error'"
+        [dependencies]="createdDependencies()"
+        [validationCount]="preflight()?.checks?.length ?? 0"
+      />
+    }
   </div>
 </div>

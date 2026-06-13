@@ -330,6 +330,193 @@ const IONOS_KEY_PAIRS = [
   { id: 'platform-ops', name: 'platform-ops' },
 ]
 
+type ProviderPreviewCatalog = {
+  accountMessage: string
+  permissions: string[]
+  defaultRegion: string
+  defaultZone: string
+  regions: { id: string; name: string }[]
+  zones: string[]
+  networks: NetworkRow[]
+  securityGroups: { id: string; name: string; vpcId?: string }[]
+  keyPairs: { id: string; name: string }[]
+  images: CloudImageRow[]
+  types: CatalogRow[]
+  namePrefix: string
+  diskType: string
+  diskGb: number
+  resourceGroup?: string
+}
+
+const PROVIDER_PREVIEW_CATALOGS: Record<CloudSlug, ProviderPreviewCatalog> = {
+  aws: {
+    accountMessage: 'Conecta una cuenta AWS con permisos EC2 para cargar VPC, subnets, AMIs, key pairs y costes reales.',
+    permissions: ['DescribeInstances', 'DescribeImages', 'DescribeVpcs', 'DescribeSubnets', 'RunInstances', 'TerminateInstances'],
+    defaultRegion: 'eu-west-1',
+    defaultZone: 'eu-west-1a',
+    regions: [
+      { id: 'eu-west-1', name: 'Europe (Ireland)' },
+      { id: 'eu-south-2', name: 'Europe (Spain)' },
+      { id: 'us-east-1', name: 'US East (N. Virginia)' },
+    ],
+    zones: ['eu-west-1a', 'eu-west-1b', 'eu-west-1c'],
+    networks: [
+      { id: 'vpc-preview-aws', name: 'default-vpc', type: 'vpc', cidr: '10.0.0.0/16' },
+      {
+        id: 'subnet-preview-aws-a',
+        name: 'public-subnet-a',
+        type: 'subnet',
+        cidr: '10.0.1.0/24',
+        availabilityZone: 'eu-west-1a',
+        vpcId: 'vpc-preview-aws',
+        mapPublicIpOnLaunch: true,
+        isDefaultForAz: true,
+      },
+    ],
+    securityGroups: [{ id: 'sg-preview-aws', name: 'launch-wizard-sg', vpcId: 'vpc-preview-aws' }],
+    keyPairs: [{ id: 'aws-platform-key', name: 'aws-platform-key' }],
+    images: [
+      {
+        id: 'ami-0abc1234def567890',
+        name: 'Amazon Linux 2023 AMI',
+        os: 'amazon-linux',
+        architecture: 'x86_64',
+        status: 'available',
+        category: 'quick_start',
+      },
+      {
+        id: 'ami-0123456789abcdef0',
+        name: 'Ubuntu Server 24.04 LTS',
+        os: 'ubuntu',
+        architecture: 'x86_64',
+        status: 'available',
+        category: 'quick_start',
+      },
+    ],
+    types: [
+      { id: 't3.micro', name: 't3.micro', vcpus: 2, memoryGb: 1, pricePerHour: 0.0104 },
+      { id: 't3.small', name: 't3.small', vcpus: 2, memoryGb: 2, pricePerHour: 0.0208 },
+      { id: 'm7g.medium', name: 'm7g.medium', vcpus: 1, memoryGb: 4, pricePerHour: 0.0385 },
+    ],
+    namePrefix: 'aws-ec2',
+    diskType: 'gp3',
+    diskGb: 30,
+  },
+  azure: {
+    accountMessage: 'Conecta una subscription Azure para cargar resource groups, VNets, NSG, imágenes y tamaños reales.',
+    permissions: ['Microsoft.Compute/virtualMachines/write', 'Microsoft.Network/*/read', 'Microsoft.Resources/subscriptions/read'],
+    defaultRegion: 'westeurope',
+    defaultZone: '1',
+    regions: [
+      { id: 'westeurope', name: 'West Europe' },
+      { id: 'spaincentral', name: 'Spain Central' },
+      { id: 'northeurope', name: 'North Europe' },
+    ],
+    zones: ['1', '2', '3'],
+    networks: [
+      { id: 'vnet-preview-azure', name: 'vnet-ai-infra', type: 'vpc', cidr: '10.10.0.0/16' },
+      {
+        id: 'snet-preview-azure',
+        name: 'default',
+        type: 'subnet',
+        cidr: '10.10.1.0/24',
+        availabilityZone: '1',
+        vpcId: 'vnet-preview-azure',
+        isDefaultForAz: true,
+      },
+    ],
+    securityGroups: [{ id: 'nsg-preview-azure', name: 'nsg-ai-infra', vpcId: 'vnet-preview-azure' }],
+    keyPairs: [{ id: 'azure-platform-key', name: 'azure-platform-key' }],
+    images: [
+      { id: 'Canonical:ubuntu-24_04-lts:server:latest', name: 'Ubuntu Server 24.04 LTS', os: 'ubuntu', status: 'available' },
+      { id: 'MicrosoftWindowsServer:WindowsServer:2022-datacenter:latest', name: 'Windows Server 2022 Datacenter', os: 'windows', status: 'available' },
+    ],
+    types: [
+      { id: 'Standard_B1s', name: 'Standard B1s', vcpus: 1, memoryGb: 1, pricePerHour: 0.0104 },
+      { id: 'Standard_B2s', name: 'Standard B2s', vcpus: 2, memoryGb: 4, pricePerHour: 0.0464 },
+      { id: 'Standard_D2s_v5', name: 'Standard D2s v5', vcpus: 2, memoryGb: 8, pricePerHour: 0.096 },
+    ],
+    namePrefix: 'az-vm',
+    diskType: 'Premium_LRS',
+    diskGb: 64,
+    resourceGroup: 'rg-ai-infra-studio',
+  },
+  gcp: {
+    accountMessage: 'Conecta un proyecto GCP con service account para cargar zonas, VPC networks, firewalls, imágenes y machine types reales.',
+    permissions: ['compute.instances.create', 'compute.networks.get', 'compute.subnetworks.use', 'compute.firewalls.list'],
+    defaultRegion: 'europe-west1',
+    defaultZone: 'europe-west1-b',
+    regions: [
+      { id: 'europe-west1', name: 'Belgium' },
+      { id: 'europe-southwest1', name: 'Madrid' },
+      { id: 'us-central1', name: 'Iowa' },
+    ],
+    zones: ['europe-west1-b', 'europe-west1-c', 'europe-west1-d'],
+    networks: [
+      { id: 'default', name: 'default', type: 'vpc', cidr: '10.128.0.0/9' },
+      {
+        id: 'default-europe-west1',
+        name: 'default · europe-west1',
+        type: 'subnet',
+        cidr: '10.132.0.0/20',
+        availabilityZone: 'europe-west1-b',
+        vpcId: 'default',
+        isDefaultForAz: true,
+      },
+    ],
+    securityGroups: [{ id: 'allow-ssh-http', name: 'allow-ssh-http', vpcId: 'default' }],
+    keyPairs: [{ id: 'gcp-platform-key', name: 'gcp-platform-key' }],
+    images: [
+      { id: 'projects/debian-cloud/global/images/family/debian-12', name: 'Debian GNU/Linux 12', os: 'debian', status: 'available' },
+      { id: 'projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64', name: 'Ubuntu 24.04 LTS', os: 'ubuntu', status: 'available' },
+    ],
+    types: [
+      { id: 'e2-micro', name: 'e2-micro', vcpus: 2, memoryGb: 1, pricePerHour: 0.0076 },
+      { id: 'e2-small', name: 'e2-small', vcpus: 2, memoryGb: 2, pricePerHour: 0.0152 },
+      { id: 'n2-standard-2', name: 'n2-standard-2', vcpus: 2, memoryGb: 8, pricePerHour: 0.097 },
+    ],
+    namePrefix: 'gce-vm',
+    diskType: 'pd-balanced',
+    diskGb: 30,
+  },
+  clouding: {
+    accountMessage: 'Conecta una cuenta Clouding.io para cargar datacenters, servidores, firewalls, plantillas y precios reales.',
+    permissions: ['Servers', 'Images', 'Firewalls', 'SSH keys', 'Billing'],
+    defaultRegion: 'es-mad-1',
+    defaultZone: 'es-mad-1a',
+    regions: [
+      { id: 'es-mad-1', name: 'Madrid' },
+      { id: 'eu-central-1', name: 'Europa Central' },
+    ],
+    zones: ['es-mad-1a', 'es-mad-1b'],
+    networks: [
+      { id: 'clouding-private-net', name: 'red-privada-ai-infra', type: 'vpc', cidr: '10.20.0.0/16' },
+      {
+        id: 'clouding-public-config',
+        name: 'IP publica + red privada',
+        type: 'subnet',
+        cidr: '10.20.1.0/24',
+        availabilityZone: 'es-mad-1a',
+        vpcId: 'clouding-private-net',
+        isDefaultForAz: true,
+      },
+    ],
+    securityGroups: [{ id: 'clouding-fw-ssh-https', name: 'Firewall SSH + HTTPS', vpcId: 'clouding-private-net' }],
+    keyPairs: [{ id: 'clouding-platform-key', name: 'clouding-platform-key' }],
+    images: [
+      { id: 'ubuntu-24-04', name: 'Ubuntu 24.04 LTS', os: 'ubuntu', status: 'ready' },
+      { id: 'debian-12', name: 'Debian 12', os: 'debian', status: 'ready' },
+    ],
+    types: [
+      { id: 'clouding-2-4', name: '2 vCPU · 4 GB RAM', vcpus: 2, memoryGb: 4, pricePerHour: 0.021 },
+      { id: 'clouding-4-8', name: '4 vCPU · 8 GB RAM', vcpus: 4, memoryGb: 8, pricePerHour: 0.042 },
+    ],
+    namePrefix: 'clouding-srv',
+    diskType: 'ssd',
+    diskGb: 80,
+  },
+}
+
 type VpsLaunchCatalog = {
   label: string
   accountName: string
@@ -666,7 +853,12 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     const step = this.activeStep()
     return (
       !this.isVpsProvider() &&
-      (step === 'region' || step === 'network' || step === 'compute' || step === 'image' || step === 'review')
+      (step === 'account' ||
+        step === 'region' ||
+        step === 'network' ||
+        step === 'compute' ||
+        step === 'image' ||
+        step === 'review')
     )
   })
 
@@ -1045,14 +1237,16 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
           this.loadAccountValidation()
           this.loadRegions()
         } else {
+          this.applyProviderPreviewCatalog(slug)
           this.accountValid.set(false)
-          this.accountMessage.set('No hay cuentas conectadas para este proveedor')
+          this.accountMessage.set(`No hay cuentas conectadas. ${PROVIDER_PREVIEW_CATALOGS[slug].accountMessage}`)
         }
       },
       error: () => {
+        this.applyProviderPreviewCatalog(slug)
         this.accountLoading.set(false)
         this.accountValid.set(false)
-        this.accountMessage.set('No se pudieron cargar las cuentas')
+        this.accountMessage.set(`No se pudieron cargar las cuentas. ${PROVIDER_PREVIEW_CATALOGS[slug].accountMessage}`)
       },
     })
   }
@@ -1675,6 +1869,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     void this.router.navigate(['/instances/all-instances'])
   }
 
+  goToProviderAccounts = (): void => {
+    void this.router.navigate(['/cloud', this.effectiveSlug(), 'accounts'])
+  }
+
   handleCycleAz = (): void => {
     const zones = this.availabilityZones()
     if (zones.length < 2) return
@@ -2024,6 +2222,38 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.accountMessage.set(`${catalog.label} listo para crear servidores`)
     this.accountPermissions.set(catalog.permissions)
     this.applyVpsCatalogDefaults()
+  }
+
+  private applyProviderPreviewCatalog = (slug: CloudSlug): void => {
+    const catalog = PROVIDER_PREVIEW_CATALOGS[slug]
+    this.accountLoading.set(false)
+    this.catalogLoading.set(false)
+    this.azLoading.set(false)
+    this.accountPermissions.set(catalog.permissions)
+    this.regions.set(catalog.regions)
+    this.availabilityZones.set(catalog.zones)
+    this.allNetworks.set(catalog.networks)
+    this.securityGroups.set(catalog.securityGroups)
+    this.keyPairs.set(catalog.keyPairs)
+    this.images.set(catalog.images)
+    this.types.set(catalog.types)
+    this.preflight.set(null)
+    this.form.patchValue({
+      region: this.form.value.region || catalog.defaultRegion,
+      availabilityZone: this.form.value.availabilityZone || catalog.defaultZone,
+      vpcId: this.form.value.vpcId || catalog.networks.find((n) => n.type === 'vpc')?.id || '',
+      subnetId: this.form.value.subnetId || catalog.networks.find((n) => n.type === 'subnet')?.id || '',
+      securityGroupId: this.form.value.securityGroupId || catalog.securityGroups[0]?.id || '',
+      keyPair: this.form.value.keyPair || catalog.keyPairs[0]?.name || '',
+      imageId: this.form.value.imageId || catalog.images[0]?.id || '',
+      instanceType: this.form.value.instanceType || catalog.types[0]?.id || '',
+      diskType: this.form.value.diskType || catalog.diskType,
+      diskGb: this.form.value.diskGb && this.form.value.diskGb >= 8 ? this.form.value.diskGb : catalog.diskGb,
+      resourceGroup: this.form.value.resourceGroup || catalog.resourceGroup || '',
+      name: this.form.value.name || `${catalog.namePrefix}-${new Date().toISOString().slice(5, 10).replace('-', '')}`,
+      tags: this.form.value.tags || `created_by=ai-infra-studio,provider=${slug},auto_delete=true`,
+    })
+    this.accountMessage.set(catalog.accountMessage)
   }
 
   private applyVpsCatalogDefaults = (): void => {

@@ -42,5 +42,32 @@
       (launched)="handleLaunched()"
       (cancelled)="handleCancel()"
     />
+  } @else if (activeProvider()) {
+    <header class="clp__bar">
+      <div class="clp__bar-brand">
+        <app-brand-logo [logo]="activeProvider()!.logo" size="md" />
+        <div>
+          <h1>Lanzar instancia · {{ activeProvider()!.label }}</h1>
+          <p>Conecta una cuenta para operar con catálogos reales de {{ activeProvider()!.label }}.</p>
+        </div>
+      </div>
+      <nav class="clp__provider-tabs" aria-label="Proveedor cloud">
+        @for (p of providers; track p.slug) {
+          <a
+            class="clp__provider-tab"
+            [class.clp__provider-tab--on]="p.slug === activeSlug()"
+            [routerLink]="['/cloud', p.slug, 'launch']"
+          >
+            {{ p.slug | uppercase }}
+          </a>
+        }
+      </nav>
+    </header>
+    <app-cloud-launch-wizard
+      [studioMode]="true"
+      [embedded]="true"
+      [initialProvider]="activeSlug()"
+      (cancelled)="handleCancel()"
+    />
   }
 </div>
