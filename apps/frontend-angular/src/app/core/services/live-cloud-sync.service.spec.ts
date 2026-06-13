@@ -50,12 +50,14 @@ describe('LiveCloudSyncService', () => {
     })
   })
 
-  it('syncAllAccountsSilent no activa syncing', (done) => {
+  it('syncAllAccountsSilent evita solapamientos y libera syncing al completar', (done) => {
     service.syncAllAccountsSilent().subscribe({
       complete: () => {
         expect(syncAllSpy).toHaveBeenCalled()
-        expect(service.syncing()).toBeFalse()
-        done()
+        queueMicrotask(() => {
+          expect(service.syncing()).toBeFalse()
+          done()
+        })
       },
     })
   })

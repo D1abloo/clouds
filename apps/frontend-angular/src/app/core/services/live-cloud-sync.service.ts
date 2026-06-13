@@ -49,11 +49,16 @@ export class LiveCloudSyncService implements OnDestroy {
     )
   }
 
-  syncAllAccountsSilent = (): Observable<{ accounts: number; instances: number }> =>
-    this.accounts.syncAll().pipe(
+  syncAllAccountsSilent = (): Observable<{ accounts: number; instances: number }> => {
+    if (this.syncing()) return of({ accounts: 0, instances: 0 })
+    this.syncing.set(true)
+
+    return this.accounts.syncAll().pipe(
       tap(() => this.lastSyncAt.set(new Date())),
       catchError(() => of({ accounts: 0, instances: 0 })),
+      finalize(() => this.syncing.set(false)),
     )
+  }
 
   ngOnDestroy(): void {
     this.stopPolling()

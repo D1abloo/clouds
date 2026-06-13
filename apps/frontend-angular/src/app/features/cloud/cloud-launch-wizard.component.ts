@@ -28,6 +28,7 @@ import {
   type LaunchPreflightCheck,
   type LaunchPreflightResult,
 } from '../../core/services/cloud-accounts.service'
+import { Subscription } from 'rxjs'
 import { CloudCatalogCacheService } from '../../core/services/cloud-catalog-cache.service'
 import { RealtimeService } from '../../core/services/realtime.service'
 import { ToastService } from '../../core/services/toast.service'
@@ -787,6 +788,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   readonly typeSearch = signal('')
   readonly imageSection = signal<AwsImageSectionId>('quick_start')
   readonly imageOsTab = signal<'all' | 'debian' | 'ubuntu' | 'windows' | 'linux'>('all')
+  readonly formRevision = signal(0)
 
   readonly regions = signal<{ id: string; name: string }[]>([])
   readonly availabilityZones = signal<string[]>([])
@@ -799,6 +801,8 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   readonly accountMessage = signal('')
   readonly accountPermissions = signal<string[]>([])
   readonly preflight = signal<LaunchPreflightResult | null>(null)
+  readonly catalogFallbackActive = signal(false)
+  readonly catalogFallbackReason = signal('')
 
   readonly theme = computed(() => cloudLaunchTheme(this.effectiveSlug()))
   readonly steps = computed((): LaunchStepMeta[] => {
@@ -864,6 +868,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
 
   readonly vpcs = computed(() => this.allNetworks().filter((n) => n.type === 'vpc' || n.id.startsWith('vpc-')))
   readonly subnetsForAz = computed(() => {
+    this.formRevision()
     const az = this.form.value.availabilityZone ?? ''
     if (this.effectiveSlug() !== 'aws') {
       return this.allNetworks().filter((n) => n.type === 'subnet' || n.id.startsWith('subnet-'))
@@ -874,6 +879,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
 
   readonly suggestedSubnetCidr = computed(() => {
+    this.formRevision()
     const vpcId = this.form.value.vpcId ?? ''
     const vpc = this.vpcs().find((v) => v.id === vpcId)
     const existing = this.allNetworks()
@@ -883,6 +889,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
 
   readonly subnetIssue = computed(() => {
+    this.formRevision()
     if (this.effectiveSlug() !== 'aws') return null
     const az = this.form.value.availabilityZone ?? ''
     const subnetId = this.form.value.subnetId ?? ''
@@ -910,6 +917,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
 
   readonly localValidationErrors = computed(() => {
+    this.formRevision()
     const v = this.form.getRawValue()
     const errors: string[] = []
     if (!this.effectiveData().accountId) errors.push('cuenta')
@@ -926,10 +934,12 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
 
   readonly canLaunch = computed(() => {
+    this.formRevision()
     const pf = this.preflight()
     if (this.preflightLoading()) return false
     if (this.localValidationErrors().length) return false
     if (pf) return pf.valid
+    if (this.catalogFallbackActive()) return false
     return this.form.valid && this.subnetIssue()?.level !== 'error'
   })
 
@@ -1002,7 +1012,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     )
   })
 
-  readonly selectedImage = computed(() => this.images().find((i) => i.id === this.form.value.imageId))
+  readonly selectedImage = computed(() => {
+    this.formRevision()
+    return this.images().find((i) => i.id === this.form.value.imageId)
+  })
   readonly nativePrimaryDisabled = computed(() => {
     if (this.launching() || this.preflightLoading() || this.accountLoading() || this.catalogLoading()) return true
     if (this.localValidationErrors().length) return true
@@ -1019,6 +1032,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
 
   readonly costEstimate = computed(() => {
+    this.formRevision()
     const t = this.types().find((x) => x.id === this.form.value.instanceType)
     if (!t) return { hourly: '', monthly: '', hint: 'Selecciona un tipo para calcular coste.' }
     const labels = this.typePriceDetail(t)
@@ -1031,19 +1045,21 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     }
   })
 
-  readonly vpsPlansForForm = computed(() =>
-    this.types().map((t) => ({
+  readonly vpsPlansForForm = computed(() => {
+    this.formRevision()
+    return this.types().map((t) => ({
       id: t.id,
       label: `${t.name} - ${t.vcpus ?? '?'} vCPU · ${t.memoryGb ?? '?'} GB`,
       cpu: t.vcpus ?? 2,
       ram: t.memoryGb ?? 4,
       disk: this.currentVpsCatalog().diskByPlan[t.id] ?? this.form.value.diskGb ?? 80,
-    })),
-  )
+    }))
+  })
 
   readonly keyPairNames = computed(() => this.keyPairs().map((k) => k.name))
 
   readonly reviewRows = computed(() => {
+    this.formRevision()
     const v = this.form.getRawValue()
     const rl = this.options().reviewLabels
     const slug = this.effectiveSlug()
@@ -1116,6 +1132,11 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     ramGb: [4],
   })
 
+  private readonly formValueSubscription: Subscription = this.form.valueChanges.subscribe(() => {
+    this.formRevision.update((version) => version + 1)
+    this.preflight.set(null)
+  })
+
   private progressHandler = (payload: unknown): void => {
     const p = payload as {
       accountId?: string
@@ -1172,6 +1193,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     const opts = cloudLaunchOptions(d.slug)
     this.form.patchValue({
       region: d.defaultRegion ?? '',
+      name: this.form.value.name || this.defaultResourceName(d.slug),
       diskGb: opts.defaultVolumeGb,
       diskType: opts.defaultVolumeType,
       resourceGroup: opts.resourceGroups?.[0] ?? '',
@@ -1190,18 +1212,20 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.selectedProviderSlug.set(normalized)
     this.activeStep.set('account')
     this.preflight.set(null)
+    this.resetCatalogFallback()
     this.launchedResource.set(null)
     this.launchProgress.set(null)
     this.launchLogLines.set([])
     this.createdDependencies.set([])
     const d = this.effectiveData()
     const opts = cloudLaunchOptions(this.effectiveSlug())
+    const defaultSlug = isVpsLaunchSlug(normalized) ? 'clouding' : (normalized as CloudSlug)
     this.form.patchValue({
       region: d.defaultRegion ?? '',
       diskGb: opts.defaultVolumeGb,
       diskType: opts.defaultVolumeType,
       resourceGroup: opts.resourceGroups?.[0] ?? '',
-      name: '',
+      name: isVpsLaunchSlug(normalized) ? '' : this.defaultResourceName(defaultSlug),
       imageId: '',
       instanceType: '',
       keyPair: '',
@@ -1266,6 +1290,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       vpcId: '',
     })
     this.preflight.set(null)
+    this.resetCatalogFallback()
     if (this.isVpsProvider()) this.loadVpsAccountAndCatalog()
     else {
       this.loadAccountValidation()
@@ -1274,6 +1299,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   }
 
   ngOnDestroy(): void {
+    this.formValueSubscription.unsubscribe()
     this.realtime.off('instance.launch.progress', this.progressHandler)
   }
 
@@ -1316,15 +1342,25 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     }
     const d = this.effectiveData()
     if (!d.accountId) return
+    this.resetCatalogFallback()
     const provider = d.provider
     const accountId = d.accountId
     this.catalogCache.fetch(`regions:${provider}:${accountId}`, () => this.accounts.regions(accountId)).subscribe({
       next: (r) => {
-        this.regions.set(r)
-        if (r.length && !this.form.value.region) this.form.patchValue({ region: r[0].id })
+        const preview = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()]
+        const list = r.length ? r : preview.regions
+        if (!r.length) this.markCatalogFallback('El proveedor no devolvió regiones; se cargó un catálogo demostrable para completar el formulario.')
+        this.regions.set(list)
+        if (!this.form.value.region || !list.some((region) => region.id === this.form.value.region)) {
+          this.form.patchValue({ region: r.length ? list[0]?.id ?? '' : preview.defaultRegion })
+        }
         this.onRegionChange()
       },
-      error: () => this.onRegionChange(),
+      error: () =>
+        this.applyProviderPreviewCatalog(this.effectiveSlug(), {
+          keepAccountMessage: true,
+          reason: 'No se pudieron leer regiones reales; se cargó un catálogo demostrable para completar el lanzamiento.',
+        }),
     })
   }
 
@@ -1345,16 +1381,25 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.azLoading.set(true)
     this.accounts.availabilityZones(this.effectiveData().accountId, region).subscribe({
       next: (zones) => {
-        this.availabilityZones.set(zones)
+        const preview = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()]
+        const resolvedZones = zones.length ? zones : preview.zones
+        if (!zones.length) this.markCatalogFallback('El proveedor no devolvió zonas; se muestran zonas de referencia para poder demostrar el flujo.')
+        this.availabilityZones.set(resolvedZones)
         const current = this.form.value.availabilityZone
-        if (!current || !zones.includes(current)) {
-          this.form.patchValue({ availabilityZone: zones[0] ?? '' })
+        if (!current || !resolvedZones.includes(current)) {
+          this.form.patchValue({ availabilityZone: zones.length ? resolvedZones[0] ?? '' : preview.defaultZone })
         }
         this.onAzChange()
         this.azLoading.set(false)
       },
       error: () => {
-        this.availabilityZones.set([])
+        const preview = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()]
+        this.markCatalogFallback('No se pudieron leer zonas reales; se muestran zonas de referencia para completar el formulario.')
+        this.availabilityZones.set(preview.zones)
+        if (!this.form.value.availabilityZone || !preview.zones.includes(this.form.value.availabilityZone)) {
+          this.form.patchValue({ availabilityZone: preview.defaultZone })
+        }
+        this.onAzChange()
         this.azLoading.set(false)
       },
     })
@@ -1422,7 +1467,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       .fetch(`images:${provider}:${accountId}:${regionKey}`, () => this.accounts.images(accountId, region))
       .subscribe({
         next: (imgs) => {
-          const list = (imgs as CloudImageRow[])
+          let list = (imgs as CloudImageRow[])
             .map((i) => ({ ...i, id: this.normalizeImageId(i.id) }))
             .filter(
               (i) =>
@@ -1430,6 +1475,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
                 isCloudImageAvailable(i.status) &&
                 (this.effectiveSlug() !== 'aws' || isValidAwsAmiId(i.id)),
             )
+          if (!list.length) {
+            list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].images
+            this.markCatalogFallback('No hay imágenes reales disponibles; se cargaron imágenes de referencia para demostrar el formulario.')
+          }
           this.images.set(list)
           const pick = this.pickImageForRegion(list)
           if (!this.form.value.imageId) this.form.patchValue({ imageId: pick })
@@ -1437,7 +1486,10 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
           done()
         },
         error: () => {
-          this.images.set([])
+          const list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].images
+          this.markCatalogFallback('No se pudieron leer imágenes reales; se cargaron imágenes de referencia para completar el formulario.')
+          this.images.set(list)
+          if (!this.form.value.imageId) this.form.patchValue({ imageId: this.pickImageForRegion(list) })
           done()
         },
       })
@@ -1446,13 +1498,20 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       .fetch(`types:${provider}:${accountId}:${regionKey}`, () => this.accounts.instanceTypes(accountId, region))
       .subscribe({
         next: (t) => {
-          const list = t as CatalogRow[]
+          let list = t as CatalogRow[]
+          if (!list.length) {
+            list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].types
+            this.markCatalogFallback('No hay tipos reales disponibles; se cargaron tamaños de referencia para demostrar el formulario.')
+          }
           this.types.set(list)
           if (!this.form.value.instanceType && list[0]) this.form.patchValue({ instanceType: list[0].id })
           done()
         },
         error: () => {
-          this.types.set([])
+          const list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].types
+          this.markCatalogFallback('No se pudieron leer tipos reales; se cargaron tamaños de referencia para completar el formulario.')
+          this.types.set(list)
+          if (!this.form.value.instanceType && list[0]) this.form.patchValue({ instanceType: list[0].id })
           done()
         },
       })
@@ -1461,7 +1520,11 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       .fetch(`networks:${provider}:${accountId}:${regionKey}`, () => this.accounts.networks(accountId, region))
       .subscribe({
         next: (n) => {
-          const raw = (n as NetworkRow[]) ?? []
+          let raw = (n as NetworkRow[]) ?? []
+          if (!this.hasCompleteNetworkCatalog(raw)) {
+            raw = this.mergePreviewNetworks(raw)
+            this.markCatalogFallback('La red real no trae VPC/subnet completa; se cargó una red de referencia para demostrar el formulario.')
+          }
           this.allNetworks.set(raw)
           const vpcs = raw.filter((x) => x.type === 'vpc' || x.id.startsWith('vpc-'))
           if (!this.form.value.vpcId && vpcs[0]) this.form.patchValue({ vpcId: vpcs[0].id })
@@ -1469,7 +1532,12 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
           done()
         },
         error: () => {
-          this.allNetworks.set([])
+          const raw = this.previewNetworksForCurrentZone(this.effectiveSlug())
+          this.markCatalogFallback('No se pudieron leer redes reales; se cargó una red de referencia para completar el formulario.')
+          this.allNetworks.set(raw)
+          const vpcs = raw.filter((x) => x.type === 'vpc' || x.id.startsWith('vpc-'))
+          if (!this.form.value.vpcId && vpcs[0]) this.form.patchValue({ vpcId: vpcs[0].id })
+          this.onAzChange()
           done()
         },
       })
@@ -1478,13 +1546,20 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       .fetch(`sgs:${provider}:${accountId}:${regionKey}`, () => this.accounts.securityGroups(accountId, region))
       .subscribe({
         next: (sg) => {
-          const list = (sg as { id: string; name: string; vpcId?: string }[]) ?? []
+          let list = (sg as { id: string; name: string; vpcId?: string }[]) ?? []
+          if (!list.length) {
+            list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].securityGroups
+            this.markCatalogFallback('No hay security groups reales; se cargó una regla de referencia para demostrar el formulario.')
+          }
           this.securityGroups.set(list)
           if (!this.form.value.securityGroupId && list[0]) this.form.patchValue({ securityGroupId: list[0].id })
           done()
         },
         error: () => {
-          this.securityGroups.set([])
+          const list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].securityGroups
+          this.markCatalogFallback('No se pudieron leer reglas de seguridad reales; se cargó una regla de referencia para completar el formulario.')
+          this.securityGroups.set(list)
+          if (!this.form.value.securityGroupId && list[0]) this.form.patchValue({ securityGroupId: list[0].id })
           done()
         },
       })
@@ -1493,13 +1568,20 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       .fetch(`keypairs:${provider}:${accountId}:${regionKey}`, () => this.accounts.keyPairs(accountId, region))
       .subscribe({
         next: (rows) => {
-          const list = (rows as { id: string; name: string }[]) ?? []
+          let list = (rows as { id: string; name: string }[]) ?? []
+          if (!list.length) {
+            list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].keyPairs
+            this.markCatalogFallback('No hay key pairs reales; se cargó una clave de referencia para demostrar el formulario.')
+          }
           this.keyPairs.set(list)
           if (!this.form.value.keyPair && list[0]) this.form.patchValue({ keyPair: list[0].name })
           done()
         },
         error: () => {
-          this.keyPairs.set([])
+          const list = PROVIDER_PREVIEW_CATALOGS[this.effectiveSlug()].keyPairs
+          this.markCatalogFallback('No se pudieron leer key pairs reales; se cargó una clave de referencia para completar el formulario.')
+          this.keyPairs.set(list)
+          if (!this.form.value.keyPair && list[0]) this.form.patchValue({ keyPair: list[0].name })
           done()
         },
       })
@@ -2213,6 +2295,7 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   private loadVpsAccountAndCatalog = (): void => {
     const catalog = this.currentVpsCatalog()
     const slug = this.selectedProviderSlug() ?? 'ionos'
+    this.resetCatalogFallback()
     this.accountLoading.set(false)
     this.catalogLoading.set(false)
     this.azLoading.set(false)
@@ -2224,15 +2307,19 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     this.applyVpsCatalogDefaults()
   }
 
-  private applyProviderPreviewCatalog = (slug: CloudSlug): void => {
+  private applyProviderPreviewCatalog = (
+    slug: CloudSlug,
+    options: { keepAccountMessage?: boolean; reason?: string } = {},
+  ): void => {
     const catalog = PROVIDER_PREVIEW_CATALOGS[slug]
+    this.markCatalogFallback(options.reason ?? 'Catálogo demostrable cargado para completar la configuración.')
     this.accountLoading.set(false)
     this.catalogLoading.set(false)
     this.azLoading.set(false)
     this.accountPermissions.set(catalog.permissions)
     this.regions.set(catalog.regions)
     this.availabilityZones.set(catalog.zones)
-    this.allNetworks.set(catalog.networks)
+    this.allNetworks.set(this.previewNetworksForCurrentZone(slug))
     this.securityGroups.set(catalog.securityGroups)
     this.keyPairs.set(catalog.keyPairs)
     this.images.set(catalog.images)
@@ -2253,7 +2340,65 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       name: this.form.value.name || `${catalog.namePrefix}-${new Date().toISOString().slice(5, 10).replace('-', '')}`,
       tags: this.form.value.tags || `created_by=ai-infra-studio,provider=${slug},auto_delete=true`,
     })
-    this.accountMessage.set(catalog.accountMessage)
+    if (!options.keepAccountMessage) this.accountMessage.set(catalog.accountMessage)
+  }
+
+  private markCatalogFallback = (reason: string): void => {
+    if (!this.catalogFallbackActive() || this.catalogFallbackReason() !== reason) {
+      this.appendLaunchLog(reason)
+    }
+    this.catalogFallbackActive.set(true)
+    this.catalogFallbackReason.set(reason)
+    if (!this.isVpsProvider()) this.applyProviderRequiredDefaults(this.effectiveSlug())
+  }
+
+  private resetCatalogFallback = (): void => {
+    this.catalogFallbackActive.set(false)
+    this.catalogFallbackReason.set('')
+  }
+
+  private defaultResourceName = (slug: CloudSlug): string => {
+    const catalog = PROVIDER_PREVIEW_CATALOGS[slug]
+    return `${catalog.namePrefix}-${new Date().toISOString().slice(5, 10).replace('-', '')}`
+  }
+
+  private applyProviderRequiredDefaults = (slug: CloudSlug): void => {
+    const catalog = PROVIDER_PREVIEW_CATALOGS[slug]
+    this.form.patchValue({
+      name: this.form.value.name?.trim() ? this.form.value.name : this.defaultResourceName(slug),
+      diskType: this.form.value.diskType || catalog.diskType,
+      diskGb: this.form.value.diskGb && this.form.value.diskGb >= 8 ? this.form.value.diskGb : catalog.diskGb,
+      resourceGroup: this.form.value.resourceGroup || catalog.resourceGroup || '',
+      tags: this.form.value.tags || `created_by=ai-infra-studio,provider=${slug},auto_delete=true`,
+    })
+  }
+
+  private hasCompleteNetworkCatalog = (rows: NetworkRow[]): boolean => {
+    const hasVpc = rows.some((n) => n.type === 'vpc' || n.id.startsWith('vpc-') || n.id.startsWith('vnet-') || n.id === 'default')
+    const hasSubnet = rows.some((n) => n.type === 'subnet' || n.id.startsWith('subnet-') || n.id.startsWith('snet-'))
+    return hasVpc && hasSubnet
+  }
+
+  private previewNetworksForCurrentZone = (slug: CloudSlug): NetworkRow[] => {
+    const catalog = PROVIDER_PREVIEW_CATALOGS[slug]
+    const zone = this.form.value.availabilityZone || catalog.defaultZone
+    return catalog.networks.map((network) =>
+      network.type === 'subnet'
+        ? {
+            ...network,
+            availabilityZone: zone,
+          }
+        : network,
+    )
+  }
+
+  private mergePreviewNetworks = (rows: NetworkRow[]): NetworkRow[] => {
+    const preview = this.previewNetworksForCurrentZone(this.effectiveSlug())
+    const byId = new Map(rows.map((row) => [row.id, row]))
+    preview.forEach((row) => {
+      if (!byId.has(row.id)) byId.set(row.id, row)
+    })
+    return Array.from(byId.values())
   }
 
   private applyVpsCatalogDefaults = (): void => {

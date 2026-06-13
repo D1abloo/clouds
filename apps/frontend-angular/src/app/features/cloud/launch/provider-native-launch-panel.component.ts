@@ -131,6 +131,7 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
                 <mat-label>Search instance types</mat-label>
                 <input matInput [value]="typeSearch()" (input)="typeSearchChange.emit($any($event.target).value)" />
                 <mat-icon matPrefix>search</mat-icon>
+                <mat-hint>{{ types().length }} visible types</mat-hint>
               </mat-form-field>
               <div class="native__type-grid">
                 @for (t of types(); track t.id) {
@@ -139,6 +140,8 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
                     <span>{{ family(t.id) }} · {{ t.vcpus || '?' }} vCPU · {{ t.memoryGb || '?' }} GB</span>
                     <small>{{ price(t) }}</small>
                   </button>
+                } @empty {
+                  <p class="native__empty">No hay tipos que coincidan con el filtro.</p>
                 }
               </div>
               <button mat-button type="button" (click)="previewCode.emit()"><mat-icon>compare_arrows</mat-icon>Compare instance types</button>
@@ -322,8 +325,14 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
               <mat-form-field appearance="outline"><mat-label>Region</mat-label><mat-select formControlName="region" (selectionChange)="regionChange.emit()">@for (r of regions(); track r.id) { <mat-option [value]="r.id">{{ r.name }}</mat-option> }</mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Availability options</mat-label><mat-select formControlName="availabilityOption"><mat-option value="zone">Availability zone</mat-option><mat-option value="set">Availability set</mat-option><mat-option value="none">No infrastructure redundancy required</mat-option></mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Security type</mat-label><mat-select formControlName="securityType"><mat-option value="standard">Standard</mat-option><mat-option value="trusted">Trusted launch</mat-option><mat-option value="confidential">Confidential VM</mat-option></mat-select></mat-form-field>
-              <mat-form-field appearance="outline"><mat-label>Image</mat-label><mat-select formControlName="imageId">@for (img of images(); track img.id) { <mat-option [value]="img.id">{{ img.name }}</mat-option> }</mat-select></mat-form-field>
-              <mat-form-field appearance="outline"><mat-label>Size</mat-label><mat-select formControlName="instanceType">@for (t of types(); track t.id) { <mat-option [value]="t.id">{{ t.name }} · {{ t.vcpus || '?' }} vCPU · {{ t.memoryGb || '?' }} GB</mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Image</mat-label><mat-select formControlName="imageId" (selectionChange)="selectImageId($event.value)">@for (img of images(); track img.id) { <mat-option [value]="img.id">{{ img.name }}</mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline" class="native__filter-field native__span-2">
+                <mat-label>Filtrar tamaños</mat-label>
+                <input matInput [value]="typeSearch()" (input)="typeSearchChange.emit($any($event.target).value)" placeholder="B1s, D2s, 2 vCPU, 4 GB..." />
+                <mat-icon matPrefix>filter_alt</mat-icon>
+                <mat-hint>{{ types().length }} tamaños visibles</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Size</mat-label><mat-select formControlName="instanceType" (selectionChange)="typeSelected.emit($event.value)">@for (t of types(); track t.id) { <mat-option [value]="t.id">{{ t.name }} · {{ t.vcpus || '?' }} vCPU · {{ t.memoryGb || '?' }} GB</mat-option> } @empty { <mat-option disabled>No hay tamaños con ese filtro</mat-option> }</mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Authentication type</mat-label><mat-select formControlName="authType"><mat-option value="ssh">SSH public key</mat-option><mat-option value="password">Password</mat-option></mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Username</mat-label><input matInput formControlName="username" placeholder="azureuser" /></mat-form-field>
             </div>
@@ -354,10 +363,16 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
               <mat-form-field appearance="outline"><mat-label>Region</mat-label><mat-select formControlName="region" (selectionChange)="regionChange.emit()">@for (r of regions(); track r.id) { <mat-option [value]="r.id">{{ r.name }}</mat-option> }</mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Zone</mat-label><mat-select formControlName="availabilityZone" (selectionChange)="azChange.emit()">@for (z of zones(); track z) { <mat-option [value]="z">{{ z }}</mat-option> }</mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Machine family</mat-label><mat-select formControlName="machineFamily"><mat-option value="general-purpose">General purpose</mat-option><mat-option value="compute-optimized">Compute optimized</mat-option><mat-option value="memory-optimized">Memory optimized</mat-option></mat-select></mat-form-field>
-              <mat-form-field appearance="outline"><mat-label>Machine type</mat-label><mat-select formControlName="instanceType">@for (t of types(); track t.id) { <mat-option [value]="t.id">{{ t.name }} · {{ t.vcpus || '?' }} vCPU · {{ t.memoryGb || '?' }} GB</mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline" class="native__filter-field native__span-2">
+                <mat-label>Filtrar machine types</mat-label>
+                <input matInput [value]="typeSearch()" (input)="typeSearchChange.emit($any($event.target).value)" placeholder="e2, n2, micro, 2 vCPU..." />
+                <mat-icon matPrefix>filter_alt</mat-icon>
+                <mat-hint>{{ types().length }} tipos visibles</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Machine type</mat-label><mat-select formControlName="instanceType" (selectionChange)="typeSelected.emit($event.value)">@for (t of types(); track t.id) { <mat-option [value]="t.id">{{ t.name }} · {{ t.vcpus || '?' }} vCPU · {{ t.memoryGb || '?' }} GB</mat-option> } @empty { <mat-option disabled>No hay tipos con ese filtro</mat-option> }</mat-select></mat-form-field>
             </div>
           } @else if (section === 'OS and storage') {
-            <mat-form-field appearance="outline" class="native__wide"><mat-label>Boot disk image</mat-label><mat-select formControlName="imageId">@for (img of images(); track img.id) { <mat-option [value]="img.id">{{ img.name }}</mat-option> }</mat-select></mat-form-field>
+            <mat-form-field appearance="outline" class="native__wide"><mat-label>Boot disk image</mat-label><mat-select formControlName="imageId" (selectionChange)="selectImageId($event.value)">@for (img of images(); track img.id) { <mat-option [value]="img.id">{{ img.name }}</mat-option> }</mat-select></mat-form-field>
             <ng-container *ngTemplateOutlet="storageSettings; context: { title: 'Boot disk', disk: 'Boot disk' }" />
           } @else if (section === 'Networking') {
             <ng-container *ngTemplateOutlet="networkSettings; context: { title: 'Networking', network: 'VPC network', subnet: 'Subnetwork', security: 'Firewall rule' }" />
@@ -386,8 +401,14 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
               <mat-form-field appearance="outline"><mat-label>Cuenta Clouding conectada</mat-label><input matInput [value]="accountName()" readonly /></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Datacenter / región</mat-label><mat-select formControlName="region" (selectionChange)="regionChange.emit()">@for (r of regions(); track r.id) { <mat-option [value]="r.id">{{ r.name }}</mat-option> }</mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Nombre del servidor</mat-label><input matInput formControlName="name" placeholder="clouding-app-01" /></mat-form-field>
-              <mat-form-field appearance="outline"><mat-label>Imagen / sistema operativo</mat-label><mat-select formControlName="imageId">@for (img of images(); track img.id) { <mat-option [value]="img.id">{{ img.name }}</mat-option> }</mat-select></mat-form-field>
-              <mat-form-field appearance="outline"><mat-label>Plan</mat-label><mat-select formControlName="instanceType">@for (t of types(); track t.id) { <mat-option [value]="t.id">{{ t.name }} · {{ t.vcpus || '?' }} vCPU · {{ t.memoryGb || '?' }} GB</mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Imagen / sistema operativo</mat-label><mat-select formControlName="imageId" (selectionChange)="selectImageId($event.value)">@for (img of images(); track img.id) { <mat-option [value]="img.id">{{ img.name }}</mat-option> }</mat-select></mat-form-field>
+              <mat-form-field appearance="outline" class="native__filter-field native__span-2">
+                <mat-label>Filtrar planes</mat-label>
+                <input matInput [value]="typeSearch()" (input)="typeSearchChange.emit($any($event.target).value)" placeholder="2 vCPU, 4 GB, SSD..." />
+                <mat-icon matPrefix>filter_alt</mat-icon>
+                <mat-hint>{{ types().length }} planes visibles</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Plan</mat-label><mat-select formControlName="instanceType" (selectionChange)="typeSelected.emit($event.value)">@for (t of types(); track t.id) { <mat-option [value]="t.id">{{ t.name }} · {{ t.vcpus || '?' }} vCPU · {{ t.memoryGb || '?' }} GB</mat-option> } @empty { <mat-option disabled>No hay planes con ese filtro</mat-option> }</mat-select></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>SSH key</mat-label><mat-select formControlName="keyPair">@for (kp of keyPairs(); track kp.id) { <mat-option [value]="kp.name">{{ kp.name }}</mat-option> }</mat-select></mat-form-field>
             </div>
           } @else if (section === 'Red y seguridad') {
@@ -421,10 +442,12 @@ type CostSummary = { hourly: string; monthly: string; hint: string }
     .native__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; padding: 0 1rem; align-items: center; }
     .native__span-2, .native__wide { grid-column: 1 / -1; width: 100%; }
     .native__search { width: min(460px, calc(100% - 2rem)); margin: 0 1rem .7rem; }
+    .native__filter-field { width: 100%; margin: 0; }
     .native__tabs, .native__dependency-actions { display: flex; flex-wrap: wrap; gap: .45rem; padding: 0 1rem .75rem; }
     .native__tabs button { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: .38rem .7rem; cursor: pointer; font-weight: 700; color: var(--text-muted); }
     .native__tab--on { color: var(--native-accent) !important; border-color: var(--native-accent) !important; background: color-mix(in srgb, var(--native-accent) 10%, #fff) !important; }
     .native__image-grid, .native__type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: .65rem; padding: 0 1rem; }
+    .native__type-grid { max-height: 340px; overflow-y: auto; align-content: start; padding-bottom: .35rem; scrollbar-width: thin; }
     .native__image, .native__type { display: grid; gap: .25rem; text-align: left; border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: .8rem; cursor: pointer; min-height: 126px; }
     .native__image--on, .native__type--on { border-color: var(--native-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--native-accent) 16%, transparent); }
     .native__image code, .native__type small, .native__mono { font-family: var(--app-font-mono, ui-monospace, monospace); }
@@ -568,5 +591,10 @@ export class ProviderNativeLaunchPanelComponent {
   price = (t: TypeRow): string => {
     const hourly = t.pricePerHour ?? (t.pricePerMinute != null ? t.pricePerMinute * 60 : undefined)
     return hourly != null ? `$${hourly.toFixed(4)}/h` : 'Precio bajo demanda'
+  }
+
+  selectImageId = (id: string): void => {
+    const img = this.images().find((row) => row.id === id)
+    if (img) this.imageSelected.emit(img)
   }
 }

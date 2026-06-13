@@ -36,8 +36,8 @@ import { ProModeService } from '../../core/services/pro-mode.service'
           <app-empty-state
             class="animate-fade-in"
             icon="cloud_off"
-            title="Sin instancias cloud"
-            message="Conecta una cuenta cloud y sincroniza el inventario para ver instancias en vivo aquí."
+            title="Sin instancias cloud o VPS"
+            message="Conecta una cuenta cloud o VPS y sincroniza el inventario para ver recursos en vivo aquí."
           />
         } @else {
           <app-dashboard-fleet-table
@@ -103,8 +103,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.realtime.connect()
     this.realtime.on('inventory.updated', () => this.loadData())
     this.realtime.on('dashboard.updated', () => this.loadData())
-    this.liveSync.startPolling(() => this.loadData(), 30_000)
     this.loadData()
+    this.liveSync.startPolling(() => this.refreshCloudInventory(), 60_000)
   }
 
   ngOnDestroy(): void {
@@ -130,6 +130,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       errorMessage: 'No se pudo cargar el tablero',
       fallback: () => (allowsDemoDataFrom(this.pro) ? buildDemoDashboard() : emptyDashboard()),
     })
+  }
+
+  private refreshCloudInventory = (): void => {
+    this.liveSync.syncAllAccountsSilent().subscribe(() => this.loadData())
   }
 
   closeDrawer = (): void => {

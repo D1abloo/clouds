@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
-import { CloudProvider } from '@prisma/client'
+import { CloudProvider, InstanceStatus } from '@prisma/client'
 import { GithubSummaryService } from '../github/github-summary.service'
 import { AppModeService } from '../../common/config/app-mode.service'
+
+const activeInstanceWhere = {
+  deletedAt: null,
+  status: { not: InstanceStatus.TERMINATED },
+} as const
 
 const emptyGithubSummary = () => ({
   connected: false,
@@ -142,7 +147,7 @@ export class InventoryService {
   async dashboardOverview() {
     const [instances, vps, alerts, billing, notifications, audit, docker, k8s, jenkins, terraform, github] =
       await Promise.all([
-        this.prisma.instance.findMany({ where: { deletedAt: null } }),
+        this.prisma.instance.findMany({ where: activeInstanceWhere }),
         this.prisma.vpsServer.findMany({ where: { deletedAt: null } }),
         this.prisma.alert.findMany({ where: { isResolved: false }, include: { rule: true }, take: 10 }),
         this.prisma.billingRecord.findMany({ include: { billingAccount: true }, take: 20 }),
@@ -177,7 +182,7 @@ export class InventoryService {
       .reduce((s, b) => s + b.amount, 0)
 
     const cloudWithAccounts = await this.prisma.instance.findMany({
-      where: { deletedAt: null },
+      where: activeInstanceWhere,
       include: { cloudAccount: { select: { id: true, name: true, provider: true } } },
       orderBy: [{ provider: 'asc' }, { name: 'asc' }],
     })
@@ -397,7 +402,7 @@ export class InventoryService {
   async providerSummary(provider: CloudProvider) {
     const accounts = await this.prisma.cloudAccount.findMany({
       where: { provider, deletedAt: null },
-      include: { regions: true, instances: { where: { deletedAt: null } } },
+      include: { regions: true, instances: { where: activeInstanceWhere } },
     })
     const instances = accounts.flatMap((a) =>
       a.instances.map((i) => {
