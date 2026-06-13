@@ -7,6 +7,7 @@ Copia `.env.example` a `.env` y ajusta los valores.
 | `NODE_ENV` | Entorno de ejecución | `development` |
 | `DATABASE_URL` | Conexión PostgreSQL | `postgresql://user:pass@localhost:5432/cloudops` |
 | `REDIS_URL` | Conexión Redis | `redis://localhost:6379` |
+| `CLOUD_CATALOG_CACHE_TTL_SECONDS` | TTL de cache Redis para catálogos cloud no sensibles | `600` |
 | `JWT_SECRET` | Secreto para firmar JWT | Cambiar en producción |
 | `JWT_EXPIRES_IN` | Expiración del token | `1d` |
 | `VAULT_ADDR` | URL de HashiCorp Vault | `http://localhost:8200` |

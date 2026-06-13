@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, Optional } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { OrganizationScopeService } from '../../common/organization/organization-scope.service'
+import { RedisService } from '../../common/redis/redis.service'
 import { AuditService } from '../audit/audit.service'
 import { CreateCloudAccountDto } from './dto/create-cloud-account.dto'
 import { LaunchInstanceDto } from './dto/launch-instance.dto'
@@ -20,6 +21,7 @@ export class CloudAccountsService {
     private vault: SecretsVaultService,
     private config: ConfigService,
     private orgScope: OrganizationScopeService,
+    @Optional() private redis?: RedisService,
   ) {}
 
   async getDefaultProject(userId: string) {
@@ -186,38 +188,37 @@ export class CloudAccountsService {
 
   async listRegions(id: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    return this.registry.listRegions(id)
+    return this.withCatalogCache(id, 'regions', 'global', () => this.registry.listRegions(id))
   }
 
   async listNetworks(id: string, region?: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    return this.registry.listNetworks(id, region)
+    const resolved = await this.resolveCatalogRegion(id, region)
+    return this.withCatalogCache(id, 'networks', resolved, () => this.registry.listNetworks(id, resolved))
   }
 
   async listSecurityGroups(id: string, region?: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    return this.registry.listSecurityGroups(id, region)
+    const resolved = await this.resolveCatalogRegion(id, region)
+    return this.withCatalogCache(id, 'security-groups', resolved, () => this.registry.listSecurityGroups(id, resolved))
   }
 
   async listImages(id: string, region: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
-    const resolved = region || account?.defaultRegion || 'us-east-1'
-    return this.registry.listImages(id, resolved)
+    const resolved = await this.resolveCatalogRegion(id, region)
+    return this.withCatalogCache(id, 'images', resolved, () => this.registry.listImages(id, resolved))
   }
 
   async listInstanceTypes(id: string, region: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
-    const resolved = region || account?.defaultRegion || 'us-east-1'
-    return this.registry.listInstanceTypes(id, resolved)
+    const resolved = await this.resolveCatalogRegion(id, region)
+    return this.withCatalogCache(id, 'instance-types', resolved, () => this.registry.listInstanceTypes(id, resolved))
   }
 
   async listKeyPairs(id: string, region: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
-    const resolved = region || account?.defaultRegion || 'us-east-1'
-    return this.registry.listKeyPairs(id, resolved)
+    const resolved = await this.resolveCatalogRegion(id, region)
+    return this.withCatalogCache(id, 'key-pairs', resolved, () => this.registry.listKeyPairs(id, resolved))
   }
 
   async syncInventory(id: string, userId?: string) {
@@ -227,7 +228,9 @@ export class CloudAccountsService {
 
   async launchInstance(id: string, dto: LaunchInstanceDto, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    return this.sync.launchInstance(id, dto, userId)
+    const result = await this.sync.launchInstance(id, dto, userId)
+    await this.invalidateCatalogCache(id, dto.region)
+    return result
   }
 
   async validateLaunchPreflight(id: string, dto: LaunchPreflightDto, userId?: string) {
@@ -237,14 +240,15 @@ export class CloudAccountsService {
 
   async createSubnet(id: string, dto: CreateSubnetDto, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    return this.registry.createSubnet(id, dto)
+    const result = await this.registry.createSubnet(id, dto)
+    await this.invalidateCatalogCache(id, dto.region)
+    return result
   }
 
   async listAvailabilityZones(id: string, region: string, userId?: string) {
     if (userId) await this.assertAccountAccess(id, userId)
-    const account = await this.prisma.cloudAccount.findUnique({ where: { id } })
-    const resolved = region || account?.defaultRegion || 'us-east-1'
-    return this.registry.listAvailabilityZones(id, resolved)
+    const resolved = await this.resolveCatalogRegion(id, region)
+    return this.withCatalogCache(id, 'availability-zones', resolved, () => this.registry.listAvailabilityZones(id, resolved))
   }
 
   async remove(id: string, userId?: string) {
@@ -305,6 +309,68 @@ export class CloudAccountsService {
       hasCredentials: !!(creds?.length),
       credentialType: creds?.[0]?.credentialType,
       status: (account['syncStatus'] as string) ?? 'idle',
+    }
+  }
+
+  private catalogCacheTtlSeconds(): number {
+    const raw = this.config.get<string>('CLOUD_CATALOG_CACHE_TTL_SECONDS')
+    const parsed = Number(raw)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 600
+  }
+
+  private async resolveCatalogRegion(id: string, region?: string) {
+    if (region?.trim()) return region.trim()
+    const account = await this.prisma.cloudAccount.findUnique({ where: { id }, select: { defaultRegion: true } })
+    return account?.defaultRegion || 'us-east-1'
+  }
+
+  private async catalogCachePrefix(id: string) {
+    const account = await this.prisma.cloudAccount.findUnique({ where: { id }, select: { provider: true } })
+    return `cloudCatalog:${account?.provider ?? 'unknown'}:${id}:`
+  }
+
+  private async catalogCacheKey(id: string, type: string, region: string) {
+    const prefix = await this.catalogCachePrefix(id)
+    return `${prefix}${region}:${type}`
+  }
+
+  private async withCatalogCache<T>(id: string, type: string, region: string, load: () => Promise<T>): Promise<T> {
+    if (!this.redis) return load()
+    const key = await this.catalogCacheKey(id, type, region)
+    try {
+      const hit = await this.redis.get(key)
+      if (hit) {
+        const parsed = JSON.parse(hit) as { data?: T }
+        if ('data' in parsed) return parsed.data as T
+      }
+    } catch {
+      // Redis cache is an optimization; provider calls remain the source of truth.
+    }
+
+    const data = await load()
+    try {
+      await this.redis.set(
+        key,
+        JSON.stringify({
+          data,
+          cachedAt: new Date().toISOString(),
+          type,
+          region,
+        }),
+        this.catalogCacheTtlSeconds(),
+      )
+    } catch {
+      // Do not fail cloud catalog reads if Redis is unavailable.
+    }
+    return data
+  }
+
+  private async invalidateCatalogCache(id: string, _region?: string): Promise<void> {
+    if (!this.redis) return
+    try {
+      await this.redis.delByPrefix(await this.catalogCachePrefix(id))
+    } catch {
+      // Cache invalidation must never block launch or resource creation.
     }
   }
 }

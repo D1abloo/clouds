@@ -60,6 +60,7 @@ import { LaunchTestPanelComponent } from './launch/launch-test-panel.component'
 import { LaunchDeletePanelComponent } from './launch/launch-delete-panel.component'
 import { CloudLaunchLogsComponent } from './launch/cloud-launch-logs.component'
 import { CloudCostEstimateCardComponent } from './launch/cloud-cost-estimate-card.component'
+import { ProviderNativeLaunchPanelComponent } from './launch/provider-native-launch-panel.component'
 import { InstancesService } from '../../core/services/instances.service'
 import {
   CloudLaunchActivityService,
@@ -553,6 +554,7 @@ const parseTagsRecord = (raw: string): Record<string, string> | undefined => {
     LaunchDeletePanelComponent,
     CloudLaunchLogsComponent,
     CloudCostEstimateCardComponent,
+    ProviderNativeLaunchPanelComponent,
   ],
   animations: [pageReveal, staggerCards, stepTransition],
   templateUrl: './cloud-launch-wizard.component.html',
@@ -659,6 +661,13 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     const steps = this.steps().length
     const idx = this.stepIndex()
     return steps && idx >= 0 ? Math.round(((idx + 1) / steps) * 100) : 0
+  })
+  readonly nativeConsoleMode = computed(() => {
+    const step = this.activeStep()
+    return (
+      !this.isVpsProvider() &&
+      (step === 'region' || step === 'network' || step === 'compute' || step === 'image' || step === 'review')
+    )
   })
 
   readonly vpcs = computed(() => this.allNetworks().filter((n) => n.type === 'vpc' || n.id.startsWith('vpc-')))
@@ -802,6 +811,20 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
   })
 
   readonly selectedImage = computed(() => this.images().find((i) => i.id === this.form.value.imageId))
+  readonly nativePrimaryDisabled = computed(() => {
+    if (this.launching() || this.preflightLoading() || this.accountLoading() || this.catalogLoading()) return true
+    if (this.localValidationErrors().length) return true
+    if (this.subnetIssue()?.level === 'error') return true
+    return false
+  })
+
+  readonly nativeBlocker = computed(() => {
+    const missing = this.localValidationErrors()
+    if (missing.length) return `Falta completar: ${missing.join(', ')}. Puedes seleccionar recursos existentes o crearlos inline antes de lanzar.`
+    if (this.subnetIssue()?.level === 'error') return this.subnetIssue()?.message ?? 'La red seleccionada no es válida.'
+    const failed = this.preflight()?.checks?.find((c) => c.level === 'error')
+    return failed?.message ?? ''
+  })
 
   readonly costEstimate = computed(() => {
     const t = this.types().find((x) => x.id === this.form.value.instanceType)
@@ -879,6 +902,22 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
     tags: [''],
     userData: [''],
     monitoring: [true],
+    iops: [3000],
+    throughput: [125],
+    encrypted: [true],
+    iamRole: [''],
+    shutdownBehavior: ['stop'],
+    metadataOptions: ['IMDSv2 required'],
+    terminationProtection: [false],
+    projectId: [''],
+    availabilityOption: ['zone'],
+    securityType: ['standard'],
+    authType: ['ssh'],
+    username: ['cloudadmin'],
+    publicIpName: ['pip-ai-infra-studio'],
+    machineFamily: ['general-purpose'],
+    serviceAccount: [''],
+    metadata: [''],
     newSubnetCidr: ['10.0.1.0/24'],
     newSubnetName: [''],
     cpuCores: [2],
@@ -1476,6 +1515,44 @@ export class CloudLaunchWizardComponent implements OnInit, OnDestroy, OnChanges 
       this.activeStep.set(next)
       if (next === 'review') this.runPreflight()
     }
+  }
+
+  handleNativePrimaryAction = (): void => {
+    if (this.nativePrimaryDisabled()) return
+    if (this.canLaunch()) {
+      this.handleLaunch()
+      return
+    }
+    this.activeStep.set('review')
+    this.runPreflight()
+  }
+
+  handlePreviewCode = (): void => {
+    const payload = this.buildLaunchPayload()
+    if (!payload) {
+      this.appendLaunchLog('Preview code pendiente: completa nombre, region, tipo e imagen.')
+      this.toast.info('Completa los campos obligatorios para generar la vista previa')
+      return
+    }
+    const safePreview = {
+      provider: this.activityProvider(),
+      account: this.effectiveData().accountName,
+      region: payload.region,
+      resource: {
+        name: payload.name,
+        imageId: payload.imageId,
+        instanceType: payload.instanceType,
+        subnetId: payload.subnetId,
+        securityGroupIds: payload.securityGroupIds,
+        keyPair: payload.keyPair,
+        publicIp: payload.publicIp,
+        diskGb: payload.diskGb,
+        diskType: payload.diskType,
+        tags: payload.tags,
+      },
+    }
+    this.appendLaunchLog(`Preview code: ${JSON.stringify(safePreview)}`)
+    this.toast.success('Preview code generado sin secretos')
   }
 
   handleBack = (): void => {

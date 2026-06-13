@@ -39,6 +39,46 @@
 
   <div class="clw__grid" [@staggerCards]="activeStep()">
     <main class="clw__card motion-card" [@stepTransition]="activeStep()">
+      @if (nativeConsoleMode()) {
+        <app-provider-native-launch-panel
+          [slug]="effectiveSlug()"
+          [logo]="theme().logo"
+          [form]="form"
+          [accountName]="effectiveData().accountName"
+          [providerLabel]="launchProviderTitle()"
+          [regions]="regions()"
+          [zones]="availabilityZones()"
+          [vpcs]="vpcs()"
+          [subnets]="subnetsForAz()"
+          [securityGroups]="securityGroups()"
+          [keyPairs]="keyPairs()"
+          [images]="filteredImages()"
+          [types]="filteredTypes()"
+          [awsSections]="awsImageSections()"
+          [imageSection]="imageSection()"
+          [imageSearch]="imageSearch()"
+          [typeSearch]="typeSearch()"
+          [volumeTypes]="options().volumeTypes"
+          [summaryRows]="reviewRows()"
+          [checks]="preflight()?.checks ?? []"
+          [cost]="costEstimate()"
+          [loading]="catalogLoading() || azLoading()"
+          [primaryDisabled]="nativePrimaryDisabled()"
+          [blocker]="nativeBlocker()"
+          (regionChange)="onRegionChange()"
+          (azChange)="onAzChange()"
+          (vpcChange)="onVpcChange()"
+          (typeSelected)="selectType($event)"
+          (imageSelected)="selectImage($event)"
+          (imageSearchChange)="imageSearch.set($event)"
+          (typeSearchChange)="typeSearch.set($event)"
+          (imageSectionChange)="selectImageSection($event)"
+          (createDependency)="createInlineDependency($event)"
+          (runPreflight)="runPreflight()"
+          (primaryAction)="handleNativePrimaryAction()"
+          (previewCode)="handlePreviewCode()"
+        />
+      } @else {
       @switch (activeStep()) {
         @case ('provider') {
           <h3 class="clw__section-title">Selecciona proveedor cloud</h3>
@@ -584,6 +624,7 @@
             (remove)="handleDelete()"
           />
         }
+      }
       }
 
       <app-cloud-launch-logs [lines]="launchLogLines()" />
