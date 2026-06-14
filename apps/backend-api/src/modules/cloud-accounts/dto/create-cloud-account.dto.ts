@@ -83,7 +83,10 @@ export class CreateCloudAccountDto {
   @IsString()
   accountId?: string
 
-  @ApiProperty({ required: false })
+  @ApiProperty({
+    required: false,
+    description: 'Optional legacy value. Account connection is provider/account scoped; use config.syncScope/enabledRegions for sync limits.',
+  })
   @IsOptional()
   @IsString()
   defaultRegion?: string

@@ -9,7 +9,7 @@ export const FULL_WIZARD_STEPS: { id: WizardStep; label: string }[] = [
   { id: 'method', label: 'Método' },
   { id: 'credentials', label: 'Credenciales' },
   { id: 'validate', label: 'Validación' },
-  { id: 'resources', label: 'Recursos' },
+  { id: 'resources', label: 'Alcance' },
   { id: 'finish', label: 'Finalizar' },
 ]
 
@@ -46,7 +46,6 @@ export interface CloudProviderWizardCard {
   /** Si guarda vía API cloud-accounts (AWS/GCP/AZURE) */
   cloudApiProvider?: CloudProvider
   defaultCredentialType: string
-  defaultRegion?: string
 }
 
 export const CLOUD_WIZARD_STEPS = FULL_WIZARD_STEPS
@@ -65,6 +64,11 @@ export interface ResourceSyncOption {
   label: string
   description: string
   defaultSelected: boolean
+}
+
+export interface SyncRegionOption {
+  id: string
+  label: string
 }
 
 export const PROVIDER_ALIAS_MAP: Record<string, ConnectionProviderId> = {
@@ -217,6 +221,75 @@ export const resourceSyncOptionsFor = (provider: ConnectionProviderId): Resource
 export const defaultSelectedResources = (provider: ConnectionProviderId): string[] =>
   resourceSyncOptionsFor(provider).filter((o) => o.defaultSelected).map((o) => o.id)
 
+export const syncRegionOptionsFor = (provider: ConnectionProviderId): SyncRegionOption[] => {
+  const map: Partial<Record<ConnectionProviderId, SyncRegionOption[]>> = {
+    AWS: [
+      { id: 'us-east-1', label: 'us-east-1 (N. Virginia)' },
+      { id: 'us-west-2', label: 'us-west-2 (Oregon)' },
+      { id: 'eu-west-1', label: 'eu-west-1 (Ireland)' },
+      { id: 'eu-central-1', label: 'eu-central-1 (Frankfurt)' },
+      { id: 'eu-south-2', label: 'eu-south-2 (Spain)' },
+    ],
+    GCP: [
+      { id: 'us-central1', label: 'us-central1' },
+      { id: 'europe-west1', label: 'europe-west1' },
+      { id: 'europe-southwest1', label: 'europe-southwest1' },
+      { id: 'southamerica-east1', label: 'southamerica-east1' },
+      { id: 'africa-south1', label: 'africa-south1' },
+    ],
+    AZURE: [
+      { id: 'westeurope', label: 'West Europe' },
+      { id: 'northeurope', label: 'North Europe' },
+      { id: 'eastus', label: 'East US' },
+      { id: 'spaincentral', label: 'Spain Central' },
+      { id: 'brazilsouth', label: 'Brazil South' },
+    ],
+    CLOUDING: [
+      { id: 'eu-central', label: 'eu-central' },
+      { id: 'eu-west', label: 'eu-west' },
+    ],
+    DIGITALOCEAN: [
+      { id: 'nyc3', label: 'NYC3' },
+      { id: 'ams3', label: 'AMS3' },
+      { id: 'fra1', label: 'FRA1' },
+      { id: 'sfo3', label: 'SFO3' },
+    ],
+    HETZNER: [
+      { id: 'fsn1', label: 'Falkenstein' },
+      { id: 'nbg1', label: 'Nuremberg' },
+      { id: 'hel1', label: 'Helsinki' },
+    ],
+    LINODE: [
+      { id: 'eu-central', label: 'Frankfurt' },
+      { id: 'eu-west', label: 'London' },
+      { id: 'us-east', label: 'Newark' },
+    ],
+    OVH: [
+      { id: 'GRA', label: 'Gravelines' },
+      { id: 'SBG', label: 'Strasbourg' },
+      { id: 'BHS', label: 'Beauharnois' },
+    ],
+    IONOS: [
+      { id: 'de/fra', label: 'Germany / Frankfurt' },
+      { id: 'de/txl', label: 'Germany / Berlin' },
+      { id: 'es/vit', label: 'Spain / Vitoria' },
+    ],
+    VULTR: [
+      { id: 'ewr', label: 'New Jersey' },
+      { id: 'ams', label: 'Amsterdam' },
+      { id: 'fra', label: 'Frankfurt' },
+      { id: 'mad', label: 'Madrid' },
+    ],
+    SCALEWAY: [
+      { id: 'fr-par-1', label: 'Paris 1' },
+      { id: 'fr-par-2', label: 'Paris 2' },
+      { id: 'nl-ams-1', label: 'Amsterdam 1' },
+      { id: 'pl-waw-1', label: 'Warsaw 1' },
+    ],
+  }
+  return map[provider] ?? []
+}
+
 export const integrationStatusLabel = (status: string): string => {
   const map: Record<string, string> = {
     connected: 'Conectada',
@@ -252,7 +325,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     scope: 'cloud',
     cloudApiProvider: 'AWS',
     defaultCredentialType: 'iam_role',
-    defaultRegion: 'us-east-1',
   },
   {
     id: 'GCP',
@@ -272,7 +344,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     scope: 'cloud',
     cloudApiProvider: 'GCP',
     defaultCredentialType: 'service_account',
-    defaultRegion: 'us-central1-a',
   },
   {
     id: 'AZURE',
@@ -291,7 +362,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     scope: 'cloud',
     cloudApiProvider: 'AZURE',
     defaultCredentialType: 'client_secret',
-    defaultRegion: 'westeurope',
   },
   {
     id: 'CLOUDING',
@@ -310,7 +380,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     scope: 'cloud',
     cloudApiProvider: 'CLOUDING',
     defaultCredentialType: 'api_token',
-    defaultRegion: 'eu-central',
   },
   {
     id: 'DIGITALOCEAN',
@@ -323,7 +392,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     toneClass: 'provider-card--do',
     scope: 'vps',
     defaultCredentialType: 'api_token',
-    defaultRegion: 'nyc3',
   },
   {
     id: 'HETZNER',
@@ -336,7 +404,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     toneClass: 'provider-card--hetzner',
     scope: 'vps',
     defaultCredentialType: 'api_token',
-    defaultRegion: 'fsn1',
   },
   {
     id: 'CLOUDFLARE',
@@ -361,7 +428,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     toneClass: 'provider-card--linode',
     scope: 'vps',
     defaultCredentialType: 'api_token',
-    defaultRegion: 'eu-central',
   },
   {
     id: 'OVH',
@@ -374,7 +440,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     toneClass: 'provider-card--ovh',
     scope: 'vps',
     defaultCredentialType: 'ovh_keys',
-    defaultRegion: 'GRA',
   },
   {
     id: 'IONOS',
@@ -387,7 +452,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     toneClass: 'provider-card--ionos',
     scope: 'vps',
     defaultCredentialType: 'api_token',
-    defaultRegion: 'de/fra',
   },
   {
     id: 'VULTR',
@@ -400,7 +464,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     toneClass: 'provider-card--vultr',
     scope: 'vps',
     defaultCredentialType: 'api_token',
-    defaultRegion: 'ewr',
   },
   {
     id: 'SCALEWAY',
@@ -413,7 +476,6 @@ export const CLOUD_PROVIDER_CARDS: CloudProviderWizardCard[] = [
     toneClass: 'provider-card--scaleway',
     scope: 'vps',
     defaultCredentialType: 'api_token',
-    defaultRegion: 'fr-par-1',
   },
   {
     id: 'KUBERNETES',

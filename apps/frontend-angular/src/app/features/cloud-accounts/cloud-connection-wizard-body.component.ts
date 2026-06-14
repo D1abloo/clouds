@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'
 import { MatCheckboxModule } from '@angular/material/checkbox'
 import { MatExpansionModule } from '@angular/material/expansion'
+import { MatRadioModule } from '@angular/material/radio'
 import { BrandLogoComponent } from '../../shared/components/brand-logo/brand-logo.component'
 import { CloudAccountWizardFacade, type WizardInitOptions } from './cloud-account-wizard.facade'
 import type { ConnectionProviderId } from './cloud-account-wizard.config'
@@ -26,6 +27,7 @@ import type { ConnectionProviderId } from './cloud-account-wizard.config'
     MatProgressSpinnerModule,
     MatCheckboxModule,
     MatExpansionModule,
+    MatRadioModule,
     BrandLogoComponent,
   ],
   templateUrl: './cloud-connection-wizard-body.component.html',

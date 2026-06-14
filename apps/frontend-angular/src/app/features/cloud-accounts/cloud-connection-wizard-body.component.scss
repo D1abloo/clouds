@@ -410,6 +410,31 @@
   color: var(--app-text-muted);
 }
 
+.caw__scope-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--caw-accent) 22%, var(--app-border-subtle));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--caw-accent) 7%, var(--app-card));
+
+  mat-icon {
+    color: var(--caw-accent);
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.76rem;
+    line-height: 1.45;
+    color: var(--app-text-muted);
+  }
+}
+
 .caw__permissions {
   box-shadow: none !important;
   border: 1px solid var(--app-border-subtle);
@@ -486,6 +511,28 @@
 .caw__resources {
   display: grid;
   gap: 0.5rem;
+}
+
+.caw__sync-scope {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--caw-accent) 18%, var(--app-border-subtle));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--caw-accent) 5%, var(--app-card));
+
+  h4 {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  mat-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1rem;
+  }
 }
 
 .caw__resource {

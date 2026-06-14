@@ -16,12 +16,14 @@ import {
   connectionMethodsFor,
   resourceSyncOptionsFor,
   defaultSelectedResources,
+  syncRegionOptionsFor,
   type ConnectionProviderId,
   type WizardStep,
 } from './cloud-account-wizard.config'
 import {
   buildConfigPayload,
   buildCredentialsPayload,
+  isSyncScopeValid,
   isWizardFormValid,
   reviewSummaryLine,
 } from './cloud-account-wizard.validation'
@@ -111,6 +113,11 @@ export class CloudAccountWizardFacade {
     return p ? resourceSyncOptionsFor(p) : []
   })
 
+  readonly syncRegionOptions = computed(() => {
+    const p = this.selectedProvider()
+    return p ? syncRegionOptionsFor(p) : []
+  })
+
   readonly reviewDisabled = computed(() => {
     const prov = this.selectedProvider()
     if (!prov || !isWizardFormValid(prov, this.form.getRawValue() as never)) return true
@@ -155,6 +162,8 @@ export class CloudAccountWizardFacade {
     jenkinsUser: [''],
     terraformOrg: [''],
     terraformHostname: ['app.terraform.io'],
+    syncScope: ['all_regions'],
+    enabledRegions: [[] as string[]],
     encryptCredentials: [true],
     syncOnCreate: [true],
   })
@@ -216,7 +225,9 @@ export class CloudAccountWizardFacade {
     if (!card) return
     this.form.patchValue({
       credentialType: card.defaultCredentialType,
-      defaultRegion: card.defaultRegion ?? '',
+      defaultRegion: '',
+      syncScope: 'all_regions',
+      enabledRegions: [],
     })
     this.selectedResources.set(defaultSelectedResources(prov))
   }
@@ -232,7 +243,9 @@ export class CloudAccountWizardFacade {
       return !!prov && isWizardFormValid(prov, this.form.getRawValue() as never)
     }
     if (target === 'resources') return !!this.validationResult()?.valid
-    if (target === 'finish') return this.selectedResources().length > 0 && !!this.validationResult()?.valid
+    if (target === 'finish') {
+      return this.selectedResources().length > 0 && !!this.validationResult()?.valid && isSyncScopeValid(this.form.getRawValue())
+    }
     return false
   }
 
@@ -288,6 +301,10 @@ export class CloudAccountWizardFacade {
         this.toast.error('Selecciona al menos un tipo de recurso')
         return
       }
+      if (!isSyncScopeValid(this.form.getRawValue())) {
+        this.toast.error('Selecciona al menos una región o usa todas las regiones disponibles')
+        return
+      }
       this.step.set('finish')
     }
   }
@@ -325,7 +342,6 @@ export class CloudAccountWizardFacade {
         name: v.name,
         provider: cloudProv,
         accountId: v.accountId || undefined,
-        defaultRegion: v.defaultRegion || undefined,
         config,
         credentials: buildCredentialsPayload(prov, v as never),
       })
@@ -381,7 +397,6 @@ export class CloudAccountWizardFacade {
         name: v.name,
         provider: cloudProv,
         accountId: v.accountId || undefined,
-        defaultRegion: v.defaultRegion || undefined,
         config,
         credentials: buildCredentialsPayload(prov, v as never),
       })
@@ -418,5 +433,22 @@ export class CloudAccountWizardFacade {
     const prov = this.selectedProvider()
     if (!prov) return '—'
     return reviewSummaryLine(prov, this.form.getRawValue() as never)
+  }
+
+  connectionScopeHelp = (prov: ConnectionProviderId): string => {
+    const map: Partial<Record<ConnectionProviderId, string>> = {
+      AWS: 'Las credenciales AWS son válidas a nivel de cuenta. Las regiones EC2 se elegirán al sincronizar recursos o al lanzar instancias.',
+      AZURE: 'La conexión Azure se asocia a una suscripción. La región se elige al crear recursos.',
+      GCP: 'La conexión GCP se asocia a un proyecto. La región y zona se eligen al crear recursos.',
+      CLOUDING: 'La conexión Clouding se guarda a nivel de cuenta API. La región se elige al crear instancias.',
+      IONOS: 'La conexión IONOS se guarda a nivel de cuenta API. El datacenter se elige al crear VPS.',
+    }
+    return map[prov] ?? 'La conexión se guarda a nivel de cuenta cloud. Las regiones se seleccionan después al sincronizar recursos o al lanzar infraestructura.'
+  }
+
+  syncScopeLabel = (): string => {
+    const v = this.form.getRawValue()
+    if (v.syncScope !== 'selected_regions') return 'Todas las regiones disponibles'
+    return v.enabledRegions.length ? v.enabledRegions.join(', ') : 'Regiones específicas pendientes'
   }
 }

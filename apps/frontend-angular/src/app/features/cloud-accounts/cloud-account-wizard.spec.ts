@@ -7,7 +7,12 @@ import {
   credentialTypeLabel,
   maskSecret,
 } from './cloud-account-wizard.config'
-import { buildCredentialsPayload, isWizardFormValid } from './cloud-account-wizard.validation'
+import {
+  buildConfigPayload,
+  buildCredentialsPayload,
+  isSyncScopeValid,
+  isWizardFormValid,
+} from './cloud-account-wizard.validation'
 
 const baseForm = (): Record<string, unknown> => ({
   name: 'Producción EU',
@@ -47,6 +52,8 @@ const baseForm = (): Record<string, unknown> => ({
   jenkinsUser: '',
   terraformOrg: '',
   terraformHostname: '',
+  syncScope: 'all_regions',
+  enabledRegions: [],
   encryptCredentials: true,
   syncOnCreate: true,
 })
@@ -75,11 +82,10 @@ describe('cloud-account-wizard.config', () => {
 })
 
 describe('cloud-account-wizard.validation', () => {
-  it('valida AWS con account ID de 12 dígitos e IAM role', () => {
+  it('valida AWS con account ID de 12 dígitos e IAM role sin región', () => {
     const v = {
       ...baseForm(),
       accountId: '123456789012',
-      defaultRegion: 'eu-west-1',
       credentialType: 'iam_role',
       roleArn: 'arn:aws:iam::123456789012:role/SpendlyxRead',
     }
@@ -91,29 +97,26 @@ describe('cloud-account-wizard.validation', () => {
     const v = {
       ...baseForm(),
       accountId: '123456789012',
-      defaultRegion: 'eu-west-1',
       credentialType: 'iam_role',
     }
     expect(isWizardFormValid('AWS', v as never)).toBe(false)
   })
 
-  it('valida GCP con JSON de service account', () => {
+  it('valida GCP con JSON de service account sin región ni zona', () => {
     const v = {
       ...baseForm(),
       accountId: 'mi-proyecto',
-      defaultRegion: 'europe-west1-b',
       credentialType: 'service_account',
       serviceAccountJson: '{"type":"service_account"}',
     }
     expect(isWizardFormValid('GCP', v as never)).toBe(true)
   })
 
-  it('valida Azure con tenant y client secret', () => {
+  it('valida Azure con tenant y client secret sin región', () => {
     const v = {
       ...baseForm(),
       accountId: '11111111-1111-1111-1111-111111111111',
       tenantId: '22222222-2222-2222-2222-222222222222',
-      defaultRegion: 'westeurope',
       credentialType: 'client_secret',
       clientId: 'app-id',
       clientSecret: 'secret',
@@ -121,14 +124,36 @@ describe('cloud-account-wizard.validation', () => {
     expect(isWizardFormValid('AZURE', v as never)).toBe(true)
   })
 
-  it('valida Clouding con API token y región', () => {
+  it('valida Clouding e IONOS con API token sin región ni datacenter', () => {
     const v = {
       ...baseForm(),
-      defaultRegion: 'eu-central',
       credentialType: 'api_token',
       apiToken: 'clouding-token',
     }
     expect(isWizardFormValid('CLOUDING', v as never)).toBe(true)
+    expect(isWizardFormValid('IONOS', v as never)).toBe(true)
+  })
+
+  it('guarda el alcance regional en config solo cuando se seleccionan regiones específicas', () => {
+    const allRegions = { ...baseForm(), syncScope: 'all_regions', enabledRegions: [] }
+    expect(isSyncScopeValid(allRegions as never)).toBe(true)
+    expect(buildConfigPayload('AWS', allRegions as never)).toEqual({
+      integrationProvider: 'AWS',
+      syncScope: 'all_regions',
+    })
+
+    const selectedRegions = { ...baseForm(), syncScope: 'selected_regions', enabledRegions: ['eu-west-1', 'us-east-1'] }
+    expect(isSyncScopeValid(selectedRegions as never)).toBe(true)
+    expect(buildConfigPayload('AWS', selectedRegions as never)).toEqual({
+      integrationProvider: 'AWS',
+      syncScope: 'selected_regions',
+      enabledRegions: ['eu-west-1', 'us-east-1'],
+    })
+  })
+
+  it('bloquea alcance por regiones específicas si no hay regiones seleccionadas', () => {
+    const v = { ...baseForm(), syncScope: 'selected_regions', enabledRegions: [] }
+    expect(isSyncScopeValid(v as never)).toBe(false)
   })
 
   it('buildCredentialsPayload no incluye demoMode', () => {

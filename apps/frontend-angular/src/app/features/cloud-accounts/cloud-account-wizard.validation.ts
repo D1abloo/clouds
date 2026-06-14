@@ -43,9 +43,14 @@ export type WizardFormValue = {
   jenkinsUser: string
   terraformOrg: string
   terraformHostname: string
+  syncScope: string
+  enabledRegions: string[]
   encryptCredentials: boolean
   syncOnCreate: boolean
 }
+
+export const isSyncScopeValid = (v: Pick<WizardFormValue, 'syncScope' | 'enabledRegions'>): boolean =>
+  v.syncScope !== 'selected_regions' || (v.enabledRegions?.length ?? 0) > 0
 
 export const isWizardFormValid = (prov: ConnectionProviderId, v: WizardFormValue): boolean => {
   if (!v.name?.trim()) return false
@@ -56,19 +61,19 @@ export const isWizardFormValid = (prov: ConnectionProviderId, v: WizardFormValue
       if (v.credentialType === 'iam_role' && !v.roleArn?.trim()) return false
       if (v.credentialType === 'access_key' && (!v.accessKeyId?.trim() || !v.secretAccessKey?.trim())) return false
       if (v.credentialType === 'oidc' && !v.oidcProvider?.trim()) return false
-      return !!v.defaultRegion?.trim()
+      return true
     }
     case 'GCP': {
       if (!v.accountId?.trim()) return false
       if (v.credentialType === 'service_account' && !v.serviceAccountJson?.trim()) return false
       if (v.credentialType === 'workload_identity' && !v.oidcProvider?.trim()) return false
-      return !!v.defaultRegion?.trim()
+      return true
     }
     case 'AZURE': {
       if (!v.accountId?.trim() || !v.tenantId?.trim()) return false
       if (v.credentialType === 'client_secret' && (!v.clientId?.trim() || !v.clientSecret?.trim())) return false
       if (v.credentialType === 'managed_identity' && !v.managedIdentity?.trim()) return false
-      return !!v.defaultRegion?.trim()
+      return true
     }
     case 'DIGITALOCEAN':
     case 'HETZNER':
@@ -77,7 +82,7 @@ export const isWizardFormValid = (prov: ConnectionProviderId, v: WizardFormValue
     case 'VULTR':
     case 'SCALEWAY':
     case 'CLOUDING':
-      return !!v.apiToken?.trim() && !!v.defaultRegion?.trim()
+      return !!v.apiToken?.trim()
     case 'CLOUDFLARE':
       if (v.credentialType === 'global_key') return !!v.apiEmail?.trim() && !!v.apiToken?.trim()
       return !!v.apiToken?.trim()
@@ -163,7 +168,14 @@ export const buildCredentialsPayload = (
 }
 
 export const buildConfigPayload = (prov: ConnectionProviderId, v: WizardFormValue): Record<string, unknown> => {
-  const config: Record<string, unknown> = { integrationProvider: prov }
+  const config: Record<string, unknown> = {
+    integrationProvider: prov,
+    syncScope: v.syncScope === 'selected_regions' ? 'selected_regions' : 'all_regions',
+  }
+
+  if (v.syncScope === 'selected_regions' && v.enabledRegions?.length) {
+    config['enabledRegions'] = v.enabledRegions
+  }
 
   if (prov === 'GCP') {
     if (v.billingAccountId) config['billingAccountId'] = v.billingAccountId

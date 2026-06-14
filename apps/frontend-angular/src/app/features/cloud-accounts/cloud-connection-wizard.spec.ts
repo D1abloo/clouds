@@ -8,7 +8,7 @@ describe('cloud-connection-wizard', () => {
     expect(labels).toContain('Método')
     expect(labels).toContain('Credenciales')
     expect(labels).toContain('Validación')
-    expect(labels).toContain('Recursos')
+    expect(labels).toContain('Alcance')
     expect(labels).toContain('Finalizar')
     expect(labels.toLowerCase()).not.toContain('demo')
   })

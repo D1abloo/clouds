@@ -167,6 +167,10 @@
 
         <form [formGroup]="f.form" class="caw__form-grid">
           <h4 class="caw__section-title caw__span-2">Identificación</h4>
+          <div class="caw__scope-note caw__span-2">
+            <mat-icon>public</mat-icon>
+            <p>{{ f.connectionScopeHelp(prov) }}</p>
+          </div>
           <mat-form-field appearance="outline" class="caw__span-2">
             <mat-label>Nombre de la conexión</mat-label>
             <input matInput formControlName="name" placeholder="Ej. Producción EU" />
@@ -180,15 +184,6 @@
             <mat-form-field appearance="outline">
               <mat-label>ID de cuenta AWS (12 dígitos)</mat-label>
               <input matInput formControlName="accountId" placeholder="123456789012" maxlength="12" />
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Región por defecto</mat-label>
-              <mat-select formControlName="defaultRegion">
-                <mat-option value="us-east-1">us-east-1 (N. Virginia)</mat-option>
-                <mat-option value="us-west-2">us-west-2 (Oregón)</mat-option>
-                <mat-option value="eu-west-1">eu-west-1 (Irlanda)</mat-option>
-                <mat-option value="eu-central-1">eu-central-1 (Fráncfort)</mat-option>
-              </mat-select>
             </mat-form-field>
             @if (f.form.value.credentialType === 'iam_role') {
               <mat-form-field appearance="outline" class="caw__span-2">
@@ -223,14 +218,6 @@
               <mat-label>ID del proyecto GCP</mat-label>
               <input matInput formControlName="accountId" placeholder="mi-proyecto-prod" />
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Zona por defecto</mat-label>
-              <mat-select formControlName="defaultRegion">
-                <mat-option value="us-central1-a">us-central1-a</mat-option>
-                <mat-option value="europe-west1-b">europe-west1-b</mat-option>
-                <mat-option value="southamerica-east1-a">southamerica-east1-a</mat-option>
-              </mat-select>
-            </mat-form-field>
             @if (f.form.value.credentialType === 'service_account') {
               <mat-form-field appearance="outline" class="caw__span-2">
                 <mat-label>JSON de la cuenta de servicio</mat-label>
@@ -262,15 +249,6 @@
               <mat-label>ID de inquilino (Tenant)</mat-label>
               <input matInput formControlName="tenantId" />
             </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Región por defecto</mat-label>
-              <mat-select formControlName="defaultRegion">
-                <mat-option value="westeurope">West Europe</mat-option>
-                <mat-option value="northeurope">North Europe</mat-option>
-                <mat-option value="eastus">East US</mat-option>
-                <mat-option value="brazilsouth">Brazil South</mat-option>
-              </mat-select>
-            </mat-form-field>
             @if (f.form.value.credentialType === 'client_secret') {
               <mat-form-field appearance="outline">
                 <mat-label>Client ID</mat-label>
@@ -294,14 +272,7 @@
           }
 
           @if (prov === 'CLOUDING') {
-            <mat-form-field appearance="outline">
-              <mat-label>Región por defecto</mat-label>
-              <mat-select formControlName="defaultRegion">
-                <mat-option value="eu-central">eu-central</mat-option>
-                <mat-option value="eu-west">eu-west</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" class="caw__span-2">
               <mat-label>API Token</mat-label>
               <input matInput type="password" formControlName="apiToken" autocomplete="new-password" />
               <mat-hint>Token con permisos de instancias, redes y facturación</mat-hint>
@@ -309,12 +280,7 @@
           }
 
           @if (prov === 'DIGITALOCEAN' || prov === 'HETZNER' || prov === 'LINODE' || prov === 'IONOS' || prov === 'VULTR' || prov === 'SCALEWAY') {
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Región / datacenter</mat-label>
-              <input matInput formControlName="defaultRegion" placeholder="fra1" />
-              <mat-hint>Código de región por defecto, ej. nyc1, ams3, par1</mat-hint>
-            </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="caw__span-2">
               <mat-label>API Token *</mat-label>
               <input matInput type="password" formControlName="apiToken" autocomplete="new-password" placeholder="••••••••••••" />
               <mat-hint>Token con permisos de lectura de servidores y facturación</mat-hint>
@@ -473,10 +439,28 @@
       <section class="caw__panel">
         <div class="caw__panel-head">
           <div>
-            <h3>Recursos a sincronizar</h3>
-            <p>Selecciona qué inventario importar desde {{ f.providerMeta()!.shortName }}.</p>
+            <h3>Recursos y alcance de sincronización</h3>
+            <p>Selecciona qué inventario importar desde {{ f.providerMeta()!.shortName }} y si quieres limitarlo por regiones.</p>
           </div>
         </div>
+        <form [formGroup]="f.form" class="caw__sync-scope">
+          <h4>Alcance de sincronización</h4>
+          <mat-radio-group formControlName="syncScope" aria-label="Alcance de sincronización">
+            <mat-radio-button value="all_regions">Todas las regiones disponibles</mat-radio-button>
+            <mat-radio-button value="selected_regions">Seleccionar regiones específicas</mat-radio-button>
+          </mat-radio-group>
+          @if (f.form.value.syncScope === 'selected_regions') {
+            <mat-form-field appearance="outline">
+              <mat-label>Regiones específicas</mat-label>
+              <mat-select formControlName="enabledRegions" multiple>
+                @for (region of f.syncRegionOptions(); track region.id) {
+                  <mat-option [value]="region.id">{{ region.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>Solo limita la sincronización. El lanzamiento seguirá pidiendo región y zona.</mat-hint>
+            </mat-form-field>
+          }
+        </form>
         <div class="caw__resources">
           @for (opt of f.resourceOptions(); track opt.id) {
             <label class="caw__resource">
@@ -508,9 +492,7 @@
           @if (f.form.value.accountId) {
             <div><dt>Identificador</dt><dd class="caw__mono">{{ f.form.value.accountId }}</dd></div>
           }
-          @if (f.form.value.defaultRegion) {
-            <div><dt>Región / zona</dt><dd>{{ f.form.value.defaultRegion }}</dd></div>
-          }
+          <div><dt>Alcance regional</dt><dd>{{ f.syncScopeLabel() }}</dd></div>
           <div><dt>Recursos</dt><dd>{{ f.selectedResources().join(', ') }}</dd></div>
           <div><dt>Cifrado</dt><dd>{{ f.form.value.encryptCredentials ? 'Activado' : 'Desactivado' }}</dd></div>
         </dl>
