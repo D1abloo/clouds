@@ -1,14 +1,12 @@
 import { Injectable, inject } from '@angular/core'
-import { Observable, map, of } from 'rxjs'
+import { Observable, map } from 'rxjs'
 import { ApiClientService } from './api-client.service'
-import { ProModeService } from './pro-mode.service'
 import { JenkinsServer } from '../models/api.models'
 import { unwrapList } from '../utils/api-response.util'
 
 @Injectable({ providedIn: 'root' })
 export class JenkinsService {
   private readonly api = inject(ApiClientService)
-  private readonly pro = inject(ProModeService)
 
   listServers = (): Observable<JenkinsServer[]> =>
     this.api
@@ -23,9 +21,8 @@ export class JenkinsService {
 
   listJobs = (serverId?: string): Observable<Record<string, unknown>[]> => {
     if (!serverId) {
-      return false
-        ? this.api.get<Record<string, unknown>[]>('jenkins/servers/mock/jobs')
-        : of([])
+      return this.api.get<Record<string, unknown>[]>('jenkins/servers')
+        .pipe(map(() => []))
     }
     return this.api.get<Record<string, unknown>[]>(`jenkins/servers/${serverId}/jobs`)
   }

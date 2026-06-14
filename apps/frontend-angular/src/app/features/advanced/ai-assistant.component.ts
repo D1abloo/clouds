@@ -90,8 +90,8 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
               <li><mat-icon>memory</mat-icon> {{ providerLabel() }}</li>
               <li><mat-icon>hub</mat-icon> {{ modeLabel() }}</li>
             } @else {
-              <li><mat-icon>schedule</mat-icon> Datos demo · sync ~3 min</li>
-              <li><mat-icon>memory</mat-icon> Modelo simulado</li>
+              <li><mat-icon>schedule</mat-icon> Datos locales · sync pendiente</li>
+              <li><mat-icon>memory</mat-icon> Modo asistido</li>
             }
             <li><mat-icon>language</mat-icon> Español</li>
           </ul>
@@ -142,7 +142,7 @@ type MessageSegment = { kind: 'text' | 'bold'; value: string }
               </span>
               <span class="cop-live-context__chip cop-live-context__chip--sync">
                 <i class="cop-live-dot"></i>
-                {{ pro.proMode() ? 'En línea · PRO' : 'En línea · demo' }}
+                {{ pro.proMode() ? 'En línea · PRO' : 'En línea · local' }}
               </span>
             </div>
 
@@ -836,7 +836,7 @@ export class AiAssistantComponent implements OnInit {
 
   readonly emptyStateDescription = computed(() =>
     allowsDemoDataFrom(this.pro)
-      ? 'Pregunta sobre instancias, costes, alertas o Kubernetes. El Copilot usa datos de demostración sincronizados con el resto de la plataforma.'
+      ? 'Pregunta sobre instancias, costes, alertas, VPS, Jenkins o Kubernetes. El Copilot usa el contexto disponible del panel.'
       : 'Pregunta sobre instancias, costes, alertas o Kubernetes. El Copilot usa los datos conectados de tu organización.',
   )
 
@@ -1072,7 +1072,7 @@ export class AiAssistantComponent implements OnInit {
       this.toast.info(`Navegando: ${action.label}`)
       return
     }
-    this.toast.info(`${action.label} (demo)`)
+    this.toast.info(`${action.label} preparado`)
   }
 
   clearChat = (): void => {

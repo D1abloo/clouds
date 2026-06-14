@@ -59,7 +59,7 @@ const autoNameFromHost = (hostname: string): string =>
         <form [formGroup]="form" class="vps-form" aria-labelledby="vps-credentials-title">
           <h2 id="vps-credentials-title" class="vps-form__title">Datos de conexión SSH</h2>
           <p class="vps-form__intro">
-            Solo necesitas IP, puerto, usuario y contraseña. El nombre se genera automáticamente.
+            Solo necesitas servidor, usuario y contraseña. Spendlyx usará SSH por contraseña en el puerto 22.
           </p>
 
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
@@ -71,14 +71,9 @@ const autoNameFromHost = (hostname: string): string =>
             }
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Puerto SSH *</mat-label>
-            <input matInput type="number" formControlName="port" placeholder="22" />
-            <mat-hint>Por defecto 22</mat-hint>
-          </mat-form-field>
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Usuario SSH *</mat-label>
             <input matInput formControlName="username" placeholder="root" autocomplete="username" />
-            <mat-hint>Por defecto root</mat-hint>
+            <mat-hint>Usuario con acceso SSH</mat-hint>
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
             <mat-label>Contraseña SSH *</mat-label>
@@ -95,8 +90,8 @@ const autoNameFromHost = (hostname: string): string =>
         <section class="vps-finish">
           <mat-icon>check_circle</mat-icon>
           <h3>Listo para guardar</h3>
-          <p><strong>{{ serverName() }}</strong> · {{ form.value.username }}&#64;{{ form.value.hostname }}:{{ form.value.port }}</p>
-          <p class="vps-finish__hint">Tras guardar detectaremos el SO y ejecutaremos el sondeo de runtime.</p>
+          <p><strong>{{ serverName() }}</strong> · {{ form.value.username }}&#64;{{ form.value.hostname }}</p>
+          <p class="vps-finish__hint">Tras guardar se validará SSH, aparecerá en Tablero y en Servidores.</p>
         </section>
       }
 
@@ -157,7 +152,6 @@ export class VpsConnectionWizardPageComponent implements OnInit {
 
   form = this.fb.nonNullable.group({
     hostname: ['', Validators.required],
-    port: [22, Validators.required],
     username: ['root', Validators.required],
     password: ['', Validators.required],
   })
@@ -205,8 +199,9 @@ export class VpsConnectionWizardPageComponent implements OnInit {
           name,
           host: v.hostname,
           hostname: v.hostname,
-          port: v.port,
+          port: 22,
           username: v.username,
+          password: v.password,
           metadata: {
             provider: 'Bare metal',
             os: osName,
@@ -230,7 +225,7 @@ export class VpsConnectionWizardPageComponent implements OnInit {
     }
 
     this.vps
-      .detectOsPreview({ hostname: v.hostname, port: v.port, username: v.username })
+      .detectOsPreview({ hostname: v.hostname, port: 22, username: v.username })
       .subscribe({
         next: (os) => saveWithMetadata(os.osName, os.osFamily),
         error: () => saveWithMetadata('Linux', 'linux'),

@@ -1,9 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { AuditService } from '../audit/audit.service'
 import { RealtimeGateway } from '../realtime/realtime.gateway'
-import { IntegrationsService } from '../integrations/integrations.service'
-import { PLATFORM_EVENTS } from '../integrations/integrations.platform-events'
+import { SecretsVaultService } from '../cloud-accounts/secrets-vault.service'
 
 @Injectable()
 export class JenkinsService {
@@ -11,16 +10,14 @@ export class JenkinsService {
     private prisma: PrismaService,
     private audit: AuditService,
     private realtime: RealtimeGateway,
-    private integrations: IntegrationsService,
+    private vault: SecretsVaultService,
   ) {}
 
   async createServer(
     data: { name: string; url: string; secretRef?: string; username?: string; apiToken?: string },
     userId?: string,
   ) {
-    const secretRef =
-      data.secretRef ??
-      JSON.stringify({ username: data.username ?? '', apiToken: data.apiToken ?? '' })
+    const secretRef = this.persistCredentials(data)
     const server = await this.prisma.jenkinsServer.create({
       data: { name: data.name, url: data.url, secretRef },
     })
@@ -37,12 +34,7 @@ export class JenkinsService {
     const server = await this.prisma.jenkinsServer.findUnique({ where: { id } })
     if (!server) throw new NotFoundException('Jenkins server not found')
 
-    let creds: { username?: string; apiToken?: string } = {}
-    try {
-      creds = JSON.parse(server.secretRef) as { username?: string; apiToken?: string }
-    } catch {
-      creds = {}
-    }
+    const creds = this.readCredentials(server.secretRef)
 
     const base = server.url.replace(/\/$/, '')
     const auth =
@@ -50,36 +42,39 @@ export class JenkinsService {
         ? Buffer.from(`${creds.username}:${creds.apiToken}`).toString('base64')
         : null
 
-    if (auth) {
-      try {
-        const res = await fetch(`${base}/api/json`, {
-          headers: { Authorization: `Basic ${auth}`, Accept: 'application/json' },
-          signal: AbortSignal.timeout(8000),
-        })
-        if (res.ok) {
-          const payload = (await res.json()) as { mode?: string }
-          return {
-            valid: true,
-            message: `Conexión OK — Jenkins ${payload.mode ?? 'online'} en ${base}`,
-          }
-        }
-        return { valid: false, message: `Jenkins respondió HTTP ${res.status}` }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error de red'
-        return { valid: false, message: `No se pudo contactar Jenkins: ${msg}` }
-      }
+    if (!auth) {
+      return { valid: false, message: 'Jenkins requiere usuario y API token para validar y desplegar apps' }
     }
 
-    return { valid: true, message: `Servidor registrado en ${server.url}` }
+    try {
+      const res = await fetch(`${base}/api/json`, {
+        headers: { Authorization: `Basic ${auth}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      })
+      if (res.ok) {
+        const payload = (await res.json()) as { mode?: string }
+        return {
+          valid: true,
+          message: `Conexión OK — Jenkins ${payload.mode ?? 'online'} en ${base}`,
+        }
+      }
+      return { valid: false, message: `Jenkins respondió HTTP ${res.status}` }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error de red'
+      return { valid: false, message: `No se pudo contactar Jenkins: ${msg}` }
+    }
   }
 
   async listJobs(serverId: string) {
+    const server = await this.prisma.jenkinsServer.findUnique({ where: { id: serverId } })
+    if (!server) throw new NotFoundException('Jenkins server not found')
+
     const jobs = await this.prisma.jenkinsJob.findMany({
       where: { serverId },
       include: { builds: { orderBy: { buildNum: 'desc' }, take: 1 } },
       orderBy: { name: 'asc' },
     })
-    return jobs.map((j) => ({
+    if (jobs.length) return jobs.map((j) => ({
       id: j.id,
       name: j.name,
       url: j.url ?? `/job/${j.name}`,
@@ -87,9 +82,15 @@ export class JenkinsService {
         ? { number: j.builds[0].buildNum, status: j.builds[0].status }
         : null,
     }))
+
+    const liveJobs = await this.fetchJenkinsJobs(server)
+    return liveJobs
   }
 
   async triggerBuild(serverId: string, jobName: string, parameters: Record<string, string>, userId?: string) {
+    const server = await this.prisma.jenkinsServer.findUnique({ where: { id: serverId } })
+    if (!server) throw new NotFoundException('Jenkins server not found')
+
     await this.audit.create({
       userId,
       action: 'jenkins.build.trigger',
@@ -98,47 +99,146 @@ export class JenkinsService {
       metadata: { serverId, parameters },
     })
 
-    const buildNum = Math.floor(Math.random() * 100) + 1
-    const build = { number: buildNum, status: 'RUNNING' as const }
+    const queued = await this.queueJenkinsBuild(server, jobName, parameters)
+    const buildNum = queued.queueId ?? Date.now()
+    const build = { number: buildNum, status: 'RUNNING' as const, queueUrl: queued.queueUrl }
     this.realtime.emitJenkinsBuild(serverId, jobName, build)
-
-    const willFail = jobName.toLowerCase().includes('fail') || jobName === 'terraform-apply'
-    setTimeout(() => {
-      const status = willFail ? 'FAILURE' : 'SUCCESS'
-      this.realtime.emitJenkinsBuild(serverId, jobName, { number: buildNum, status })
-      void this.integrations.emitPlatformEvent(
-        {
-          eventType: willFail ? PLATFORM_EVENTS.DEPLOY_FAILED : PLATFORM_EVENTS.DEPLOY_SUCCESS,
-          title: `Jenkins ${jobName} #${buildNum}`,
-          body: `Pipeline ${jobName} build #${buildNum} finished with ${status}`,
-          severity: willFail ? 'critical' : 'info',
-          source: 'Jenkins',
-          metadata: { serverId, jobName, buildNum, status, parameters },
-        },
-        userId,
-      )
-      void this.integrations.emitPlatformEvent(
-        {
-          eventType: PLATFORM_EVENTS.WORKFLOW_RUN,
-          title: `Workflow ${jobName}`,
-          body: `GitHub/Jenkins workflow completed: ${status}`,
-          severity: willFail ? 'warning' : 'info',
-          source: 'Jenkins',
-          metadata: { jobName, buildNum, status },
-        },
-        userId,
-      )
-    }, 1500)
 
     return { queued: true, build }
   }
 
-  async getBuildLogs(_serverId: string, jobName: string, buildNum: number) {
+  async getBuildLogs(serverId: string, jobName: string, buildNum: number) {
+    const server = await this.prisma.jenkinsServer.findUnique({ where: { id: serverId } })
+    if (!server) throw new NotFoundException('Jenkins server not found')
+    const base = server.url.replace(/\/$/, '')
+    const auth = this.authHeader(server.secretRef)
+    const path = this.jobPath(jobName)
+    const res = await fetch(`${base}/${path}/${buildNum}/consoleText`, {
+      headers: { ...(auth ? { Authorization: auth } : {}) },
+      signal: AbortSignal.timeout(12_000),
+    })
+    if (!res.ok) throw new BadRequestException(`Jenkins respondió HTTP ${res.status} al leer logs`)
     return {
       jobName,
       buildNum,
-      logs: `[Mock Jenkins Log]\nStarted by user cloudops\nBuilding ${jobName} #${buildNum}\nFinished: SUCCESS\n`,
-      status: 'SUCCESS',
+      logs: await res.text(),
+      status: 'LIVE',
     }
+  }
+
+  private readCredentials(secretRef: string): { username?: string; apiToken?: string } {
+    const fromVault = this.vault.readSecrets(secretRef)
+    if (fromVault.username || fromVault.apiToken) return fromVault
+    try {
+      return JSON.parse(secretRef) as { username?: string; apiToken?: string }
+    } catch {
+      return {}
+    }
+  }
+
+  private authHeader(secretRef: string): string | null {
+    const creds = this.readCredentials(secretRef)
+    return creds.username && creds.apiToken
+      ? `Basic ${Buffer.from(`${creds.username}:${creds.apiToken}`).toString('base64')}`
+      : null
+  }
+
+  private async fetchCrumb(server: { url: string; secretRef: string }): Promise<Record<string, string>> {
+    const base = server.url.replace(/\/$/, '')
+    const auth = this.authHeader(server.secretRef)
+    const res = await fetch(`${base}/crumbIssuer/api/json`, {
+      headers: { ...(auth ? { Authorization: auth } : {}), Accept: 'application/json' },
+      signal: AbortSignal.timeout(8_000),
+    }).catch(() => null)
+    if (!res?.ok) return {}
+    const crumb = (await res.json()) as { crumbRequestField?: string; crumb?: string }
+    return crumb.crumbRequestField && crumb.crumb ? { [crumb.crumbRequestField]: crumb.crumb } : {}
+  }
+
+  private jobPath(jobName: string): string {
+    return jobName
+      .split('/')
+      .filter(Boolean)
+      .map((part) => `job/${encodeURIComponent(part)}`)
+      .join('/')
+  }
+
+  private async fetchJenkinsJobs(server: { id: string; url: string; secretRef: string }) {
+    const base = server.url.replace(/\/$/, '')
+    const auth = this.authHeader(server.secretRef)
+    if (!auth) throw new BadRequestException('Jenkins requiere usuario y API token para listar jobs')
+    const res = await fetch(`${base}/api/json?tree=jobs[name,url,color,lastBuild[number,result]]`, {
+      headers: { Authorization: auth, Accept: 'application/json' },
+      signal: AbortSignal.timeout(12_000),
+    })
+    if (!res.ok) throw new BadRequestException(`Jenkins respondió HTTP ${res.status} al listar jobs`)
+    const payload = (await res.json()) as {
+      jobs?: { name: string; url?: string; color?: string; lastBuild?: { number?: number; result?: string | null } }[]
+    }
+    return (payload.jobs ?? []).map((j) => ({
+      id: `${server.id}:${j.name}`,
+      name: j.name,
+      serverId: server.id,
+      server: base,
+      url: j.url ?? `${base}/${this.jobPath(j.name)}`,
+      lastBuild: j.lastBuild
+        ? { number: j.lastBuild.number ?? 0, status: j.lastBuild.result ?? (j.color?.includes('anime') ? 'RUNNING' : 'UNKNOWN') }
+        : null,
+    }))
+  }
+
+  private persistCredentials(data: {
+    secretRef?: string
+    username?: string
+    apiToken?: string
+  }): string {
+    if (data.secretRef?.startsWith('vault:enc:v1:')) return data.secretRef
+
+    if (data.secretRef) {
+      const parsed = this.readCredentials(data.secretRef)
+      if (parsed.username && parsed.apiToken) {
+        return this.vault.storeSecrets(parsed)
+      }
+    }
+
+    if (!data.username?.trim() || !data.apiToken?.trim()) {
+      throw new BadRequestException('Jenkins requiere usuario y API token')
+    }
+
+    return this.vault.storeSecrets({
+      username: data.username.trim(),
+      apiToken: data.apiToken.trim(),
+    })
+  }
+
+  private async queueJenkinsBuild(
+    server: { url: string; secretRef: string },
+    jobName: string,
+    parameters: Record<string, string>,
+  ): Promise<{ queueId?: number; queueUrl?: string }> {
+    const base = server.url.replace(/\/$/, '')
+    const auth = this.authHeader(server.secretRef)
+    if (!auth) throw new BadRequestException('Jenkins requiere usuario y API token para desplegar apps')
+    const crumb = await this.fetchCrumb(server)
+    const hasParameters = Object.keys(parameters).length > 0
+    const body = hasParameters ? new URLSearchParams(parameters) : undefined
+    const endpoint = hasParameters ? 'buildWithParameters' : 'build'
+    const res = await fetch(`${base}/${this.jobPath(jobName)}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        Authorization: auth,
+        ...crumb,
+        ...(hasParameters ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+      },
+      body,
+      signal: AbortSignal.timeout(12_000),
+    })
+    if (res.status !== 200 && res.status !== 201 && res.status !== 202) {
+      const text = await res.text().catch(() => '')
+      throw new BadRequestException(`Jenkins respondió HTTP ${res.status} al desplegar: ${text.slice(0, 180)}`)
+    }
+    const queueUrl = res.headers.get('location') ?? undefined
+    const queueId = queueUrl?.match(/queue\/item\/(\d+)/)?.[1]
+    return { queueUrl, queueId: queueId ? Number(queueId) : undefined }
   }
 }

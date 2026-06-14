@@ -1,4 +1,4 @@
-/** Demo datasets for Fase 28 advanced modules */
+/** Static reference catalog for advanced modules; live data is loaded from API in PRO. */
 
 export type ResourceType =
   | 'instance'
@@ -165,8 +165,11 @@ export const COPILOT_QUICK_PROMPTS: CopilotQuickPrompt[] = [
   { id: 'top-cost', label: 'Mayor coste', question: '¿Qué instancia consume más?', icon: 'trending_up', context: 'instances' },
   { id: 'failures', label: 'Recursos fallando', question: '¿Qué recursos están fallando?', icon: 'error_outline', context: 'alerts' },
   { id: 'savings', label: 'Ahorro', question: '¿Dónde puedo ahorrar coste?', icon: 'savings', context: 'costs' },
+  { id: 'billing', label: 'Facturas', question: 'Resume facturas, gasto por proveedor y anomalías FinOps.', icon: 'receipt_long', context: 'costs' },
   { id: 'k8s', label: 'Estado K8s', question: 'Resume el estado de Kubernetes.', icon: 'hub', context: 'kubernetes' },
-  { id: 'vps', label: 'Diagnóstico VPS', question: 'Genera diagnóstico de esta VPS.', icon: 'terminal', context: 'instances' },
+  { id: 'vps', label: 'VPS por SSH', question: 'Revisa servidores VPS añadidos por SSH y su estado.', icon: 'terminal', context: 'instances' },
+  { id: 'launch', label: 'Lanzar compute', question: 'Ayúdame a lanzar una instancia desde AI Infra Studio.', icon: 'rocket_launch', context: 'instances' },
+  { id: 'jenkins-deploy', label: 'Deploy Jenkins', question: 'Revisa Jenkins y dime cómo desplegar una app.', icon: 'build', context: 'approvals' },
   { id: 'critical', label: 'Alertas críticas', question: '¿Qué alertas críticas hay ahora?', icon: 'notification_important', context: 'alerts' },
   { id: 'approvals', label: 'Aprobaciones', question: '¿Qué acciones pendientes de aprobación existen?', icon: 'rule', context: 'approvals' },
   { id: 'security', label: 'Postura seguridad', question: 'Resume la postura de seguridad actual.', icon: 'shield', context: 'security' },
@@ -187,7 +190,7 @@ export const COPILOT_RESPONSES: Record<string, CopilotResponsePayload> = {
       { id: 'cost-opt', label: 'Abrir Cost Optimizer', icon: 'savings', route: '/cost-optimizer' },
       { id: 'instances', label: 'Ver instancias', icon: 'dns', route: '/instances/all-instances' },
     ],
-    sources: ['Inventario demo', 'Billing AWS', 'Cost Optimizer'],
+    sources: ['Inventario', 'Billing AWS', 'Cost Optimizer'],
   },
   '¿Qué recursos están fallando?': {
     text: 'Detecté **4 recursos** que requieren atención inmediata:\n\n1. Pod **worker-crash-loop** — CrashLoopBackOff (OOM, namespace checkout)\n2. Jenkins **integration-tests** — build #841 failed hace 22 min\n3. Alerta **Backup failed snap-staging** — VPS fra1\n4. Servicio **checkout-api** — latencia p95 > 800 ms\n\nPrioridad sugerida: estabilizar el pod K8s y revisar el pipeline CI.',
@@ -199,7 +202,7 @@ export const COPILOT_RESPONSES: Record<string, CopilotResponsePayload> = {
     sources: ['Health Center', 'Kubernetes', 'Jenkins', 'Alertas'],
   },
   '¿Dónde puedo ahorrar coste?': {
-    text: 'Oportunidades de ahorro identificadas (demo):\n\n• Rightsizing **web-prod-01** t3.large → t3.medium — **~$420/mo**\n• Eliminar volumen huérfano **vol-orphan-001** — **$85/mo**\n• RI 1 año para **gcp-analytics-vm** — **~$310/mo**\n• Apagar snapshots staging > 90 días — **$48/mo**\n\n**Total estimado: $863/mo** (~20% del gasto actual). Impacto bajo en producción si se valida en ventana de mantenimiento.',
+    text: 'Oportunidades de ahorro identificadas:\n\n• Rightsizing de instancias con baja CPU sostenida.\n• Eliminar volúmenes huérfanos si aparecen en inventario.\n• Revisar compromisos/RI/Savings Plans para cargas estables.\n• Apagar snapshots staging fuera de retención.\n\nAbre FinOps para confirmar importes reales antes de aplicar cambios.',
     actions: [
       { id: 'cost', label: 'Cost Optimizer', icon: 'savings', route: '/cost-optimizer' },
       { id: 'billing', label: 'Billing overview', icon: 'receipt_long', route: '/billing/overview' },
@@ -207,7 +210,7 @@ export const COPILOT_RESPONSES: Record<string, CopilotResponsePayload> = {
     sources: ['Cost Optimizer', 'Billing', 'Inventario'],
   },
   'Resume el estado de Kubernetes.': {
-    text: 'Cluster **prod-cluster** (GKE demo):\n\n• **12 pods** running · **2** warning · **1** critical\n• Namespace **checkout**: deployment estable, HPA al 68%\n• Pod **checkout-api-7f2k9** — OK (CPU 41%, mem 62%)\n• Pod **worker-crash-loop** — OOMKilled × 14 reinicios\n\nEventos recientes: OOM en worker, ingress OK, cert-manager synced.',
+    text: 'Estado Kubernetes basado en los clusters conectados:\n\n• Revisa pods en warning/critical.\n• Comprueba reinicios, HPA e ingress.\n• Cruza eventos con logs de Observabilidad.\n\nAbre Kubernetes para ver namespaces y recursos sincronizados.',
     actions: [
       { id: 'pods', label: 'Ver pods', icon: 'hub', route: '/kubernetes/pods' },
       { id: 'topology', label: 'Mapa topología', icon: 'account_tree', route: '/topology-map' },
@@ -215,7 +218,7 @@ export const COPILOT_RESPONSES: Record<string, CopilotResponsePayload> = {
     sources: ['Kubernetes', 'Logs', 'Topology Map'],
   },
   'Genera diagnóstico de esta VPS.': {
-    text: 'Diagnóstico **vps-bastion-01** (fra1, bare metal demo):\n\n• CPU **24%** · RAM **61%** · Disco **48%**\n• SSH activo · puerto 22 expuesto (revisar Security Center)\n• Docker host: **6 contenedores** (nginx-edge running)\n• Último backup: hace **6 h** — OK\n• Red: latencia interna 2.1 ms · sin packet loss\n\nRiesgo: puerto 22 público sin fail2ban en política demo.',
+    text: 'Diagnóstico VPS:\n\n• Revisa servidores añadidos por SSH en **VPS → Servidores**.\n• Valida acceso SSH, runtime Docker/Kubernetes y métricas.\n• Si el puerto 22 está expuesto, revisa reglas en Seguridad.\n• Cruza disponibilidad con logs y auditoría.',
     actions: [
       { id: 'vps', label: 'Overview VPS', icon: 'dns', route: '/vps/overview' },
       { id: 'security', label: 'Security Center', icon: 'shield', route: '/security-center' },
@@ -251,7 +254,7 @@ export const COPILOT_RESPONSES: Record<string, CopilotResponsePayload> = {
     sources: ['Aprobaciones'],
   },
   'Resume la postura de seguridad actual.': {
-    text: 'Postura de seguridad demo — score **92/100**:\n\n• **2 findings** medium abiertos (API key en K8s secret, SSH expuesto)\n• Políticas MFA y rotación tokens — activas\n• **0 violaciones** críticas de compliance\n• Último escaneo secretos: hace 45 min\n\nAcción sugerida: rotar OPENAI_API_KEY en ai-assistant y cerrar puerto 22 en bastion.',
+    text: 'Postura de seguridad:\n\n• Revisa findings abiertos en Centro de seguridad.\n• Comprueba MFA, rotación de tokens y secretos cifrados.\n• Audita exposición SSH en servidores VPS.\n• Valida cumplimiento y políticas antes de cambios productivos.',
     actions: [
       { id: 'security', label: 'Security Center', icon: 'shield', route: '/security-center' },
       { id: 'secrets', label: 'Gestor secretos', icon: 'key', route: '/secrets-manager' },
@@ -263,12 +266,12 @@ export const COPILOT_RESPONSES: Record<string, CopilotResponsePayload> = {
 export const defaultCopilotResponse = (q: string, context?: CopilotContextId): CopilotResponsePayload => {
   const ctxLabel = COPILOT_CONTEXT_DOMAINS.find((d) => d.id === context)?.label ?? 'plataforma'
   return {
-    text: `Consulta sobre **${ctxLabel}**: "${q}"\n\nResumen demo:\n• Salud global **94%** · 4 warning · 2 critical\n• Datos sincronizados hace ~3 min (modo demo)\n• Contexto activo: ${ctxLabel}\n\nPuedo profundizar en instancias, costes, alertas, Kubernetes o aprobaciones. Prueba una sugerencia del panel lateral.`,
+    text: `Consulta sobre **${ctxLabel}**: "${q}"\n\nPuedo ayudarte con instancias, lanzamientos, VPS, facturas, logs, Jenkins, seguridad y cualquier módulo conectado del panel. Usa el asistente en modo PRO para cruzar datos live del workspace.`,
     actions: [
       { id: 'explorer', label: 'Resource Explorer', icon: 'travel_explore', route: '/resource-explorer' },
       { id: 'health', label: 'Health Center', icon: 'monitor_heart', route: '/health-center' },
     ],
-    sources: ['Inventario demo', 'Health Center'],
+    sources: ['Inventario', 'Health Center'],
   }
 }
 

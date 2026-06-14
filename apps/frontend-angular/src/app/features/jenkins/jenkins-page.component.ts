@@ -15,8 +15,6 @@ import { JenkinsJobWorkspaceComponent } from './jenkins-job-workspace.component'
 import {
   JenkinsLaunchDetailDialogComponent,
   JenkinsLaunchDialogComponent,
-  buildJenkinsLaunchDetail,
-  defaultLaunchParams,
   type JenkinsLaunchDetailData,
 } from './jenkins-launch-dialog.component'
 import { launchDetailKey } from './jenkins-launch-detail-panel.component'
@@ -231,17 +229,9 @@ export class JenkinsPageComponent implements OnInit {
           const build = inv.builds.find((b) => b.jobName === pick.name)
           if (build) this.selectedBuild.set(build)
         }
-        this.seedDemoLaunch(jobs, false)
       },
       errorMessage: 'No se pudo cargar Jenkins',
     })
-  }
-
-  private seedDemoLaunch = (jobs: JenkinsJob[], demoMode: boolean): void => {
-    if (!demoMode || this.launchHistory().length > 0) return
-    const job = jobs.find((j) => j.status === 'RUNNING') ?? jobs[0]
-    if (!job) return
-    this.pushLaunch(buildJenkinsLaunchDetail(jobToRow(job), defaultLaunchParams(jobToRow(job))))
   }
 
   private pushLaunch = (detail: JenkinsLaunchDetailData): void => {
@@ -331,7 +321,7 @@ export class JenkinsPageComponent implements OnInit {
         })
         this.selectedJob.set(job)
         this.selectedServerId.set(job.serverId)
-        this.actions.simulate(`Job ${job.name} creado`, 800, 'Configuración guardada (demo)').subscribe()
+        this.toast.success(`Job ${job.name} añadido al workspace`)
       })
   }
 
@@ -365,22 +355,38 @@ export class JenkinsPageComponent implements OnInit {
         if (!detail) return
         const inv = this.inventory()
         const launched = inv?.jobItems.find((j) => j.name === detail.jobName)
-        if (launched) {
-          this.selectedJob.set(launched)
-          this.selectedBuild.set({
-            jobName: detail.jobName,
-            buildNum: detail.buildNum,
-            status: detail.status,
-            createdAt: detail.startedAt,
-            duration: '—',
-            branch: detail.params.branch,
-            triggeredBy: detail.triggeredBy,
-          })
+        if (!launched?.serverId) {
+          this.toast.error('No se pudo resolver el controlador Jenkins del job')
+          return
         }
-        this.pushLaunch(detail)
-        this.registerLaunchBuild(detail)
-        this.openLaunchDetailDialog(detail)
-        this.actions.simulate(`Build ${detail.jobName}`, 900, `#${detail.buildNum} en cola`).subscribe()
+        const parameters = Object.fromEntries(
+          detail.parameters.map((p: { key: string; value: string }) => [p.key, p.value === '—' ? '' : p.value]),
+        )
+        this.jenkinsApi.triggerBuild(launched.serverId, detail.jobName, parameters).subscribe({
+          next: (res) => {
+            const liveDetail = {
+              ...detail,
+              buildNum: res.build.number,
+              status: res.build.status,
+              buildUrl: String((res.build as { queueUrl?: string }).queueUrl ?? detail.buildUrl),
+            }
+            this.selectedJob.set(launched)
+            this.selectedBuild.set({
+              jobName: liveDetail.jobName,
+              buildNum: liveDetail.buildNum,
+              status: liveDetail.status,
+              createdAt: liveDetail.startedAt,
+              duration: '—',
+              branch: liveDetail.params.branch,
+              triggeredBy: liveDetail.triggeredBy,
+            })
+            this.pushLaunch(liveDetail)
+            this.registerLaunchBuild(liveDetail)
+            this.openLaunchDetailDialog(liveDetail)
+            this.toast.success(`Jenkins aceptó ${liveDetail.jobName} #${liveDetail.buildNum}`)
+          },
+          error: (err) => this.toast.error(err?.error?.message ?? 'Jenkins no pudo encolar el despliegue'),
+        })
       })
   }
 

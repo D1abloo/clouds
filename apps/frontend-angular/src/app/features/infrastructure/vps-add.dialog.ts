@@ -7,9 +7,6 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatInputModule } from '@angular/material/input'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { startWith } from 'rxjs'
-import { InfrastructureActionService } from './infrastructure-action.service'
-import { ToastService } from '../../core/services/toast.service'
-import { ProModeService } from '../../core/services/pro-mode.service'
 
 export interface VpsAddDialogData {
   existingNames?: string[]
@@ -20,6 +17,7 @@ export interface VpsAddDialogResult {
   host: string
   port: number
   user: string
+  password: string
   authMethod: 'public-key' | 'agent' | 'password'
   sshKeyName: string
   provider: string
@@ -71,10 +69,6 @@ const autoNameFromHost = (hostname: string): string =>
             }
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Puerto SSH</mat-label>
-            <input matInput type="number" [formControl]="port" placeholder="22" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
             <mat-label>Usuario SSH</mat-label>
             <input matInput [formControl]="user" placeholder="root" />
           </mat-form-field>
@@ -89,7 +83,7 @@ const autoNameFromHost = (hostname: string): string =>
 
         <p class="vps-add-preview">
           <mat-icon>dns</mat-icon>
-          Nombre automático: <strong class="mono">{{ previewName() }}</strong>
+          Se guardará como <strong class="mono">{{ previewName() }}</strong> usando SSH por contraseña en el puerto 22.
         </p>
       </mat-dialog-content>
 
@@ -132,12 +126,9 @@ const autoNameFromHost = (hostname: string): string =>
 })
 export class VpsAddDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<VpsAddDialogComponent, VpsAddDialogResult | undefined>)
-  private readonly infraActions = inject(InfrastructureActionService)
-  private readonly toast = inject(ToastService)
-  private readonly pro = inject(ProModeService)
   readonly data = inject<VpsAddDialogData>(MAT_DIALOG_DATA, { optional: true })
 
-  readonly host = new FormControl('203.0.113.10', { nonNullable: true, validators: [Validators.required] })
+  readonly host = new FormControl('', { nonNullable: true, validators: [Validators.required] })
   readonly port = new FormControl(22, { nonNullable: true, validators: [Validators.min(1), Validators.max(65535)] })
   readonly user = new FormControl('root', { nonNullable: true, validators: [Validators.required] })
   readonly password = new FormControl('', { nonNullable: true, validators: [Validators.required] })
@@ -166,6 +157,7 @@ export class VpsAddDialogComponent {
     host: this.host.value.trim(),
     port: this.port.value,
     user: this.user.value.trim(),
+    password: this.password.value,
     authMethod: 'password',
     sshKeyName: '',
     provider: 'Bare metal',

@@ -1,4 +1,3 @@
-import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
 import { FormControl, ReactiveFormsModule } from '@angular/forms'
 import { Router, RouterLink } from '@angular/router'
@@ -9,8 +8,8 @@ import { MatInputModule } from '@angular/material/input'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
 import { MatMenuModule } from '@angular/material/menu'
-import { MatDialog, MatDialogModule } from '@angular/material/dialog'
-import { debounceTime, startWith } from 'rxjs'
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog'
+import { catchError, debounceTime, forkJoin, map, of, startWith } from 'rxjs'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component'
 import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component'
@@ -21,6 +20,7 @@ import { VpsService } from '../../core/services/vps.service'
 import { ToastService } from '../../core/services/toast.service'
 import { VpsHost } from '../../core/models/api.models'
 import { createPageLoader } from '../../core/utils/page-load.util'
+import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 
 type VpsRow = VpsHost & {
   os?: string
@@ -46,7 +46,7 @@ import { VpsAddDialogComponent, type VpsAddDialogResult } from '../infrastructur
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close type="button">Cerrar</button>
-      <button mat-flat-button color="primary" type="button" (click)="run()">Ejecutar</button>
+      <button mat-flat-button color="primary" type="button" [disabled]="busy || !cmd.value.trim()" (click)="run()">Ejecutar</button>
     </mat-dialog-actions>
   `,
   styles: `
@@ -55,12 +55,31 @@ import { VpsAddDialogComponent, type VpsAddDialogResult } from '../infrastructur
   `,
 })
 export class VpsCommandDialogComponent {
-  private readonly actions = inject(PlatformActionService)
+  private readonly service = inject(VpsService)
+  private readonly toast = inject(ToastService)
+  private readonly data = inject<{ row: VpsRow; command?: string }>(MAT_DIALOG_DATA)
 
-  readonly cmd = new FormControl('uname -a', { nonNullable: true })
+  readonly cmd = new FormControl(this.data.command ?? 'uname -a', { nonNullable: true })
   output = ''
+  busy = false
+
   run = (): void => {
-    this.output = `$ ${this.cmd.value}\n(sin salida — ejecuta en terminal SSH)`
+    const command = this.cmd.value.trim()
+    if (!command) return
+    this.busy = true
+    this.output = `$ ${command}\nEjecutando en ${this.data.row.name}...`
+    this.service.execute(this.data.row.id, command).subscribe({
+      next: (res) => {
+        const payload = res as { output?: string; exitCode?: number }
+        this.output = `$ ${command}\n${payload.output ?? ''}\nexit=${payload.exitCode ?? 0}`.trim()
+        this.busy = false
+      },
+      error: (err) => {
+        this.output = `$ ${command}\n${err?.error?.message ?? 'No se pudo ejecutar el comando SSH'}`
+        this.toast.error(err?.error?.message ?? 'Error ejecutando comando SSH')
+        this.busy = false
+      },
+    })
   }
 }
 
@@ -148,12 +167,12 @@ export class VpsCommandDialogComponent {
               }
             </div>
           </mat-tab>
-          <mat-tab label="SSH"><div class="tab-panel"><p>SSH key auth configured for {{ connected() }} hosts.</p></div></mat-tab>
-          <mat-tab label="Services"><div class="tab-panel"><p>nginx, docker, kubelet, postgresql (demo systemd units)</p></div></mat-tab>
+          <mat-tab label="SSH"><div class="tab-panel"><p>{{ connected() }} servidores con credenciales SSH cifradas.</p></div></mat-tab>
+          <mat-tab label="Services"><div class="tab-panel"><p>Servicios detectados desde SSH al ejecutar comandos de inventario.</p></div></mat-tab>
           <mat-tab label="Docker"><div class="tab-panel"><p>{{ withDocker() }} hosts running Docker Engine.</p></div></mat-tab>
           <mat-tab label="Kubernetes"><div class="tab-panel"><p>{{ withK8s() }} hosts with k3s/k8s agents.</p></div></mat-tab>
-          <mat-tab label="Ports"><div class="tab-panel"><p>22, 80, 443, 3000, 6443 open (demo scan)</p></div></mat-tab>
-          <mat-tab label="Metrics"><div class="tab-panel"><p>CPU/RAM/disk collected every 5m (demo).</p></div></mat-tab>
+          <mat-tab label="Ports"><div class="tab-panel"><p>Puertos registrados desde auditorías reales de cada servidor.</p></div></mat-tab>
+          <mat-tab label="Metrics"><div class="tab-panel"><p>Métricas preparadas para recolección real por agente o SSH.</p></div></mat-tab>
           <mat-tab label="Audit"><div class="tab-panel"><p>SSH sessions logged to <a routerLink="/audit">Audit</a>.</p></div></mat-tab>
         </mat-tab-group>
         </div>
@@ -167,11 +186,12 @@ export class VpsListComponent implements OnInit {
   private readonly toast = inject(ToastService)
   private readonly dialog = inject(MatDialog)
   private readonly router = inject(Router)
-  private readonly actions = inject(PlatformActionService)
+  private readonly accounts = inject(CloudAccountsService)
 
   readonly searchControl = new FormControl('', { nonNullable: true })
   readonly page = createPageLoader(true)
   readonly hosts = signal<VpsRow[]>([])
+  readonly projectId = signal('')
   readonly cols = ['name', 'host', 'port', 'user', 'os', 'status', 'docker', 'cpu', 'actions']
 
   private readonly searchTerm = toSignal(this.searchControl.valueChanges.pipe(debounceTime(200), startWith('')), { initialValue: '' })
@@ -183,10 +203,14 @@ export class VpsListComponent implements OnInit {
 
   connected = computed(() => this.hosts().filter((h) => (h.status ?? 'online') !== 'offline').length)
   disconnected = computed(() => this.hosts().length - this.connected())
-  withDocker = computed(() => this.hosts().filter((h) => h.docker !== false).length)
-  withK8s = computed(() => Math.min(2, this.hosts().length))
+  withDocker = computed(() => this.hosts().filter((h) => h.docker === true).length)
+  withK8s = computed(() => this.hosts().filter((h) => h.kubernetes === true).length)
 
   ngOnInit(): void {
+    this.accounts.defaultProject().subscribe({
+      next: (project) => this.projectId.set(project.id),
+      error: () => this.toast.error('No se pudo resolver el proyecto del workspace'),
+    })
     this.load()
   }
 
@@ -194,15 +218,16 @@ export class VpsListComponent implements OnInit {
     this.page.run(this.service.list(), {
       onSuccess: (data) =>
         this.hosts.set(
-          data.map((h, i) => ({
+          data.map((h) => ({
             ...h,
-            user: 'ubuntu',
-            os: 'Ubuntu 22.04 LTS',
-            docker: i % 2 === 0,
-            kubernetes: i < 2,
-            cpu: 20 + (i * 7) % 60,
-            ram: 40 + (i * 11) % 50,
-            disk: 55 + (i * 5) % 30,
+            host: h.host ?? h.hostname ?? '',
+            user: h.user ?? h.username ?? 'root',
+            os: h.os ?? String(h.metadata?.['os'] ?? 'Pendiente'),
+            docker: Boolean(h.metadata?.['docker']),
+            kubernetes: Boolean(h.metadata?.['kubernetes']),
+            cpu: Number(h.metadata?.['cpu'] ?? 0),
+            ram: Number(h.metadata?.['ram'] ?? 0),
+            disk: Number(h.metadata?.['disk'] ?? 0),
           })),
         ),
       errorMessage: 'No se pudieron cargar los hosts VPS',
@@ -225,33 +250,102 @@ export class VpsListComponent implements OnInit {
         .afterClosed()
         .subscribe((payload: VpsAddDialogResult | undefined) => {
           if (!payload) return
-          this.actions.simulate(`Add VPS ${payload.name}`, 900, 'VPS added (demo)').subscribe(() => this.load())
+          this.createVps(payload)
         })
       return
     }
-    this.actions.simulate('Validate all VPS', 1500).subscribe()
+    const hosts = this.hosts()
+    if (!hosts.length) {
+      this.toast.info('No hay servidores VPS para validar')
+      return
+    }
+    forkJoin(
+      hosts.map((host) =>
+        this.service.validate(host.id).pipe(
+          map(() => true),
+          catchError(() => of(false)),
+        ),
+      ),
+    ).subscribe((results) => {
+      const ok = results.filter(Boolean).length
+      if (ok === hosts.length) {
+        this.toast.success(`SSH validado en ${ok} servidor(es)`)
+      } else {
+        this.toast.error(`SSH validado en ${ok}/${hosts.length} servidor(es)`)
+      }
+      this.load()
+    })
   }
 
   handleValidate = (host: VpsHost): void => {
     this.service.validate(host.id).subscribe({
       next: () => this.toast.success(`Validated ${host.name}`),
-      error: () => this.actions.simulate(`Validate ${host.name}`, 600).subscribe(),
+      error: (err) => this.toast.error(err?.error?.message ?? `No se pudo validar ${host.name}`),
     })
   }
 
-  openCommand = (_row: VpsRow): void => {
-    this.dialog.open(VpsCommandDialogComponent, { width: '480px' })
+  openCommand = (row: VpsRow, command?: string): void => {
+    this.dialog.open(VpsCommandDialogComponent, {
+      width: '560px',
+      maxWidth: '96vw',
+      data: { row, command },
+    })
   }
 
   detectDocker = (row: VpsRow): void => {
-    this.actions.simulate(`Detect Docker on ${row.name}`, 900, 'Docker 24.0 detected').subscribe()
+    this.service.detectRuntime(row.id, { probeDocker: true, probeKubernetes: false }).subscribe({
+      next: (res) => {
+        this.hosts.update((hosts) => hosts.map((host) => (host.id === row.id ? { ...host, docker: res.docker } : host)))
+        this.toast.success(res.message)
+      },
+      error: (err) => this.toast.error(err?.error?.message ?? `No se pudo detectar Docker en ${row.name}`),
+    })
   }
 
   detectK8s = (row: VpsRow): void => {
-    this.actions.simulate(`Detect K8s on ${row.name}`, 900, 'k3s v1.28 detected').subscribe()
+    this.service.detectRuntime(row.id, { probeDocker: false, probeKubernetes: true }).subscribe({
+      next: (res) => {
+        this.hosts.update((hosts) => hosts.map((host) => (host.id === row.id ? { ...host, kubernetes: res.kubernetes } : host)))
+        this.toast.success(res.message)
+      },
+      error: (err) => this.toast.error(err?.error?.message ?? `No se pudo detectar Kubernetes en ${row.name}`),
+    })
   }
 
   viewMetrics = (row: VpsRow): void => {
-    this.actions.simulate(`Metrics ${row.name}`, 500).subscribe()
+    this.openCommand(row, 'uptime && free -m && df -h /')
+  }
+
+  private createVps = (payload: VpsAddDialogResult): void => {
+    const projectId = this.projectId()
+    if (!projectId) {
+      this.toast.error('No se pudo resolver el proyecto del workspace')
+      return
+    }
+
+    this.service
+      .create({
+        projectId,
+        name: payload.name,
+        hostname: payload.host,
+        host: payload.host,
+        port: 22,
+        username: payload.user,
+        password: payload.password,
+        metadata: {
+          provider: 'VPS',
+          os: 'Linux',
+          environment: payload.environment,
+          authMethod: 'password',
+          connectionMethod: 'ssh',
+        },
+      })
+      .subscribe({
+        next: () => {
+          this.toast.success(`${payload.name} añadido por SSH`)
+          this.load()
+        },
+        error: (err) => this.toast.error(err?.error?.message ?? 'No se pudo añadir el servidor VPS'),
+      })
   }
 }

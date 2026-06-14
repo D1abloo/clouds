@@ -100,7 +100,8 @@ export class JenkinsConnectDialogComponent {
       .createServer({
         name,
         url: url.replace(/\/$/, ''),
-        secretRef: JSON.stringify({ username, apiToken }),
+        username,
+        apiToken,
       })
       .subscribe({
         next: (server) => {

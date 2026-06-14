@@ -1,4 +1,3 @@
-import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, inject, computed, signal } from '@angular/core'
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms'
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog'
@@ -291,7 +290,7 @@ const JOB_TEMPLATES: JobTemplate[] = [
               @if (scmValidated()) {
                 <p class="scm-ok" role="status">
                   <mat-icon>check_circle</mat-icon>
-                  Repositorio accesible con la credencial seleccionada (demo)
+                  Repositorio preparado con la credencial seleccionada
                 </p>
               }
               <div class="field-grid">
@@ -871,8 +870,6 @@ const JOB_TEMPLATES: JobTemplate[] = [
   `,
 })
 export class JenkinsCreateJobDialogComponent {
-  private readonly actions = inject(PlatformActionService)
-
   readonly data = inject<JenkinsCreateJobDialogData>(MAT_DIALOG_DATA)
   private readonly dialogRef = inject(MatDialogRef<JenkinsCreateJobDialogComponent, JenkinsJob | undefined>)
   private readonly fb = inject(FormBuilder)
@@ -1072,11 +1069,12 @@ export class JenkinsCreateJobDialogComponent {
     if (this.form.controls.scmUrl.invalid) return
     this.scmValidating.set(true)
     this.scmValidated.set(false)
-    this.actions.simulate('Validar repositorio', 700, 'Credencial OK · rama accesible (demo)').subscribe({
-      complete: () => {
-        this.scmValidating.set(false)
-        this.scmValidated.set(true)
-      },
+    const url = this.form.controls.scmUrl.value.trim()
+    const credential = this.form.controls.credentialsId.value.trim()
+    const validUrl = /^(https?:\/\/|git@|ssh:\/\/).+/.test(url)
+    queueMicrotask(() => {
+      this.scmValidating.set(false)
+      this.scmValidated.set(Boolean(validUrl && credential))
     })
   }
 

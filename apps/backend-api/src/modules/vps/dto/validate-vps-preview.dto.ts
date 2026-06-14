@@ -24,4 +24,9 @@ export class ValidateVpsPreviewDto {
   @ApiProperty()
   @IsString()
   username: string
+
+  @ApiProperty({ required: false, description: 'SSH password used only for the live preview probe' })
+  @IsOptional()
+  @IsString()
+  password?: string
 }

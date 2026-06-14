@@ -1,21 +1,14 @@
-import { PlatformActionService } from '../../shared/platform/platform-action.service'
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core'
 import { ActivatedRoute } from '@angular/router'
+import { catchError, forkJoin, map, of } from 'rxjs'
 import { bindSectionTabs } from '../../core/routing/section-tab.util'
 import { MatDialog, MatDialogModule } from '@angular/material/dialog'
 import { ErrorStateComponent } from '../../shared/components/error-state/error-state.component'
 import { VpsService } from '../../core/services/vps.service'
-import { ProModeService } from '../../core/services/pro-mode.service'
-import { allowsDemoDataFrom } from '../../core/utils/demo-runtime.util'
+import { CloudAccountsService } from '../../core/services/cloud-accounts.service'
 import { ToastService } from '../../core/services/toast.service'
 import { InfrastructureActionService } from './infrastructure-action.service'
 import { createPageLoader } from '../../core/utils/page-load.util'
-import {
-  VPS_DEMO_AUDIT,
-  VPS_DEMO_PORTS,
-  VPS_DEMO_SERVICES,
-  VPS_DEMO_SSH_KEYS,
-} from './infrastructure.data'
 import { InfrastructureWorkspaceComponent } from './infrastructure-workspace.component'
 import { buildVpsWorkspace, type VpsHostRow } from './infrastructure-workspace.builders'
 import type { NavLogoKey } from '../../shared/theme/nav-logo.types'
@@ -23,8 +16,11 @@ import {
   VpsAddDialogComponent,
   type VpsAddDialogResult,
 } from './vps-add.dialog'
-import { updateDemoSshKeyAfterRotation, type SshRotationApplyResult } from './infrastructure-vps-ssh-rotation.util'
-import { VpsAddDiscoveryService } from './vps-add-discovery.service'
+import {
+  updateDemoSshKeyAfterRotation,
+  type SshRotationApplyResult,
+  type VpsDemoSshKey,
+} from './infrastructure-vps-ssh-rotation.util'
 
 type DemoRow = Record<string, unknown>
 
@@ -46,13 +42,10 @@ type DemoRow = Record<string, unknown>
   `,
 })
 export class VpsPageComponent implements OnInit {
-  private readonly actions = inject(PlatformActionService)
-
   private readonly service = inject(VpsService)
-  private readonly pro = inject(ProModeService)
+  private readonly accounts = inject(CloudAccountsService)
   private readonly toast = inject(ToastService)
   private readonly infraActions = inject(InfrastructureActionService)
-  private readonly discovery = inject(VpsAddDiscoveryService)
   private readonly dialog = inject(MatDialog)
   private readonly route = inject(ActivatedRoute)
   private readonly destroyRef = inject(DestroyRef)
@@ -60,10 +53,11 @@ export class VpsPageComponent implements OnInit {
   readonly page = createPageLoader(true)
   readonly tabIndex = signal(0)
   readonly hosts = signal<VpsHostRow[]>([])
-  readonly portCatalog = signal<DemoRow[]>(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_PORTS] : [])
-  readonly serviceCatalog = signal<DemoRow[]>(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_SERVICES] : [])
-  readonly auditLog = signal<DemoRow[]>(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_AUDIT] : [])
-  readonly sshKeys = signal(allowsDemoDataFrom(this.pro) ? [...VPS_DEMO_SSH_KEYS] : [])
+  readonly projectId = signal('')
+  readonly portCatalog = signal<DemoRow[]>([])
+  readonly serviceCatalog = signal<DemoRow[]>([])
+  readonly auditLog = signal<DemoRow[]>([])
+  readonly sshKeys = signal<VpsDemoSshKey[]>([])
 
   readonly workspace = computed(() =>
     buildVpsWorkspace(
@@ -76,6 +70,10 @@ export class VpsPageComponent implements OnInit {
   )
 
   ngOnInit(): void {
+    this.accounts.defaultProject().subscribe({
+      next: (project) => this.projectId.set(project.id),
+      error: () => this.toast.error('No se pudo resolver el proyecto del workspace'),
+    })
     bindSectionTabs(this.route, this.destroyRef, this.tabIndex, 'vps', (section) => {
       const map: Record<string, number> = {
         overview: 0,
@@ -94,28 +92,22 @@ export class VpsPageComponent implements OnInit {
   }
 
   load = (): void => {
-    const allowDemo = allowsDemoDataFrom(this.pro)
-    const providers = ['Hetzner', 'OVH', 'DigitalOcean', 'Bare metal']
-    const locations = ['fra1', 'ams3', 'nyc1', 'mad1', 'lon1']
     this.page.run(this.service.list(), {
       onSuccess: (data) =>
         this.hosts.set(
-          data.map((h, i) =>
-            allowDemo
-              ? {
-                  ...h,
-                  user: 'ubuntu',
-                  os: i % 3 === 0 ? 'Ubuntu 22.04 LTS' : i % 3 === 1 ? 'Debian 12' : 'Rocky Linux 9',
-                  provider: providers[i % providers.length],
-                  location: locations[i % locations.length],
-                  docker: i % 2 === 0,
-                  kubernetes: i < 3,
-                  cpu: 20 + (i * 7) % 60,
-                  ram: 40 + (i * 11) % 50,
-                  disk: 55 + (i * 5) % 30,
-                }
-              : { ...h },
-          ),
+          data.map((h) => ({
+            ...h,
+            host: h.host ?? h.hostname ?? '',
+            user: h.user ?? h.username ?? 'root',
+            os: h.os ?? String(h.metadata?.['os'] ?? 'Pendiente'),
+            provider: String(h.metadata?.['provider'] ?? 'VPS'),
+            location: String(h.metadata?.['region'] ?? h.metadata?.['location'] ?? ''),
+            docker: Boolean(h.metadata?.['docker']),
+            kubernetes: Boolean(h.metadata?.['kubernetes']),
+            cpu: Number(h.metadata?.['cpu'] ?? 0),
+            ram: Number(h.metadata?.['ram'] ?? 0),
+            disk: Number(h.metadata?.['disk'] ?? 0),
+          })),
         ),
       errorMessage: 'Error al cargar servidores VPS',
     })
@@ -149,71 +141,72 @@ export class VpsPageComponent implements OnInit {
       return
     }
     if (label === 'Validar todos') {
-      this.infraActions.runBatchValidate(this.hosts())
+      this.validateAllVps()
+      return
+    }
+    if (label === 'Sincronizar') {
+      this.load()
       return
     }
     this.infraActions.confirmAndRunAction(label, { moduleId: ctx.moduleId, logos: [...ctx.logos] }, () => this.load()).subscribe()
   }
 
   private registerVps = (payload: VpsAddDialogResult): void => {
-    const finishRegistration = (id: string): void => {
-      const baseRow = this.toHostRow(id, payload)
-      this.toast.info(`Discovery post-alta · ${payload.name}…`)
-      this.discovery.runPostAddDiscovery(payload, baseRow).subscribe((result) => {
-        this.hosts.update((list) => [...list, result.host])
-        if (result.ports.length) {
-          this.portCatalog.update((rows) => [...rows, ...result.ports])
-        }
-        if (result.services.length) {
-          this.serviceCatalog.update((rows) => [...rows, ...result.services])
-        }
-        if (result.audit.length) {
-          this.auditLog.update((rows) => [...rows, ...result.audit])
-        }
-        const taskCount = result.tasks.length
-        this.toast.success(
-          taskCount
-            ? `${payload.name} registrado · ${taskCount} tareas de discovery completadas`
-            : `${payload.name} registrado en inventario`,
-        )
-        if (taskCount) {
-          this.infraActions.openDiscoverySummary(result, payload)
-        }
-      })
+    const projectId = this.projectId()
+    if (!projectId) {
+      this.toast.error('No se pudo resolver el proyecto del workspace')
+      return
     }
 
     this.service
       .create({
+        projectId,
         name: payload.name,
         host: payload.host,
-        port: payload.port,
+        hostname: payload.host,
+        port: 22,
+        username: payload.user,
+        password: payload.password,
+        metadata: {
+          provider: payload.provider,
+          os: payload.os,
+          environment: payload.environment,
+          authMethod: 'password',
+          connectionMethod: 'ssh',
+        },
       })
       .subscribe({
-        next: (created) => finishRegistration(created.id),
-        error: () => {
-          this.actions.simulate(`Añadir VPS ${payload.name}`, 900, `${payload.name} registrado (demo)`).subscribe(() => {
-            finishRegistration(`vps-${Date.now()}`)
-          })
+        next: () => {
+          this.toast.success(`${payload.name} añadido por SSH`)
+          this.load()
         },
+        error: (err) => this.toast.error(err?.error?.message ?? 'No se pudo añadir el servidor VPS'),
       })
   }
 
-  private toHostRow = (id: string, payload: VpsAddDialogResult): VpsHostRow => ({
-    id,
-    name: payload.name,
-    host: payload.host,
-    port: payload.port,
-    status: 'connected',
-    user: payload.user,
-    os: payload.os,
-    provider: payload.provider,
-    location: payload.location,
-    docker: false,
-    kubernetes: false,
-    cpu: 0,
-    ram: 0,
-    disk: 0,
-  })
+  private validateAllVps = (): void => {
+    const hosts = this.hosts()
+    if (!hosts.length) {
+      this.toast.info('No hay servidores VPS para validar')
+      return
+    }
+    forkJoin(
+      hosts.map((host) =>
+        this.service.validate(host.id).pipe(
+          map(() => true),
+          catchError(() => of(false)),
+        ),
+      ),
+    ).subscribe((results) => {
+      const ok = results.filter(Boolean).length
+      if (ok === hosts.length) {
+        this.toast.success(`SSH validado en ${ok} servidor(es)`)
+      } else {
+        this.toast.error(`SSH validado en ${ok}/${hosts.length} servidor(es)`)
+      }
+      this.load()
+    })
+  }
 
   private handleSshKeyRotated = (result: SshRotationApplyResult): void => {
     if (result.newPublicKeyDeployed) {

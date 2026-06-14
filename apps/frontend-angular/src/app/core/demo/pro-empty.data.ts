@@ -51,10 +51,25 @@ export const emptyGithubInventory = (): Record<string, unknown> => ({
 })
 
 export const emptyJenkinsInventory = (): Record<string, unknown> => ({
+  demoMode: false,
   serverCount: 0,
   jobCount: 0,
   buildsRunning: 0,
+  buildsSuccess: 0,
+  buildsFailed: 0,
+  queueSize: 0,
+  executorBusy: 0,
+  executorTotal: 0,
+  diskUsagePercent: 0,
+  version: 'live',
+  servers: [],
+  agents: [],
+  queue: [],
+  folders: [],
   jobItems: [],
+  builds: [],
+  logsByJob: {},
+  plugins: [],
   message: PRO_CONFIG_MSG,
 })
 

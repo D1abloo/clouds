@@ -152,7 +152,10 @@ export class AuthService {
         ? this.config.get<string>('GOOGLE_CLIENT_SECRET')
         : this.config.get<string>('GITHUB_CLIENT_SECRET')
 
-    if (!demoMode && clientId && clientSecret) {
+    if (!demoMode) {
+      if (!clientId || !clientSecret) {
+        throw new UnauthorizedException(`OAuth ${normalized} no está configurado en modo PRO`)
+      }
       const profile =
         normalized === 'google'
           ? await this.exchangeGoogleProfile(code)

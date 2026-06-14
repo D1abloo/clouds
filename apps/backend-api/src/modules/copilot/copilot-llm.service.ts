@@ -18,6 +18,8 @@ REGLAS ESTRICTAS:
 - Solo respondes sobre infraestructura, nubes, instancias, costes, alertas, despliegues, Kubernetes, Jenkins, Terraform y configuración del panel.
 - Si la pregunta no es sobre operaciones o infraestructura del panel, responde amablemente que solo puedes ayudar con temas de la plataforma.
 - Usa los datos de contexto proporcionados; no inventes recursos que no aparezcan en el contexto.
+- Puedes orientar al usuario por todas las rutas y capacidades del panel incluidas en "Capacidades del panel y rutas".
+- Debes ayudar con lanzamientos, estado de instancias, VPS por SSH, facturas, FinOps, logs, Jenkins, seguridad y cualquier módulo listado en el contexto.
 - Responde siempre en español, con formato claro (listas, negritas con **texto**).
 - Para lanzar instancias (solo si está permitido), incluye un bloque \`\`\`copilot_action con JSON: {"type":"launch_instance","accountId":"...","name":"...","region":"...","instanceType":"...","imageId":"..."}
 - Sé conciso y accionable.`
@@ -101,6 +103,9 @@ export class CopilotLlmService {
         jenkinsServers: 0,
         terraformWorkspaces: 0,
         recentInstances: [],
+        vpsList: [],
+        jenkinsList: [],
+        panelRoutes: [],
         healthScore: 100,
       },
       'Responde solo: OK',
@@ -176,12 +181,32 @@ export class CopilotLlmService {
       return `**Inventario de instancias** (${ctx.organizationName}):\n\n${list}\n\n**Resumen:** ${ctx.instances.running} en ejecución · ${ctx.instances.stopped} detenidas · ${ctx.instances.warning} con aviso.`
     }
 
+    if (q.includes('vps') || q.includes('ssh')) {
+      const list = ctx.vpsList.length
+        ? ctx.vpsList.map((v) => `• **${v.name}** — ${v.username}@${v.hostname} · ${v.status}`).join('\n')
+        : '• No hay VPS registrados por SSH todavía.'
+      return `**Servidores VPS por SSH**\n\n${list}\n\nAlta esperada: servidor, usuario y contraseña desde **VPS → Servidores** o **Infraestructura → VPS**.`
+    }
+
+    if (q.includes('jenkins') || q.includes('pipeline') || q.includes('desplieg')) {
+      const list = ctx.jenkinsList.length
+        ? ctx.jenkinsList.map((j) => `• **${j.name}** — ${j.url}`).join('\n')
+        : '• No hay controladores Jenkins conectados.'
+      return `**Jenkins y despliegues**\n\n${list}\n\nDesde **Jenkins → Jobs** puedes conectar un controlador, listar jobs y encolar builds reales con parámetros.`
+    }
+
     if (q.includes('alerta') || q.includes('incidente')) {
       return `**Alertas abiertas:** ${ctx.alerts.open}\n• Críticas: **${ctx.alerts.critical}**\n• Advertencias: **${ctx.alerts.warning}**\n\nRevisa el módulo Alertas para priorizar acciones.`
     }
 
     if (q.includes('coste') || q.includes('costo') || q.includes('factur') || q.includes('gasto')) {
       return `**Gasto estimado MTD:** **${ctx.billing.monthlySpend.toFixed(2)} ${ctx.billing.currency}**\n\nCuentas cloud conectadas: ${ctx.cloudAccounts.total} (AWS ${ctx.cloudAccounts.aws}, GCP ${ctx.cloudAccounts.gcp}, Azure ${ctx.cloudAccounts.azure}).`
+    }
+
+    if (q.includes('opciones') || q.includes('panel') || q.includes('ruta') || q.includes('módulo') || q.includes('modulo')) {
+      return `**Opciones del panel disponibles para asistirte:**\n\n${ctx.panelRoutes
+        .map((r) => `• **${r.area}** — ${r.capability} (${r.route})`)
+        .join('\n')}`
     }
 
     if (q.includes('cuenta') || q.includes('cloud') || q.includes('aws') || q.includes('gcp')) {

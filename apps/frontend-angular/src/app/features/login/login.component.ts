@@ -152,8 +152,10 @@ import {
             (click)="handleOAuth('google')"
             aria-label="Continuar con Google"
           >
-            <img src="/assets/logos/google.svg" alt="" width="20" height="20" />
-            Continuar con Google
+            <span class="login-oauth__icon login-oauth__icon--google" aria-hidden="true">
+              <img src="/assets/logos/google.svg" alt="" width="20" height="20" />
+            </span>
+            <span>Continuar con Google</span>
           </button>
           <button
             type="button"
@@ -163,8 +165,10 @@ import {
             (click)="handleOAuth('github')"
             aria-label="Continuar con GitHub"
           >
-            <img src="/assets/logos/github.svg" alt="" width="20" height="20" />
-            Continuar con GitHub
+            <span class="login-oauth__icon login-oauth__icon--github" aria-hidden="true">
+              <img src="/assets/logos/github.svg" alt="" width="20" height="20" />
+            </span>
+            <span>Continuar con GitHub</span>
           </button>
         </div>
 
@@ -698,17 +702,19 @@ import {
     .login-oauth__btn {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 0.55rem;
+      justify-content: flex-start;
+      gap: 0.7rem;
       width: 100%;
       min-height: 48px;
-      padding: 0.7rem 1rem;
-      border-radius: 12px;
+      padding: 0.55rem 0.75rem;
+      border-radius: 999px;
       border: 1px solid var(--border);
-      background: var(--card);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 255, 0.92)),
+        var(--card);
       font: inherit;
       font-size: 0.9rem;
-      font-weight: 600;
+      font-weight: 750;
       color: var(--text-main);
       cursor: pointer;
       transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
@@ -718,20 +724,51 @@ import {
         border-color: rgba(0, 87, 217, 0.32);
         box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
         transform: translateY(-1px);
+
+        .login-oauth__icon {
+          transform: rotate(-4deg) scale(1.06);
+          box-shadow: 0 10px 22px rgba(0, 87, 217, 0.16);
+        }
       }
 
       &:focus-visible { outline: 3px solid rgba(0, 194, 255, 0.35); outline-offset: 3px; }
       &:disabled { opacity: 0.6; cursor: not-allowed; }
 
       &--github {
-        background: #101828;
+        background:
+          linear-gradient(180deg, #111827, #0b1220),
+          #101828;
         border-color: #101828;
         color: #fff;
 
-        img { filter: brightness(0) invert(1); }
-
         &:hover:not(:disabled) { background: #1d2939; border-color: #1d2939; }
       }
+    }
+
+    .login-oauth__icon {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+      animation: socialIconIn 0.55s ease both;
+    }
+
+    .login-oauth__icon--google {
+      background: #ffffff;
+      border: 1px solid rgba(216, 222, 240, 0.9);
+      box-shadow: inset 0 0 0 4px rgba(238, 244, 255, 0.8);
+    }
+
+    .login-oauth__icon--github {
+      background: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.38);
+    }
+
+    .login-oauth__icon--github img {
+      filter: none;
     }
 
     .login-divider {
@@ -844,6 +881,11 @@ import {
     @keyframes submitPulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.88; }
+    }
+
+    @keyframes socialIconIn {
+      from { opacity: 0; transform: scale(0.72) rotate(-14deg); }
+      to { opacity: 1; transform: scale(1) rotate(0deg); }
     }
 
     .login-error {

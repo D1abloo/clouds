@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
 import { CloudProvider, InstanceStatus } from '@prisma/client'
 import { GithubSummaryService } from '../github/github-summary.service'
-import { AppModeService } from '../../common/config/app-mode.service'
 
 const activeInstanceWhere = {
   deletedAt: null,
@@ -27,7 +26,6 @@ export class InventoryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly githubSummarySvc: GithubSummaryService,
-    private readonly mode: AppModeService,
   ) {}
 
   async dockerSummary() {
@@ -38,30 +36,23 @@ export class InventoryService {
     const running = containers.filter((c) => c.status === 'running').length
     const stopped = containers.filter((c) => c.status !== 'running').length
     const images = [...new Set(containers.map((c) => c.image))]
-    const useDemoMetrics = this.mode.canUseDemoFallback()
     return {
       hosts: hosts.length,
       containers: containers.length,
       running,
       stopped,
       images: images.length,
-      volumes: useDemoMetrics ? 4 : 0,
-      networks: useDemoMetrics ? 3 : 0,
+      volumes: 0,
+      networks: 0,
       items: containers.map((c) => ({
         id: c.id,
         name: c.name,
         image: c.image,
         host: c.dockerHost.hostRef,
         status: c.status,
-        ports: useDemoMetrics
-          ? c.name.includes('nginx')
-            ? '80:80'
-            : c.name.includes('api')
-              ? '3000:3000'
-              : '—'
-          : '—',
-        cpu: useDemoMetrics ? Math.round(10 + Math.random() * 40) : null,
-        ram: useDemoMetrics ? Math.round(20 + Math.random() * 50) : null,
+        ports: '—',
+        cpu: null,
+        ram: null,
       })),
     }
   }
@@ -75,7 +66,6 @@ export class InventoryService {
     )
     const pods = resources.filter((r) => r.kind === 'Pod')
     const errors = pods.filter((p) => p.status?.includes('Error') || p.status?.includes('Crash')).length
-    const useDemoMetrics = this.mode.canUseDemoFallback()
     return {
       clusters: clusters.length,
       namespaceCount: resources.filter((r) => r.kind === 'Namespace').length,
@@ -89,10 +79,10 @@ export class InventoryService {
         name: p.name,
         namespace: p.namespace ?? 'default',
         status: p.status ?? 'Unknown',
-        node: useDemoMetrics ? 'demo-node-01' : '—',
-        restarts: useDemoMetrics && p.status === 'CrashLoopBackOff' ? 12 : 0,
-        cpu: useDemoMetrics ? Math.round(5 + Math.random() * 60) : null,
-        ram: useDemoMetrics ? Math.round(10 + Math.random() * 70) : null,
+        node: '—',
+        restarts: 0,
+        cpu: null,
+        ram: null,
         clusterName: p.clusterName,
       })),
     }
@@ -124,7 +114,6 @@ export class InventoryService {
     })
     const jobs = servers.flatMap((s) => s.jobs.map((j) => ({ ...j, serverName: s.name, serverUrl: s.url })))
     const builds = jobs.flatMap((j) => j.builds.map((b) => ({ ...b, jobName: j.name, serverName: j.serverName })))
-    const useDemoMetrics = this.mode.canUseDemoFallback()
     return {
       serverCount: servers.length,
       jobCount: jobs.length,
@@ -134,11 +123,23 @@ export class InventoryService {
       jobItems: jobs.map((j) => ({
         id: j.id,
         name: j.name,
+        serverId: j.serverId,
         server: j.serverName,
         url: j.url,
         status: j.builds[0]?.status ?? 'IDLE',
         lastRun: j.builds[0] ? `#${j.builds[0].buildNum}` : '—',
-        duration: useDemoMetrics ? `${Math.round(30 + Math.random() * 300)}s` : '—',
+        buildNum: j.builds[0]?.buildNum ?? 0,
+        duration: '—',
+      })),
+      servers: servers.map((s) => ({
+        id: s.id,
+        name: s.name,
+        url: s.url,
+        version: 'live',
+        jobs: s.jobs.length,
+        status: 'online',
+        executors: 0,
+        busyExecutors: 0,
       })),
       builds,
     }

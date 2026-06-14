@@ -23,7 +23,7 @@ export class VpsService {
   getOne = (id: string): Observable<VpsHost> =>
     this.api.get<VpsHost>(`vps/${id}`)
 
-  create = (body: Partial<VpsHost>): Observable<VpsHost> =>
+  create = (body: Partial<VpsHost> & { password?: string; hostname?: string; username?: string }): Observable<VpsHost> =>
     this.api.post<VpsHost>('vps', body)
 
   validate = (id: string): Observable<unknown> =>
@@ -38,6 +38,7 @@ export class VpsService {
     hostname: string
     port?: number
     username?: string
+    password?: string
   }): Observable<{ valid: boolean; message?: string }> =>
     this.api.post('vps/validate-preview', body)
 

@@ -65,11 +65,21 @@ export interface Instance {
 
 export interface VpsHost {
   id: string
+  projectId?: string
   name: string
   host: string
+  hostname?: string
   port?: number
+  username?: string
+  user?: string
   status?: string
-  projectId?: string
+  os?: string | null
+  environment?: string | null
+  publicIp?: string | null
+  privateIp?: string | null
+  metadata?: Record<string, unknown>
+  hasSshKey?: boolean
+  isDemo?: boolean
 }
 
 export interface DashboardStats {

@@ -25,7 +25,12 @@ export class CreateVpsDto {
   @IsString()
   username: string
 
-  @ApiProperty({ required: false, description: 'Vault reference for SSH private key' })
+  @ApiProperty({ required: false, description: 'SSH password. It is encrypted before being persisted.' })
+  @IsOptional()
+  @IsString()
+  password?: string
+
+  @ApiProperty({ required: false, description: 'Vault reference for SSH credentials' })
   @IsOptional()
   @IsString()
   sshKeyRef?: string

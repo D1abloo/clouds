@@ -30,6 +30,9 @@ export type CopilotPlatformContext = {
   jenkinsServers: number
   terraformWorkspaces: number
   recentInstances: { name: string; provider: string; region: string; status: string }[]
+  vpsList: { name: string; hostname: string; username: string; status: string }[]
+  jenkinsList: { name: string; url: string }[]
+  panelRoutes: { area: string; route: string; capability: string }[]
   healthScore: number
 }
 
@@ -78,6 +81,8 @@ export class CopilotContextService {
       tfWorkspaces,
       recentInstances,
       cloudAccountList,
+      vpsList,
+      jenkinsList,
     ] = await Promise.all([
       this.prisma.instance.count({ where: instanceBase }),
       this.prisma.instance.count({ where: { ...instanceBase, status: 'RUNNING' } }),
@@ -116,6 +121,17 @@ export class CopilotContextService {
         orderBy: { updatedAt: 'desc' },
         take: 24,
         select: { id: true, name: true, provider: true, defaultRegion: true },
+      }),
+      this.prisma.vpsServer.findMany({
+        where: { deletedAt: null, ...vpsScope },
+        orderBy: { updatedAt: 'desc' },
+        take: 12,
+        select: { name: true, hostname: true, username: true, metadata: true },
+      }),
+      this.prisma.jenkinsServer.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: { name: true, url: true },
       }),
     ])
 
@@ -167,6 +183,17 @@ export class CopilotContextService {
         region: i.region ?? '—',
         status: i.status,
       })),
+      vpsList: vpsList.map((v) => {
+        const meta = (v.metadata as Record<string, unknown>) ?? {}
+        return {
+          name: v.name,
+          hostname: v.hostname,
+          username: v.username,
+          status: String(meta['sshStatus'] ?? 'connected'),
+        }
+      }),
+      jenkinsList,
+      panelRoutes: this.panelRoutes(),
       healthScore,
     }
   }
@@ -268,7 +295,39 @@ export class CopilotContextService {
         )
       })
     }
+    if (ctx.vpsList.length) {
+      lines.push('Servidores VPS por SSH:')
+      ctx.vpsList.forEach((v) => {
+        lines.push(`- ${v.name} · ${v.username}@${v.hostname} · ${v.status}`)
+      })
+    }
+    if (ctx.jenkinsList.length) {
+      lines.push('Controladores Jenkins:')
+      ctx.jenkinsList.forEach((j) => {
+        lines.push(`- ${j.name} · ${j.url}`)
+      })
+    }
+    lines.push('Capacidades del panel y rutas:')
+    ctx.panelRoutes.forEach((r) => {
+      lines.push(`- ${r.area}: ${r.capability} → ${r.route}`)
+    })
     lines.push(`Salud global estimada: ${ctx.healthScore}%`)
     return lines.join('\n')
+  }
+
+  private panelRoutes(): { area: string; route: string; capability: string }[] {
+    return [
+      { area: 'Tablero', route: '/dashboard', capability: 'estado global, instancias cloud y VPS visibles' },
+      { area: 'AI Infra Studio', route: '/automation/ai-infra-studio', capability: 'lanzar, probar y eliminar instancias AWS, GCP e IONOS' },
+      { area: 'AWS EC2', route: '/cloud/aws/ec2', capability: 'lanzar instancia AWS con cuenta, region, VPC, subnet, SG, key pair, AMI y tipo' },
+      { area: 'GCP', route: '/cloud/gcp/overview', capability: 'lanzar Compute Engine con proyecto, region, zona, VPC, subnet, firewall, imagen y machine type' },
+      { area: 'VPS Servidores', route: '/vps/ionos/servers', capability: 'agregar servidor por SSH con servidor, usuario y contraseña' },
+      { area: 'Infraestructura Instancias', route: '/instances/all-instances', capability: 'ver, probar y eliminar instancias y VPS' },
+      { area: 'Observabilidad Logs', route: '/observability/logs', capability: 'revisar logs de lanzamiento, prueba y eliminación' },
+      { area: 'FinOps Facturación', route: '/finops/billing', capability: 'analizar facturas y coste estimado' },
+      { area: 'FinOps Instancias', route: '/finops/instances', capability: 'coste por recurso, proveedor, region y etiquetas' },
+      { area: 'Jenkins', route: '/jenkins/jobs', capability: 'conectar controlador, listar jobs y desplegar apps con build real' },
+      { area: 'Seguridad', route: '/security-center', capability: 'postura, secretos, auditoria y cumplimiento' },
+    ]
   }
 }
